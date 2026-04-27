@@ -1,0 +1,13 @@
+-- 0001_init.sql — PRD §8 테이블 9종 초기 스키마.
+-- BE 담당자가 Day 1에 채움. 컬럼 정의는 PRD §8.2 참조.
+--
+-- 대상 테이블:
+--   users · groups · group_members · challenges · challenge_participants
+--   action_logs · feed_items · kudos · push_subscriptions
+--
+-- 인덱스 (PRD §8.3):
+--   challenges(group_id, status)
+--   action_logs(challenge_id, user_id, created_at DESC)
+--   action_logs(user_id, created_at DESC)
+--   kudos(feed_item_id)
+--   action_logs USING GIN (selected_keywords)

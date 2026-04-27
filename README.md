@@ -1,1 +1,75 @@
-# with-key-app
+# with-key (윗키)
+
+그룹 운동 각서 앱 — 모바일 웹(PWA) POC. 친구 3~4명이 주간 운동 챌린지를 서로 각서 형태로 약속하고, 사진 + 키워드 칩 원탭으로 인증하면 AI가 짧은 운동 일기를 대신 써준다.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS v4** + **shadcn/ui**
+- **Supabase** (Postgres · Auth · Storage) via `@supabase/ssr`
+- **OpenAI** `gpt-4o-mini` (키워드 기반 일기 생성)
+- **Web Push (VAPID)** — PWA 알림
+- **Vercel** 배포 · **pnpm** · **Node 20 LTS**
+
+## Quick Start (30분 체크리스트)
+
+```bash
+# 1. Node 고정 (nvm 사용 시)
+nvm use
+
+# 2. 의존성 설치
+pnpm install
+
+# 3. env 복사 + 값 채우기
+cp .env.example .env.local
+# .env.local을 열어 Supabase / OpenAI / VAPID 키를 채운다
+
+# 4. (선택) 로컬 Supabase 실행 — Docker 필요
+pnpm supabase start
+pnpm supabase db reset       # migrations + seed
+
+# 5. 개발 서버 (Turbopack)
+pnpm dev
+# → http://localhost:3000
+```
+
+## Scripts
+
+| 명령 | 용도 |
+|---|---|
+| `pnpm dev` | 개발 서버 (Turbopack) |
+| `pnpm build` | 프로덕션 빌드 |
+| `pnpm start` | 프로덕션 서버 |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm test` | Vitest 단발 실행 |
+| `pnpm test:watch` | Vitest watch |
+| `pnpm format` | Prettier 전체 포맷 |
+
+## 구조
+
+```
+src/
+├─ app/                ← Next.js App Router
+│  ├─ (auth)/          ← 로그인 · 초대 (미인증 전용)
+│  ├─ (app)/           ← 인증 필요 화면 (home · feed · action · pledge · recap · settings)
+│  │   └─ <route>/_components, _actions.ts  ← route-colocated
+│  └─ api/push/        ← 외부 콜백만 Route Handler
+├─ components/ui/      ← shadcn primitive
+└─ lib/
+   ├─ supabase/        ← client · server · middleware
+   ├─ ai/              ← prompts · diary (OpenAI + 키워드 폴백)
+   ├─ keywords/        ← pool(하드코딩) · shuffle(비복원 랜덤)
+   ├─ push/            ← VAPID · send
+   ├─ analytics/       ← track (PRD §9.1과 1:1)
+   ├─ validators/      ← zod 스키마 = 타입 SoT
+   └─ utils.ts
+```
+
+**원칙**: feature성 컴포넌트는 해당 route의 `_components/`에 colocate. `src/features/`는 두지 않는다. 자세한 규칙은 팀 내부 `ONBOARDING` 문서 참조.
+
+## 문서
+
+팀 내부 기획 문서 (저장소 외부에서 관리).
+
+- Ideation · PRD · Design Brief · Engineering Onboarding · Validation Plan — 킥오프 당일 공유

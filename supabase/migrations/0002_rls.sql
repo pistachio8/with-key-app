@@ -1,0 +1,3 @@
+-- 0002_rls.sql — Row Level Security.
+-- ONBOARDING §6.1: RLS는 전 테이블 ON. 예외 없음.
+-- BE 담당자가 Day 1에 채움. 그룹 멤버십 기준으로 read/write 정책 분리.
