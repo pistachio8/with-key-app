@@ -3,17 +3,16 @@
 import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { makeUserMessage } from "@/lib/actions/error-messages";
 import { PledgeCard } from "./_components/pledge-card";
 import { signPledge } from "./_actions";
 
-const ERROR_MESSAGES: Record<string, string> = {
+// pledge 는 unauthorized 시 redirect 하지 않으므로 기본 copy 의 "이동할게요" 표현을 줄이고,
+// invalid_input 도 도메인 특정("서약서 정보") copy 로 덮어씀.
+const userMessage = makeUserMessage({
   unauthorized: "로그인이 필요해요.",
   invalid_input: "서약서 정보를 확인해 주세요.",
-};
-
-function userMessage(code: string): string {
-  return ERROR_MESSAGES[code] ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
-}
+});
 
 // TODO(Day 2): Server 컴포넌트로 전환 + activeChallenge + participants fetch.
 const MOCK_PLEDGE = {

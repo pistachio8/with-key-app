@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { makeUserMessage } from "@/lib/actions/error-messages";
 import { cn } from "@/lib/utils";
 import { DurationPicker } from "./_components/duration-picker";
 import { PenaltyPicker } from "./_components/penalty-picker";
@@ -12,14 +13,7 @@ import { createChallenge } from "./_actions";
 
 const GOAL_OPTIONS = [1, 2, 3, 4, 5] as const;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: "로그인이 필요해요. 로그인 화면으로 이동할게요.",
-  invalid_input: "입력값을 다시 확인해 주세요.",
-};
-
-function userMessage(code: string): string {
-  return ERROR_MESSAGES[code] ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
-}
+const userMessage = makeUserMessage();
 
 // PRD §3.3 AC-1 · Design Brief 화면 2
 export default function NewChallengePage() {

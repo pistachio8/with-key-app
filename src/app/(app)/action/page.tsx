@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { makeUserMessage } from "@/lib/actions/error-messages";
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
 import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
 import { cn } from "@/lib/utils";
@@ -18,14 +19,7 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
   other: "✨ 기타",
 };
 
-const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: "로그인이 필요해요. 로그인 화면으로 이동할게요.",
-  invalid_input: "입력값을 다시 확인해 주세요.",
-};
-
-function userMessage(code: string): string {
-  return ERROR_MESSAGES[code] ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
-}
+const userMessage = makeUserMessage();
 
 // PRD §4.3 + §5 · Design Brief 화면 5 (인증 — 키워드 칩)
 export default function ActionPage() {
