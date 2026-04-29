@@ -1,3 +1,6 @@
+// Playwright fixtures receive a `use` callback (fixture value passthrough);
+// the react-hooks rule misreads it as the React `use()` hook.
+/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 

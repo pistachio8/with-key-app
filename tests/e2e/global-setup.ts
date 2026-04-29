@@ -1,4 +1,4 @@
-import { chromium, type FullConfig } from "@playwright/test";
+import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
@@ -31,7 +31,7 @@ function base64UrlEncode(s: string): string {
     .replace(/\//g, "_");
 }
 
-export default async function globalSetup(_config: FullConfig) {
+export default async function globalSetup() {
   const email = `e2e+${Date.now()}@test.local`;
   const baseURL = `http://127.0.0.1:${process.env.E2E_PORT ?? 3000}`;
 
