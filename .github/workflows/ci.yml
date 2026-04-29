@@ -38,6 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
       - name: Apply pending migrations (no-op if up to date)
         run: bash scripts/ci/apply-migrations.sh
       - name: Run integration tests
