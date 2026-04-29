@@ -24,10 +24,7 @@ type Props = {
   memo?: string;
 };
 
-type QrState =
-  | { status: "loading" }
-  | { status: "ready"; dataUrl: string }
-  | { status: "failed" };
+type QrState = { status: "loading" } | { status: "ready"; dataUrl: string } | { status: "failed" };
 
 // PRD §11 주간 정산 · Design Brief §1.4 — 완곡 톤 유지.
 // Kakaopay 실결제 연동은 BE_SCHEMA §13.2 로 이연.
@@ -85,8 +82,8 @@ export function SettlementSheet({ open, onOpenChange, amount, memo }: Props) {
           <DialogTitle>벌금 보내기</DialogTitle>
           <DialogDescription>
             친구에게 카카오페이로{" "}
-            <span className="font-semibold tabular-nums">{formatKRW(amount)}</span>{" "}
-            을 보낼 수 있어요.
+            <span className="font-semibold tabular-nums">{formatKRW(amount)}</span> 을 보낼 수
+            있어요.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,10 +96,7 @@ export function SettlementSheet({ open, onOpenChange, amount, memo }: Props) {
               className="bg-background h-48 w-48 rounded-xl border p-2"
             />
           ) : qr.status === "loading" ? (
-            <div
-              className="bg-muted h-48 w-48 animate-pulse rounded-xl"
-              aria-hidden="true"
-            />
+            <div className="bg-muted h-48 w-48 animate-pulse rounded-xl" aria-hidden="true" />
           ) : (
             <p
               role="status"

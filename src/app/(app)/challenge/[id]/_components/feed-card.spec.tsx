@@ -42,9 +42,7 @@ describe("FeedCard", () => {
   it("invokes onKudos with the clicked emoji", () => {
     const onKudos = vi.fn();
     render(<FeedCard {...baseProps} onKudos={onKudos} />);
-    const fireButton = screen
-      .getAllByRole("button")
-      .find((b) => b.textContent?.includes("🔥"));
+    const fireButton = screen.getAllByRole("button").find((b) => b.textContent?.includes("🔥"));
     if (!fireButton) throw new Error("🔥 button not found");
     fireEvent.click(fireButton);
     expect(onKudos).toHaveBeenCalledWith("🔥");

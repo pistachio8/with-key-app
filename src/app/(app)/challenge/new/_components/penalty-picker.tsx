@@ -83,8 +83,7 @@ export function PenaltyPicker({ value, onChange }: Props) {
         })}
       </div>
       <p className="text-muted-foreground text-xs">
-        달성 못 하면 친구들에게 {formatKRW(value)} 예정이에요{" "}
-        <span aria-hidden="true">😅</span>
+        달성 못 하면 친구들에게 {formatKRW(value)} 예정이에요 <span aria-hidden="true">😅</span>
       </p>
     </fieldset>
   );

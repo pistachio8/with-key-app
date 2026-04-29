@@ -42,10 +42,7 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
           </p>
           <p className="text-xl font-bold tabular-nums">{formatKRW(MOCK_DETAIL.potTotal)}</p>
         </div>
-        <SettlementTrigger
-          amount={MOCK_DETAIL.potTotal}
-          memo={`${MOCK_DETAIL.title} 벌금`}
-        />
+        <SettlementTrigger amount={MOCK_DETAIL.potTotal} memo={`${MOCK_DETAIL.title} 벌금`} />
       </section>
       {/* TODO(Day 2): 오늘의 피드 (FeedCard 리스트) — 실제 action_logs 결합 시 추가. */}
     </div>

@@ -4,9 +4,7 @@ import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "./error-messages";
 describe("makeUserMessage", () => {
   it("maps default codes to Korean copy", () => {
     const userMessage = makeUserMessage();
-    expect(userMessage("unauthorized")).toBe(
-      "로그인이 필요해요. 로그인 화면으로 이동할게요.",
-    );
+    expect(userMessage("unauthorized")).toBe("로그인이 필요해요. 로그인 화면으로 이동할게요.");
     expect(userMessage("invalid_input")).toBe("입력값을 다시 확인해 주세요.");
   });
 

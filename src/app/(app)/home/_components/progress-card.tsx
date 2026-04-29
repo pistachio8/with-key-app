@@ -11,9 +11,7 @@ type Props = {
 // PRD §4 · Design Brief 화면 4
 export function ProgressCard({ title, goalCount, doneCount, potTotal, daysLeft }: Props) {
   const progress =
-    goalCount > 0
-      ? Math.min(100, Math.max(0, Math.round((doneCount / goalCount) * 100)))
-      : 0;
+    goalCount > 0 ? Math.min(100, Math.max(0, Math.round((doneCount / goalCount) * 100))) : 0;
   const dayLabel = daysLeft >= 0 ? `D-${daysLeft}` : "종료";
   return (
     <article className="bg-card rounded-2xl border p-5 shadow-sm">

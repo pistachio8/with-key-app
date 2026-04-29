@@ -30,23 +30,13 @@ describe("MemberStrip", () => {
   });
 
   it("clamps over-goal doneCount at 100%", () => {
-    render(
-      <MemberStrip
-        goalCount={3}
-        members={[{ id: "u1", displayName: "나", doneCount: 5 }]}
-      />,
-    );
+    render(<MemberStrip goalCount={3} members={[{ id: "u1", displayName: "나", doneCount: 5 }]} />);
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBe("100");
   });
 
   it("treats goalCount=0 as 0% (zero-division guard)", () => {
-    render(
-      <MemberStrip
-        goalCount={0}
-        members={[{ id: "u1", displayName: "나", doneCount: 1 }]}
-      />,
-    );
+    render(<MemberStrip goalCount={0} members={[{ id: "u1", displayName: "나", doneCount: 1 }]} />);
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBe("0");
   });
@@ -59,10 +49,7 @@ describe("MemberStrip", () => {
 
   it("clamps negative doneCount at 0%", () => {
     render(
-      <MemberStrip
-        goalCount={3}
-        members={[{ id: "u1", displayName: "나", doneCount: -1 }]}
-      />,
+      <MemberStrip goalCount={3} members={[{ id: "u1", displayName: "나", doneCount: -1 }]} />,
     );
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBe("0");

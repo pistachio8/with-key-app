@@ -31,12 +31,7 @@ describe("SettlementSheet", () => {
 
   it("shows amount + link + send button when open", async () => {
     render(
-      <SettlementSheet
-        open
-        onOpenChange={() => {}}
-        amount={3000}
-        memo="주 3회 헬스장 벌금"
-      />,
+      <SettlementSheet open onOpenChange={() => {}} amount={3000} memo="주 3회 헬스장 벌금" />,
     );
     expect(screen.getByText(/3,000/)).toBeTruthy();
     const link = await screen.findByRole("link", { name: /카카오페이로 보내기/ });
