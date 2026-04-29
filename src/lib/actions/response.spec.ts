@@ -50,3 +50,19 @@ describe("ActionResult type", () => {
     expect(fail.ok).toBe(false);
   });
 });
+
+describe("ErrorCode coverage", () => {
+  it("accepts all declared codes in failure()", () => {
+    const codes = [
+      "unauthorized",
+      "forbidden",
+      "invalid_input",
+      "not_found",
+      "conflict",
+      "upstream_error",
+    ] as const;
+    for (const c of codes) {
+      expect(failure(c).error).toBe(c);
+    }
+  });
+});
