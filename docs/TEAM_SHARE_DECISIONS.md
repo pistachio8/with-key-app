@@ -64,6 +64,91 @@
 
 ---
 
+### D-013 — BFF Read 레이어를 RSC 페이지에서 분리
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - 홈/챌린지 디테일/서약 페이지의 데이터 페칭을 `page.tsx` 에 inline `await supabase.from(...)` 으로 두면 POC 동작에는 문제 없음.
+  - 주간 정산·피드 페이지네이션 같은 Day 2+ 요구가 들어오면 "쿼리 shape" 과 "UI 조립" 이 같은 파일에서 엉켜 캐싱 전략 교체가 어렵다.
+- **고려한 옵션 (Options considered)**:
+  - A) 페이지에 직접 호출 — 초기 속도 / Day 2 캐시 교체 비용 증가
+  - B) `src/lib/db/reads/*.ts` 로 분리 — RSC 이점 유지 · view 타입 공유 / 파일 1개 추가
+  - C) React Query + client fetch — Day 2 피드 친화 / SSR 비용 2배 + POC 범위 밖
+- **결정 (Decision)**:
+  - 우리는 **B) `src/lib/db/reads/*.ts` 로 분리** 를 선택한다.
+  - 3개 read 지점(`fetchActiveChallenge` · `fetchChallengeDetail` · `fetchPendingPledge`) 분리 완료. page 는 supabase-js 를 직접 부르지 않는다.
+- **근거 (Reasoning)**:
+  - RSC 이점 유지 + material view · request-memo 교체 시 UI 미수정.
+  - View 타입(`ActiveChallengeView` 등)이 page props 계약 역할.
+- **영향 범위 (Impact)**:
+  - `src/app/(app)/home/page.tsx` · `src/app/(app)/challenge/[id]/page.tsx` · `src/app/(app)/pledge/page.tsx` · `src/app/(app)/pledge/_components/pledge-sheet.tsx`.
+  - 신규 디렉터리: `src/lib/db/reads/`.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - Day 2+ 에 "cache 전략을 쓸 일이 없다" 는 결론이 나오면 inline 으로 원복.
+  - read 함수가 page 별 1:1 대응으로만 쓰이고 재사용이 없다면 YAGNI.
+- **되돌리기 비용**: 낮음. 3 함수를 page 본문으로 inline 하는 리팩터 수준.
+
+---
+
+### D-012 — Error taxonomy 6 코드 확정
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - Batch A~C 에서는 `ActionResult.error` 가 `unauthorized`/`invalid_input` 2 코드로 충분했으나, 실 DB 연동 후 RLS 거부(42501)·unique(23505)·대상 부재(PGRST116)·FK(23503) 가 등장.
+  - UI 분기(로그인 화면 이동 vs 재시도 vs "없음" 안내) 가 각기 다르다.
+- **고려한 옵션 (Options considered)**:
+  - A) 모두 `upstream_error` 1 코드 — 코드 단순 / UX 분기 불가
+  - B) 6 코드 유니언 (`unauthorized | forbidden | invalid_input | not_found | conflict | upstream_error`) — 의미 분리 / 컴파일 타임 exhaustiveness
+  - C) HTTP 상태 코드 직수용 — 표준 / 의미 중복 + 프레임워크 종속
+- **결정 (Decision)**:
+  - 우리는 **B) 6 코드 유니언** 을 선택한다.
+  - `mapSupabaseError()` 가 Postgres/PostgREST 코드를 이 6 코드로 투영. `makeUserMessage()` 는 6 코드 모두 한국어 카피 보유.
+- **근거 (Reasoning)**:
+  - (A) 는 UX 분기 불가. (C) 는 의미 중복 + 프레임워크 종속.
+  - discriminated union 이라 컴파일 타임 exhaustiveness 체크 가능.
+- **영향 범위 (Impact)**:
+  - `src/lib/actions/response.ts` · `error-messages.ts` · `supabase-error.ts` 신설 + 모든 Server Action 호출부 업데이트.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 코드 3 개만 쓰이고 있다는 사용 통계가 6개월 간 지속되면 축소 고려.
+- **되돌리기 비용**: 중간. 유니언 축소는 `ErrorCode` 참조 모든 호출부에 영향.
+
+---
+
+### D-011 — 로컬 dev 인증 경로는 Supabase Magic Link (원격 dev project)
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - 카카오 OAuth 는 redirect URL/키 발급/앱 심사가 필요해 POC 2주 내 진행 어려움.
+  - 반면 RLS 검증은 real auth 없이 불가능 — `DEV_BYPASS_AUTH=1` 로는 RLS 를 한 줄도 검증 불가.
+  - 원격 dev 프로젝트(`ohvcaytmzzwxkbxsmyny`)는 이미 발급되어 있어 Docker 로컬 스택은 불필요.
+- **고려한 옵션 (Options considered)**:
+  - A) `DEV_BYPASS_AUTH=1` 계속 유지 — 빠름 / RLS 검증 불가
+  - B) Supabase email OTP (magic link) — real auth · RLS 검증 가능 / 이메일 한 번 확인 필요
+  - C) 카카오 OAuth 즉시 연결 — 실사용 경로 / POC 범위 초과
+- **결정 (Decision)**:
+  - 우리는 **B) Magic Link** 를 선택한다.
+  - 로컬 dev 기본 인증으로 magic link. 카카오 provider 는 v1 백로그.
+  - dev DB 는 원격 Supabase 프로젝트 사용 (Docker 미사용) — `supabase link --project-ref` + `db push` 플로우.
+- **근거 (Reasoning)**:
+  - (A) 는 RLS 검증 불가 → Day 2 목표 충돌. (C) 는 POC 범위 초과 + 외부 의존.
+  - 원격 dev 사용 시 Integration test 의 `truncate_test_data` 를 `@test.local` email 스코프로 좁히면 실 seed 데이터 보호 가능.
+- **영향 범위 (Impact)**:
+  - `src/app/(auth)/login/page.tsx` 이메일 입력 버튼, `src/app/(auth)/login/_actions.ts` 신설, `src/app/auth/callback/route.ts` 신설.
+  - `src/app/(app)/layout.tsx` 의 `DEV_BYPASS_AUTH` 분기 제거.
+  - `package.json`: `dev` 에서 `DEV_BYPASS_AUTH=1` 제거, `db:push`/`db:types` 스크립트 추가.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 카카오 OAuth 가 준비되면 magic link 는 dev 보조 경로로 축소.
+  - 원격 dev 에서 여러 명이 충돌하는 상황이 생기면 per-contributor Supabase branch 로 전환 검토.
+- **되돌리기 비용**: 낮음. login UI 교체 수준. `supabase/config.toml` + callback 확장이면 카카오 추가 가능.
+
+---
+
 ### D-010 — AI 트레이너 판독 / 상호 인정·반려 UI 제거
 
 - **날짜**: 2026-04-28

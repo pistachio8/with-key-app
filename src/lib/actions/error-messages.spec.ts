@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "./error-messages";
+import type { ErrorCode } from "./response";
 
 describe("makeUserMessage", () => {
   it("maps default codes to Korean copy", () => {
@@ -8,10 +9,26 @@ describe("makeUserMessage", () => {
     expect(userMessage("invalid_input")).toBe("입력값을 다시 확인해 주세요.");
   });
 
-  it("falls back for unknown codes", () => {
+  it("has Korean copy for every ErrorCode", () => {
+    const m = makeUserMessage();
+    const codes: ErrorCode[] = [
+      "unauthorized",
+      "forbidden",
+      "invalid_input",
+      "not_found",
+      "conflict",
+      "upstream_error",
+    ];
+    for (const c of codes) {
+      expect(m(c)).toBeTruthy();
+    }
+  });
+
+  it("falls back for unknown codes (runtime safety)", () => {
     const userMessage = makeUserMessage();
-    expect(userMessage("internal_error")).toBe(FALLBACK_ERROR_MESSAGE);
-    expect(userMessage("anything_else")).toBe(FALLBACK_ERROR_MESSAGE);
+    // Simulate a malformed wire value arriving from an untrusted source.
+    expect(userMessage("internal_error" as unknown as ErrorCode)).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(userMessage("anything_else" as unknown as ErrorCode)).toBe(FALLBACK_ERROR_MESSAGE);
   });
 
   it("applies overrides without mutating defaults", () => {
@@ -21,9 +38,9 @@ describe("makeUserMessage", () => {
     expect(plain("invalid_input")).toBe("입력값을 다시 확인해 주세요.");
   });
 
-  it("override unknown code still falls back for other codes", () => {
+  it("override a single code still falls back for unknown runtime codes", () => {
     const custom = makeUserMessage({ unauthorized: "로그인이 필요해요." });
     expect(custom("unauthorized")).toBe("로그인이 필요해요.");
-    expect(custom("internal_error")).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(custom("internal_error" as unknown as ErrorCode)).toBe(FALLBACK_ERROR_MESSAGE);
   });
 });

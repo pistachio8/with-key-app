@@ -5,18 +5,9 @@ import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Shared resolve + plugins. Per-project test config lives in vitest.workspace.ts.
 export default defineConfig({
   plugins: [react()],
-  test: {
-    environment: "jsdom",
-    globals: true,
-    environmentMatchGlobs: [
-      ["**/*.spec.tsx", "jsdom"],
-      ["**/_components/**", "jsdom"],
-      ["**", "node"],
-    ],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
-  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
