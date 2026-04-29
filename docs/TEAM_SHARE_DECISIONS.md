@@ -64,6 +64,68 @@
 
 ---
 
+### D-015 — E2E 인증: admin generateLink + verifyOtp, 단일 storageState 재사용
+
+- **날짜**: 2026-05-01
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - E2E 에서 이메일 수신을 실제로 기다리면 Inbucket/Mailtrap 같은 메일 서버가 필요하고 플레이크가 심하다.
+  - 반대로 "폼 입력 → 링크 클릭" 전체를 mock 하면 auth 배선 자체의 회귀가 잡히지 않는다.
+  - `generateLink({ type: "magiclink" })` 의 `action_link` 는 Supabase hosted `/auth/v1/verify` 로 redirect 해 hash flow(`#access_token=`)로 돌아오는데, 앱의 `/auth/callback` 은 PKCE `?code=` 만 처리한다 → 실경로 navigate 는 프로덕션 코드 변경이 필요해 부적절.
+- **고려한 옵션 (Options considered)**:
+  - A) `action_link` 직접 navigate — 실경로 / hash flow 미지원 → 프로덕션 코드 변경 필요
+  - B) node 에서 `verifyOtp` → session JSON 을 `base64-<…>` 쿠키로 encode → `addCookies` — 브라우저/서버 동기화 보장
+  - C) Inbucket 같은 로컬 메일 서버 삽입 — 가장 real / POC 범위 초과 · 플레이크 높음
+- **결정 (Decision)**:
+  - 우리는 **B) `verifyOtp` + 직접 쿠키 주입** 을 선택한다.
+  - node 에서 `admin.generateLink` → OTP 추출 → anon client `verifyOtp` → session → `@supabase/ssr` 포맷 쿠키(`sb-<ref>-auth-token`, `base64-<base64url(JSON)>`)로 `context.addCookies` → `/home` 접근 확인 → `storageState` 저장.
+  - 별도로 `auth-login.spec.ts` 한 개는 실폼 → 토스트 경로를 단독 커버하여 UI 회귀 방어.
+- **근거 (Reasoning)**:
+  - (A) 는 production-fidelity 는 높지만 callback route 를 hash flow 용으로 fork 하는 비용이 크다.
+  - (C) 는 Supabase hosted 메일 발송의 rate-limit 문제는 해결하지만 컨테이너 라이프사이클 관리가 추가된다.
+  - (B) 는 쿠키 포맷이 `@supabase/ssr` 내부 구현에 의존하지만 해당 라이브러리 공식 API 와 분리되어도 포맷은 버전 차이로 깨지기 어렵고, 깨지면 한 줄 로그에서 원인이 명확.
+- **영향 범위 (Impact)**:
+  - `tests/e2e/global-setup.ts` 신설.
+  - `src/app/api/me/route.ts` — fixture 가 현재 user id 를 얻기 위한 얇은 read-only 엔드포인트.
+  - `tests/e2e/fixtures.ts` — groupId seed/cleanup 포함.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - `@supabase/ssr` 쿠키 포맷이 major 버전에서 바뀌면 재작성.
+  - 프로덕션 E2E 가 필요해지는 시점 — service_role 을 CI 에 노출할 수 없으므로 seed user + password 또는 Supabase SSO 테스트 유틸로 재설계 예정.
+- **되돌리기 비용**: 낮음. 전부 `tests/e2e/` 내부 변경 + `/api/me` 하나.
+
+---
+
+### D-014 — POC 단일 Supabase 프로젝트 공유 (local + CI + preview)
+
+- **날짜**: 2026-05-01
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - Runway 구축 시점에 원격 Supabase 는 `with-key` 프로젝트 1개(ref `ohvcaytmzzwxkbxsmyny`)만 존재하고 0001~0006 마이그레이션이 이미 반영되어 있었다.
+  - 표준 가이드라인은 dev/ci/prod 3개 분리지만, POC 스케일에서 3개 프로젝트는 과투자다.
+- **고려한 옵션 (Options considered)**:
+  - A) `with-key-ci` 신규 생성 → CI 전용, dev 와 데이터 격리 — 안전 / 초기 운영 비용 2중화
+  - B) 단일 프로젝트를 local + CI + preview 공유 — 관리 단순 / 격리 없음 (안전 근거 필요)
+- **결정 (Decision)**:
+  - 우리는 **B) 단일 프로젝트 공유** 를 선택한다.
+  - 안전 근거: `truncate_test_data` RPC([supabase/migrations/0003_state_transitions.sql](../supabase/migrations/0003_state_transitions.sql)) 가 `email like '%@test.local'` 로 스코핑되어 있어, CI 통합 테스트가 수동 검증 데이터를 지울 수 없다.
+  - 분리 운영 비용(2중 프로젝트 관리 · 마이그레이션 2중 apply · link 실수 리스크) > 얻는 격리 이득.
+- **근거 (Reasoning)**:
+  - 격리 이득의 대부분은 "CI 가 실데이터 지우면 안 됨" 이고 이는 scope 조건으로 이미 달성됨.
+  - Preview 가 dev 와 같은 DB 를 쓰는 것도 POC 에서는 "어떤 데이터라도 최신 UI" 가 목적이라 오히려 이점.
+- **영향 범위 (Impact)**:
+  - GitHub secrets: `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_SECRET_KEY` (CI 접두 없음).
+  - `.github/workflows/ci.yml` integration + e2e job 이 위 secrets 를 `NEXT_PUBLIC_*` 이름으로 매핑.
+  - `scripts/ci/apply-migrations.sh` 가 `SUPABASE_PROJECT_REF` 기본값을 `ohvcaytmzzwxkbxsmyny` 로 가짐.
+  - [docs/DEPLOY.md](./DEPLOY.md) 환경 매트릭스.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - v1 컷오버 시 `with-key-prod` 생성 — 이 결정을 supersede 하는 새 ADR.
+  - CI 가 수동 검증 데이터를 실제로 파괴하는 사건이 1회라도 발생 — 즉시 ci 프로젝트 분리.
+- **되돌리기 비용**: 중간. 프로젝트 생성 + secrets rotation + 마이그레이션 push + Vercel env 재매핑.
+
+---
+
 ### D-013 — BFF Read 레이어를 RSC 페이지에서 분리
 
 - **날짜**: 2026-04-30
