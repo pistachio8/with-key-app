@@ -33,6 +33,12 @@ describe("buildKakaoPayLink", () => {
     expect(url.startsWith("https://pay.kakao.com/")).toBe(true);
   });
 
+  it("falls back to pay.kakao.com when env is an empty string", () => {
+    process.env.NEXT_PUBLIC_KAKAOPAY_SEND_URL = "";
+    const url = buildKakaoPayLink({ amount: 1000 });
+    expect(url.startsWith("https://pay.kakao.com/")).toBe(true);
+  });
+
   it("rejects non-positive amount", () => {
     expect(() => buildKakaoPayLink({ amount: 0 })).toThrow();
     expect(() => buildKakaoPayLink({ amount: -100 })).toThrow();

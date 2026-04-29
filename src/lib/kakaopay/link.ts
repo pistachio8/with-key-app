@@ -14,7 +14,10 @@ export function buildKakaoPayLink({ amount, memo }: KakaoPayLinkInput): string {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("amount must be positive");
   }
-  const base = process.env.NEXT_PUBLIC_KAKAOPAY_SEND_URL ?? FALLBACK;
+  // `??` only catches null/undefined — an empty string from `.env` (e.g. KAKAOPAY_SEND_URL=)
+  // would otherwise slip through and crash `new URL("")`.
+  const envUrl = process.env.NEXT_PUBLIC_KAKAOPAY_SEND_URL;
+  const base = envUrl && envUrl.trim().length > 0 ? envUrl : FALLBACK;
   let url: URL;
   try {
     url = new URL(base);
