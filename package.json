@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
+    "test:ci": "vitest run --project unit --reporter=dot",
     "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
     "format": "prettier --write .",

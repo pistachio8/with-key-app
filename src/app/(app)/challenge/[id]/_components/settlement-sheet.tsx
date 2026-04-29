@@ -40,22 +40,22 @@ export function SettlementSheet({ open, onOpenChange, amount, memo }: Props) {
     }
   }, [amount, memo]);
 
-  const [qr, setQr] = useState<QrState>({ status: "loading" });
+  const [asyncQr, setAsyncQr] = useState<QrState>({ status: "loading" });
+
+  // Link 실패는 render-phase 파생값으로 노출 — effect 내부 동기 setState 회피
+  // (react-hooks/set-state-in-effect).
+  const qr: QrState = linkResult.ok ? asyncQr : { status: "failed" };
 
   useEffect(() => {
-    if (!linkResult.ok) {
-      setQr({ status: "failed" });
-      return;
-    }
-    setQr({ status: "loading" });
+    if (!linkResult.ok) return;
     let cancelled = false;
     QRCode.toDataURL(linkResult.link, { margin: 1, width: 256 })
       .then((url) => {
-        if (!cancelled) setQr({ status: "ready", dataUrl: url });
+        if (!cancelled) setAsyncQr({ status: "ready", dataUrl: url });
       })
       .catch((err) => {
         console.error("[SettlementSheet] QR generation failed", err);
-        if (!cancelled) setQr({ status: "failed" });
+        if (!cancelled) setAsyncQr({ status: "failed" });
       });
     return () => {
       cancelled = true;
