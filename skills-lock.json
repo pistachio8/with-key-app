@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "nextjs-supabase-auth": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nextjs-supabase-auth/SKILL.md",
+      "computedHash": "a500cb0b508e60b36ac15ba330d34975d2e71e47e72201fc974e3440645d0389"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
+    }
+  }
+}
