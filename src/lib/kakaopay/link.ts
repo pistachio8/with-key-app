@@ -15,7 +15,12 @@ export function buildKakaoPayLink({ amount, memo }: KakaoPayLinkInput): string {
     throw new Error("amount must be positive");
   }
   const base = process.env.NEXT_PUBLIC_KAKAOPAY_SEND_URL ?? FALLBACK;
-  const url = new URL(base);
+  let url: URL;
+  try {
+    url = new URL(base);
+  } catch {
+    throw new Error(`invalid kakaopay URL: ${base}`);
+  }
   if (!ALLOWED_HOSTS.has(url.host)) {
     throw new Error(`disallowed kakaopay host: ${url.host}`);
   }

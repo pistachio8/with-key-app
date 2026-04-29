@@ -49,4 +49,11 @@ describe("buildKakaoPayLink", () => {
       expect(() => buildKakaoPayLink({ amount: 1000 })).not.toThrow();
     }
   });
+
+  it("throws a clear error for malformed URL env", () => {
+    for (const bad of ["not-a-url", "http://", "//evil.com"]) {
+      process.env.NEXT_PUBLIC_KAKAOPAY_SEND_URL = bad;
+      expect(() => buildKakaoPayLink({ amount: 1000 })).toThrow(/invalid kakaopay url/i);
+    }
+  });
 });
