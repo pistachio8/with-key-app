@@ -50,10 +50,7 @@ export default async function HomePage() {
           <p className="text-muted-foreground break-keep text-sm">
             진행 중인 서약서가 없어요. 친구들과 새 챌린지를 시작해 보세요.
           </p>
-          <Link
-            href="/challenge/new"
-            className={cn(buttonVariants({ size: "lg" }), "h-12 w-full")}
-          >
+          <Link href="/challenge/new" className={cn(buttonVariants({ size: "lg" }), "h-12 w-full")}>
             <Plus aria-hidden="true" /> 새로운 서약서 만들기
           </Link>
         </section>
