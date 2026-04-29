@@ -1,11 +1,11 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { makeUserMessage } from "@/lib/actions/error-messages";
+import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { cn } from "@/lib/utils";
 import { DurationPicker } from "./_components/duration-picker";
 import { PenaltyPicker } from "./_components/penalty-picker";
@@ -18,6 +18,8 @@ const userMessage = makeUserMessage();
 // PRD §3.3 AC-1 · Design Brief 화면 2
 export default function NewChallengePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const groupId = searchParams.get("groupId") ?? "";
   const titleId = useId();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("이번 주 운동 서약서");
@@ -26,9 +28,14 @@ export default function NewChallengePage() {
   const [penaltyAmount, setPenaltyAmount] = useState(3000);
 
   function submit() {
+    if (!groupId) {
+      toast.error("그룹 정보가 없어요. 홈에서 다시 시도해 주세요.");
+      return;
+    }
     startTransition(async () => {
       try {
         const res = await createChallenge({
+          groupId,
           title,
           type: "fitness",
           goalCount,
@@ -44,13 +51,13 @@ export default function NewChallengePage() {
           return;
         }
         if (!res.data?.id) {
-          toast.error(userMessage("internal_error"));
+          toast.error(FALLBACK_ERROR_MESSAGE);
           return;
         }
         router.push(`/challenge/${res.data.id}`);
       } catch (err) {
         console.error("[createChallenge] unexpected throw:", err);
-        toast.error(userMessage("internal_error"));
+        toast.error(FALLBACK_ERROR_MESSAGE);
       }
     });
   }
