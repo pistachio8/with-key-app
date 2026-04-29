@@ -70,6 +70,15 @@ src/
 
 ## 문서
 
-팀 내부 기획 문서 (저장소 외부에서 관리).
+| 문서 | 역할 |
+|---|---|
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 스택 · 구조 · 원칙 (Route colocation · zod SoT · RLS) |
+| [`docs/PRD.md`](./docs/PRD.md) | 유저 스토리 · AC · 데이터 모델 · 이벤트 스키마 |
+| [`docs/BE_SCHEMA.md`](./docs/BE_SCHEMA.md) | 테이블 · 제약 · 인덱스 · RLS · 상태 전이 SoT |
+| [`docs/ONBOARDING.md`](./docs/ONBOARDING.md) | Day 1 세팅 · 개발 규칙 · 배포 |
+| [`docs/DECISIONS.md`](./docs/DECISIONS.md) | ADR-lite — 되돌리기 비용이 큰 결정 누적 |
+| [`docs/VALIDATION.md`](./docs/VALIDATION.md) | Week 2 GO/NO-GO 지표 · 인터뷰 · 리포트 템플릿 |
+| [`docs/IDEATION.md`](./docs/IDEATION.md) | 제품 "왜" · 페르소나 · 가설 |
+| [`docs/KICKOFF.md`](./docs/KICKOFF.md) | D0 스냅샷 (수정 금지) |
 
-- Ideation · PRD · Design Brief · Engineering Onboarding · Validation Plan — 킥오프 당일 공유
+Design Brief · 킥오프 안건 · 일일 로그는 `.claude/drafts/`에 로컬 보관.

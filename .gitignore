@@ -38,13 +38,9 @@ yarn-error.log*
 yarn.lock
 
 # Tooling
-.node-version
 .DS_Store
 *.pem
 *.bak
-
-# Generated docs (kept local; do not commit)
-/docs
 
 # Personal AI assistant workspace
 .claude/
