@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-// PRD §3.3 AC-1
+// BE_SCHEMA §5.5 · D-006(1~90일) · D-007(1,000~10,000 / 1,000원 단위)
 export const challengeInputSchema = z.object({
   title: z.string().min(1).max(30),
   type: z.literal("fitness"),
   goalCount: z.number().int().min(1).max(7),
-  durationDays: z.literal(7),
+  durationDays: z.number().int().min(1).max(90),
   penaltyAmount: z
     .number()
     .int()
     .min(1000)
-    .max(20000)
+    .max(10000)
     .refine((v) => v % 1000 === 0, "1000원 단위"),
 });
 
