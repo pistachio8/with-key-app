@@ -42,6 +42,9 @@ yarn.lock
 *.pem
 *.bak
 
+# Supabase CLI link-state (per-machine)
+supabase/.temp/
+
 # Personal AI assistant workspace
 .claude/
 .cursor/

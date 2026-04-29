@@ -15,4 +15,10 @@ if (missing.length > 0) {
   console.error("Missing env:", missing.join(", "));
   process.exit(1);
 }
-console.log("env OK");
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+if (url.includes("127.0.0.1") || url.includes("localhost")) {
+  console.log("env OK (local Supabase — run `supabase start` if not already running)");
+} else {
+  console.log("env OK (remote Supabase project)");
+}

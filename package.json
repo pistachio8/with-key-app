@@ -7,15 +7,19 @@
   },
   "packageManager": "pnpm@10.7.0",
   "scripts": {
-    "dev": "DEV_BYPASS_AUTH=1 next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:push": "supabase db push --linked",
+    "db:diff": "supabase db diff --linked",
+    "db:types": "supabase gen types typescript --linked > src/types/supabase.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
