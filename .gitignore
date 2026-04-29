@@ -45,6 +45,11 @@ yarn.lock
 # Supabase CLI link-state (per-machine)
 supabase/.temp/
 
+# Playwright
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+
 # Personal AI assistant workspace
 .claude/
 .cursor/
