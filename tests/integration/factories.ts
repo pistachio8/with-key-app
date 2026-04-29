@@ -7,14 +7,19 @@ export async function createUser(opts: { displayName?: string } = {}) {
     email,
     email_confirm: true,
   });
-  if (error) throw error;
+  if (error) {
+    throw new Error(`auth.admin.createUser failed for ${email}: ${error.message}`);
+  }
   const userId = data.user.id;
-  const { error: insertErr } = await admin.from("users").insert({
-    id: userId,
-    display_name: opts.displayName ?? `User-${userId.slice(0, 4)}`,
-  });
-  // handle_new_auth_user trigger may already have inserted — ignore duplicate-key.
-  if (insertErr && insertErr.code !== "23505") throw insertErr;
+  // handle_new_auth_user trigger already inserted public.users with a default display_name.
+  // Only override if caller explicitly provided one.
+  if (opts.displayName) {
+    const { error: updErr } = await admin
+      .from("users")
+      .update({ display_name: opts.displayName })
+      .eq("id", userId);
+    if (updErr) throw updErr;
+  }
   return { id: userId, email };
 }
 

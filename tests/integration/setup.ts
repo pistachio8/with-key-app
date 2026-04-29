@@ -22,23 +22,23 @@ export const admin: SupabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
 });
 
 /**
- * Returns an anon-keyed Supabase client already signed in as `userId`.
+ * Returns an anon-keyed Supabase client already signed in as the given test user.
  * Impersonation works by issuing a magic link via admin API and verifying the OTP.
- * Requires the test user to have email `${userId}@test.local`.
+ * Takes the object returned by `createUser()` — uses the real email, not the uid.
  */
-export async function asUser(userId: string): Promise<SupabaseClient> {
+export async function asUser(user: { id: string; email: string }): Promise<SupabaseClient> {
   const client = createClient(SUPABASE_URL!, ANON_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: `${userId}@test.local`,
+    email: user.email,
   });
   if (error) throw error;
   const otp = data.properties?.email_otp;
   if (!otp) throw new Error("no email_otp in generateLink response");
   const verify = await client.auth.verifyOtp({
-    email: `${userId}@test.local`,
+    email: user.email,
     token: otp,
     type: "magiclink",
   });
