@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { makeUserMessage } from "@/lib/actions/error-messages";
+import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
 import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
 import { cn } from "@/lib/utils";
@@ -61,14 +61,14 @@ export default function ActionPage() {
         }
         if (!res.data?.id) {
           console.error("[submitActionLog] ok=true but missing data.id", res);
-          toast.error(userMessage("internal_error"));
+          toast.error(FALLBACK_ERROR_MESSAGE);
           return;
         }
         toast.success("인증 완료!");
         router.push("/home");
       } catch (err) {
         console.error("[submitActionLog] unexpected throw:", err);
-        toast.error(userMessage("internal_error"));
+        toast.error(FALLBACK_ERROR_MESSAGE);
       }
     });
   }
