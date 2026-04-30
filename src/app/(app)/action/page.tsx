@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/server";
 import { fetchActiveChallenge } from "@/lib/db/reads/active-challenge";
+import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import { ActionForm } from "./_components/action-form";
 
 // PRD §4.3 + §5 · Design Brief 화면 5 (인증 — 키워드 칩)
