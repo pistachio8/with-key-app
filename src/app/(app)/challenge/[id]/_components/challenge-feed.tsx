@@ -1,0 +1,97 @@
+"use client";
+
+import { useCallback, useOptimistic, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { FeedCard } from "./feed-card";
+import { toggleKudos } from "../_actions";
+import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "@/lib/actions/error-messages";
+import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
+import type { KudosEmoji } from "@/lib/validators/kudos";
+
+type Props = {
+  items: ReadonlyArray<FeedItemView>;
+  viewerId: string;
+};
+
+type OptimisticAction = {
+  logId: string;
+  emoji: KudosEmoji;
+};
+
+const messageFor = makeUserMessage({
+  forbidden: "자기 인증에는 응원을 보낼 수 없어요.",
+});
+
+function applyToggle(items: ReadonlyArray<FeedItemView>, action: OptimisticAction): FeedItemView[] {
+  return items.map((item) => {
+    if (item.id !== action.logId) return item;
+
+    const hadKudos = item.viewerKudos.includes(action.emoji);
+    const viewerKudos = hadKudos
+      ? item.viewerKudos.filter((emoji) => emoji !== action.emoji)
+      : [...item.viewerKudos, action.emoji];
+    const kudosByEmoji = { ...item.kudosByEmoji };
+    kudosByEmoji[action.emoji] = Math.max(
+      0,
+      (kudosByEmoji[action.emoji] ?? 0) + (hadKudos ? -1 : 1),
+    );
+
+    return { ...item, viewerKudos, kudosByEmoji };
+  });
+}
+
+export function ChallengeFeed({ items, viewerId }: Props) {
+  const [settledItems, setSettledItems] = useState<FeedItemView[]>(() => [...items]);
+  const [optimisticItems, applyOptimistic] = useOptimistic(settledItems, applyToggle);
+  const [, startTransition] = useTransition();
+
+  const handleKudos = useCallback(
+    (logId: string, authorId: string, emoji: KudosEmoji) => {
+      if (authorId === viewerId) return;
+
+      startTransition(async () => {
+        const action = { logId, emoji };
+        applyOptimistic(action);
+
+        try {
+          const result = await toggleKudos({ actionLogId: logId, emoji });
+          if (!result.ok) {
+            toast.error(messageFor(result.error));
+            return;
+          }
+          setSettledItems((currentItems) => applyToggle(currentItems, action));
+        } catch (error) {
+          console.error("[ChallengeFeed] toggleKudos failed", error);
+          toast.error(FALLBACK_ERROR_MESSAGE);
+        }
+      });
+    },
+    [applyOptimistic, viewerId],
+  );
+
+  if (optimisticItems.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm break-keep">
+        아직 인증이 없어요. 첫 번째 인증을 올려보세요.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="flex flex-col gap-4">
+      {optimisticItems.map((item) => (
+        <li key={item.id}>
+          <FeedCard
+            authorName={item.authorName}
+            photoUrl={item.photoUrl}
+            summary={item.summary}
+            keywords={item.keywords}
+            kudosByEmoji={item.kudosByEmoji}
+            onKudos={(emoji) => handleKudos(item.id, item.authorId, emoji)}
+            disabled={item.authorId === viewerId}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
