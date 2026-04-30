@@ -59,7 +59,7 @@ test("tapping 🔥 on a teammate's log creates a kudos row", async ({ page, grou
       challenge_id: challenge.id,
       user_id: otherId,
       activity_type: "gym",
-      photo_url: "https://example.com/p.jpg",
+      photo_path: null,
       selected_keywords: ["펌핑"],
       shown_keywords: ["펌핑", "집중"],
       reroll_count: 0,
