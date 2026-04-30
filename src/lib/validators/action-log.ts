@@ -2,11 +2,7 @@ import { z } from "zod";
 import { ACTIVITY_TYPES, KEYWORD_POOL } from "@/lib/keywords/pool";
 
 const activityType = z.enum(ACTIVITY_TYPES);
-export const ALLOWED_PHOTO_MIME = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
+export const ALLOWED_PHOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 export type AllowedPhotoMime = (typeof ALLOWED_PHOTO_MIME)[number];
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 

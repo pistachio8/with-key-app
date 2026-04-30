@@ -260,12 +260,7 @@ export function ActionForm({ challengeId }: Props) {
         )}
       </section>
 
-      <Button
-        size="lg"
-        className="h-12"
-        disabled={selected.length === 0 || busy}
-        onClick={submit}
-      >
+      <Button size="lg" className="h-12" disabled={selected.length === 0 || busy} onClick={submit}>
         {pending ? "일기 쓰는 중..." : preparing ? "사진 준비 중..." : "인증하기"}
       </Button>
     </div>
