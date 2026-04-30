@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
+export type ChallengeStatus = "pending" | "accepted" | "active" | "closed";
+
 export type ActiveChallengeView = {
   id: string;
   groupId: string;
@@ -7,7 +9,7 @@ export type ActiveChallengeView = {
   goalCount: number;
   durationDays: number;
   penaltyAmount: number;
-  status: "pending" | "accepted" | "active" | "closed";
+  status: ChallengeStatus;
   startAt: string | null;
   endAt: string | null;
   doneCount: number;
@@ -15,19 +17,33 @@ export type ActiveChallengeView = {
   potTotal: number;
 };
 
+type FetchActiveChallengeOptions = {
+  statuses?: readonly ChallengeStatus[];
+};
+
+const DEFAULT_CURRENT_STATUSES = [
+  "pending",
+  "accepted",
+  "active",
+] as const satisfies readonly ChallengeStatus[];
+
 /**
  * 내가 속한 그룹 중 가장 최근의 "진행 중 또는 서명 대기" 챌린지 1개.
  * 없으면 null. RLS 가 is_group_member 로 자동 필터링.
  */
-export async function fetchActiveChallenge(userId: string): Promise<ActiveChallengeView | null> {
+export async function fetchActiveChallenge(
+  userId: string,
+  options: FetchActiveChallengeOptions = {},
+): Promise<ActiveChallengeView | null> {
   const supabase = await createClient();
+  const statuses = options.statuses ?? DEFAULT_CURRENT_STATUSES;
 
   const { data: challenges, error } = await supabase
     .from("challenges")
     .select(
       "id, group_id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at",
     )
-    .in("status", ["pending", "accepted", "active"])
+    .in("status", [...statuses])
     .order("created_at", { ascending: false })
     .limit(1);
 
@@ -56,7 +72,7 @@ export async function fetchActiveChallenge(userId: string): Promise<ActiveChalle
     goalCount: c.goal_count,
     durationDays: c.duration_days,
     penaltyAmount: c.penalty_amount,
-    status: c.status as ActiveChallengeView["status"],
+    status: c.status as ChallengeStatus,
     startAt: c.start_at,
     endAt: c.end_at,
     doneCount: doneCount ?? 0,
