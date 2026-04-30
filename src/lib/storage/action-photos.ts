@@ -9,15 +9,13 @@ import {
 } from "@/lib/validators/action-log";
 
 const BUCKET = "action-photos";
-const ALLOWED_EXT = ["jpg", "jpeg", "png", "webp", "heic", "heif"] as const;
+const ALLOWED_EXT = ["jpg", "jpeg", "png", "webp"] as const;
 type AllowedExt = (typeof ALLOWED_EXT)[number];
 
 const MIME_TO_EXT: Record<AllowedPhotoMime, AllowedExt> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
-  "image/heic": "heic",
-  "image/heif": "heif",
 };
 
 const EXT_TO_MIME: Record<AllowedExt, AllowedPhotoMime> = {
@@ -25,13 +23,11 @@ const EXT_TO_MIME: Record<AllowedExt, AllowedPhotoMime> = {
   jpeg: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
-  heic: "image/heic",
-  heif: "image/heif",
 };
 
 const SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 const PHOTO_PATH_RE =
-  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+-[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp|heic|heif)$/i;
+  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+-[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp)$/i;
 
 export function looksLikePhotoPath(value: string | null | undefined): value is string {
   if (!value || value.includes("://")) return false;
