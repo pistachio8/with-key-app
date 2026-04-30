@@ -64,6 +64,41 @@
 
 ---
 
+### D-018 — Storage 사진: private bucket + 2-step path RPC + 10분 signed URL
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - `/action` 인증 플로우가 `https://example.com/photo.jpg` 를 저장해 피드의 사진 신뢰도가 무너진다.
+  - Supabase Storage 는 public bucket 으로 열면 링크 유출 시 그룹 외부 접근을 막기 어렵다.
+  - 기존 `action_logs` UPDATE RLS 는 생성 후 5분만 허용하므로, DB insert 후 파일 업로드가 지연되면 `photo_path` 저장이 막힐 수 있다.
+- **고려한 옵션 (Options considered)**:
+  - A) public bucket URL 저장 — 구현 단순 / 그룹 경계 없음.
+  - B) 브라우저 direct upload signed URL — 대용량에 유리 / CORS·완료 ack·retry 복잡도 증가.
+  - C) Server Action FormData 업로드 + private bucket + server signed read URL — POC 사진 1장에 적합 / Next body limit 설정 필요.
+- **결정 (Decision)**:
+  - 우리는 **C) Server Action FormData 업로드** 를 선택한다.
+  - `action-photos` private bucket 1개를 두고 path 는 `{userId}/{challengeId}/{actionLogId}-{nonce}.{ext}` 로 고정한다.
+  - `action_logs.photo_url` 은 `photo_path` nullable 로 전환한다. 업로드 실패 시 row 는 유지되고 `photo_path=null` 로 폴백한다.
+  - 쓰기는 `insert(photo_path=null) -> uploadPhoto -> update_action_log_photo_path()` 2-step 으로 처리한다.
+  - 읽기는 `fetchChallengeFeed` 가 user-scoped client 로 `createSignedUrl(path, 600)` 을 호출해 `FeedCard` 에 URL 만 전달한다.
+- **근거 (Reasoning)**:
+  - Server Action 본문 제한은 `experimental.serverActions.bodySizeLimit="8mb"` 로 5MB 이미지 1장 POC 요구를 충족한다.
+  - signed URL 발급도 user-scoped client 로 수행해 `storage.objects` SELECT RLS 를 그대로 태운다. service_role/admin bypass 는 쓰지 않는다.
+  - 5분 UPDATE 창 충돌은 `SECURITY DEFINER` RPC 로 해결하되, 함수 내부에서 `auth.uid() = action_logs.user_id` 및 path 의 owner/challenge/log 세그먼트 일치를 재검증한다.
+- **영향 범위 (Impact)**:
+  - DB: `supabase/migrations/0010_action_logs_photo_path.sql`, `0011_storage_action_photos.sql`.
+  - App: `submitActionLog(FormData)`, `/action` 사진 선택/프리뷰, `fetchChallengeFeed`, `FeedCard`.
+  - Analytics: `action_logged.props.photoAttached` 추가.
+  - Test cleanup: `truncate_test_data()` 가 `@test.local` 유저의 Storage object 도 삭제. **단, D-017 의 `ai_cost_log(scope='test')` 리셋 + `user_id IS NULL` 24h 정리 로직도 함께 유지한다** (0011 이 함수를 재정의할 때 D-017 블록을 제거하지 말 것).
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 사진 다건/대용량 업로드가 필요하거나 Server Action 8MB 제한이 실제 UX 병목이 되면 `createSignedUploadUrl` + 브라우저 direct upload 로 재설계.
+  - signed URL 만료가 피드 세션 중 빈번히 관측되면 TTL 또는 RSC 재발급 전략 재논의.
+- **되돌리기 비용**: 중간. migration forward-only 특성상 `photo_path` 의미를 유지한 채 별도 write/read 경로로 교체해야 한다.
+
+---
+
 ### D-017 — analytics 이벤트는 service_role admin client 로 insert하고 Zod 로 런타임 검증, AI 월예산은 (month, scope) 분리된 micros 테이블 + RPC로 가드
 
 - **날짜**: 2026-04-30
