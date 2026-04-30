@@ -27,7 +27,7 @@ const baseItem = {
   id: "00000000-0000-4000-8000-000000000001",
   authorId: "author-1",
   authorName: "민지",
-  photoUrl: "https://example.com/p.jpg",
+  photoSignedUrl: "https://example.com/p.jpg",
   summary: "오늘도 해냈다.",
   keywords: ["펌핑"],
   kudosByEmoji: { "🔥": 2, "💪": 0, "👏": 0 } as const,

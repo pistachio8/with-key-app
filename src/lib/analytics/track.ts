@@ -40,6 +40,7 @@ export type AnalyticsEvent =
         hasMemo: boolean;
         rerollCount: number;
         photoSize: number;
+        photoAttached: boolean;
       };
     }
   | {

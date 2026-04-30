@@ -26,7 +26,7 @@ async function activeLog() {
       challenge_id: c.id,
       user_id: owner.id,
       activity_type: "gym",
-      photo_url: "x",
+      photo_path: null,
       selected_keywords: ["펌핑"],
       shown_keywords: ["펌핑"],
       ai_summary: "ok",

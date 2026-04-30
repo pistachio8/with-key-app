@@ -67,6 +67,7 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       hasMemo: z.boolean(),
       rerollCount: z.number().int().min(0).max(5),
       photoSize: z.number().int().min(0),
+      photoAttached: z.boolean(),
     }),
   }),
   z.object({

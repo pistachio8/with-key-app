@@ -5,7 +5,7 @@ import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
 
 type Props = {
   authorName: string;
-  photoUrl: string;
+  photoSignedUrl: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Partial<Record<KudosEmoji, number>>>;
@@ -16,7 +16,7 @@ type Props = {
 // PRD §7 · Design Brief 화면 6 — Kudos 3 이모지 피드 카드.
 export function FeedCard({
   authorName,
-  photoUrl,
+  photoSignedUrl,
   summary,
   keywords,
   kudosByEmoji,
@@ -29,14 +29,22 @@ export function FeedCard({
         <span className="font-semibold">{authorName}</span>
       </header>
       <div className="relative aspect-square w-full overflow-hidden rounded-xl">
-        <Image
-          src={photoUrl}
-          alt={`${authorName}의 인증 사진`}
-          fill
-          sizes="(max-width: 640px) 100vw, 640px"
-          className="object-cover"
-          unoptimized
-        />
+        {photoSignedUrl ? (
+          <Image
+            src={photoSignedUrl}
+            alt={`${authorName}의 인증 사진`}
+            fill
+            sizes="(max-width: 640px) 100vw, 640px"
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div
+            aria-label={`${authorName}의 인증 사진 없음`}
+            role="img"
+            className="from-muted to-muted/60 absolute inset-0 bg-gradient-to-br"
+          />
+        )}
       </div>
       <p className="text-sm leading-relaxed break-keep">{summary}</p>
       <ul className="text-muted-foreground flex flex-wrap gap-1.5 text-xs">

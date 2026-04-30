@@ -282,6 +282,17 @@ pnpm dev
 - RLS는 **전 테이블 ON**. 예외 없음.
 - Storage 사진: **Pre-signed URL** 만 사용. Public 버킷 금지.
 
+#### 6.1.1 Storage 사진 wiring (D-018)
+
+- **버킷**: `action-photos` private, 5MB 제한, MIME allowlist `jpeg/png/webp/heic/heif`.
+- **path 규약**: `{userId}/{challengeId}/{actionLogId}-{nonce}.{ext}`.
+- **쓰기**: `submitActionLog(FormData)` → `action_logs.insert(photo_path=null)` → `uploadPhoto()` → `update_action_log_photo_path()` RPC.
+- **읽기**: `fetchChallengeFeed()` 가 `photo_path` 를 `createSignedUrl(path, 600)` 으로 변환하고, 클라이언트에는 signed URL 만 전달.
+- **권한**: Storage SELECT/INSERT/DELETE 는 `storage.objects` RLS 로 통제. signed URL 발급도 user-scoped client 로 수행.
+- **폴백**: 업로드나 RPC 실패 시 인증 제출은 성공, `photo_path=null`, `action_logged.photoAttached=false`.
+- **테스트 정리**: `truncate_test_data()` 는 `@test.local` 유저 소유 Storage object 도 삭제.
+- **Next 설정**: `next.config.ts` 의 `experimental.serverActions.bodySizeLimit="8mb"` 유지.
+
 ### 6.2 OpenAI (AI 일기)
 
 - 모델: `gpt-4o-mini` (비용 · 지연 균형)
