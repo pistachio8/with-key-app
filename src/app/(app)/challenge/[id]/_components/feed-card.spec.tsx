@@ -5,9 +5,12 @@ import type { ImgHTMLAttributes } from "react";
 
 // next/image 는 jsdom 에서 remotePatterns 검증을 피하기 위해 plain img 로 스텁.
 vi.mock("next/image", () => ({
-  default: (props: ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => {
-    const { fill, ...rest } = props;
+  default: (
+    props: ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean; unoptimized?: boolean },
+  ) => {
+    const { fill, unoptimized, ...rest } = props;
     void fill;
+    void unoptimized;
     // eslint-disable-next-line jsx-a11y/alt-text, @next/next/no-img-element -- rest includes alt; test-only mock
     return <img {...rest} />;
   },

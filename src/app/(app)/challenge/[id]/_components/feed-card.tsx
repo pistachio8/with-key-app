@@ -10,11 +10,10 @@ type Props = {
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Partial<Record<KudosEmoji, number>>>;
   onKudos: (emoji: KudosEmoji) => void;
+  disabled?: boolean;
 };
 
 // PRD §7 · Design Brief 화면 6 — Kudos 3 이모지 피드 카드.
-// NOTE: next/image 사용. Day 2 실 데이터 결합 시 Supabase Storage 도메인을
-// next.config.ts `images.remotePatterns` 에 등록 필요.
 export function FeedCard({
   authorName,
   photoUrl,
@@ -22,6 +21,7 @@ export function FeedCard({
   keywords,
   kudosByEmoji,
   onKudos,
+  disabled = false,
 }: Props) {
   return (
     <article className="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
@@ -35,6 +35,7 @@ export function FeedCard({
           fill
           sizes="(max-width: 640px) 100vw, 640px"
           className="object-cover"
+          unoptimized
         />
       </div>
       <p className="text-sm leading-relaxed break-keep">{summary}</p>
@@ -51,8 +52,9 @@ export function FeedCard({
             key={e}
             type="button"
             onClick={() => onKudos(e)}
+            disabled={disabled}
             aria-label={`${e} 응원 (${kudosByEmoji[e] ?? 0}개)`}
-            className="bg-muted hover:bg-muted/80 focus-visible:ring-ring flex items-center gap-1 rounded-full px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="bg-muted hover:bg-muted/80 focus-visible:ring-ring flex items-center gap-1 rounded-full px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span aria-hidden="true">{e}</span>
             <span className="tabular-nums">{kudosByEmoji[e] ?? 0}</span>

@@ -1,16 +1,26 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { formatKRW } from "@/lib/challenge/penalty";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
+import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
+import { createClient } from "@/lib/supabase/server";
 import { MemberStrip } from "./_components/member-strip";
 import { SettlementTrigger } from "./_components/settlement-trigger";
+import { ChallengeFeed } from "./_components/challenge-feed";
 
 type Params = Promise<{ id: string }>;
 
 // PRD §4 · §11 · BE_SCHEMA §4 상태머신 · Design Brief 화면 4
 export default async function ChallengeDetailPage({ params }: { params: Params }) {
   const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const detail = await fetchChallengeDetail(id);
   if (!detail) notFound();
+  const feed = await fetchChallengeFeed(id, user.id);
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -35,6 +45,12 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
           <p className="text-xl font-bold tabular-nums">{formatKRW(detail.potTotal)}</p>
         </div>
         <SettlementTrigger amount={detail.potTotal} memo={`${detail.title} 벌금`} />
+      </section>
+      <section aria-labelledby="feed-heading">
+        <h2 id="feed-heading" className="mb-3 text-sm font-semibold">
+          인증 피드
+        </h2>
+        <ChallengeFeed items={feed} viewerId={user.id} />
       </section>
     </div>
   );

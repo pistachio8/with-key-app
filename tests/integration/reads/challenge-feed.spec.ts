@@ -1,0 +1,84 @@
+import { describe, it, expect } from "vitest";
+import { asUser, admin } from "../setup";
+import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
+import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
+
+async function seedActive() {
+  const owner = await createUser();
+  const other = await createUser();
+  const g = await createGroup(owner.id);
+  await addMember(g.id, other.id);
+  const c = await createPendingChallenge(g.id);
+  await admin.from("challenge_participants").insert([
+    { challenge_id: c.id, user_id: owner.id },
+    { challenge_id: c.id, user_id: other.id },
+  ]);
+  await admin
+    .from("challenges")
+    .update({
+      status: "active",
+      start_at: new Date(Date.now() - 60_000).toISOString(),
+      end_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    })
+    .eq("id", c.id);
+  const { data: log, error } = await admin
+    .from("action_logs")
+    .insert({
+      challenge_id: c.id,
+      user_id: other.id,
+      activity_type: "gym",
+      photo_url: "https://example.com/p.jpg",
+      selected_keywords: ["펌핑"],
+      shown_keywords: ["펌핑", "집중"],
+      reroll_count: 0,
+      ai_summary: "오늘도 해냈다.",
+      prompt_version: "v1",
+    })
+    .select("id")
+    .single();
+  if (error || !log) throw new Error(`seed action_log failed: ${error?.message ?? "no row"}`);
+  return { owner, other, challenge: c, logId: log.id };
+}
+
+async function fetchChallengeFeedAsUser(
+  viewer: { id: string; email: string },
+  challengeId: string,
+) {
+  const client = await asUser(viewer);
+  return fetchChallengeFeed(challengeId, viewer.id, { client });
+}
+
+describe("fetchChallengeFeed", () => {
+  it("returns feed items with author, summary, keywords, zero kudos initially", async () => {
+    const { owner, other, challenge, logId } = await seedActive();
+    const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: logId,
+      authorId: other.id,
+      summary: "오늘도 해냈다.",
+      keywords: ["펌핑"],
+      kudosByEmoji: { "🔥": 0, "💪": 0, "👏": 0 },
+      viewerKudos: [],
+    });
+  });
+
+  it("aggregates kudos counts by emoji and marks viewer's own kudos", async () => {
+    const { owner, other, challenge, logId } = await seedActive();
+    await admin.from("kudos").insert([
+      { action_log_id: logId, user_id: owner.id, emoji: "🔥" },
+      { action_log_id: logId, user_id: other.id, emoji: "🔥" },
+      { action_log_id: logId, user_id: owner.id, emoji: "💪" },
+    ]);
+    const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
+    expect(rows[0].kudosByEmoji).toEqual({ "🔥": 2, "💪": 1, "👏": 0 });
+    expect(rows[0].viewerKudos).toEqual(expect.arrayContaining(["🔥", "💪"]));
+  });
+
+  it("returns [] for non-members (RLS denies select)", async () => {
+    const { challenge } = await seedActive();
+    const outsider = await createUser();
+    const rows = await fetchChallengeFeedAsUser(outsider, challenge.id);
+    expect(rows).toEqual([]);
+  });
+});
