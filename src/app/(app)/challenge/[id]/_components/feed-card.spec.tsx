@@ -20,7 +20,7 @@ import { FeedCard } from "./feed-card";
 
 const baseProps = {
   authorName: "민지",
-  photoUrl: "https://example.com/photo.jpg",
+  photoSignedUrl: "https://example.com/photo.jpg",
   summary: "오늘도 스쿼트 PR 갱신!",
   keywords: ["스쿼트", "PR도전"],
   kudosByEmoji: { "🔥": 3, "💪": 1, "👏": 0 } as const,
@@ -57,5 +57,10 @@ describe("FeedCard", () => {
     const alt = img.getAttribute("alt") ?? "";
     expect(alt.length).toBeGreaterThan(0);
     expect(alt).toContain("민지");
+  });
+
+  it("renders a placeholder when the signed URL is missing", () => {
+    render(<FeedCard {...baseProps} photoSignedUrl={null} onKudos={() => {}} />);
+    expect(screen.getByRole("img", { name: /인증 사진 없음/ })).toBeTruthy();
   });
 });

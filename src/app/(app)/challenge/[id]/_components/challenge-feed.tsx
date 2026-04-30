@@ -83,7 +83,7 @@ export function ChallengeFeed({ items, viewerId }: Props) {
         <li key={item.id}>
           <FeedCard
             authorName={item.authorName}
-            photoUrl={item.photoUrl}
+            photoSignedUrl={item.photoSignedUrl}
             summary={item.summary}
             keywords={item.keywords}
             kudosByEmoji={item.kudosByEmoji}
