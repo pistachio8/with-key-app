@@ -27,10 +27,13 @@ export const signPledge = withUser<SignInput, SignResult>(
     const row = data?.[0];
     if (!row) return failure("not_found");
 
-    await track({
-      name: "challenge_signed",
-      props: { challengeId: parsed.data.challengeId, userId: user.id },
-    }).catch((err) => console.error("[signPledge] track failed:", err));
+    void track(
+      {
+        name: "challenge_signed",
+        props: { challengeId: parsed.data.challengeId, userId: user.id },
+      },
+      { userId: user.id },
+    );
 
     return success({
       challengeId: parsed.data.challengeId,

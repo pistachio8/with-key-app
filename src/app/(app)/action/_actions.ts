@@ -41,11 +41,20 @@ export const submitActionLog = withUser<ActionLogInput, SubmitResult>(
       return failure("forbidden");
     }
 
-    const diary = await generateDiary({
-      activityType: parsed.data.activityType,
-      keywords: parsed.data.selectedKeywords,
-      memo: parsed.data.memo,
-    });
+    const { data: profile } = await supabase
+      .from("users")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const diary = await generateDiary(
+      {
+        activityType: parsed.data.activityType,
+        keywords: parsed.data.selectedKeywords,
+        memo: parsed.data.memo,
+      },
+      { displayName: profile?.display_name ?? undefined },
+    );
 
     const { data, error } = await supabase
       .from("action_logs")
@@ -68,29 +77,35 @@ export const submitActionLog = withUser<ActionLogInput, SubmitResult>(
     if (error) return failure(mapSupabaseError(error));
     if (!data) return failure("upstream_error");
 
-    void track({
-      name: "action_logged",
-      props: {
-        challengeId: parsed.data.challengeId,
-        activityType: parsed.data.activityType,
-        selectedKeywords: parsed.data.selectedKeywords,
-        keywordCount: parsed.data.selectedKeywords.length,
-        hasMemo: Boolean(parsed.data.memo),
-        rerollCount: parsed.data.rerollCount,
-        photoSize: 0,
+    void track(
+      {
+        name: "action_logged",
+        props: {
+          challengeId: parsed.data.challengeId,
+          activityType: parsed.data.activityType,
+          selectedKeywords: parsed.data.selectedKeywords,
+          keywordCount: parsed.data.selectedKeywords.length,
+          hasMemo: Boolean(parsed.data.memo),
+          rerollCount: parsed.data.rerollCount,
+          photoSize: 0,
+        },
       },
-    }).catch((e) => console.error("[track] action_logged failed", e));
+      { userId: user.id },
+    );
 
-    void track({
-      name: "ai_generated",
-      props: {
-        actionLogId: data.id,
-        latencyMs: diary.latencyMs,
-        fallback: diary.fallback,
-        keywordCoverage: diary.keywordCoverage,
-        promptVersion: diary.promptVersion,
+    void track(
+      {
+        name: "ai_generated",
+        props: {
+          actionLogId: data.id,
+          latencyMs: diary.latencyMs,
+          fallback: diary.fallback,
+          keywordCoverage: diary.keywordCoverage,
+          promptVersion: diary.promptVersion,
+        },
       },
-    }).catch((e) => console.error("[track] ai_generated failed", e));
+      { userId: user.id },
+    );
 
     return success({ id: data.id, summary: diary.summary });
   },

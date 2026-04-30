@@ -38,10 +38,13 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
     });
     if (error) return failure(mapSupabaseError(error));
 
-    void track({
-      name: "kudos_given",
-      props: { actionLogId: parsed.data.actionLogId, emoji: parsed.data.emoji },
-    }).catch((e) => console.error("[toggleKudos] track failed", e));
+    void track(
+      {
+        name: "kudos_given",
+        props: { actionLogId: parsed.data.actionLogId, emoji: parsed.data.emoji },
+      },
+      { userId: user.id },
+    );
 
     return success({ toggled: "added" });
   },
