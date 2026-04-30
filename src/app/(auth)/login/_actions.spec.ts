@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const signInWithOtp = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { signInWithOtp: (...args: unknown[]) => signInWithOtp(...args) } }),
+  createClient: async () => ({
+    auth: { signInWithOtp: (...args: unknown[]) => signInWithOtp(...args) },
+  }),
 }));
 
 const headersGet = vi.fn<(name: string) => string | null>();
@@ -75,9 +77,7 @@ describe("requestMagicLink", () => {
   });
 
   it("returns upstream_error when Supabase signInWithOtp fails", async () => {
-    headersGet.mockImplementation((name) =>
-      name === "origin" ? "https://example.com" : null,
-    );
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
     signInWithOtp.mockResolvedValueOnce({ error: { message: "boom" } });
 
     const res = await requestMagicLink("user@example.com");
