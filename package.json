@@ -22,7 +22,9 @@
     "format:check": "prettier --check .",
     "db:push": "supabase db push --linked",
     "db:diff": "supabase db diff --linked",
-    "db:types": "supabase gen types typescript --linked > src/types/supabase.ts"
+    "db:types": "supabase gen types typescript --linked > src/types/supabase.ts",
+    "login:link": "node scripts/dev-login-link.mjs",
+    "seed:action-log": "node scripts/dev-seed-action-log.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
