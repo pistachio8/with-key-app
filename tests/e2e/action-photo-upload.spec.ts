@@ -1,9 +1,10 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { expect, test } from "./fixtures";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PIXEL = resolve(__dirname, "../fixtures/pixel.jpg");
+// Playwright runs each spec from the project root, so resolve against cwd
+// rather than import.meta.url — this file loads under ts-node's CJS mode
+// where import.meta is unavailable.
+const PIXEL = resolve(process.cwd(), "tests/fixtures/pixel.jpg");
 
 test("user uploads a photo and sees it in the challenge feed", async ({
   page,
