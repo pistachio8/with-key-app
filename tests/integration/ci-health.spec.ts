@@ -15,4 +15,12 @@ describe("ci health", () => {
     const { error } = await admin.rpc("truncate_test_data");
     expect(error).toBeNull();
   });
+
+  it("events name CHECK rejects unknown names", async () => {
+    const { error } = await admin.from("events").insert({
+      name: "nonsense_event",
+      props: {},
+    });
+    expect(error?.code).toBe("23514");
+  });
 });
