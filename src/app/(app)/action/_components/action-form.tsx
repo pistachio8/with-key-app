@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, X } from "lucide-react";
+import { Camera, Loader2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-mes
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
 import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
 import { cn } from "@/lib/utils";
+import { prepareForUpload } from "@/lib/image/prepare-upload";
 import { ALLOWED_PHOTO_MIME, MAX_PHOTO_BYTES } from "@/lib/validators/action-log";
 import { submitActionLog } from "../_actions";
 import { KeywordChipGroup } from "./keyword-chip-group";
@@ -21,6 +22,8 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
   other: "✨ 기타",
 };
 
+// iOS Safari gives file.type === "" for HEIC picks — extension fallback lets
+// us accept those; prepareForUpload transcodes them to JPEG before submit.
 const ACCEPTED_PHOTO_EXT = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"] as const;
 
 const userMessage = makeUserMessage({
@@ -33,7 +36,11 @@ type Props = {
 };
 
 function isAllowedFile(file: File): boolean {
-  if (file.type) return (ALLOWED_PHOTO_MIME as readonly string[]).includes(file.type);
+  if (file.type) {
+    if ((ALLOWED_PHOTO_MIME as readonly string[]).includes(file.type)) return true;
+    if (/^image\/hei[cf]$/i.test(file.type)) return true;
+    return false;
+  }
   const lowerName = file.name.toLowerCase();
   return ACCEPTED_PHOTO_EXT.some((ext) => lowerName.endsWith(ext));
 }
@@ -43,6 +50,7 @@ export function ActionForm({ challengeId }: Props) {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [preparing, setPreparing] = useState(false);
   const [activityType, setActivityType] = useState<ActivityType>("gym");
   const [shuffle, setShuffle] = useState<ShuffleState>(() => initialShuffle("gym"));
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,10 +58,6 @@ export function ActionForm({ challengeId }: Props) {
   const [memo, setMemo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  // Chrome/Firefox can't decode HEIC/HEIF natively — upload succeeds but
-  // <img> fires onError. Fall back to a friendly placeholder so the user
-  // knows the photo is queued without seeing a broken icon.
-  const [previewFailed, setPreviewFailed] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -70,11 +74,10 @@ export function ActionForm({ challengeId }: Props) {
   function clearPhoto() {
     setFile(null);
     setPreview(null);
-    setPreviewFailed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function handleFile(nextFile: File | null) {
+  async function handleFile(nextFile: File | null) {
     if (!nextFile) {
       clearPhoto();
       return;
@@ -90,9 +93,14 @@ export function ActionForm({ challengeId }: Props) {
       return;
     }
 
-    setFile(nextFile);
-    setPreview(URL.createObjectURL(nextFile));
-    setPreviewFailed(false);
+    setPreparing(true);
+    try {
+      const prepared = await prepareForUpload(nextFile);
+      setFile(prepared);
+      setPreview(URL.createObjectURL(prepared));
+    } finally {
+      setPreparing(false);
+    }
   }
 
   function submit() {
@@ -129,6 +137,8 @@ export function ActionForm({ challengeId }: Props) {
       }
     });
   }
+
+  const busy = pending || preparing;
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,53 +179,43 @@ export function ActionForm({ challengeId }: Props) {
         </div>
         <label
           htmlFor={fileInputId}
+          aria-busy={preparing}
           className="bg-muted hover:bg-muted/80 focus-within:ring-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-offset-2"
         >
-          <Camera className="size-4" aria-hidden="true" />
-          {file ? "사진 바꾸기" : "사진 선택"}
+          {preparing ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Camera className="size-4" aria-hidden="true" />
+          )}
+          {preparing ? "사진 준비 중..." : file ? "사진 바꾸기" : "사진 선택"}
         </label>
         <input
           ref={fileInputRef}
           id={fileInputId}
           type="file"
-          accept={`${ALLOWED_PHOTO_MIME.join(",")},image/*`}
+          accept={`${ALLOWED_PHOTO_MIME.join(",")},image/heic,image/heif,image/*`}
           capture="environment"
           className="sr-only"
           aria-label="사진 선택"
-          disabled={pending}
-          onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+          disabled={busy}
+          onChange={(event) => {
+            void handleFile(event.target.files?.[0] ?? null);
+          }}
         />
         {preview && (
           <div className="flex flex-col gap-2">
             <div className="bg-muted relative aspect-square w-full overflow-hidden rounded-xl border">
-              {previewFailed ? (
-                <div
-                  role="img"
-                  aria-label="사진 미리보기"
-                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center"
-                >
-                  <Camera className="text-muted-foreground size-6" aria-hidden="true" />
-                  <p className="text-muted-foreground text-xs break-keep">
-                    {file?.name ?? "사진"} 준비됨
-                  </p>
-                  <p className="text-muted-foreground text-xs break-keep">
-                    이 브라우저에서는 HEIC 미리보기가 지원되지 않아요. 업로드는 정상 진행돼요.
-                  </p>
-                </div>
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element -- blob preview is client-local */
-                <img
-                  src={preview}
-                  alt="사진 미리보기"
-                  onError={() => setPreviewFailed(true)}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob preview is client-local */}
+              <img
+                src={preview}
+                alt="사진 미리보기"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
             </div>
             <button
               type="button"
               onClick={clearPhoto}
-              disabled={pending}
+              disabled={busy}
               className="text-muted-foreground focus-visible:ring-ring inline-flex w-fit items-center gap-1 rounded text-xs underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <X className="size-3.5" aria-hidden="true" />
@@ -263,10 +263,10 @@ export function ActionForm({ challengeId }: Props) {
       <Button
         size="lg"
         className="h-12"
-        disabled={selected.length === 0 || pending}
+        disabled={selected.length === 0 || busy}
         onClick={submit}
       >
-        {pending ? "일기 쓰는 중..." : "인증하기"}
+        {pending ? "일기 쓰는 중..." : preparing ? "사진 준비 중..." : "인증하기"}
       </Button>
     </div>
   );
