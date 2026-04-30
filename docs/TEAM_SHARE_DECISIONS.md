@@ -64,6 +64,37 @@
 
 ---
 
+### D-016 — Kudos toggle: useOptimistic + 전체 배열 재생성 + 롤백-by-동일-액션
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - `toggleKudos` 는 insert/delete 양방향이다. 네트워크 왕복을 기다리면 피드의 핵심 인터랙션이 느리게 느껴진다.
+  - RLS `kudos_insert_self_not_own` 때문에 자기 로그에는 insert 가 실패한다. UI 가드가 없으면 서버 왕복 후 에러만 보여 사용자 경험이 거칠다.
+- **고려한 옵션 (Options considered)**:
+  - A) 토글 후 `revalidatePath` — 서버 왕복 필수 · 구현 단순 / 반응 느림
+  - B) 로컬 `useState` 관리 + 실패 시 refetch — 카운트 계산 분산 / 실패 복구 복잡
+  - C) `useOptimistic` 전체 배열 변환 함수 + 성공 시 settled state 확정 — React 19 정석 / 배열 전체 복사 cost
+- **결정 (Decision)**:
+  - 우리는 **C) `useOptimistic` + 성공 시 settled state 확정** 을 선택한다.
+  - 액션이 순수 토글(더하기 ↔ 빼기)이라 optimistic 변환 함수 하나로 count 와 viewer flag 를 함께 갱신한다.
+  - 자기 로그에 대해서는 client-side `disabled` 가드를 두되, 실 보안은 RLS 가 담당한다.
+- **근거 (Reasoning)**:
+  - (A) 는 kudos 가 짧고 자주 일어나는 인터랙션이라 체감 저하가 크다.
+  - (B) 는 카운트 계산을 여러 곳에 흩뜨리고 refetch 시 깜빡임이 생긴다.
+  - (C) 는 React 19 native API 를 쓰면서 서버 성공 후 로컬 settled state 를 확정해 revalidate 없이도 UI 가 유지된다. POC 규모 피드(~10~50건)는 배열 복사 cost 가 낮다.
+- **영향 범위 (Impact)**:
+  - `src/app/(app)/challenge/[id]/_components/challenge-feed.tsx` 신설.
+  - `src/lib/db/reads/challenge-feed.ts` 신설 (D-013 패턴 계승).
+  - `src/app/(app)/challenge/[id]/_components/feed-card.tsx` 에 `disabled` prop 추가.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 피드가 100+ 건으로 늘어 배열 전체 복사 cost 가 사용자 입력 지연으로 보이면 per-item state 로 전환.
+  - `useOptimistic` 가 React major 버전에서 API 의미를 바꾸면 재평가.
+- **되돌리기 비용**: 낮음. `ChallengeFeed` 내부 상태 관리 교체 수준.
+
+---
+
 ### D-015 — E2E 인증: admin generateLink + verifyOtp, 단일 storageState 재사용
 
 - **날짜**: 2026-05-01
