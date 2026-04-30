@@ -284,8 +284,9 @@ pnpm dev
 
 #### 6.1.1 Storage 사진 wiring (D-018)
 
-- **버킷**: `action-photos` private, 5MB 제한, MIME allowlist `jpeg/png/webp/heic/heif`.
+- **버킷**: `action-photos` private, 5MB 제한, MIME allowlist `jpeg/png/webp` (HEIC/HEIF 는 2026-04-30 후후속에서 제거).
 - **path 규약**: `{userId}/{challengeId}/{actionLogId}-{nonce}.{ext}`.
+- **클라이언트 변환**: 업로드 직전 `src/lib/image/prepare-upload.ts` 가 HEIC/HEIF 를 `heic2any` (dynamic import) 로 JPEG 로 바꾸고, 모든 입력을 long-edge 1920px / quality 0.85 JPEG 로 표준화한다. 변환 실패 시 원본 File 을 그대로 업로드 → bucket policy 가 거부 → `photo_path=null` 비파괴 폴백.
 - **쓰기**: `submitActionLog(FormData)` → `action_logs.insert(photo_path=null)` → `uploadPhoto()` → `update_action_log_photo_path()` RPC.
 - **읽기**: `fetchChallengeFeed()` 가 `photo_path` 를 `createSignedUrl(path, 600)` 으로 변환하고, 클라이언트에는 signed URL 만 전달.
 - **권한**: Storage SELECT/INSERT/DELETE 는 `storage.objects` RLS 로 통제. signed URL 발급도 user-scoped client 로 수행.
