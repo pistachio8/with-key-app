@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { adminClient } from "@/lib/supabase/admin";
+import { estimateCostMicros, monthlyBudgetMicros } from "./cost";
 import { PROMPT_VERSION, SYSTEM_PROMPT, buildUserPrompt, type DiaryPromptInput } from "./prompts";
 
 const AI_TIMEOUT_MS = 4500; // PRD §5.3 AC-4: P95 < 5초, 0.5s 버퍼
@@ -18,10 +20,11 @@ const ACTIVITY_LABEL_KO: Record<DiaryPromptInput["activityType"], string> = {
   other: "운동",
 };
 
-export function templateFallback(input: DiaryPromptInput, displayName = "회원"): string {
+export function templateFallback(input: DiaryPromptInput, _displayName = "회원"): string {
   const label = ACTIVITY_LABEL_KO[input.activityType];
   const kw = input.keywords.join(" · ");
-  return `${displayName}님, 오늘 ${label}에서 ${kw} 🔥 수고하셨어요!`;
+  void _displayName; // retained for signature back-compat; diary is first-person now.
+  return `오늘 ${label} 했어요. ${kw} 느낌으로 몸에 힘이 붙은 하루였어요. 🔥`;
 }
 
 function keywordCoverage(summary: string, keywords: string[]): number {
@@ -30,24 +33,86 @@ function keywordCoverage(summary: string, keywords: string[]): number {
   return hit / keywords.length;
 }
 
+function currentMonthIso(): string {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+function currentScope(): "prod" | "test" {
+  // VERCEL_ENV distinguishes preview from production; NODE_ENV cannot (both are
+  // "production" on Vercel). Preview budget must stay isolated under D-014.
+  return process.env.VERCEL_ENV === "production" ? "prod" : "test";
+}
+
+async function readCurrentMonthCostMicros(scope: "prod" | "test"): Promise<number> {
+  try {
+    const { data, error } = await adminClient()
+      .from("ai_cost_log")
+      .select("total_micros")
+      .eq("month", currentMonthIso())
+      .eq("scope", scope)
+      .maybeSingle();
+
+    if (error || !data) return 0;
+    return Number(data.total_micros ?? 0);
+  } catch (error) {
+    console.error("[generateDiary] read ai_cost_log failed", error);
+    return 0;
+  }
+}
+
+async function logCost(micros: number, scope: "prod" | "test"): Promise<void> {
+  try {
+    const { error } = await adminClient().rpc("add_ai_cost", {
+      p_micros: micros,
+      p_scope: scope,
+    });
+    if (error) console.error("[generateDiary] add_ai_cost failed", error);
+  } catch (error) {
+    console.error("[generateDiary] add_ai_cost failed", error);
+  }
+}
+
+function templateResult(
+  input: DiaryPromptInput,
+  displayName: string | undefined,
+  started: number,
+): DiaryResult {
+  return {
+    summary: templateFallback(input, displayName),
+    fallback: true,
+    keywordCoverage: 0,
+    latencyMs: Date.now() - started,
+    promptVersion: PROMPT_VERSION,
+  };
+}
+
 export async function generateDiary(
   input: DiaryPromptInput,
   options: { displayName?: string; signal?: AbortSignal } = {},
 ): Promise<DiaryResult> {
   const started = Date.now();
+  const scope = currentScope();
+
+  const budget = monthlyBudgetMicros();
+  const spent = await readCurrentMonthCostMicros(scope);
+  if (spent >= budget) {
+    return templateResult(input, options.displayName, started);
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  if (!apiKey) return templateResult(input, options.displayName, started);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
   if (options.signal) {
     options.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-
   try {
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY missing");
-    }
     const client = new OpenAI({ apiKey });
     const completion = await client.chat.completions.create(
       {
@@ -62,18 +127,20 @@ export async function generateDiary(
       { signal: controller.signal },
     );
 
+    const usage = completion.usage;
+    if (usage) {
+      const micros = estimateCostMicros({
+        inputTokens: usage.prompt_tokens ?? 0,
+        outputTokens: usage.completion_tokens ?? 0,
+      });
+      if (micros > 0) await logCost(micros, scope);
+    }
+
     const summary = completion.choices[0]?.message?.content?.trim() ?? "";
     const coverage = keywordCoverage(summary, input.keywords);
 
     if (!summary || coverage < 1) {
-      // PRD §5.3 AC-3: 누락 시 템플릿 폴백 (self-retry는 추후 PR)
-      return {
-        summary: templateFallback(input, options.displayName),
-        fallback: true,
-        keywordCoverage: coverage,
-        latencyMs: Date.now() - started,
-        promptVersion: PROMPT_VERSION,
-      };
+      return templateResult(input, options.displayName, started);
     }
 
     return {
@@ -83,14 +150,9 @@ export async function generateDiary(
       latencyMs: Date.now() - started,
       promptVersion: PROMPT_VERSION,
     };
-  } catch {
-    return {
-      summary: templateFallback(input, options.displayName),
-      fallback: true,
-      keywordCoverage: 0,
-      latencyMs: Date.now() - started,
-      promptVersion: PROMPT_VERSION,
-    };
+  } catch (error) {
+    console.error("[generateDiary] call failed", error);
+    return templateResult(input, options.displayName, started);
   } finally {
     clearTimeout(timeout);
   }
