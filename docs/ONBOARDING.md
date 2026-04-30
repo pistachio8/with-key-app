@@ -647,5 +647,42 @@ POC에서 **하지 않는 것**, 시간 아끼기:
 
 ---
 
+## CI & 배포 (Runway 완료 시점)
+
+### GitHub Actions 파이프라인
+
+- `quick` — 모든 PR blocking. 2~5분. lint + typecheck + unit.
+- `integration` — repo-owned PR 만 blocking. 5~10분. 원격 `with-key` 프로젝트에 real RLS 질의.
+- `e2e` — integration 뒤 실행. Playwright chromium 단일. 8~15분.
+
+### Supabase 프로젝트 분리 정책 (POC 스케일)
+
+현재 `with-key` 프로젝트 **1개**를 local/CI/preview 가 공유한다. 안전 근거는
+`truncate_test_data` 가 `@test.local` 이메일로 스코핑되어 있다는 점
+([supabase/migrations/0003_state_transitions.sql](../supabase/migrations/0003_state_transitions.sql)).
+
+v1 컷오버 시 `with-key-prod` 를 별도 생성하며, 그때까지는 이 단일 공유 모델 유지.
+자세한 배경은 DECISIONS 의 **D-014**.
+
+### 새 개발자 체크리스트
+
+- [ ] `.env.local` 을 팀원에게 요청하거나 Supabase 대시보드에서 직접 채움.
+- [ ] `pnpm exec supabase link --project-ref ohvcaytmzzwxkbxsmyny` 로 로컬 link.
+- [ ] Vercel 팀에 초대 요청 (Preview URL 접근 권한).
+- [ ] `gh auth login` 으로 PR 생성 + required check 통과 권한 확인.
+
+### Secrets 를 새로 추가할 때
+
+1. GitHub → Settings → Secrets and variables → Actions 에서 `gh secret set <NAME>`.
+2. `.github/workflows/ci.yml` 의 **각 job env 블록**에 새 키를 명시적으로 매핑 (secrets 는 자동 전파되지 않음).
+3. Vercel → Settings → Environment Variables 에도 동일 값 등록 (Preview scope).
+4. `scripts/check-env.ts` 의 `REQUIRED` 에 추가 (로컬 누락 감지).
+
+### 배포 런북
+
+[docs/DEPLOY.md](./DEPLOY.md).
+
+---
+
 > _이 파일은 `.claude/drafts/` 하위의 개인 드래프트로, `.gitignore`에 의해 커밋되지 않습니다._
 > _팀 공유 시 저장소 `README.md` 또는 `docs/ONBOARDING.md` 로 복사하세요._
