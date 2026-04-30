@@ -29,9 +29,6 @@ export async function requestMagicLink(email: string): Promise<ActionResult<{ se
   }
 
   const origin = await resolveAppOrigin();
-  // TODO(remove after PR #8 preview verification): confirm Vercel request
-  // headers produce the preview URL instead of localhost.
-  console.log("[requestMagicLink] resolved origin:", origin);
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data,
