@@ -53,3 +53,8 @@ supabase/.temp/
 # Personal AI assistant workspace
 .claude/
 .cursor/
+.agents/
+.codex/
+
+# Personal journal (Ian's dev log — not for team)
+docs/JOURNAL.md

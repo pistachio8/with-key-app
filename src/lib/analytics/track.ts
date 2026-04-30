@@ -1,5 +1,7 @@
 // PRD §9.1 이벤트 스키마와 1:1. 임의 추가 금지 (PO 승인).
 import type { ActivityType } from "@/lib/keywords/pool";
+import { adminClient } from "@/lib/supabase/admin";
+import { analyticsEventSchema } from "./schema";
 
 export type AnalyticsEvent =
   | { name: "user_signed_up"; props: { provider: "kakao" | "email"; invitedBy?: string } }
@@ -56,10 +58,38 @@ export type AnalyticsEvent =
   | { name: "notification_opened"; props: { type: "start" | "deadline" } }
   | { name: "penalty_displayed"; props: { amount: number } };
 
-export async function track<E extends AnalyticsEvent>(event: E): Promise<void> {
-  // POC 초기: Supabase `events` 테이블에 insert 예정.
-  // 실제 구현은 BE 스키마 확정 후 추가 — Day 1엔 no-op + console 로깅.
-  if (process.env.NODE_ENV !== "production") {
-    console.debug("[track]", event.name, event.props);
+type TrackOptions = { userId?: string };
+
+/**
+ * Fire-and-forget analytics insert. Never throws.
+ *
+ * Server/system events can point at a recipient user_id that is not the acting
+ * Supabase session, so inserts use service_role and Zod becomes the runtime
+ * shape boundary for props that RLS cannot inspect.
+ */
+export async function track<E extends AnalyticsEvent>(
+  event: E,
+  options: TrackOptions = {},
+): Promise<void> {
+  const parsed = analyticsEventSchema.safeParse(event);
+  if (!parsed.success) {
+    console.error("[track] schema violation", parsed.error.flatten());
+    return;
+  }
+
+  try {
+    const { error } = await adminClient()
+      .from("events")
+      .insert({
+        name: parsed.data.name,
+        props: parsed.data.props,
+        user_id: options.userId ?? null,
+      });
+
+    if (error) {
+      console.error("[track] insert failed", { name: parsed.data.name, error });
+    }
+  } catch (error) {
+    console.error("[track] insert failed", { name: parsed.data.name, error });
   }
 }

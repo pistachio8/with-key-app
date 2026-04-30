@@ -64,6 +64,50 @@
 
 ---
 
+### D-017 — analytics 이벤트는 service_role admin client 로 insert하고 Zod 로 런타임 검증, AI 월예산은 (month, scope) 분리된 micros 테이블 + RPC로 가드
+
+- **날짜**: 2026-04-30
+- **상태**: ✅ Active
+- **참여자**: Ian
+
+- **맥락 (Context)**
+  - PRD §9 이벤트 로깅 + §5.3 AC-7 월 예산 폴백을 end-to-end 로 배선해야 한다.
+  - D-014 에 따라 Supabase 프로젝트 1 개를 local/CI/Preview 가 공유 → test 호출이 prod 누적을 오염시키면 안 된다.
+  - OpenAI gpt-4o-mini POC 스케일 호출 비용이 **호출당 1 cent 미만** — cent 단위 저장은 선형성/누적 의미를 잃는다.
+
+- **이벤트 로깅 옵션**
+  - A) Server Action 세션 client 로 events insert — 거부: `events_insert_self_or_anon` 정책상 system 이벤트(AI 비용·알림 발송 등 acting session 과 다른 user_id) insert 불가능. RLS 가 `name` 은 CHECK 로 강제해도 **`props` shape 은 못 본다**.
+  - B) Edge Function + 큐 — 거부: POC 범위 초과.
+  - C) **service_role admin client 직접 insert + Zod 런타임 검증 (채택)** — `import "server-only"` 가드, lazy singleton, Zod `discriminatedUnion` 이 RLS 가 못 보는 `props` shape 을 대신 방어.
+
+- **AI 비용 가드 옵션**
+  - A) In-memory cache — 거부: 서버 인스턴스 재시작마다 0.
+  - B) 외부 KV/Redis — 거부: POC 인프라 최소화 위반.
+  - C) **`ai_cost_log(month, scope, total_micros)` + atomic upsert RPC (채택)** — PK=(month, scope) 로 test/prod 호출 격리. `truncate_test_data` 는 `scope='test'` 만 리셋 → D-014 안전성 유지. micros 단위로 POC 스케일 정확도 확보.
+
+- **결정 (Decision)**
+  - 이벤트: **service_role admin + Zod discriminatedUnion 이중 방어**. TS union(SoT, `track.ts`) ↔ Zod(`schema.ts`) drift 는 parity 테스트로 방어.
+  - AI 비용: **`ai_cost_log(month, scope)` + `add_ai_cost(p_micros, p_scope) RPC`**, 단위는 micros.
+  - self-retry 는 이 ADR 범위에 포함하지 않는다 — "누락 키워드 지시 주입 + wall-clock timeout" 재설계와 한 번에 다뤄야 함.
+
+- **영향 범위 (Impact)**
+  - `src/lib/supabase/admin.ts` (lazy singleton) + 이벤트/비용 insert 경로가 RLS 를 우회 → Zod 가 방어선.
+  - 모든 `track()` 호출부의 `.catch(console.error)` 가 dead code 가 됨 → 제거.
+  - `truncate_test_data` 가 scope='test' / user_id=null 24h 범위까지 추가 정리.
+
+- **되돌릴 조건 (Reversal trigger) ⚠️**
+  - 이벤트 insert 가 월 수십만 건 수준으로 늘어나면 admin client 일원화가 병목 → 배치 insert / Edge Function 으로 승격.
+  - `events_insert_self_or_anon` 정책이 recipient user_id 를 허용하도록 확장되면 admin bypass 전제가 무너짐 → 재평가.
+
+- **되돌리기 비용**: 낮음~중간. `track` 내부 교체 + RPC 유지하면 FE 영향 없음.
+
+- **Follow-up**
+  - `notification_sent` / `notification_opened` 배선은 Web Push plan 에서.
+  - self-retry 는 "누락 키워드 지시 + wall-clock timeout" plan 에서.
+  - `/admin/ai-cost` read-only 대시보드는 v1.
+
+---
+
 ### D-016 — Kudos toggle: useOptimistic + 전체 배열 재생성 + 롤백-by-동일-액션
 
 - **날짜**: 2026-04-30

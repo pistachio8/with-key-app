@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
+      "server-only": resolve(__dirname, "node_modules/server-only/empty.js"),
     },
   },
 });
