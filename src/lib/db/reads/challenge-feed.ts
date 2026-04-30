@@ -1,12 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { getPhotoSignedUrls } from "@/lib/storage/action-photos";
 import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
 
 export type FeedItemView = {
   id: string;
   authorId: string;
   authorName: string;
-  photoUrl: string;
+  photoSignedUrl: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Record<KudosEmoji, number>>;
@@ -21,7 +22,7 @@ type Options = {
 type FeedRow = {
   id: string;
   user_id: string;
-  photo_url: string;
+  photo_path: string | null;
   ai_summary: string;
   selected_keywords: string[] | null;
   created_at: string;
@@ -52,7 +53,7 @@ export async function fetchChallengeFeed(
       [
         "id",
         "user_id",
-        "photo_url",
+        "photo_path",
         "ai_summary",
         "selected_keywords",
         "created_at",
@@ -66,8 +67,13 @@ export async function fetchChallengeFeed(
   if (error || !data) return [];
 
   const rows = data as unknown as FeedRow[];
+  // Single Storage batch request instead of N parallel createSignedUrl calls.
+  const signedUrls = await getPhotoSignedUrls(
+    rows.map((row) => row.photo_path),
+    supabase,
+  );
 
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const author = Array.isArray(row.users) ? row.users[0] : row.users;
     const kudosByEmoji = emptyKudosByEmoji();
     const viewerKudos: KudosEmoji[] = [];
@@ -82,7 +88,7 @@ export async function fetchChallengeFeed(
       id: row.id,
       authorId: row.user_id,
       authorName: author?.display_name ?? "익명",
-      photoUrl: row.photo_url,
+      photoSignedUrl: signedUrls[index],
       summary: row.ai_summary,
       keywords: row.selected_keywords ?? [],
       kudosByEmoji,

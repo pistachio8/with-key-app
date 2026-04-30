@@ -3,6 +3,12 @@ import { asUser, admin } from "../setup";
 import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 
+function tinyJpeg() {
+  return new Blob([Uint8Array.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0xff, 0xd9])], {
+    type: "image/jpeg",
+  });
+}
+
 async function seedActive() {
   const owner = await createUser();
   const other = await createUser();
@@ -27,7 +33,7 @@ async function seedActive() {
       challenge_id: c.id,
       user_id: other.id,
       activity_type: "gym",
-      photo_url: "https://example.com/p.jpg",
+      photo_path: null,
       selected_keywords: ["펌핑"],
       shown_keywords: ["펌핑", "집중"],
       reroll_count: 0,
@@ -57,6 +63,7 @@ describe("fetchChallengeFeed", () => {
       id: logId,
       authorId: other.id,
       summary: "오늘도 해냈다.",
+      photoSignedUrl: null,
       keywords: ["펌핑"],
       kudosByEmoji: { "🔥": 0, "💪": 0, "👏": 0 },
       viewerKudos: [],
@@ -73,6 +80,21 @@ describe("fetchChallengeFeed", () => {
     const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
     expect(rows[0].kudosByEmoji).toEqual({ "🔥": 2, "💪": 1, "👏": 0 });
     expect(rows[0].viewerKudos).toEqual(expect.arrayContaining(["🔥", "💪"]));
+  });
+
+  it("converts photo_path to a signed URL for group members", async () => {
+    const { owner, other, challenge, logId } = await seedActive();
+    const otherClient = await asUser(other);
+    const path = `${other.id}/${challenge.id}/${logId}-feed.jpg`;
+    const upload = await otherClient.storage
+      .from("action-photos")
+      .upload(path, tinyJpeg(), { contentType: "image/jpeg" });
+    expect(upload.error).toBeNull();
+    const update = await admin.from("action_logs").update({ photo_path: path }).eq("id", logId);
+    expect(update.error).toBeNull();
+
+    const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
+    expect(rows[0].photoSignedUrl).toMatch(/^https?:\/\//);
   });
 
   it("returns [] for non-members (RLS denies select)", async () => {
