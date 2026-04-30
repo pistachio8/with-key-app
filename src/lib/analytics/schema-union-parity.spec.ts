@@ -62,6 +62,7 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       hasMemo: false,
       rerollCount: 0,
       photoSize: 0,
+      photoAttached: false,
     },
   },
   ai_generated: {
