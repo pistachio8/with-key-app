@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
 
@@ -23,19 +24,25 @@ export function FeedCard({
   onKudos,
   disabled = false,
 }: Props) {
+  // Chrome/Firefox can't decode HEIC — fall back to the no-photo placeholder
+  // when <Image> fails to load so the card doesn't show a broken icon.
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasImage = Boolean(photoSignedUrl) && !imageFailed;
+
   return (
     <article className="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
       <header className="flex items-center gap-2">
         <span className="font-semibold">{authorName}</span>
       </header>
       <div className="relative aspect-square w-full overflow-hidden rounded-xl">
-        {photoSignedUrl ? (
+        {hasImage && photoSignedUrl ? (
           <Image
             src={photoSignedUrl}
             alt={`${authorName}의 인증 사진`}
             fill
             sizes="(max-width: 640px) 100vw, 640px"
             className="object-cover"
+            onError={() => setImageFailed(true)}
             unoptimized
           />
         ) : (
