@@ -48,7 +48,7 @@ export type Database = {
           edited_at: string | null
           id: string
           memo: string | null
-          photo_url: string
+          photo_path: string | null
           prompt_version: string
           regenerate_count: number
           reroll_count: number
@@ -65,7 +65,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           memo?: string | null
-          photo_url: string
+          photo_path?: string | null
           prompt_version: string
           regenerate_count?: number
           reroll_count?: number
@@ -82,7 +82,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           memo?: string | null
-          photo_url?: string
+          photo_path?: string | null
           prompt_version?: string
           regenerate_count?: number
           reroll_count?: number
@@ -449,6 +449,10 @@ export type Database = {
         }[]
       }
       truncate_test_data: { Args: never; Returns: undefined }
+      update_action_log_photo_path: {
+        Args: { p_log_id: string; p_photo_path: string | null }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
