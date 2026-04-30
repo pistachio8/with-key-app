@@ -50,6 +50,10 @@ export function ActionForm({ challengeId }: Props) {
   const [memo, setMemo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // Chrome/Firefox can't decode HEIC/HEIF natively — upload succeeds but
+  // <img> fires onError. Fall back to a friendly placeholder so the user
+  // knows the photo is queued without seeing a broken icon.
+  const [previewFailed, setPreviewFailed] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -66,6 +70,7 @@ export function ActionForm({ challengeId }: Props) {
   function clearPhoto() {
     setFile(null);
     setPreview(null);
+    setPreviewFailed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -87,6 +92,7 @@ export function ActionForm({ challengeId }: Props) {
 
     setFile(nextFile);
     setPreview(URL.createObjectURL(nextFile));
+    setPreviewFailed(false);
   }
 
   function submit() {
@@ -181,13 +187,30 @@ export function ActionForm({ challengeId }: Props) {
         />
         {preview && (
           <div className="flex flex-col gap-2">
-            <div className="relative aspect-square w-full overflow-hidden rounded-xl border">
-              {/* eslint-disable-next-line @next/next/no-img-element -- blob preview is client-local */}
-              <img
-                src={preview}
-                alt="사진 미리보기"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+            <div className="bg-muted relative aspect-square w-full overflow-hidden rounded-xl border">
+              {previewFailed ? (
+                <div
+                  role="img"
+                  aria-label="사진 미리보기"
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center"
+                >
+                  <Camera className="text-muted-foreground size-6" aria-hidden="true" />
+                  <p className="text-muted-foreground text-xs break-keep">
+                    {file?.name ?? "사진"} 준비됨
+                  </p>
+                  <p className="text-muted-foreground text-xs break-keep">
+                    이 브라우저에서는 HEIC 미리보기가 지원되지 않아요. 업로드는 정상 진행돼요.
+                  </p>
+                </div>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element -- blob preview is client-local */
+                <img
+                  src={preview}
+                  alt="사진 미리보기"
+                  onError={() => setPreviewFailed(true)}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
             </div>
             <button
               type="button"
