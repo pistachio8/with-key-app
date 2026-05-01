@@ -2,8 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
+import { track } from "@/lib/analytics/track";
+import { RecapHero } from "./_components/recap-hero";
+import { RecapStatsRow } from "./_components/recap-stats-row";
+import { RecapMembersList } from "./_components/recap-members-list";
 
-// PRD §10 화면 8 · §11.1 Day 7 Happy Path.
+// PRD §10 화면 8 · §11.1 Day 7 Happy Path · §9.1 penalty_displayed.
 export default async function RecapPage() {
   const supabase = await createClient();
   const {
@@ -30,6 +34,27 @@ export default async function RecapPage() {
     );
   }
 
-  // Task 10 에서 채움
-  return <div className="p-4">TODO: render recap view</div>;
+  // PRD §9.1 — fire-and-forget, never throws.
+  void track(
+    { name: "penalty_displayed", props: { amount: recap.viewerPerHeadPenalty } },
+    { userId: user.id },
+  );
+
+  return (
+    <div className="flex flex-col gap-6 p-4">
+      <RecapHero
+        title={recap.title}
+        startAt={recap.startAt}
+        endAt={recap.endAt}
+        viewerAchieved={recap.viewerAchieved}
+        anyoneAchieved={recap.anyoneAchieved}
+      />
+      <RecapStatsRow
+        viewerDoneCount={recap.viewerDoneCount}
+        goalCount={recap.goalCount}
+        viewerPerHeadPenalty={recap.viewerPerHeadPenalty}
+      />
+      <RecapMembersList goalCount={recap.goalCount} members={recap.members} />
+    </div>
+  );
 }
