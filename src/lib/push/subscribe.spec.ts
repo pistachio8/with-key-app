@@ -1,11 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  isPushSupported,
-  subscribeToPush,
-  unsubscribeFromPush,
-} from "./subscribe";
+import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "./subscribe";
 
 // 65-byte VAPID public key (1 + 32 + 32), base64url 로 인코딩하면 87 chars.
 const VAPID_BASE64URL =
@@ -41,9 +37,7 @@ describe("subscribeToPush", () => {
 
   it("throws when push is unsupported", async () => {
     vi.stubGlobal("navigator", {});
-    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow(
-      "push_unsupported",
-    );
+    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow("push_unsupported");
   });
 
   it("calls pushManager.subscribe with VAPID key and userVisibleOnly", async () => {
@@ -92,9 +86,7 @@ describe("subscribeToPush", () => {
     });
     vi.stubGlobal("window", { PushManager: class {} });
 
-    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow(
-      "subscription_incomplete",
-    );
+    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow("subscription_incomplete");
   });
 });
 
@@ -137,9 +129,7 @@ describe("unsubscribeFromPush", () => {
     });
     vi.stubGlobal("window", { PushManager: class {} });
 
-    await expect(unsubscribeFromPush()).resolves.toBe(
-      "https://fcm.googleapis.com/fcm/send/x",
-    );
+    await expect(unsubscribeFromPush()).resolves.toBe("https://fcm.googleapis.com/fcm/send/x");
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });

@@ -52,10 +52,7 @@ export const unregisterPushSubscription = withUser<UnregisterPushInput, { ok: tr
 export const clearMyPushSubscriptions = withUser<void, { ok: true }>(
   async (user): Promise<ActionResult<{ ok: true }>> => {
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("push_subscriptions")
-      .delete()
-      .eq("user_id", user.id);
+    const { error } = await supabase.from("push_subscriptions").delete().eq("user_id", user.id);
     if (error) return failure(mapSupabaseError(error));
     return success({ ok: true });
   },

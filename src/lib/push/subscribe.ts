@@ -23,9 +23,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return arr;
 }
 
-export async function subscribeToPush(
-  vapidPublicKey: string,
-): Promise<BrowserPushSubscription> {
+export async function subscribeToPush(vapidPublicKey: string): Promise<BrowserPushSubscription> {
   if (!isPushSupported()) throw new Error("push_unsupported");
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.subscribe({

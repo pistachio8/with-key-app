@@ -1,15 +1,10 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import {
-  notificationPrefsSchema,
-  type NotificationPrefs,
-} from "@/lib/validators/push";
+import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
 
 const DEFAULT_PREFS: NotificationPrefs = { start: true, deadline: true };
 
-export async function fetchNotificationPrefs(
-  userId: string,
-): Promise<NotificationPrefs> {
+export async function fetchNotificationPrefs(userId: string): Promise<NotificationPrefs> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("users")
@@ -21,9 +16,7 @@ export async function fetchNotificationPrefs(
   return parsed.success ? parsed.data : DEFAULT_PREFS;
 }
 
-export async function fetchActiveSubscriptionEndpoint(
-  userId: string,
-): Promise<string | null> {
+export async function fetchActiveSubscriptionEndpoint(userId: string): Promise<string | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("push_subscriptions")

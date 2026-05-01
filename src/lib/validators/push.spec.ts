@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  notificationPrefsSchema,
-  pushSubscriptionSchema,
-  unregisterPushSchema,
-} from "./push";
+import { notificationPrefsSchema, pushSubscriptionSchema, unregisterPushSchema } from "./push";
 
 describe("pushSubscriptionSchema", () => {
   it("accepts a valid https subscription", () => {
@@ -36,23 +32,17 @@ describe("pushSubscriptionSchema", () => {
 
 describe("notificationPrefsSchema", () => {
   it("accepts both booleans", () => {
-    expect(
-      notificationPrefsSchema.safeParse({ start: true, deadline: false })
-        .success,
-    ).toBe(true);
+    expect(notificationPrefsSchema.safeParse({ start: true, deadline: false }).success).toBe(true);
   });
 
   it("rejects when a key is missing", () => {
-    expect(
-      notificationPrefsSchema.safeParse({ start: true }).success,
-    ).toBe(false);
+    expect(notificationPrefsSchema.safeParse({ start: true }).success).toBe(false);
   });
 
   it("rejects non-boolean values", () => {
-    expect(
-      notificationPrefsSchema.safeParse({ start: "yes", deadline: false })
-        .success,
-    ).toBe(false);
+    expect(notificationPrefsSchema.safeParse({ start: "yes", deadline: false }).success).toBe(
+      false,
+    );
   });
 });
 
