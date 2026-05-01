@@ -4,13 +4,13 @@ import { dispatchDeadlineNotification } from "@/lib/push/dispatch";
 
 export const runtime = "nodejs";
 
-// Vercel hobby plan 은 cron 을 하루 2 회까지만 허용해 `vercel.json` 의 스케줄이
-// `0 0,12 * * *` (12 시간 주기) 로 잡혀 있다. "마감 24 시간 전" 의도를 ±6 시간
-// 허용 창으로 넓혀 12 시간 주기에서도 누락이 생기지 않게 한다.
+// Vercel hobby plan 은 cron 을 하루 1 회까지만 허용해 `vercel.json` 의 스케줄이
+// `0 0 * * *` (UTC 자정 = KST 09 시) 로 잡혀 있다. "마감 24 시간 전" 의도를
+// ±12 시간 허용 창으로 넓혀 24 시간 주기에서도 누락이 생기지 않게 한다.
 // 중복 dispatch 는 events 조회(name='notification_sent', props.type='deadline',
 // props.challengeId) 가 이미 막는다. pro 로 올라가면 주기와 창을 같이 좁힌다.
-const DEADLINE_WINDOW_START_HOURS = 18;
-const DEADLINE_WINDOW_END_HOURS = 30;
+const DEADLINE_WINDOW_START_HOURS = 12;
+const DEADLINE_WINDOW_END_HOURS = 36;
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
