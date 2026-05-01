@@ -13,3 +13,15 @@ export function computePerHeadPenalty(input: SettlementInput): number {
   if (doneCount >= goalCount) return 0;
   return penaltyAmount;
 }
+
+export type MvpInput = {
+  goalCount: number;
+  members: ReadonlyArray<{ id: string; doneCount: number }>;
+};
+
+export function pickMvpIds(input: MvpInput): ReadonlyArray<string> {
+  const achievers = input.members.filter((m) => m.doneCount >= input.goalCount);
+  if (achievers.length === 0) return [];
+  const max = Math.max(...achievers.map((m) => m.doneCount));
+  return achievers.filter((m) => m.doneCount === max).map((m) => m.id);
+}
