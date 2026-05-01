@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatKRW } from "@/lib/challenge/penalty";
 
 type Props = {
@@ -37,6 +38,14 @@ export function ProgressCard({ title, goalCount, doneCount, potTotal, daysLeft }
         모인 예정 벌금{" "}
         <span className="text-foreground font-semibold tabular-nums">{formatKRW(potTotal)}</span>
       </p>
+      {daysLeft === 0 && (
+        <Link
+          href="/recap"
+          className="text-primary mt-3 inline-block text-sm font-semibold underline-offset-4 hover:underline"
+        >
+          주간 정산 보기 →
+        </Link>
+      )}
     </article>
   );
 }
