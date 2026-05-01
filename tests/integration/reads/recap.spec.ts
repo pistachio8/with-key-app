@@ -12,11 +12,7 @@ async function closeChallenge(challengeId: string, endAt: Date) {
     .eq("id", challengeId);
 }
 
-async function insertActionLogs(opts: {
-  challengeId: string;
-  userId: string;
-  count: number;
-}) {
+async function insertActionLogs(opts: { challengeId: string; userId: string; count: number }) {
   const rows = Array.from({ length: opts.count }, (_, i) => ({
     challenge_id: opts.challengeId,
     user_id: opts.userId,
@@ -41,10 +37,7 @@ describe("fetchRecap integration", () => {
     await closeChallenge(c.id, new Date(Date.now() - 86_400_000));
 
     const outsiderClient = await asUser(outsider);
-    const { data } = await outsiderClient
-      .from("challenges")
-      .select("id")
-      .eq("id", c.id);
+    const { data } = await outsiderClient.from("challenges").select("id").eq("id", c.id);
     expect(data).toEqual([]);
   });
 
