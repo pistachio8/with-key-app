@@ -64,6 +64,47 @@
 
 ---
 
+### D-019 — Web Push: in-request fan-out + events 기반 dedup + quiet hours suppressed-only
+
+- **날짜**: 2026-05-01
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - PRD §6.3 은 2종 알림(시작 / 마감)을 요구하지만 코드는 `src/lib/push/*` 헬퍼와 `push_subscriptions` 테이블까지만 배선되고 실제 dispatch 경로가 한 번도 호출되지 않던 상태였다.
+  - 참가자 전원 서명 시점(`sign_and_maybe_activate` 가 `status='active'` 반환)과 마감 24 시간 전을 실제 사용자 기기까지 도달하는 알림으로 연결할 필요가 있다.
+  - POC 스케일(그룹당 2~10 인)에서 큐/스케줄러 인프라를 새로 들이면 과잉.
+- **고려한 옵션 (Options considered)**:
+  - A) Server Action 내 직접 fan-out (`await sendPush` 순차) + Vercel Cron / 별도 `notification_dispatch_log` 없이 기존 `events` 테이블로 중복 제어.
+  - B) 큐(Upstash / SQS / pg_cron) + 전용 `notification_dispatch_log` 테이블 + 독립 워커.
+  - C) Supabase Realtime / Database Webhook 으로 상태 전이를 구독해 알림을 보내는 경로.
+- **결정 (Decision)**:
+  - 우리는 **A 안** 을 선택한다.
+  - **시작 알림**: `signPledge` Server Action 이 RPC 결과 `status === "active"` 분기에서만 `void dispatchStartNotification(challengeId)` 를 fire-and-forget 호출. 참가자 서명 응답은 dispatch 결과와 무관하게 반환.
+  - **마감 임박 알림**: `vercel.json` crons 가 **6 시간마다** (`0 */6 * * *`, hobby plan 기준) `POST /api/cron/deadline-push` 호출. `status='active' AND end_at ∈ [now+23h, now+25h]` 스캔 → `events.name='notification_sent' AND props->>'type'='deadline' AND props->>'challengeId'=...` 조회로 중복 제거 → `dispatchDeadlineNotification` fan-out.
+  - **Quiet hours 02~07 KST**: 발송 포인트에서만 차단. `notification_sent` 이벤트는 `suppressed=true, outcome='suppressed'` 로 기록해 관찰성 유지(큐잉/재스케줄 X).
+  - **410 Gone / 404**: 응답 상태 코드로 판별 후 `push_subscriptions` 에서 해당 endpoint 즉시 삭제, `outcome='cleaned'`.
+  - **선호도 저장**: `users.notification_prefs jsonb` (D-box-3 동일 결정). 별도 1:1 테이블 도입 금지.
+  - **Cron 인증**: `Authorization: Bearer $CRON_SECRET` 헤더 비교. 미설정 시 401.
+- **근거 (Reasoning)**:
+  - 큐는 POC 스케일 대비 과잉 — 참가자 10 인 × endpoint 1 개 기준 `await Promise.allSettled` 없이 순차 처리해도 500 ms 미만.
+  - `events` 테이블은 이미 D-017 에서 `props` gin 인덱스(0008) 가 있어 `challengeId` 조회가 싸다. 전용 dispatch ledger 테이블을 또 만드는 건 중복 관심사.
+  - Realtime/Webhook 은 인프라가 느슨하게 연결돼 실패 관찰이 나쁘고, Server Action 에서 직접 호출하는 쪽이 시점 보장이 명확하다.
+  - Quiet hours 를 큐잉하면 수신자 경험은 나아지지만 POC 범위에서 재스케줄/중복 가드까지 관리할 만한 가치가 없음 → suppressed 이벤트만 기록해 나중에 UX 정책 바뀌면 다시 본다.
+- **영향 범위 (Impact)**:
+  - DB: `supabase/migrations/0014_notification_prefs.sql`, `0015_notification_prefs_require_keys.sql`.
+  - Server: `src/lib/push/dispatch.ts`, `src/app/api/cron/deadline-push/route.ts`, `src/app/(app)/pledge/_actions.ts` 에 dispatch 주입.
+  - Client: `src/app/(app)/settings/_components/push-settings.tsx` 에서 구독 등록/해제 + prefs 토글.
+  - Analytics: `notification_sent` props 에 `challengeId / suppressed / outcome` 추가, `notification_opened` 에 `challengeId` 추가.
+  - Config: `vercel.json` crons 배열, `.env.example` 의 `CRON_SECRET`, Vercel Preview + Production env 등록.
+  - Test: unit(push helpers + actions) + integration(RLS · dispatch · cron) + E2E(`/settings` smoke).
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 참가자가 100 명을 넘거나 일일 dispatch 건수가 수천건 규모가 되면 in-request fan-out 이 응답 지연을 만들 수 있음 → 옵션 B(큐) 로 이전 + ADR 새로 등록.
+  - `events` 조회가 dedup 병목이 되거나 감사 성격 쿼리와 충돌하면 `notification_dispatch_log` 전용 테이블 분리.
+  - Quiet hours suppressed 만으로 사용자 불만이 발생하면 큐잉 + 재스케줄러 도입.
+- **되돌리기 비용**: 중간. dispatch 함수 경계는 잘 나눠져 있어 내부만 교체 가능하지만, cron 주기/계약(`CRON_SECRET`·route path) 이 외부 인프라와 엮여 있어 Vercel/Supabase env 동기화가 필요하다.
+
+---
+
 ### D-018 — Storage 사진: private bucket + 2-step path RPC + 10분 signed URL
 
 - **날짜**: 2026-04-30
