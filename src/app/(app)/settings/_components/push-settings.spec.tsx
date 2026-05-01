@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const registerPushSubscription = vi.fn();
-const unregisterPushSubscription = vi.fn();
+const clearMyPushSubscriptions = vi.fn();
 const updateNotificationPrefs = vi.fn();
 vi.mock("@/app/(app)/settings/_actions", () => ({
   registerPushSubscription: (...a: unknown[]) => registerPushSubscription(...a),
-  unregisterPushSubscription: (...a: unknown[]) => unregisterPushSubscription(...a),
+  clearMyPushSubscriptions: (...a: unknown[]) => clearMyPushSubscriptions(...a),
   updateNotificationPrefs: (...a: unknown[]) => updateNotificationPrefs(...a),
 }));
 
@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   isPushSupported.mockReturnValue(true);
   registerPushSubscription.mockResolvedValue({ ok: true });
-  unregisterPushSubscription.mockResolvedValue({ ok: true });
+  clearMyPushSubscriptions.mockResolvedValue({ ok: true });
   updateNotificationPrefs.mockResolvedValue({ ok: true });
   subscribeToPush.mockResolvedValue({
     endpoint: "https://fcm.googleapis.com/fcm/send/x",
@@ -91,11 +91,7 @@ describe("PushSettings", () => {
     const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
     fireEvent.click(startSwitch); // now start=false, deadline=false → no kinds on
     await waitFor(() => expect(unsubscribeFromPush).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(unregisterPushSubscription).toHaveBeenCalledWith({
-        endpoint: "https://fcm.googleapis.com/fcm/send/x",
-      }),
-    );
+    await waitFor(() => expect(clearMyPushSubscriptions).toHaveBeenCalled());
     await waitFor(() =>
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: false,

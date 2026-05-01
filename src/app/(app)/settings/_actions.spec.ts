@@ -4,6 +4,7 @@ type SupabaseChainResult = { error: unknown };
 
 const upsert = vi.fn<(...args: unknown[]) => SupabaseChainResult>();
 const deleteMatch = vi.fn<(match: object) => Promise<SupabaseChainResult>>();
+const deleteEq = vi.fn<(col: string, val: string) => Promise<SupabaseChainResult>>();
 const updateEq = vi.fn<(col: string, val: string) => Promise<SupabaseChainResult>>();
 
 const USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -20,7 +21,10 @@ vi.mock("@/lib/supabase/server", () => ({
       if (table === "push_subscriptions") {
         return {
           upsert: (...args: unknown[]) => upsert(...args),
-          delete: () => ({ match: (m: object) => deleteMatch(m) }),
+          delete: () => ({
+            match: (m: object) => deleteMatch(m),
+            eq: (col: string, val: string) => deleteEq(col, val),
+          }),
         };
       }
       if (table === "users") {
@@ -37,6 +41,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import {
+  clearMyPushSubscriptions,
   registerPushSubscription,
   unregisterPushSubscription,
   updateNotificationPrefs,
@@ -45,6 +50,7 @@ import {
 beforeEach(() => {
   upsert.mockReset();
   deleteMatch.mockReset();
+  deleteEq.mockReset();
   updateEq.mockReset();
 });
 
@@ -110,6 +116,21 @@ describe("unregisterPushSubscription", () => {
     });
     expect(res.ok).toBe(false);
     expect(deleteMatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("clearMyPushSubscriptions", () => {
+  it("deletes all rows owned by the caller", async () => {
+    deleteEq.mockResolvedValue({ error: null });
+    const res = await clearMyPushSubscriptions();
+    expect(res.ok).toBe(true);
+    expect(deleteEq).toHaveBeenCalledWith("user_id", USER_ID);
+  });
+
+  it("maps upstream_error when delete fails", async () => {
+    deleteEq.mockResolvedValue({ error: { code: "XX000", message: "boom" } });
+    const res = await clearMyPushSubscriptions();
+    expect(res.ok).toBe(false);
   });
 });
 

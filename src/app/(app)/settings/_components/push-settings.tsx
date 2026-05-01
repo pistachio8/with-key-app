@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useState, useTransition } from "react";
 import {
+  clearMyPushSubscriptions,
   registerPushSubscription,
-  unregisterPushSubscription,
   updateNotificationPrefs,
 } from "@/app/(app)/settings/_actions";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "@/lib/push/subscribe";
@@ -76,10 +76,14 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
   };
 
   const dropSubscription = async (): Promise<void> => {
-    const endpoint = await unsubscribeFromPush();
-    if (endpoint) {
-      await unregisterPushSubscription({ endpoint });
+    // browser unsubscribe 는 best-effort — 이미 만료됐거나 비어있어도 무관.
+    // 서버 상태는 user_id 기준으로 전체 비워 누적을 방지한다.
+    try {
+      await unsubscribeFromPush();
+    } catch {
+      // noop
     }
+    await clearMyPushSubscriptions();
     setSubscribed(false);
   };
 
