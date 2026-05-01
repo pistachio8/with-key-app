@@ -6,6 +6,7 @@ import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
+import { dispatchStartNotification } from "@/lib/push/dispatch";
 
 const signInputSchema = z.object({ challengeId: z.string().uuid() });
 type SignInput = z.infer<typeof signInputSchema>;
@@ -34,6 +35,14 @@ export const signPledge = withUser<SignInput, SignResult>(
       },
       { userId: user.id },
     );
+
+    if (row.status === "active") {
+      // Fire-and-forget. dispatch 실패가 서명 성공을 뒤엎지 않도록
+      // 반환 전에 어떤 await 도 걸지 않는다.
+      void dispatchStartNotification(parsed.data.challengeId).catch(() => {
+        // dispatch 내부에서 track 이 이미 outcome='failed' 를 기록한다.
+      });
+    }
 
     return success({
       challengeId: parsed.data.challengeId,
