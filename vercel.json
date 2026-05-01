@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["icn1"],
-  "cleanUrls": false
+  "cleanUrls": false,
+  "crons": [{ "path": "/api/cron/deadline-push", "schedule": "0 */6 * * *" }]
 }

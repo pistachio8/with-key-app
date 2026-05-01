@@ -1,0 +1,147 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+type AdminResponse<T = unknown> = { data: T; error: unknown };
+
+// -----------------------------------------------------------------------------
+// Mocks
+// -----------------------------------------------------------------------------
+
+const challengesPlan: { rows: Array<{ id: string }>; error?: unknown } = {
+  rows: [],
+};
+const dispatchedMap: Record<string, boolean> = {};
+
+function challengesChain() {
+  const chain: Record<string, unknown> = {};
+  const resolved: AdminResponse = {
+    data: challengesPlan.rows,
+    error: challengesPlan.error ?? null,
+  };
+  chain.select = () => chain;
+  chain.eq = () => chain;
+  chain.gte = () => chain;
+  chain.lte = () => chain;
+  chain.then = (onFulfilled: (r: AdminResponse) => unknown) => onFulfilled(resolved);
+  return chain;
+}
+
+function eventsChain() {
+  // events 조회는 "이 challenge 에 대해 이미 deadline notification 이 기록됐는가?"
+  // dispatchedMap 기반으로 답한다.
+  const chain: Record<string, unknown> = { __challengeId: null as string | null };
+  chain.select = () => chain;
+  chain.eq = () => chain;
+  chain.contains = (_col: string, value: { challengeId?: string }) => {
+    chain.__challengeId = value?.challengeId ?? null;
+    return chain;
+  };
+  chain.limit = () => chain;
+  chain.then = (onFulfilled: (r: AdminResponse) => unknown) => {
+    const id = chain.__challengeId as string | null;
+    const rows = id && dispatchedMap[id] ? [{ id: "ev" }] : [];
+    return onFulfilled({ data: rows, error: null });
+  };
+  return chain;
+}
+
+const from = vi.fn((table: string) => {
+  if (table === "challenges") return challengesChain();
+  if (table === "events") return eventsChain();
+  throw new Error(`unexpected table: ${table}`);
+});
+
+vi.mock("@/lib/supabase/admin", () => ({
+  adminClient: () => ({ from }),
+}));
+
+const dispatchDeadlineNotification = vi.fn();
+vi.mock("@/lib/push/dispatch", () => ({
+  dispatchDeadlineNotification: (...args: unknown[]) =>
+    dispatchDeadlineNotification(...args),
+}));
+
+import { POST, GET } from "./route";
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+function req(auth?: string): Request {
+  const headers = new Headers();
+  if (auth !== undefined) headers.set("authorization", auth);
+  return new Request("https://app.example/api/cron/deadline-push", {
+    method: "POST",
+    headers,
+  });
+}
+
+beforeEach(() => {
+  challengesPlan.rows = [];
+  challengesPlan.error = undefined;
+  for (const k of Object.keys(dispatchedMap)) delete dispatchedMap[k];
+  dispatchDeadlineNotification.mockReset();
+  dispatchDeadlineNotification.mockResolvedValue(undefined);
+  from.mockClear();
+  process.env.CRON_SECRET = "supersecret";
+});
+
+// -----------------------------------------------------------------------------
+// Tests
+// -----------------------------------------------------------------------------
+
+describe("POST /api/cron/deadline-push — auth", () => {
+  it("rejects without an Authorization header", async () => {
+    const res = await POST(req());
+    expect(res.status).toBe(401);
+    expect(dispatchDeadlineNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the Bearer secret does not match", async () => {
+    const res = await POST(req("Bearer nope"));
+    expect(res.status).toBe(401);
+    expect(dispatchDeadlineNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects when CRON_SECRET is unset on the server", async () => {
+    delete process.env.CRON_SECRET;
+    const res = await POST(req("Bearer anything"));
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /api/cron/deadline-push — dispatch", () => {
+  it("returns dispatched=0 when no challenges match the window", async () => {
+    challengesPlan.rows = [];
+    const res = await POST(req("Bearer supersecret"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true, scanned: 0, dispatched: 0 });
+  });
+
+  it("dispatches once per eligible challenge and skips ones already dispatched", async () => {
+    challengesPlan.rows = [{ id: "c-already" }, { id: "c-fresh" }];
+    dispatchedMap["c-already"] = true;
+
+    const res = await POST(req("Bearer supersecret"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, scanned: 2, dispatched: 1 });
+    expect(dispatchDeadlineNotification).toHaveBeenCalledTimes(1);
+    expect(dispatchDeadlineNotification).toHaveBeenCalledWith("c-fresh");
+  });
+
+  it("returns 500 when the challenges query errors", async () => {
+    challengesPlan.error = { code: "XX000", message: "db down" };
+    const res = await POST(req("Bearer supersecret"));
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /api/cron/deadline-push", () => {
+  it("delegates to POST (Vercel Cron 은 GET 으로도 호출)", async () => {
+    challengesPlan.rows = [];
+    const res = await GET(req("Bearer supersecret"));
+    expect(res.status).toBe(200);
+  });
+});
