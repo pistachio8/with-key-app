@@ -28,6 +28,12 @@
 - [src/lib/analytics/schema.ts](src/lib/analytics/schema.ts) — `penalty_displayed` 이벤트 이미 정의됨 (props: `{ amount: number }`)
 - [tests/integration/factories.ts](tests/integration/factories.ts) — `createUser`, `createGroup`, `addMember`, `createPendingChallenge`
 
+## Test Environment Notes (프로젝트 컨벤션)
+
+- 프로젝트에는 `@testing-library/jest-dom` 이 설치돼 있지만 **setupFiles 가 없어 `toBeInTheDocument` 매처가 런타임에 없음.** 기존 spec 들(e.g. `challenge-feed.spec.tsx`, `feed-card.spec.tsx`)은 `expect(screen.getByText(...)).toBeTruthy()` 패턴 사용. 이번 플랜의 스펙들도 `toBeTruthy()` 를 쓴다.
+- Vitest workspace 의 unit 프로젝트는 `*.spec.tsx` 는 jsdom, 그 외는 node 로 자동 라우팅 (`environmentMatchGlobs`). 필요한 경우 파일 상단에 `// @vitest-environment jsdom` 명시해도 무방.
+- Node ICU 의 `ko-KR` + `month: "2-digit", day: "2-digit"` 는 `"05. 01."` (공백·마침표 포함) 을 반환한다. `MM.DD` 형식이 필요하면 `formatToParts` 로 `month`/`day` 값만 뽑아 조합할 것.
+
 ## File Structure
 
 | 파일 | 책임 | 종류 |
