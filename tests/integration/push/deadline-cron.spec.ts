@@ -71,7 +71,7 @@ describe("deadline-push cron (integration)", () => {
     expect((events ?? []).length).toBe(1);
   });
 
-  it("skips challenges whose end_at is outside the 23-25h window", async () => {
+  it("skips challenges whose end_at is outside the 18-30h window", async () => {
     const { POST } = await import("@/app/api/cron/deadline-push/route");
     await seedActiveEndingIn(48);
     const res = await POST(cronReq());

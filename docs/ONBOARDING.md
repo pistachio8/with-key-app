@@ -336,7 +336,7 @@ pnpm dev
 
 1. **클라이언트 구독**: `/settings` 토글 ON → `pushManager.subscribe()` → `registerPushSubscription` Server Action → `push_subscriptions` upsert (endpoint unique). 둘 다 OFF 전이 시 `clearMyPushSubscriptions` 로 자기 row 전체 삭제.
 2. **시작 알림**: `signPledge` 가 `sign_and_maybe_activate` RPC 결과 `status='active'` 면 `void dispatchStartNotification(challengeId)` fire-and-forget 호출. dispatch 실패는 서명 응답을 막지 않는다.
-3. **마감 임박 알림**: `vercel.json` crons 가 6 시간마다 `POST /api/cron/deadline-push` 호출 (Bearer `CRON_SECRET`). `status='active' AND end_at ∈ [now+23h, now+25h]` 스캔 → `events` 테이블로 중복 제거 → `dispatchDeadlineNotification` fan-out.
+3. **마감 임박 알림**: `vercel.json` crons 가 하루 2 회(`0 0,12 * * *`, hobby plan 기준) `POST /api/cron/deadline-push` 호출 (Bearer `CRON_SECRET`). `status='active' AND end_at ∈ [now+18h, now+30h]` 스캔 → `events` 테이블로 중복 제거 → `dispatchDeadlineNotification` fan-out. pro plan 업그레이드 시 `0 */6 * * *` + window `[+23h, +25h]` 로 같이 좁힌다.
 
 #### 로컬/프리뷰 개발 가이드
 

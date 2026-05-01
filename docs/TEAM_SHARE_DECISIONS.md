@@ -80,7 +80,7 @@
 - **결정 (Decision)**:
   - 우리는 **A 안** 을 선택한다.
   - **시작 알림**: `signPledge` Server Action 이 RPC 결과 `status === "active"` 분기에서만 `void dispatchStartNotification(challengeId)` 를 fire-and-forget 호출. 참가자 서명 응답은 dispatch 결과와 무관하게 반환.
-  - **마감 임박 알림**: `vercel.json` crons 가 **6 시간마다** (`0 */6 * * *`, hobby plan 기준) `POST /api/cron/deadline-push` 호출. `status='active' AND end_at ∈ [now+23h, now+25h]` 스캔 → `events.name='notification_sent' AND props->>'type'='deadline' AND props->>'challengeId'=...` 조회로 중복 제거 → `dispatchDeadlineNotification` fan-out.
+  - **마감 임박 알림**: `vercel.json` crons 가 **하루 2 회** (`0 0,12 * * *`, hobby plan 이 허용하는 최대 빈도) `POST /api/cron/deadline-push` 호출. 12 시간 주기에서도 누락이 생기지 않도록 창을 넓혀 `status='active' AND end_at ∈ [now+18h, now+30h]` 스캔 → `events.name='notification_sent' AND props->>'type'='deadline' AND props->>'challengeId'=...` 조회로 중복 제거 → `dispatchDeadlineNotification` fan-out. `events` dedup 이 이미 있어 창이 겹쳐도 중복 발송은 없다.
   - **Quiet hours 02~07 KST**: 발송 포인트에서만 차단. `notification_sent` 이벤트는 `suppressed=true, outcome='suppressed'` 로 기록해 관찰성 유지(큐잉/재스케줄 X).
   - **410 Gone / 404**: 응답 상태 코드로 판별 후 `push_subscriptions` 에서 해당 endpoint 즉시 삭제, `outcome='cleaned'`.
   - **선호도 저장**: `users.notification_prefs jsonb` (D-box-3 동일 결정). 별도 1:1 테이블 도입 금지.
