@@ -13,11 +13,12 @@ export function isPushSupported(): boolean {
   return "PushManager" in window;
 }
 
-function urlBase64ToUint8Array(base64: string): Uint8Array {
+function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
   const normalized = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(normalized);
-  const arr = new Uint8Array(raw.length);
+  const buffer = new ArrayBuffer(raw.length);
+  const arr = new Uint8Array(buffer);
   for (let i = 0; i < raw.length; i += 1) arr[i] = raw.charCodeAt(i);
   return arr;
 }
