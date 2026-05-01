@@ -87,3 +87,55 @@ export function buildRecapView(input: {
     anyoneAchieved: members.some((m) => m.achieved),
   };
 }
+
+type Options = { client?: SupabaseClient; now?: Date };
+
+/**
+ * 내가 참가 중인 챌린지 중 "이미 끝났거나 end_at 이 지난" 가장 최근 챌린지 1개의 정산 뷰.
+ * 없으면 null. RLS 가 챌린지/참가자/로그 접근을 자동 필터링.
+ */
+export async function fetchRecap(
+  viewerId: string,
+  options: Options = {},
+): Promise<RecapView | null> {
+  const supabase = options.client ?? (await createClient());
+  const now = options.now ?? new Date();
+  const nowIso = now.toISOString();
+
+  const { data: challenges, error } = await supabase
+    .from("challenges")
+    .select("id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at")
+    .in("status", ["active", "closed"])
+    .lte("end_at", nowIso)
+    .order("end_at", { ascending: false })
+    .limit(1);
+
+  if (error || !challenges?.[0]) return null;
+  const challenge = challenges[0] as ChallengeRow;
+
+  const { data: parts } = await supabase
+    .from("challenge_participants")
+    .select("user_id, users!inner(display_name)")
+    .eq("challenge_id", challenge.id);
+
+  const { data: logs } = await supabase
+    .from("action_logs")
+    .select("user_id")
+    .eq("challenge_id", challenge.id);
+
+  const doneByUser = new Map<string, number>();
+  for (const l of logs ?? []) {
+    doneByUser.set(l.user_id, (doneByUser.get(l.user_id) ?? 0) + 1);
+  }
+
+  const participants: ParticipantRow[] = (parts ?? []).map((p) => {
+    const u = Array.isArray(p.users) ? p.users[0] : p.users;
+    return {
+      user_id: p.user_id,
+      display_name: u?.display_name ?? null,
+      done_count: doneByUser.get(p.user_id) ?? 0,
+    };
+  });
+
+  return buildRecapView({ challenge, participants, viewerId, now });
+}
