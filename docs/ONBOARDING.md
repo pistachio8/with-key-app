@@ -327,8 +327,23 @@ pnpm dev
 ### 6.4 Web Push
 
 - VAPID 키는 env 관리 (§7). 키 변경 시 전 구독 무효화됨.
-- 구독 정보는 `push_subscriptions` table (PRD §8.1).
-- Quiet Hours (02~07시) 판정은 **서버 타임(KST)** 기준.
+- 구독 정보는 `push_subscriptions` table (PRD §8.1). `endpoint` 에 unique 제약.
+- 선호도는 `users.notification_prefs jsonb` 단일 컬럼. 스키마 `{ start: bool, deadline: bool }` — CHECK 가 키 존재 + boolean 강제 (0014·0015 migration).
+- Quiet Hours (02~07시) 판정은 **서버 타임(KST)** 기준. 해당 시간대엔 발송 skip + `notification_sent.props.suppressed=true, outcome='suppressed'` 이벤트만 기록 (재스케줄 X).
+- 410/404 응답은 dispatch helper(`src/lib/push/dispatch.ts`) 가 자동으로 `push_subscriptions` row 삭제, `outcome='cleaned'` 이벤트 기록.
+
+#### 실 dispatch 경로 (D-019 이후)
+
+1. **클라이언트 구독**: `/settings` 토글 ON → `pushManager.subscribe()` → `registerPushSubscription` Server Action → `push_subscriptions` upsert (endpoint unique). 둘 다 OFF 전이 시 `clearMyPushSubscriptions` 로 자기 row 전체 삭제.
+2. **시작 알림**: `signPledge` 가 `sign_and_maybe_activate` RPC 결과 `status='active'` 면 `void dispatchStartNotification(challengeId)` fire-and-forget 호출. dispatch 실패는 서명 응답을 막지 않는다.
+3. **마감 임박 알림**: `vercel.json` crons 가 하루 1 회(`0 0 * * *` = UTC 자정 / KST 09 시, hobby plan 최대 빈도) `POST /api/cron/deadline-push` 호출 (Bearer `CRON_SECRET`). `status='active' AND end_at ∈ [now+12h, now+36h]` 스캔 → `events` 테이블로 중복 제거 → `dispatchDeadlineNotification` fan-out. pro plan 업그레이드 시 `0 */6 * * *` + window `[+23h, +25h]` 로 같이 좁힌다.
+
+#### 로컬/프리뷰 개발 가이드
+
+- **VAPID 키 생성**: `pnpm exec web-push generate-vapid-keys` → `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` 를 `.env.local` + Vercel(Preview+Production) env 에 동일 값으로 등록.
+- **CRON_SECRET**: `openssl rand -hex 32` 로 생성. Vercel env 등록. 미등록 시 cron route 가 401 반환.
+- **push 는 HTTPS 필수** — `localhost` 는 브라우저 예외로 허용, 로컬 dev 는 `pnpm dev` 로 충분. Preview 는 Vercel 기본 HTTPS.
+- 수동 smoke: `/settings` 에서 두 토글 ON → Chrome DevTools → Application → Service Workers 에서 `/service-worker.js` activated 확인 → 별도 탭에서 서명 플로우 태워서 시작 알림 수신.
 
 ### 6.5 이벤트 로깅 (§9 PRD)
 
