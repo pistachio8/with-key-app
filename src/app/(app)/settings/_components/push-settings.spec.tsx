@@ -104,6 +104,26 @@ describe("PushSettings", () => {
     );
   });
 
+  it("does not re-subscribe when turning one pref OFF while the other stays ON", async () => {
+    render(
+      <PushSettings
+        initialPrefs={{ start: true, deadline: true }}
+        initialSubscribedEndpoint={null}
+        vapidPublicKey="BFN..."
+      />,
+    );
+    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    fireEvent.click(startSwitch); // start true → false, deadline stays true
+    await waitFor(() =>
+      expect(updateNotificationPrefs).toHaveBeenCalledWith({
+        start: false,
+        deadline: true,
+      }),
+    );
+    expect(subscribeToPush).not.toHaveBeenCalled();
+    expect(registerPushSubscription).not.toHaveBeenCalled();
+  });
+
   it("shows the unsupported banner when browser lacks support", async () => {
     isPushSupported.mockReturnValue(false);
     render(
@@ -113,9 +133,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    expect(
-      await screen.findByText(/이 브라우저는 푸시 알림을 지원하지 않/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/이 브라우저는 푸시 알림을 지원하지 않/)).toBeTruthy();
     expect(screen.queryByRole("switch", { name: "시작 알림" })).toBeNull();
   });
 });

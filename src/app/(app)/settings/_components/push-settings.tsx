@@ -6,11 +6,7 @@ import {
   unregisterPushSubscription,
   updateNotificationPrefs,
 } from "@/app/(app)/settings/_actions";
-import {
-  isPushSupported,
-  subscribeToPush,
-  unsubscribeFromPush,
-} from "@/lib/push/subscribe";
+import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "@/lib/push/subscribe";
 import type { NotificationPrefs } from "@/lib/validators/push";
 
 type Props = {
@@ -19,11 +15,7 @@ type Props = {
   vapidPublicKey: string;
 };
 
-export function PushSettings({
-  initialPrefs,
-  initialSubscribedEndpoint,
-  vapidPublicKey,
-}: Props) {
+export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPublicKey }: Props) {
   const [prefs, setPrefs] = useState<NotificationPrefs>(initialPrefs);
   const [subscribed, setSubscribed] = useState(!!initialSubscribedEndpoint);
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -60,8 +52,7 @@ export function PushSettings({
           푸시 알림
         </h2>
         <p className="text-muted-foreground text-xs">
-          이 브라우저는 푸시 알림을 지원하지 않아요. 크롬/엣지/사파리 16.4+ 에서
-          다시 시도해 주세요.
+          이 브라우저는 푸시 알림을 지원하지 않아요. 크롬/엣지/사파리 16.4+ 에서 다시 시도해 주세요.
         </p>
       </section>
     );
@@ -98,8 +89,9 @@ export function PushSettings({
     setPrefs(next);
     setErrorMsg(null);
     start(async () => {
+      const turningOn = value === true;
       const anyOn = next.start || next.deadline;
-      if (anyOn && !subscribed) {
+      if (turningOn && !subscribed) {
         const ok = await ensureSubscription();
         if (!ok) {
           setPrefs(prev);
@@ -138,9 +130,7 @@ export function PushSettings({
         checked={prefs.deadline}
         onChange={(v) => handlePrefChange("deadline", v)}
       />
-      <p className="text-muted-foreground text-xs">
-        새벽 2~7시(KST)는 자동 차단돼요.
-      </p>
+      <p className="text-muted-foreground text-xs">새벽 2~7시(KST)는 자동 차단돼요.</p>
       {errorMsg && (
         <p role="alert" className="text-destructive text-xs">
           {errorMsg}
