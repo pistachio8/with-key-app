@@ -22,9 +22,7 @@ async function seedActiveEndingIn(hours: number) {
   const owner = await createUser();
   const g = await createGroup(owner.id);
   const c = await createPendingChallenge(g.id);
-  await admin
-    .from("challenge_participants")
-    .insert({ challenge_id: c.id, user_id: owner.id });
+  await admin.from("challenge_participants").insert({ challenge_id: c.id, user_id: owner.id });
   await admin
     .from("challenges")
     .update({

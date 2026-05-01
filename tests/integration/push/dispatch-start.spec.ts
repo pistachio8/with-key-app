@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { admin } from "../setup";
-import {
-  addMember,
-  createGroup,
-  createPendingChallenge,
-  createUser,
-} from "../factories";
+import { addMember, createGroup, createPendingChallenge, createUser } from "../factories";
 
 // web-push 는 실제 FCM 호출을 하므로 integration 에서도 mock. 관측하려는 건
 // "row 흐름 + events 기록"이지 외부 도달 여부가 아니다.
@@ -77,9 +72,7 @@ describe("dispatchStartNotification (integration)", () => {
     const owner = await createUser();
     const g = await createGroup(owner.id);
     const c = await createPendingChallenge(g.id);
-    await admin
-      .from("challenge_participants")
-      .insert({ challenge_id: c.id, user_id: owner.id });
+    await admin.from("challenge_participants").insert({ challenge_id: c.id, user_id: owner.id });
     const endpoint = `https://fcm.googleapis.com/fcm/send/gone-${owner.id}`;
     await admin
       .from("push_subscriptions")
@@ -91,10 +84,7 @@ describe("dispatchStartNotification (integration)", () => {
     await dispatchStartNotification(c.id);
     await new Promise((r) => setTimeout(r, 250));
 
-    const { data } = await admin
-      .from("push_subscriptions")
-      .select("id")
-      .eq("endpoint", endpoint);
+    const { data } = await admin.from("push_subscriptions").select("id").eq("endpoint", endpoint);
     expect(data).toEqual([]);
   });
 });

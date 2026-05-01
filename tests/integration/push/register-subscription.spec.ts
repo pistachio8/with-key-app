@@ -7,10 +7,9 @@ describe("push_subscriptions — RLS", () => {
     const u = await createUser();
     const c = await asUser(u);
     const endpoint = `https://fcm.googleapis.com/fcm/send/${u.id}`;
-    const { error } = await c.from("push_subscriptions").upsert(
-      { user_id: u.id, endpoint, p256dh: "p", auth: "a" },
-      { onConflict: "endpoint" },
-    );
+    const { error } = await c
+      .from("push_subscriptions")
+      .upsert({ user_id: u.id, endpoint, p256dh: "p", auth: "a" }, { onConflict: "endpoint" });
     expect(error).toBeNull();
 
     const { data } = await admin

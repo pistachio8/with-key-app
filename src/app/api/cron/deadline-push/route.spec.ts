@@ -56,8 +56,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 const dispatchDeadlineNotification = vi.fn();
 vi.mock("@/lib/push/dispatch", () => ({
-  dispatchDeadlineNotification: (...args: unknown[]) =>
-    dispatchDeadlineNotification(...args),
+  dispatchDeadlineNotification: (...args: unknown[]) => dispatchDeadlineNotification(...args),
 }));
 
 import { POST, GET } from "./route";
