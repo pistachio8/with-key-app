@@ -80,8 +80,22 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
     name: "kudos_given",
     props: { emoji: "🔥", actionLogId: "11111111-1111-4111-8111-111111111111" },
   },
-  notification_sent: { name: "notification_sent", props: { type: "start" } },
-  notification_opened: { name: "notification_opened", props: { type: "start" } },
+  notification_sent: {
+    name: "notification_sent",
+    props: {
+      type: "start",
+      challengeId: "11111111-1111-4111-8111-111111111111",
+      suppressed: false,
+      outcome: "sent",
+    },
+  },
+  notification_opened: {
+    name: "notification_opened",
+    props: {
+      type: "start",
+      challengeId: "11111111-1111-4111-8111-111111111111",
+    },
+  },
   penalty_displayed: { name: "penalty_displayed", props: { amount: 3000 } },
 };
 

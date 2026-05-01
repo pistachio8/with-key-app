@@ -90,11 +90,19 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   }),
   z.object({
     name: z.literal("notification_sent"),
-    props: z.object({ type: z.enum(["start", "deadline"]) }),
+    props: z.object({
+      type: z.enum(["start", "deadline"]),
+      challengeId: uuid,
+      suppressed: z.boolean(),
+      outcome: z.enum(["sent", "cleaned", "failed", "suppressed"]),
+    }),
   }),
   z.object({
     name: z.literal("notification_opened"),
-    props: z.object({ type: z.enum(["start", "deadline"]) }),
+    props: z.object({
+      type: z.enum(["start", "deadline"]),
+      challengeId: uuid,
+    }),
   }),
   z.object({
     name: z.literal("penalty_displayed"),

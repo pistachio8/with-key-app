@@ -108,6 +108,27 @@ export type Database = {
           },
         ]
       }
+      ai_cost_log: {
+        Row: {
+          month: string
+          scope: string
+          total_micros: number
+          updated_at: string
+        }
+        Insert: {
+          month: string
+          scope: string
+          total_micros?: number
+          updated_at?: string
+        }
+        Update: {
+          month?: string
+          scope?: string
+          total_micros?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       challenge_participants: {
         Row: {
           challenge_id: string
@@ -419,18 +440,21 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          notification_prefs: Json
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           display_name: string
           id: string
+          notification_prefs?: Json
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          notification_prefs?: Json
         }
         Relationships: []
       }
@@ -439,7 +463,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_ai_cost: {
+        Args: { p_micros: number; p_scope: string }
+        Returns: number
+      }
+      audit_rls_status: {
+        Args: never
+        Returns: {
+          rowsecurity: boolean
+          tablename: string
+        }[]
+      }
       is_group_member: { Args: { gid: string }; Returns: boolean }
+      is_group_owner: { Args: { gid: string }; Returns: boolean }
       sign_and_maybe_activate: {
         Args: { p_challenge_id: string }
         Returns: {
@@ -450,7 +486,7 @@ export type Database = {
       }
       truncate_test_data: { Args: never; Returns: undefined }
       update_action_log_photo_path: {
-        Args: { p_log_id: string; p_photo_path: string | null }
+        Args: { p_log_id: string; p_photo_path: string }
         Returns: undefined
       }
     }

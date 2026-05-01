@@ -55,8 +55,19 @@ export type AnalyticsEvent =
     }
   | { name: "feed_view"; props: { unreadCount: number } }
   | { name: "kudos_given"; props: { emoji: string; actionLogId: string } }
-  | { name: "notification_sent"; props: { type: "start" | "deadline" } }
-  | { name: "notification_opened"; props: { type: "start" | "deadline" } }
+  | {
+      name: "notification_sent";
+      props: {
+        type: "start" | "deadline";
+        challengeId: string;
+        suppressed: boolean;
+        outcome: "sent" | "cleaned" | "failed" | "suppressed";
+      };
+    }
+  | {
+      name: "notification_opened";
+      props: { type: "start" | "deadline"; challengeId: string };
+    }
   | { name: "penalty_displayed"; props: { amount: number } };
 
 type TrackOptions = { userId?: string };
