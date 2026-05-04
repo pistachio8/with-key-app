@@ -83,5 +83,30 @@ describe("requestMagicLink", () => {
     const res = await requestMagicLink("user@example.com");
 
     expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("upstream_error");
+  });
+
+  it("maps Supabase 429 (status) to rate_limited", async () => {
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
+    signInWithOtp.mockResolvedValueOnce({
+      error: { status: 429, message: "Email rate limit exceeded" },
+    });
+
+    const res = await requestMagicLink("user@example.com");
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("rate_limited");
+  });
+
+  it("maps Supabase over_email_send_rate_limit code to rate_limited", async () => {
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
+    signInWithOtp.mockResolvedValueOnce({
+      error: { code: "over_email_send_rate_limit", message: "cool down" },
+    });
+
+    const res = await requestMagicLink("user@example.com");
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("rate_limited");
   });
 });

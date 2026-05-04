@@ -39,7 +39,15 @@ export async function requestMagicLink(email: string): Promise<ActionResult<{ se
 
   if (error) {
     console.error("[requestMagicLink] supabase error:", error.message);
-    return failure("upstream_error");
+    return failure(isRateLimitError(error) ? "rate_limited" : "upstream_error");
   }
   return success({ sent: true });
+}
+
+// Supabase OTP 발송은 이메일당 60초 쿨다운 + 프로젝트 시간당 쿼터가 있다.
+// AuthApiError 는 status=429 로 오고, 신버전에서는 "over_email_send_rate_limit" 류 code 도 들어온다.
+function isRateLimitError(err: { status?: number; code?: string | null }): boolean {
+  if (err.status === 429) return true;
+  const code = err.code ?? "";
+  return /^over_.*_rate_limit$/.test(code);
 }
