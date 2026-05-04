@@ -440,6 +440,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          last_feed_seen_at: string | null
           notification_prefs: Json
         }
         Insert: {
@@ -447,6 +448,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
+          last_feed_seen_at?: string | null
           notification_prefs?: Json
         }
         Update: {
@@ -454,6 +456,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          last_feed_seen_at?: string | null
           notification_prefs?: Json
         }
         Relationships: []
