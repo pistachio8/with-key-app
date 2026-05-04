@@ -27,9 +27,7 @@ test("author sees unread badge + home dot, both clear after /feed visit", async 
   if (!giver?.user) throw new Error("failed to create giver");
   const giverId = giver.user.id;
 
-  await admin
-    .from("group_members")
-    .insert({ group_id: groupId, user_id: giverId, role: "member" });
+  await admin.from("group_members").insert({ group_id: groupId, user_id: giverId, role: "member" });
 
   const { data: ch, error: chErr } = await admin
     .from("challenges")
