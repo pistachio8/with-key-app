@@ -15,10 +15,11 @@ test("login form submits and surfaces a toast", async ({ page }) => {
   await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
   await submitBtn.click();
 
-  // Either the success toast or an upstream error toast — both prove the
+  // Success, upstream_error, or rate_limited toast — all three prove the
   // form+Server Action round-trip works. Supabase may reject @test.local
   // domains (rate-limit or allowlist), which is independent of auth wiring.
   const successToast = page.getByText("로그인 링크를 이메일로 보냈어요");
   const errorToast = page.getByText("로그인 링크를 보내지 못했어요");
-  await expect(successToast.or(errorToast)).toBeVisible({ timeout: 15_000 });
+  const rateLimitedToast = page.getByText("요청이 너무 많아요");
+  await expect(successToast.or(errorToast).or(rateLimitedToast)).toBeVisible({ timeout: 15_000 });
 });
