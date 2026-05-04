@@ -11,7 +11,12 @@ const TABS = [
   { href: "/pledge", label: "서약서", icon: Users },
 ] as const;
 
-export function BottomNav() {
+interface BottomNavProps {
+  /** DESIGN_BRIEF §1.5 — 미읽음 Kudos 존재 시 홈 탭에 dot. presence only (count 없음). */
+  unreadDot?: boolean;
+}
+
+export function BottomNav({ unreadDot = false }: BottomNavProps) {
   const pathname = usePathname();
 
   return (
@@ -19,6 +24,7 @@ export function BottomNav() {
       <ul className="mx-auto flex max-w-screen-sm items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
+          const showDot = unreadDot && href === "/home";
           return (
             <li key={href} className="flex-1">
               <Link
@@ -30,7 +36,16 @@ export function BottomNav() {
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="size-6" aria-hidden="true" />
+                <span className="relative">
+                  <Icon className="size-6" aria-hidden="true" />
+                  {showDot && (
+                    <span
+                      data-testid="home-unread-dot"
+                      aria-label="새 응원 있음"
+                      className="bg-primary ring-background absolute -top-1 -right-1 block size-2 rounded-full ring-2"
+                    />
+                  )}
+                </span>
                 <span>{label}</span>
               </Link>
             </li>
