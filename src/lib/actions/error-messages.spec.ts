@@ -17,11 +17,17 @@ describe("makeUserMessage", () => {
       "invalid_input",
       "not_found",
       "conflict",
+      "rate_limited",
       "upstream_error",
     ];
     for (const c of codes) {
       expect(m(c)).toBeTruthy();
     }
+  });
+
+  it("rate_limited default copy asks the user to wait", () => {
+    const m = makeUserMessage();
+    expect(m("rate_limited")).toBe("요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.");
   });
 
   it("falls back for unknown codes (runtime safety)", () => {

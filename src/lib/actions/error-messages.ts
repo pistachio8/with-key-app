@@ -10,6 +10,7 @@ const DEFAULT_ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_input: "입력값을 다시 확인해 주세요.",
   not_found: "대상을 찾을 수 없어요.",
   conflict: "이미 처리된 요청이에요.",
+  rate_limited: "요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.",
   upstream_error: FALLBACK_ERROR_MESSAGE,
 };
 

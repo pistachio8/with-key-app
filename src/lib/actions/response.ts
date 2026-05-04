@@ -9,6 +9,7 @@ export type ErrorCode =
   | "invalid_input" // Zod 또는 DB check/FK 실패
   | "not_found" // 대상 row 없음 (PGRST116)
   | "conflict" // unique 위반
+  | "rate_limited" // 외부 서비스 429 (예: Supabase OTP 이메일 쿨다운)
   | "upstream_error"; // AI / 외부 서비스 장애 / 알 수 없음
 
 export type ActionSuccess<T> = { ok: true; data: T };
