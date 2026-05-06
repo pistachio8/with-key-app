@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const maybeSingle = vi.fn();
-const eq = vi.fn(() => ({ maybeSingle }));
-const select = vi.fn(() => ({ eq }));
-const from = vi.fn(() => ({ select }));
+const eq = vi.fn((): { maybeSingle: typeof maybeSingle } => ({ maybeSingle }));
+const select = vi.fn((): { eq: typeof eq } => ({ eq }));
+const from = vi.fn((): { select: typeof select } => ({ select }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -17,7 +17,7 @@ vi.mock("@/lib/supabase/server", () => ({
         error: null,
       }),
     },
-    from: (...args: unknown[]) => from(...args),
+    from: () => from(),
   }),
 }));
 
