@@ -7,6 +7,13 @@ export type ChallengeMemberView = {
   signed: boolean;
 };
 
+export type ChallengeGroupView = {
+  id: string;
+  bankCode: string | null;
+  accountHolder: string | null;
+  accountNumberLast4: string | null;
+};
+
 export type ChallengeDetailView = {
   id: string;
   title: string;
@@ -16,18 +23,25 @@ export type ChallengeDetailView = {
   status: "pending" | "accepted" | "active" | "closed";
   members: ChallengeMemberView[];
   potTotal: number;
+  group: ChallengeGroupView;
 };
 
 export async function fetchChallengeDetail(
   challengeId: string,
 ): Promise<ChallengeDetailView | null> {
   const supabase = await createClient();
+  // D-016: groups 계좌 필드는 마스킹·표시용 3개만 SELECT. 암호문(account_number_encrypted)
+  // 은 revealAccountNumber Server Action 한 경로로만 조회.
   const { data: c, error } = await supabase
     .from("challenges")
-    .select("id, title, goal_count, duration_days, penalty_amount, status")
+    .select(
+      "id, title, goal_count, duration_days, penalty_amount, status, group_id, groups!inner(id, bank_code, account_holder, account_number_last4)",
+    )
     .eq("id", challengeId)
     .maybeSingle();
   if (error || !c) return null;
+
+  const groupRow = Array.isArray(c.groups) ? c.groups[0] : c.groups;
 
   const { data: parts } = await supabase
     .from("challenge_participants")
@@ -62,5 +76,11 @@ export async function fetchChallengeDetail(
     status: c.status as ChallengeDetailView["status"],
     members,
     potTotal: members.length * c.penalty_amount,
+    group: {
+      id: groupRow?.id ?? c.group_id,
+      bankCode: groupRow?.bank_code ?? null,
+      accountHolder: groupRow?.account_holder ?? null,
+      accountNumberLast4: groupRow?.account_number_last4 ?? null,
+    },
   };
 }
