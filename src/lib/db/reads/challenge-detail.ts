@@ -9,6 +9,7 @@ export type ChallengeMemberView = {
 
 export type ChallengeGroupView = {
   id: string;
+  ownerId: string;
   bankCode: string | null;
   accountHolder: string | null;
   accountNumberLast4: string | null;
@@ -35,7 +36,7 @@ export async function fetchChallengeDetail(
   const { data: c, error } = await supabase
     .from("challenges")
     .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, group_id, groups!inner(id, bank_code, account_holder, account_number_last4)",
+      "id, title, goal_count, duration_days, penalty_amount, status, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
     )
     .eq("id", challengeId)
     .maybeSingle();
@@ -78,6 +79,7 @@ export async function fetchChallengeDetail(
     potTotal: members.length * c.penalty_amount,
     group: {
       id: groupRow?.id ?? c.group_id,
+      ownerId: groupRow?.owner_id ?? "",
       bankCode: groupRow?.bank_code ?? null,
       accountHolder: groupRow?.account_holder ?? null,
       accountNumberLast4: groupRow?.account_number_last4 ?? null,

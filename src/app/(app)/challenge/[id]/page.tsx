@@ -3,6 +3,7 @@ import { formatKRW } from "@/lib/challenge/penalty";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { createClient } from "@/lib/supabase/server";
+import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger";
 import { MemberStrip } from "./_components/member-strip";
 import { AccountInfoTrigger } from "./_components/account-info-trigger";
 import { ChallengeFeed } from "./_components/challenge-feed";
@@ -34,6 +35,11 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
         </h2>
         <MemberStrip goalCount={detail.goalCount} members={detail.members} />
       </section>
+      {user.id === detail.group.ownerId ? (
+        <section aria-label="초대">
+          <InviteTrigger groupId={detail.group.id} />
+        </section>
+      ) : null}
       <section
         aria-labelledby="settlement-heading"
         className="bg-card flex items-center justify-between rounded-2xl border p-4"
