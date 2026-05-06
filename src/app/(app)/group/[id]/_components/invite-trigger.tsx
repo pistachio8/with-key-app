@@ -32,10 +32,7 @@ export function InviteTrigger({ groupId }: Props) {
           toast.error(userMessage(res.error));
           return;
         }
-        const origin =
-          typeof window !== "undefined"
-            ? window.location.origin
-            : "";
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
         const url = buildInviteUrl(origin, res.data.token);
         setLastUrl(url);
 

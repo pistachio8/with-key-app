@@ -34,10 +34,7 @@ export const createInvite = withUser<string, { token: string }>(
     if (error) return failure(mapSupabaseError(error));
     if (!data?.token) return failure("upstream_error");
 
-    void track(
-      { name: "invite_sent", props: { groupId: parsed.data } },
-      { userId: user.id },
-    );
+    void track({ name: "invite_sent", props: { groupId: parsed.data } }, { userId: user.id });
 
     return success({ token: data.token });
   },
