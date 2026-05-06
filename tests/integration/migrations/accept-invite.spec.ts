@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { asUser, admin, expectRlsDenied } from "../setup";
 import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
 
-async function createInviteRow(groupId: string, ownerId: string, opts: { expiresInMs?: number; token?: string } = {}) {
+async function createInviteRow(
+  groupId: string,
+  ownerId: string,
+  opts: { expiresInMs?: number; token?: string } = {},
+) {
   const token = opts.token ?? `tok-${Math.random().toString(36).slice(2, 20)}`;
   const expiresAt = new Date(Date.now() + (opts.expiresInMs ?? 72 * 3600 * 1000)).toISOString();
   const { data, error } = await admin
@@ -93,9 +97,7 @@ describe("accept_invite RPC", () => {
     const joiner = await createUser();
     const g = await createGroup(owner.id);
     const c = await createPendingChallenge(g.id);
-    await admin
-      .from("challenge_participants")
-      .insert({ challenge_id: c.id, user_id: owner.id });
+    await admin.from("challenge_participants").insert({ challenge_id: c.id, user_id: owner.id });
     const invite = await createInviteRow(g.id, owner.id);
 
     const client = await asUser(joiner);
