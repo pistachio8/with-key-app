@@ -4,7 +4,7 @@ import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { createClient } from "@/lib/supabase/server";
 import { MemberStrip } from "./_components/member-strip";
-import { SettlementTrigger } from "./_components/settlement-trigger";
+import { AccountInfoTrigger } from "./_components/account-info-trigger";
 import { ChallengeFeed } from "./_components/challenge-feed";
 
 type Params = Promise<{ id: string }>;
@@ -44,7 +44,12 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
           </p>
           <p className="text-xl font-bold tabular-nums">{formatKRW(detail.potTotal)}</p>
         </div>
-        <SettlementTrigger amount={detail.potTotal} memo={`${detail.title} 벌금`} />
+        <AccountInfoTrigger
+          groupId={detail.group.id}
+          bankCode={detail.group.bankCode}
+          accountHolder={detail.group.accountHolder}
+          accountNumberLast4={detail.group.accountNumberLast4}
+        />
       </section>
       <section aria-labelledby="feed-heading">
         <h2 id="feed-heading" className="mb-3 text-sm font-semibold">

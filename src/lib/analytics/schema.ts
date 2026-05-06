@@ -11,7 +11,15 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   }),
   z.object({
     name: z.literal("group_created"),
-    props: z.object({ groupId: uuid, memberTarget: z.number().int().min(2) }),
+    props: z.object({
+      groupId: uuid,
+      memberTarget: z.number().int().min(2),
+      hasAccount: z.boolean().optional(),
+    }),
+  }),
+  z.object({
+    name: z.literal("account_copied"),
+    props: z.object({ groupId: uuid }),
   }),
   z.object({ name: z.literal("invite_sent"), props: z.object({ groupId: uuid }) }),
   z.object({

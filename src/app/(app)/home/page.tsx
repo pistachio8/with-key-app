@@ -4,8 +4,8 @@ import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
-import { fetchActiveChallenge } from "@/lib/db/reads/active-challenge";
-import { ProgressCard } from "./_components/progress-card";
+import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
+import { GroupStrip } from "./_components/group-strip";
 
 // PRD §4 · Design Brief 화면 4
 export default async function HomePage() {
@@ -15,7 +15,8 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const active = await fetchActiveChallenge(user.id);
+  const groups = await fetchCurrentChallenges(user.id);
+  const hasAnyGroup = groups.length > 0;
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -29,31 +30,15 @@ export default async function HomePage() {
         </Link>
       </header>
 
-      {active ? (
-        <>
-          <ProgressCard
-            title={active.title}
-            goalCount={active.goalCount}
-            doneCount={active.doneCount}
-            potTotal={active.potTotal}
-            daysLeft={active.daysLeft}
-          />
-          <Link
-            href={`/challenge/${active.id}`}
-            className={cn(buttonVariants({ size: "lg" }), "h-12 w-full")}
-          >
-            현황 보기
-          </Link>
-        </>
-      ) : (
-        <section className="bg-card flex flex-col items-center gap-3 rounded-2xl border p-6 text-center">
-          <p className="text-muted-foreground break-keep text-sm">
-            진행 중인 서약서가 없어요. 친구들과 새 챌린지를 시작해 보세요.
-          </p>
-          <Link href="/challenge/new" className={cn(buttonVariants({ size: "lg" }), "h-12 w-full")}>
-            <Plus aria-hidden="true" /> 새로운 서약서 만들기
-          </Link>
-        </section>
+      <GroupStrip groups={groups} />
+
+      {hasAnyGroup && (
+        <Link
+          href="/group/new"
+          className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-11 w-full gap-2")}
+        >
+          <Plus aria-hidden="true" /> 새 그룹 만들기
+        </Link>
       )}
     </div>
   );

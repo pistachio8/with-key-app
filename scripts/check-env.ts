@@ -8,6 +8,7 @@ const REQUIRED = [
   "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
   "VAPID_PRIVATE_KEY",
   "VAPID_SUBJECT",
+  "ACCOUNT_ENCRYPTION_KEY",
 ];
 
 const missing = REQUIRED.filter((k) => !process.env[k]);

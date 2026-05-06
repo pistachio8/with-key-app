@@ -5,7 +5,11 @@ import { analyticsEventSchema } from "./schema";
 
 export type AnalyticsEvent =
   | { name: "user_signed_up"; props: { provider: "kakao" | "email"; invitedBy?: string } }
-  | { name: "group_created"; props: { groupId: string; memberTarget: number } }
+  | {
+      name: "group_created";
+      props: { groupId: string; memberTarget: number; hasAccount?: boolean };
+    }
+  | { name: "account_copied"; props: { groupId: string } }
   | { name: "invite_sent"; props: { groupId: string } }
   | { name: "invite_opened"; props: { groupId: string; fromOrganicUser: boolean } }
   | {
