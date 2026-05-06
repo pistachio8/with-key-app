@@ -51,9 +51,9 @@ describe("AccountInfoSheet", () => {
     expect(screen.getByText("****-**-****5678")).toBeTruthy();
     // Bank code 088 → 신한 (from BANK_NAMES)
     expect(screen.getByText(/신한.*홍길동/)).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /계좌번호 복사/ }).hasAttribute("disabled"),
-    ).toBe(false);
+    expect(screen.getByRole("button", { name: /계좌번호 복사/ }).hasAttribute("disabled")).toBe(
+      false,
+    );
   });
 
   it("copies plaintext returned from revealAccountNumber to clipboard", async () => {

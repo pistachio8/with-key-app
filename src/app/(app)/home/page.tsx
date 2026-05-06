@@ -35,10 +35,7 @@ export default async function HomePage() {
       {hasAnyGroup && (
         <Link
           href="/group/new"
-          className={cn(
-            buttonVariants({ variant: "outline", size: "lg" }),
-            "h-11 w-full gap-2",
-          )}
+          className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-11 w-full gap-2")}
         >
           <Plus aria-hidden="true" /> 새 그룹 만들기
         </Link>

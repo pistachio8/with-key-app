@@ -33,9 +33,7 @@ export default function NewGroupPage() {
     }
     const trimmedHolder = accountHolder.trim();
     const trimmedNumber = accountNumber.trim();
-    const filledCount = [bankCode, trimmedHolder, trimmedNumber].filter(
-      (v) => v.length > 0,
-    ).length;
+    const filledCount = [bankCode, trimmedHolder, trimmedNumber].filter((v) => v.length > 0).length;
     if (filledCount > 0 && filledCount < 3) {
       toast.error("은행 · 예금주 · 계좌번호를 모두 입력하거나 전부 비워주세요.");
       return;
@@ -98,9 +96,7 @@ export default function NewGroupPage() {
       </div>
 
       <details className="bg-muted/30 rounded-xl border p-4">
-        <summary className="text-sm font-semibold select-none">
-          (선택) 벌금 정산 계좌 등록
-        </summary>
+        <summary className="text-sm font-semibold select-none">(선택) 벌금 정산 계좌 등록</summary>
         <div className="mt-4 flex flex-col gap-4">
           <p className="text-muted-foreground text-xs break-keep">
             여기에 등록한 계좌는 멤버들이 정산 시 마스킹된 형태로 보이며, 복사 버튼을 눌러 평문을

@@ -26,9 +26,9 @@ describe("groupInputSchema", () => {
     expect(
       groupInputSchema.safeParse({ name: "민지네", accountNumber: VALID.accountNumber }).success,
     ).toBe(false);
-    expect(
-      groupInputSchema.safeParse({ name: "민지네", bankCode: VALID.bankCode }).success,
-    ).toBe(false);
+    expect(groupInputSchema.safeParse({ name: "민지네", bankCode: VALID.bankCode }).success).toBe(
+      false,
+    );
   });
 
   it("rejects partial triple — 2 of 3", () => {
@@ -49,21 +49,17 @@ describe("groupInputSchema", () => {
   });
 
   it("rejects account number shorter than 8 digits", () => {
-    expect(
-      groupInputSchema.safeParse({ ...VALID, accountNumber: "1234567" }).success,
-    ).toBe(false);
+    expect(groupInputSchema.safeParse({ ...VALID, accountNumber: "1234567" }).success).toBe(false);
   });
 
   it("rejects account number longer than 16 digits", () => {
-    expect(
-      groupInputSchema.safeParse({ ...VALID, accountNumber: "1".repeat(17) }).success,
-    ).toBe(false);
+    expect(groupInputSchema.safeParse({ ...VALID, accountNumber: "1".repeat(17) }).success).toBe(
+      false,
+    );
   });
 
   it("rejects unknown bank code", () => {
-    expect(
-      groupInputSchema.safeParse({ ...VALID, bankCode: "999" }).success,
-    ).toBe(false);
+    expect(groupInputSchema.safeParse({ ...VALID, bankCode: "999" }).success).toBe(false);
   });
 
   it("rejects name over 30 chars", () => {

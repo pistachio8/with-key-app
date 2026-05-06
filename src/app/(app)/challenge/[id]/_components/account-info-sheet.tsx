@@ -47,8 +47,7 @@ export function AccountInfoSheet({
 }: Props) {
   const [copying, setCopying] = useState(false);
 
-  const hasAccount =
-    bankCode !== null && accountHolder !== null && accountNumberLast4 !== null;
+  const hasAccount = bankCode !== null && accountHolder !== null && accountNumberLast4 !== null;
   const bankLabel = bankDisplay(bankCode);
   const masked = accountNumberLast4 ? maskAccountNumber(accountNumberLast4) : null;
 

@@ -16,9 +16,7 @@ function loadKey(): Buffer {
   }
   const key = Buffer.from(raw, "base64");
   if (key.length !== KEY_BYTES) {
-    throw new Error(
-      `ACCOUNT_ENCRYPTION_KEY must decode to 32 bytes (got ${key.length})`,
-    );
+    throw new Error(`ACCOUNT_ENCRYPTION_KEY must decode to 32 bytes (got ${key.length})`);
   }
   return key;
 }
