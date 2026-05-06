@@ -51,9 +51,13 @@ supabase/.temp/
 /tests/e2e/.auth/
 
 # Personal AI assistant workspace
-# Keep the directory open so we can whitelist team-shared rules below.
+# Keep the directory open so we can whitelist team-shared subtrees below.
 /.claude/*
 !/.claude/rules/
+!/.claude/commands/
+!/.claude/skills/
+!/.claude/settings.json
+!/.claude/project-log-policy.md
 # Personal subtrees under .claude/rules/ (if any) should be re-ignored here.
 .cursor/
 .agents/

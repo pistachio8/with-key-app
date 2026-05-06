@@ -478,6 +478,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: { Args: { p_token: string }; Returns: string }
       add_ai_cost: {
         Args: { p_micros: number; p_scope: string }
         Returns: number
@@ -491,10 +492,10 @@ export type Database = {
       }
       create_group_with_owner: {
         Args: {
-          p_account_holder: string | null
-          p_account_number_encrypted: string | null
-          p_account_number_last4: string | null
-          p_bank_code: string | null
+          p_account_holder: string
+          p_account_number_encrypted: string
+          p_account_number_last4: string
+          p_bank_code: string
           p_name: string
         }
         Returns: string

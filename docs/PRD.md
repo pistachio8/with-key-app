@@ -667,6 +667,10 @@ push_subscriptions
 
 ## 17. Changelog
 
+- **v0.4** (2026-05-06) — **친구 초대 · 수락 플로우 구현** (Ian · D-021)
+  - §3 기능 #1: AC-2/AC-3/AC-4 구현분 착지. `createInvite` / `acceptInvite` Server Action + `accept_invite` RPC.
+  - §9 이벤트: `invite_sent` · `invite_opened` 실제 발사 경로 연결.
+  - §10 화면 #2: 챌린지 상세에서 공유 버튼 노출.
 - **v0.3** (2026-05-06) — **멀티 그룹 + 계좌번호 기반 정산** (Ian · D-020)
   - §8.2 `groups` 테이블 컬럼 표 신설 — `bank_code`, `account_holder`, `account_number_encrypted`, `account_number_last4` + 묶음 CHECK.
   - §14 Out of Scope 에 "계좌번호 실명 검증", "그룹 계좌 N개 / 변경 이력 / 키 로테이션" 추가.

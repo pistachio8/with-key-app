@@ -64,6 +64,15 @@
 
 ---
 
+### D-021 · 초대 수락을 SECURITY DEFINER RPC 로 구현 (2026-05-06)
+
+- **결정**: 초대 수락 경로를 `accept_invite(p_token text) returns uuid` RPC 로 구현.
+- **왜**: `group_members` INSERT 는 0002_rls.sql 기준 `service_role` 전용. 사용자 토큰으로 직접 insert 불가. 대안 A (앱 서버 Action 에서 `adminClient` 로 insert) 는 RLS 우회면 확대. 대안 B (group_members INSERT RLS 정책 추가) 는 멤버십-자기증명 loop 위험 (A 가 B 를 초대하는 걸 막을 수 없음). RPC 경로는 토큰 검증과 insert 를 한 트랜잭션에 묶어 최소 노출면 보장.
+- **적용 범위**: `supabase/migrations/0018_accept_invite_rpc.sql`, `src/app/(auth)/invite/[token]/_actions.ts`.
+- **되돌릴 조건**: 초대 외에 "자발적 그룹 탐색 가입" 기능이 생기면 RPC 1개로는 부족 — 그때 RLS 정책 재설계.
+
+---
+
 ### D-020 — 정산 수단: 카카오페이 송금 링크 → 앱 레이어 AES-256-GCM 암호화 계좌번호 (D-009 반전)
 
 - **날짜**: 2026-05-06
