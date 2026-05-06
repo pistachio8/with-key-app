@@ -285,6 +285,10 @@ export type Database = {
       }
       groups: {
         Row: {
+          account_holder: string | null
+          account_number_encrypted: string | null
+          account_number_last4: string | null
+          bank_code: string | null
           created_at: string
           disbanded_at: string | null
           id: string
@@ -293,6 +297,10 @@ export type Database = {
           status: string
         }
         Insert: {
+          account_holder?: string | null
+          account_number_encrypted?: string | null
+          account_number_last4?: string | null
+          bank_code?: string | null
           created_at?: string
           disbanded_at?: string | null
           id?: string
@@ -301,6 +309,10 @@ export type Database = {
           status?: string
         }
         Update: {
+          account_holder?: string | null
+          account_number_encrypted?: string | null
+          account_number_last4?: string | null
+          bank_code?: string | null
           created_at?: string
           disbanded_at?: string | null
           id?: string
@@ -476,6 +488,16 @@ export type Database = {
           rowsecurity: boolean
           tablename: string
         }[]
+      }
+      create_group_with_owner: {
+        Args: {
+          p_account_holder: string | null
+          p_account_number_encrypted: string | null
+          p_account_number_last4: string | null
+          p_bank_code: string | null
+          p_name: string
+        }
+        Returns: string
       }
       is_group_member: { Args: { gid: string }; Returns: boolean }
       is_group_owner: { Args: { gid: string }; Returns: boolean }

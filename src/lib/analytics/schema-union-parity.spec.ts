@@ -97,6 +97,10 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
     },
   },
   penalty_displayed: { name: "penalty_displayed", props: { amount: 3000 } },
+  account_copied: {
+    name: "account_copied",
+    props: { groupId: "11111111-1111-4111-8111-111111111111" },
+  },
 };
 
 describe("TS union ↔ Zod schema parity", () => {
