@@ -64,6 +64,45 @@
 
 ---
 
+### D-020 — 정산 수단: 카카오페이 송금 링크 → 앱 레이어 AES-256-GCM 암호화 계좌번호 (D-009 반전)
+
+- **날짜**: 2026-05-06
+- **상태**: ✅ Active
+- **참여자**: Ian
+- **맥락 (Context)**:
+  - D-009 가 채택한 `NEXT_PUBLIC_KAKAOPAY_SEND_URL` + QR 경로는 외부 카카오페이 송금 링크/QR 스펙이 정책·도메인 변경으로 갑자기 깨질 수 있어 POC 가설 검증의 안정성이 떨어진다.
+  - 멀티 그룹 전환 시점(`groups` 가 N:N 지원)과 맞물려 "오너별 수취 주체" 를 스키마 수준에서 1급 필드로 둘 필요가 생겼다.
+  - 벌금 정산 플로우에서 사용자 저항이 낮은 1차 기능은 "오너 계좌번호 공유 + 복사" 이다(실결제 API 연동은 POC 밖).
+- **고려한 옵션 (Options considered)**:
+  - A) D-009 유지 (송금 링크 + QR) — 구현 단순 / 외부 스펙 리스크 잔존.
+  - B) 오픈뱅킹·ARS 실명 검증 — 정확도 高 / POC 대비 심사·비용 과다.
+  - C) **오너 수기 입력 + 앱 레이어 AES-256-GCM + 마스킹 표시 + 복사 버튼 (채택).**
+  - D) pgcrypto `pgp_sym_encrypt` + Postgres GUC `app.account_key` — DB-local 구현 단순 / DB 덤프 + GUC 동시 유출 시 무력화(키와 암호문이 같은 신뢰 경계).
+- **결정 (Decision)**:
+  - 우리는 **C 안** 을 선택한다.
+  - DB: `groups` 에 `bank_code`, `account_holder`, `account_number_encrypted(bytea)`, `account_number_last4` 4 컬럼 + 묶음 CHECK(all-or-nothing).
+  - 암호화: `ACCOUNT_ENCRYPTION_KEY` env(base64 32B) + Node `crypto` AES-256-GCM. 포맷 `iv(12) || cipher || tag(16)` 단일 bytea.
+  - 읽기 경로: 마스킹 표시용 `bank_code`/`account_holder`/`account_number_last4` 만 RSC 화이트리스트 SELECT. `account_number_encrypted` 는 **오직** `revealAccountNumber` Server Action 한 경로로만 SELECT + 복호화하여 평문 반환 → `navigator.clipboard.writeText`.
+  - 쓰기 경로: `create_group_with_owner(p_name, p_bank_code, p_account_holder, p_account_number_encrypted, p_account_number_last4)` SECURITY DEFINER RPC 가 groups insert + group_members(role=owner) 를 한 트랜잭션에서 처리(0002_rls 가 group_members INSERT 를 service_role-only 로 막기 때문).
+  - 복호화 RPC 는 두지 않는다 — RLS `is_group_member` 만으로 비멤버 차단.
+- **근거 (Reasoning)**:
+  - **키와 DB 의 신뢰 경계 분리**: 키는 Vercel env, 암호문은 Supabase DB → 한쪽 덤프만으로는 평문 복구 불가(D 안 대비 우위).
+  - **노출면 최소화**: 복호화는 앱 레이어 1개 모듈(`account-cipher.ts` + `import "server-only"`) + Server Action 1개 경로. definer RPC 로 복호화를 여는 설계를 거부.
+  - **v1 KMS 이관 경로 단순**: `encryptAccountNumber`/`decryptAccountNumber` 시그니처 고정, 내부 구현을 AWS KMS / Supabase Vault 호출로 교체하면 끝.
+  - POC 가설("정산 액션이 실제로 발생하는가") 검증에 외부 API 의존을 완전히 제거.
+- **영향 범위 (Impact)**:
+  - Supabase: `groups` 컬럼 4개 추가 + 묶음 CHECK · `create_group_with_owner(text, text, text, bytea, text)` RPC (0017 migration).
+  - 앱: `src/lib/crypto/account-cipher.ts` (신규), `src/lib/bank/**` (신규), `/group/new` (계좌 3필드 묶음 optional 폼), `AccountInfoSheet` + `revealAccountNumber` Server Action.
+  - 삭제: `src/lib/kakaopay/**`, `SettlementSheet`/`SettlementTrigger`, `qrcode` 의존성, `NEXT_PUBLIC_KAKAOPAY_SEND_URL` env.
+  - 신규 env `ACCOUNT_ENCRYPTION_KEY` (REQUIRED, base64 32B).
+  - PRD §8.2 `groups` 컬럼 표 갱신, §11 정산 섹션 갱신, §14 Non-Goals 갱신.
+- **되돌릴 조건 (Reversal trigger) ⚠️**:
+  - 실결제 API 운영 여력(사업자등록·PG 계약·심사) 확보 시 실결제 플로우로 상향. 또는 KMS 이관 시 D-020.1 로 superseding.
+  - 유저가 "복사 후 실제 이체" 누락률 ≥ TBD% 로 측정되면 실결제 API 재검토.
+- **되돌리기 비용**: 중간 — migration + AccountInfoSheet + account-cipher 모듈 교체.
+
+---
+
 ### D-019 — Web Push: in-request fan-out + events 기반 dedup + quiet hours suppressed-only
 
 - **날짜**: 2026-05-01
@@ -392,7 +431,7 @@
 ### D-009 — 카카오페이 결제 연동 대신 송금 링크 + QR
 
 - **날짜**: 2026-04-28
-- **상태**: ✅ Active
+- **상태**: ⛔ Reverted (sunset 2026-05-06) — D-020 으로 대체
 - **참여자**: Ian
 - **맥락 (Context)**:
   - 벌금 정산에 카카오페이 결제 API 연동은 심사/PG 계약/키 관리 비용이 높음.

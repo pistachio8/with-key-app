@@ -432,6 +432,23 @@ push_subscriptions
 | auth_provider | text | `kakao` \| `email` |
 | created_at | timestamptz | |
 
+**groups**
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| id | uuid | PK |
+| owner_id | uuid | FK users |
+| name | text | 1~30자, nullable |
+| status | text | `active` \| `disbanded` |
+| bank_code | text | D-020, nullable. 금융결제원 3자리 코드. |
+| account_holder | text | D-020, nullable. 1~30자. |
+| account_number_encrypted | bytea | D-020, nullable. AES-256-GCM `iv \|\| cipher \|\| tag`. |
+| account_number_last4 | text | D-020, nullable. 마스킹 표시용. |
+| disbanded_at | timestamptz | nullable |
+| created_at | timestamptz | |
+
+> **D-020 묶음 CHECK**: `bank_code` / `account_holder` / `account_number_encrypted` / `account_number_last4` 4개는 모두 NULL 이거나 모두 NOT NULL 이어야 한다. "last4 만 채워지는" 부분 상태 불가능.
+
 **challenges**
 
 | 컬럼 | 타입 | 비고 |
@@ -618,6 +635,8 @@ push_subscriptions
 | 주간 브이로그 자동 영상 | 복잡도 높음 | v1 (IDEATION §7.3 백로그) |
 | 인증 사진 자동 검열 | POC는 소규모·신뢰 그룹 | v1 |
 | 앱스토어 네이티브 앱 | 웹/PWA로 충분 | v2 |
+| 계좌번호 실명 검증 (오픈뱅킹/ARS) | D-020 scope 밖. 오너 입력값은 UI 표시용 | v1 |
+| 그룹 계좌 N개 / 계좌 변경 이력 / 키 로테이션 | D-020 POC 단일 키 | v1 |
 
 ---
 
@@ -648,6 +667,10 @@ push_subscriptions
 
 ## 17. Changelog
 
+- **v0.3** (2026-05-06) — **멀티 그룹 + 계좌번호 기반 정산** (Ian · D-020)
+  - §8.2 `groups` 테이블 컬럼 표 신설 — `bank_code`, `account_holder`, `account_number_encrypted`, `account_number_last4` + 묶음 CHECK.
+  - §14 Out of Scope 에 "계좌번호 실명 검증", "그룹 계좌 N개 / 변경 이력 / 키 로테이션" 추가.
+  - D-009 (카카오페이 송금 링크 + QR) 반전 — D-020 (앱 레이어 AES-256-GCM 암호화 계좌번호)으로 교체.
 - **v0.2** (2026-04-24) — **인증·AI 일기를 "원탭 키워드" 모델로 전환** (Ian)
   - §2 용어 사전에 **키워드 칩 · 다시 뽑기** 추가
   - §4 인증: UX 흐름 재작성 · 키워드 1~3개 필수 + 메모 escape hatch · AC-2/7/8/9/10 신규 · Edge Case 5건 추가 · 키워드 풀 초안(§4.6) 첨부
