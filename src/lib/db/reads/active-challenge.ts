@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchCurrentChallenges } from "./current-challenges";
 
 export type ChallengeStatus = "pending" | "accepted" | "active" | "closed";
 
@@ -30,11 +31,38 @@ const DEFAULT_CURRENT_STATUSES = [
 /**
  * 내가 속한 그룹 중 가장 최근의 "진행 중 또는 서명 대기" 챌린지 1개.
  * 없으면 null. RLS 가 is_group_member 로 자동 필터링.
+ *
+ * @deprecated 신규 호출자는 `fetchCurrentChallenges(userId)` 를 사용.
+ *             기본 status 호출은 내부적으로 그쪽으로 위임한다.
  */
 export async function fetchActiveChallenge(
   userId: string,
   options: FetchActiveChallengeOptions = {},
 ): Promise<ActiveChallengeView | null> {
+  // 기본 status 사용 시 — 멀티 그룹 환경에서 첫 그룹의 최신 챌린지를 그대로 반환하여
+  // 레거시 홈/스펙 호출자와 계약 유지.
+  const usingDefaults = options.statuses === undefined;
+  if (usingDefaults) {
+    const groups = await fetchCurrentChallenges(userId);
+    const firstWithChallenge = groups.find((g) => g.challenge !== null);
+    if (!firstWithChallenge || !firstWithChallenge.challenge) return null;
+    const c = firstWithChallenge.challenge;
+    return {
+      id: c.id,
+      groupId: firstWithChallenge.groupId,
+      title: c.title,
+      goalCount: c.goalCount,
+      durationDays: c.durationDays,
+      penaltyAmount: c.penaltyAmount,
+      status: c.status,
+      startAt: c.startAt,
+      endAt: c.endAt,
+      doneCount: c.doneCount,
+      daysLeft: c.daysLeft,
+      potTotal: c.potTotal,
+    };
+  }
+
   const supabase = await createClient();
   const statuses = options.statuses ?? DEFAULT_CURRENT_STATUSES;
 
