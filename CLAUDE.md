@@ -1,3 +1,5 @@
+@AGENTS.md
+
 안드레아 카파시(andrej-karpathy-skills)의 문서를 참조합니다.(https://github.com/forrestchang/andrej-karpathy-skills/blob/main/CLAUDE.md)
 
 LLM이 코딩할 때 자주 발생하는 실수를 줄이기 위한 행동 지침입니다. 필요에 따라 프로젝트별 규칙과 함께 사용하세요.

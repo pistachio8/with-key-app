@@ -1,60 +1,46 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# 이건 당신이 알던 Next.js가 아닙니다
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+이 버전에는 breaking change가 포함되어 있습니다 — API, 컨벤션, 파일 구조 모두 학습 데이터와 다를 수 있습니다. 코드를 작성하기 전에 반드시 `node_modules/next/dist/docs/`의 관련 가이드를 먼저 읽으세요. deprecation 안내에도 주의하세요.
 <!-- END:nextjs-agent-rules -->
 
 ---
 
-# with-key Agent Operating Rules
+# with-key 에이전트 운영 규칙
 
-These rules are for every coding agent session in this repository. They are
-intentionally self-contained because `.claude/**` is local-only and ignored by
-git.
+이 규칙은 본 저장소의 모든 코딩 에이전트 세션에 적용됩니다. `.claude/**`는 로컬 전용이며 git에서 무시되므로, 이 문서는 의도적으로 자체 완결적으로 작성되었습니다.
 
-## Start-of-task Protocol
+## 작업 시작 프로토콜
 
-Before making code changes for a non-trivial request, report a short fact-based
-brief in Korean:
+사소하지 않은(non-trivial) 요청에 대해 코드를 변경하기 전에, 다음 형식의 짧은 사실 기반 브리프를 한국어로 보고하세요:
 
-1. **Fact 요약** — what is already known from the user request, active plan, repo
-   files, and previous commits. Separate facts from assumptions.
-2. **작업 범위** — exact paths likely to change.
-3. **데이터/RLS 영향** — Supabase tables, RLS policies, migrations, or "없음".
-4. **검증 계획** — commands/tests that will prove the work is done.
+1. **Fact 요약** — 사용자 요청, 진행 중인 계획, 저장소 파일, 이전 커밋에서 이미 알려진 사실. 사실과 가정을 분리해서 기술합니다.
+2. **작업 범위** — 변경될 가능성이 높은 정확한 경로.
+3. **데이터/RLS 영향** — Supabase 테이블, RLS 정책, 마이그레이션, 또는 "없음".
+4. **검증 계획** — 작업이 완료되었음을 증명할 커맨드/테스트.
 
-For tiny requests such as "show git status" or "commit this", skip the full
-brief and execute directly.
+"git status 보여줘"나 "이거 커밋해" 같은 사소한 요청은 전체 브리프를 생략하고 바로 실행합니다.
 
-## Execution Style
+## 실행 스타일
 
-- Prefer the plan/task structure already present in `docs/superpowers/plans/**`.
-- Execute in small batches. After each batch, summarize what changed and which
-  verification command passed or failed.
-- Keep changes surgical. Do not rewrite unrelated code, docs, or formatting.
-- If `.claude/commands/*.md` or `.claude/skills/*.md` exists and the user asks
-  for that command/skill by name, read it and follow the parts that fit the
-  current agent/tooling.
-- Claude-specific subagent rules in `.claude/rules/common/agents.md` are
-  advisory for non-Claude agents. Codex must use only the available tools and
-  must not spawn subagents unless the user explicitly asks for parallel agents.
+- `docs/superpowers/plans/**`에 이미 존재하는 plan/task 구조를 우선적으로 활용합니다.
+- 작은 배치 단위로 실행합니다. 각 배치 이후 무엇이 바뀌었고, 어떤 검증 커맨드가 통과 또는 실패했는지 요약합니다.
+- 변경은 외과적으로(surgical) 유지합니다. 무관한 코드, 문서, 포맷을 다시 쓰지 않습니다.
+- `.claude/commands/*.md` 또는 `.claude/skills/*.md`가 존재하고 사용자가 그 커맨드/스킬을 이름으로 요청하면, 해당 파일을 읽고 현재 에이전트/툴링에 맞는 부분을 따릅니다.
+- `.claude/rules/common/agents.md`의 Claude 전용 서브에이전트 규칙은 Claude가 아닌 에이전트에게는 권고 사항입니다. Codex는 사용 가능한 도구만 사용해야 하며, 사용자가 명시적으로 병렬 에이전트를 요청하지 않는 한 서브에이전트를 생성해서는 안 됩니다.
 
-## End-of-task Report
+## 작업 종료 보고
 
-Finish implementation work with this Korean report shape:
+구현 작업은 다음과 같은 한국어 보고 형식으로 마무리합니다:
 
-1. **명세 요약** — plan task, PRD/BE_SCHEMA reference, or user goal.
-2. **구현 내역** — behavior changed, not just filenames.
-3. **변경 파일** — clickable file links when possible.
-4. **영향 범위** — app paths, Supabase tables/RLS/migrations, external services.
-5. **검증 결과** — exact commands run and pass/fail/skip.
-6. **커밋** — hashes and messages if commits were created.
-7. **미해결/후속 액션** — only real residual risk.
+1. **명세 요약** — plan task, PRD/BE_SCHEMA 참조, 또는 사용자 목표.
+2. **구현 내역** — 파일명 나열이 아니라 변경된 동작을 기술.
+3. **변경 파일** — 가능하면 클릭 가능한 파일 링크.
+4. **영향 범위** — 앱 경로, Supabase 테이블/RLS/마이그레이션, 외부 서비스.
+5. **검증 결과** — 실제 실행한 커맨드와 pass/fail/skip 결과.
+6. **커밋** — 커밋이 생성되었다면 해시와 메시지.
+7. **미해결/후속 액션** — 실제로 남아있는 리스크만 기재.
 
-## Technical Scribe Compatibility
+## Technical Scribe 호환성
 
-If `.claude/PROJECT_LOG.md` and `.claude/project-log-policy.md` exist, and the
-work contains a high-value decision, user-facing feature, security/RLS change,
-or deployment/database pipeline change, update `.claude/PROJECT_LOG.md` unless
-the user says not to. End the response with `이번에 추가된 항목 3줄 요약` only
-when that project log was actually updated.
+`.claude/PROJECT_LOG.md`와 `.claude/project-log-policy.md`가 존재하고, 작업이 가치가 높은 의사결정, 사용자 노출 기능, 보안/RLS 변경, 또는 배포/데이터베이스 파이프라인 변경을 포함하는 경우, 사용자가 별도로 하지 말라고 하지 않는 한 `.claude/PROJECT_LOG.md`를 업데이트합니다. 해당 프로젝트 로그가 실제로 업데이트된 경우에만 응답 마지막에 `이번에 추가된 항목 3줄 요약`을 덧붙입니다.
