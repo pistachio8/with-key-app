@@ -3,9 +3,13 @@ import { admin } from "./setup";
 export async function createUser(opts: { displayName?: string } = {}) {
   const suffix = Math.random().toString(36).slice(2, 10);
   const email = `u-${suffix}@test.local`;
+  // Use a known password so asUser() can sign in via signInWithPassword,
+  // avoiding the OTP verifyOtp endpoint which has a tight rate limit (~30/hr).
+  const password = `Pw-${suffix}-Test!`;
   const { data, error } = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
+    password,
   });
   if (error) {
     throw new Error(`auth.admin.createUser failed for ${email}: ${error.message}`);
@@ -20,7 +24,7 @@ export async function createUser(opts: { displayName?: string } = {}) {
       .eq("id", userId);
     if (updErr) throw updErr;
   }
-  return { id: userId, email };
+  return { id: userId, email, password };
 }
 
 export async function createGroup(ownerId: string, opts: { name?: string } = {}) {

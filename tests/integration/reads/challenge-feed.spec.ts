@@ -47,7 +47,7 @@ async function seedActive() {
 }
 
 async function fetchChallengeFeedAsUser(
-  viewer: { id: string; email: string },
+  viewer: { id: string; email: string; password: string },
   challengeId: string,
 ) {
   const client = await asUser(viewer);
