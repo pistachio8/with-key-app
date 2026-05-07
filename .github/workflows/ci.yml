@@ -19,6 +19,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm validate:docs
       - run: pnpm test:ci
 
   integration:
