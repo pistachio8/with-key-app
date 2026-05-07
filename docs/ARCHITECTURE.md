@@ -231,7 +231,7 @@ pnpm test             # Vitest (util 중심)
 
 ## 참조 문서
 
-- [`docs/CLAUDE.md`](./CLAUDE.md) — Claude Code 작업 규칙
+- [`CLAUDE.md`](../CLAUDE.md) — Claude Code 컨텍스트 인덱스 (작업별 진입 문서 매핑)
 - [`docs/PRD.md`](./PRD.md) — 기능 스펙 · AC · 이벤트 · 데이터 모델
 - [`docs/BE_SCHEMA.md`](./BE_SCHEMA.md) — 테이블 · 제약 · 인덱스 · RLS · 상태 전이 SoT
 - [`docs/ONBOARDING.md`](./ONBOARDING.md) — Day 1 실행 가이드

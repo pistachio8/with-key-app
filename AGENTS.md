@@ -43,4 +43,4 @@
 
 ## Technical Scribe 호환성
 
-`.claude/PROJECT_LOG.md`와 `.claude/project-log-policy.md`가 존재하고, 작업이 가치가 높은 의사결정, 사용자 노출 기능, 보안/RLS 변경, 또는 배포/데이터베이스 파이프라인 변경을 포함하는 경우, 사용자가 별도로 하지 말라고 하지 않는 한 `.claude/PROJECT_LOG.md`를 업데이트합니다. 해당 프로젝트 로그가 실제로 업데이트된 경우에만 응답 마지막에 `이번에 추가된 항목 3줄 요약`을 덧붙입니다.
+상세 정책은 [`./.claude/AGENTS.md`](./.claude/AGENTS.md) "항상 실행 규칙 (기술 서기)" 섹션을 참조합니다 — 본 파일에서 중복 기술하지 않습니다.
