@@ -8,6 +8,7 @@ paths:
 # TypeScript/JavaScript Security
 
 > This file extends [common/security.md](../common/security.md) with TypeScript/JavaScript specific content.
+> 공통 보안 기준은 [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md)를 우선합니다.
 
 ## Secret Management
 
@@ -25,4 +26,4 @@ if (!apiKey) {
 
 ## Agent Support
 
-- Use **security-reviewer** skill for comprehensive security audits
+- Use **everything-claude-code:security-reviewer** skill for comprehensive security audits

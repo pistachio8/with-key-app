@@ -2,6 +2,8 @@
 
 `with-key` (윗키) 프로젝트의 아키텍처 레퍼런스. AI 코딩 도구(Claude Code, Cursor)와 개발자가 프로젝트 구조를 이해하기 위해 참조한다.
 
+코딩 품질, 금지 사항, 변경 유형별 검증 기준은 [`QUALITY_GATE.md`](./QUALITY_GATE.md)를 우선한다.
+
 ## 프로젝트 개요
 
 **with-key**는 친구 3~4명이 주간 운동 챌린지를 서약서 형태로 약속하고, 사진 + 키워드 칩 원탭으로 인증하면 AI가 운동 일기를 대신 써주는 모바일 웹(PWA) POC다.
@@ -19,6 +21,8 @@
 - **dev 서버**: Turbopack (`next dev` 기본)
 - **린터/포맷터**: ESLint (Next flat config) + Prettier
 - **테스트**: Vitest (jsdom, util 중심)
+
+품질 게이트의 실행 순서와 추가 검증 조건은 [`QUALITY_GATE.md`](./QUALITY_GATE.md) "테스트와 검증"을 따른다.
 
 ## 아키텍처 원칙
 

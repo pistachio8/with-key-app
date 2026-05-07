@@ -2,6 +2,7 @@
 
 > 출처: 일부 원칙은 [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills/blob/main/CLAUDE.md)에서 가져왔습니다.
 > 트레이드오프: 본 가이드는 속도보다 신중함을 우선합니다. 사소한 작업은 상황에 맞게 판단하세요.
+> 공통 품질 기준은 [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md)를 우선합니다.
 
 ## 1. 코드 작성 전에 생각하기
 

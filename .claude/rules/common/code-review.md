@@ -1,5 +1,7 @@
 # Code Review Standards
 
+> 공통 리뷰 기준의 원본은 [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md)입니다. 이 파일은 Claude/ECC 세션에서 리뷰 trigger와 agent 매핑을 적용하기 위한 보조 문서입니다.
+
 ## Purpose
 
 Code review ensures quality, security, and maintainability before code is merged. This rule defines when and how to conduct code reviews.
@@ -38,7 +40,7 @@ Before marking code complete:
 
 ## Security Review Triggers
 
-**STOP and use security-reviewer agent when:**
+**STOP and use everything-claude-code:security-reviewer agent when:**
 
 - Authentication or authorization code
 - User input handling
@@ -63,12 +65,12 @@ Use these agents for code review:
 
 | Agent | Purpose |
 |-------|---------|
-| **code-reviewer** | General code quality, patterns, best practices |
-| **security-reviewer** | Security vulnerabilities, OWASP Top 10 |
-| **typescript-reviewer** | TypeScript/JavaScript specific issues |
-| **python-reviewer** | Python specific issues |
-| **go-reviewer** | Go specific issues |
-| **rust-reviewer** | Rust specific issues |
+| **everything-claude-code:code-reviewer** | General code quality, patterns, best practices |
+| **everything-claude-code:security-reviewer** | Security vulnerabilities, OWASP Top 10 |
+| **everything-claude-code:typescript-reviewer** | TypeScript/JavaScript specific issues |
+| **everything-claude-code:python-reviewer** | Python specific issues |
+| **everything-claude-code:go-reviewer** | Go specific issues |
+| **everything-claude-code:rust-reviewer** | Rust specific issues |
 
 ## Review Workflow
 

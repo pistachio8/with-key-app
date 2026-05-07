@@ -1,8 +1,9 @@
 ---
 description: ESLint 자동 수정 (with-key)
-agent: build
+agent: "everything-claude-code:build-error-resolver"
 ---
 
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 lint 검증을 Claude/ECC에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행한다.
 
 아래 명령을 실행하고 남는 오류를 모두 수정해줘.
@@ -11,6 +12,7 @@ agent: build
 pnpm lint --fix
 ```
 
+- [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 금지 사항과 아키텍처 가드레일을 우선한다.
 - `eslint.config.mjs`(Next flat config) 외의 임의 설정 추가/플러그인 설치는 하지 않는다. 실행 자체가 실패하면 원인만 보고한다.
 - `--fix`로 해결되지 않는 오류는 수동으로 수정하되, 아래 가드레일은 건드리지 않는다.
   - `src/lib/validators/` 의 zod 스키마 시그니처 (타입 SoT)
