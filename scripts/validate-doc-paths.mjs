@@ -16,6 +16,7 @@
 //   - 글롭/와일드카드: * 또는 < > { } 포함
 //   - 라인 번호 suffix(:42) · 쿼리/프래그먼트는 제거 후 검증
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -41,16 +42,37 @@ function stripFragment(p) {
   return p.replace(/[?#].*$/, '').replace(/:\d+(:\d+)?$/, '').trim();
 }
 
-function refResolves(fromFile, ref, kind) {
-  // 절대 경로 ('/foo/bar') 는 repo root 기준
-  if (ref.startsWith('/')) return existsSync(join(ROOT, ref.slice(1)));
-  // 명시적 상대 prefix ('./' 또는 '../') 또는 markdown link 는 파일 기준
-  if (ref.startsWith('./') || ref.startsWith('../') || kind === 'mdlink') {
-    return existsSync(resolve(dirname(fromFile), ref));
+const ignoreCache = new Map();
+function isGitIgnored(absPath) {
+  if (ignoreCache.has(absPath)) return ignoreCache.get(absPath);
+  let result = false;
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', absPath], { cwd: ROOT, stdio: 'pipe' });
+    result = true; // exit 0 = ignored
+  } catch {
+    result = false; // exit non-zero = not ignored
   }
-  // backtick / @import 는 repo root 우선, 안 되면 파일 기준 fallback
-  if (existsSync(join(ROOT, ref))) return true;
-  return existsSync(resolve(dirname(fromFile), ref));
+  ignoreCache.set(absPath, result);
+  return result;
+}
+
+function refResolves(fromFile, ref, kind) {
+  // 가능한 resolve 후보 수집 (절대/상대/file-relative/repo-root 컨벤션 모두 시도)
+  const candidates = [];
+  if (ref.startsWith('/')) {
+    candidates.push(join(ROOT, ref.slice(1)));
+  } else if (ref.startsWith('./') || ref.startsWith('../') || kind === 'mdlink') {
+    candidates.push(resolve(dirname(fromFile), ref));
+  } else {
+    // backtick / @import: repo root 우선 + 파일 상대 fallback
+    candidates.push(join(ROOT, ref));
+    candidates.push(resolve(dirname(fromFile), ref));
+  }
+  // 1) 실제 존재
+  for (const p of candidates) if (existsSync(p)) return true;
+  // 2) 의도적으로 gitignored 된 path (예: .claude/AGENTS.md, docs/JOURNAL.md) 는 broken 아님
+  for (const p of candidates) if (isGitIgnored(p)) return true;
+  return false;
 }
 
 async function collectContextFiles(dir, out) {
