@@ -25,3 +25,4 @@
 
 - Next.js 16 breaking change: 코드 작성 전 `node_modules/next/dist/docs/`의 관련 가이드를 먼저 읽으세요 (학습 데이터와 다를 수 있음).
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만.
+- agent session 결과/회귀는 `evals/results/agent-results.json` 의 runs[] 에 append합니다 (append-only agent log). OpenTelemetry 연동은 후속.
