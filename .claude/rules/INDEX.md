@@ -2,7 +2,9 @@
 
 이 폴더의 룰은 **자동 로드되지 않습니다**. 작업 종류에 맞는 파일을 명시적으로 읽어야 합니다.
 
-매 세션 자동 로드되는 것은 `CLAUDE.md` `@import` 체인뿐입니다 (`AGENTS.md` · `.claude/AGENTS.md` · `rules/common/agents.md`).
+매 세션 자동 로드되는 것은 `CLAUDE.md` `@import` 체인뿐입니다 (`AGENTS.md` · `docs/QUALITY_GATE.md` · `.claude/AGENTS.md` · `rules/common/agents.md`).
+
+공통 품질 기준의 원본은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)입니다. 이 폴더의 룰은 Claude/ECC 세션에서 그 기준을 더 쉽게 적용하기 위한 보조 문서입니다.
 
 ## 폴더 구조
 
@@ -19,6 +21,7 @@
 | 작업 | 읽을 파일 (순서) |
 |------|-----------------|
 | 새 기능 / 리팩토링 계획 | `common/development-workflow.md` → `common/agents.md` (서브에이전트 매핑) |
+| 품질 기준 / 검증 게이트 | `../../docs/QUALITY_GATE.md` |
 | 코드 작성·수정 | `common/coding-style.md` (Karpathy 4원칙·불변성) → `typescript/coding-style.md` |
 | 코드 리뷰 / PR 리뷰 | `common/code-review.md` → `common/security.md` |
 | 보안 민감 변경 (인증·입력·DB) | `common/security.md` → `typescript/security.md` |

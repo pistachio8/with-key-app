@@ -9,6 +9,8 @@ with-key 팀이 공유하는 제품·아키텍처·운영 문서입니다.
 | 묻고 싶은 것 | 읽을 문서 |
 |--------------|-----------|
 | 무엇을 만드나? 인수 기준은? | [`PRD.md`](./PRD.md) — 유저 스토리 · AC · 이벤트 표(§9.1) |
+| 코딩 품질·검증 기준은? | [`QUALITY_GATE.md`](./QUALITY_GATE.md) — 모든 AI 에이전트와 사람이 공유하는 성공 기준 |
+| AI 에이전트가 달라도 코드 품질을 유지하려면? | [`AI_AGENT_CODE_QUALITY.md`](./AI_AGENT_CODE_QUALITY.md) — 공통 품질 기준과 도구별 adapter 원칙 |
 | DB 스키마·RLS·상태 전이 | [`BE_SCHEMA.md`](./BE_SCHEMA.md) + [`BE_SCHEMA_RLS.md`](./BE_SCHEMA_RLS.md) |
 | 아키텍처 원칙·폴더 구조 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
 | 되돌리기 비용 큰 결정 로그 | [`DECISIONS.md`](./DECISIONS.md) (ADR-lite) |
@@ -26,6 +28,7 @@ with-key 팀이 공유하는 제품·아키텍처·운영 문서입니다.
 코딩 행동 원칙·룰은 `docs/`가 아닌 다음 위치에 있습니다:
 
 - 매 세션 인덱스: [`../CLAUDE.md`](../CLAUDE.md)
+- 공통 품질 기준: [`./QUALITY_GATE.md`](./QUALITY_GATE.md)
 - 에이전트 운영 규칙: [`../.claude/AGENTS.md`](../.claude/AGENTS.md)
 - 룰 전체 색인: [`../.claude/rules/INDEX.md`](../.claude/rules/INDEX.md)
 - 코딩 스타일·Karpathy 4원칙: [`../.claude/rules/common/coding-style.md`](../.claude/rules/common/coding-style.md)

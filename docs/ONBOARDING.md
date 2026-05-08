@@ -5,6 +5,7 @@
 > **Pre-read**:
 > - [IDEATION.md](./IDEATION.md) v0.8 — **왜** 만드는가
 > - [PRD.md](./PRD.md) v0.1 — **무엇을** 만드는가 (§8 데이터 모델 · §9 이벤트 필수)
+> - [QUALITY_GATE.md](./QUALITY_GATE.md) — 코딩 품질 · 검증 기준 · 금지 사항의 공통 원본
 > - [TEAM_SHARE_DESIGN_BRIEF.md](../.claude/drafts/TEAM_SHARE_DESIGN_BRIEF.md) v0.1 — **어떻게 보일 것인가** (§5 컴포넌트 명명 계약, 로컬 전용)
 >
 > **이 문서의 역할**: 개발자 Day 1에 **"clone → 로컬 실행 → 첫 커밋"** 을 1시간 안에 끝낼 수 있는 실전 가이드.
@@ -52,6 +53,7 @@
 with-key/
 ├─ README.md                  ← 이 문서 요약본
 ├─ AGENTS.md                  ← Next.js 16 공식 안내 (코드 작성 전 docs 읽기)
+├─ docs/QUALITY_GATE.md       ← 코딩 품질·검증 기준의 공통 원본
 ├─ .env.example              ← env 변수 템플릿 (§7)
 ├─ .env.local                ← 개인 로컬용 (gitignore)
 ├─ .nvmrc                    ← Node 20
