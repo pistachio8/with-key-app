@@ -44,9 +44,7 @@ const from = vi.fn((table: string) => {
     };
   }
   if (next.table !== table) {
-    throw new Error(
-      `dispatch test expected next from() to be "${next.table}", got "${table}"`,
-    );
+    throw new Error(`dispatch test expected next from() to be "${next.table}", got "${table}"`);
   }
   return {
     select: () => chainResolvingTo(next.rows, next.error ?? null),
@@ -72,7 +70,7 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
-import { dispatchStartNotification } from "./dispatch";
+import { dispatchActionStartNotification, dispatchStartNotification } from "./dispatch";
 
 // -----------------------------------------------------------------------------
 // Fixtures
@@ -80,22 +78,21 @@ import { dispatchStartNotification } from "./dispatch";
 
 const CHALLENGE_ID = "00000000-0000-4000-8000-000000000001";
 
-function queueHappyPath(overrides: {
-  participants?: Array<{ user_id: string }>;
-  users?: Array<{ id: string; notification_prefs: unknown }>;
-  subs?: Array<{
-    user_id: string;
-    endpoint: string;
-    p256dh: string;
-    auth: string;
-  }>;
-} = {}) {
+function queueHappyPath(
+  overrides: {
+    participants?: Array<{ user_id: string }>;
+    users?: Array<{ id: string; notification_prefs: unknown }>;
+    subs?: Array<{
+      user_id: string;
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+    }>;
+  } = {},
+) {
   tablePlans.push({
     table: "challenge_participants",
-    rows: overrides.participants ?? [
-      { user_id: "user-a" },
-      { user_id: "user-b" },
-    ],
+    rows: overrides.participants ?? [{ user_id: "user-a" }, { user_id: "user-b" }],
   });
   tablePlans.push({
     table: "users",
@@ -142,9 +139,7 @@ describe("dispatchStartNotification", () => {
         { id: "user-a", notification_prefs: { start: true, deadline: true } },
         { id: "user-b", notification_prefs: { start: false, deadline: true } },
       ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" },
-      ],
+      subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
 
     await dispatchStartNotification(CHALLENGE_ID);
@@ -170,20 +165,17 @@ describe("dispatchStartNotification", () => {
     expect(sendPush).not.toHaveBeenCalled();
     expect(trackCalls).toHaveLength(2);
     for (const call of trackCalls) {
-      expect((call.event as { props: { suppressed: boolean; outcome: string } }).props)
-        .toMatchObject({ suppressed: true, outcome: "suppressed" });
+      expect(
+        (call.event as { props: { suppressed: boolean; outcome: string } }).props,
+      ).toMatchObject({ suppressed: true, outcome: "suppressed" });
     }
   });
 
   it("cleans up subscriptions on 410 Gone and records outcome=cleaned", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-gone", p256dh: "p", auth: "a" },
-      ],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true } }],
+      subs: [{ user_id: "user-a", endpoint: "ep-gone", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("gone"), { statusCode: 410 });
     sendPush.mockRejectedValue(err);
@@ -192,20 +184,14 @@ describe("dispatchStartNotification", () => {
 
     expect(deletedEndpoints).toEqual(["ep-gone"]);
     expect(trackCalls).toHaveLength(1);
-    expect(
-      (trackCalls[0].event as { props: { outcome: string } }).props.outcome,
-    ).toBe("cleaned");
+    expect((trackCalls[0].event as { props: { outcome: string } }).props.outcome).toBe("cleaned");
   });
 
   it("records outcome=failed on non-Gone errors without deleting subscription", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" },
-      ],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true } }],
+      subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("boom"), { statusCode: 500 });
     sendPush.mockRejectedValue(err);
@@ -214,9 +200,7 @@ describe("dispatchStartNotification", () => {
 
     expect(deletedEndpoints).toHaveLength(0);
     expect(trackCalls).toHaveLength(1);
-    expect(
-      (trackCalls[0].event as { props: { outcome: string } }).props.outcome,
-    ).toBe("failed");
+    expect((trackCalls[0].event as { props: { outcome: string } }).props.outcome).toBe("failed");
   });
 
   it("skips users whose prefs fail schema validation", async () => {
@@ -226,9 +210,7 @@ describe("dispatchStartNotification", () => {
         { id: "user-x", notification_prefs: "garbage" },
         { id: "user-y", notification_prefs: { start: true, deadline: true } },
       ],
-      subs: [
-        { user_id: "user-y", endpoint: "ep-y", p256dh: "p", auth: "a" },
-      ],
+      subs: [{ user_id: "user-y", endpoint: "ep-y", p256dh: "p", auth: "a" }],
     });
 
     await dispatchStartNotification(CHALLENGE_ID);
@@ -238,5 +220,50 @@ describe("dispatchStartNotification", () => {
       expect.objectContaining({ endpoint: "ep-y" }),
       expect.anything(),
     );
+  });
+});
+
+describe("dispatchActionStartNotification", () => {
+  it("excludes the actor and sends to remaining opted-in members with name in body", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }, { user_id: "user-c" }],
+      users: [
+        // actor is filtered out before users lookup so prefs row not required
+        { id: "user-b", notification_prefs: { start: true, deadline: true } },
+        { id: "user-c", notification_prefs: { start: true, deadline: true } },
+      ],
+      subs: [
+        { user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" },
+        { user_id: "user-c", endpoint: "ep-c", p256dh: "p", auth: "a" },
+      ],
+    });
+
+    await dispatchActionStartNotification(CHALLENGE_ID, {
+      userId: "actor",
+      displayName: "민지",
+    });
+
+    expect(sendPush).toHaveBeenCalledTimes(2);
+    for (const [, payload] of sendPush.mock.calls) {
+      expect((payload as { body: string }).body).toBe("민지님이 운동을 시작했어요!");
+    }
+    const recipientIds = trackCalls.map((c) => (c.options as { userId?: string }).userId);
+    expect(recipientIds).toEqual(expect.arrayContaining(["user-b", "user-c"]));
+    expect(recipientIds).not.toContain("actor");
+  });
+
+  it("returns silently when the actor is the only participant", async () => {
+    tablePlans.push({
+      table: "challenge_participants",
+      rows: [{ user_id: "solo" }],
+    });
+
+    await dispatchActionStartNotification(CHALLENGE_ID, {
+      userId: "solo",
+      displayName: "혼자",
+    });
+
+    expect(sendPush).not.toHaveBeenCalled();
+    expect(trackCalls).toHaveLength(0);
   });
 });
