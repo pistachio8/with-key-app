@@ -7,6 +7,7 @@ import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger
 import { MemberStrip } from "./_components/member-strip";
 import { AccountInfoTrigger } from "./_components/account-info-trigger";
 import { ChallengeFeed } from "./_components/challenge-feed";
+import { StartActionButton } from "./_components/start-action-button";
 
 type Params = Promise<{ id: string }>;
 
@@ -23,12 +24,28 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
   if (!detail) notFound();
   const feed = await fetchChallengeFeed(id, user.id);
 
+  const isParticipant = detail.members.some((m) => m.id === user.id);
+  const showStartButton = isParticipant && detail.status === "active";
+  let pushSubscribed = false;
+  if (showStartButton) {
+    const { count } = await supabase
+      .from("push_subscriptions")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    pushSubscribed = (count ?? 0) > 0;
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4">
       <header>
         <p className="text-muted-foreground font-mono text-xs">{id.slice(0, 8)}</p>
         <h1 className="text-xl font-semibold">{detail.title}</h1>
       </header>
+      {showStartButton ? (
+        <section aria-label="운동 시작">
+          <StartActionButton challengeId={id} pushSubscribed={pushSubscribed} />
+        </section>
+      ) : null}
       <section aria-labelledby="member-progress-heading">
         <h2 id="member-progress-heading" className="mb-3 text-sm font-semibold">
           멤버 진행률
