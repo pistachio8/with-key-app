@@ -1,0 +1,93 @@
+name: Slack develop push
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require Slack webhook secret
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVELOP_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "Missing required GitHub secret: SLACK_DEVELOP_WEBHOOK_URL" >&2
+            exit 1
+          fi
+
+      - name: Send develop push notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEVELOP_WEBHOOK_URL }}
+          ACTOR: ${{ github.actor }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          COMPARE_URL: ${{ github.event.compare }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          short_sha="${COMMIT_SHA::7}"
+          fallback_commit_url="https://github.com/${REPOSITORY}/commit/${COMMIT_SHA}"
+          commit_url="${COMMIT_URL:-$fallback_commit_url}"
+          compare_url="${COMPARE_URL:-https://github.com/${REPOSITORY}/commits/${BRANCH_NAME}}"
+
+          payload="$(jq -n \
+            --arg text "develop 브랜치에 새 push가 올라왔습니다." \
+            --arg actor "$ACTOR" \
+            --arg repository "$REPOSITORY" \
+            --arg branch "$BRANCH_NAME" \
+            --arg short_sha "$short_sha" \
+            --arg commit_url "$commit_url" \
+            --arg compare_url "$compare_url" \
+            --arg head_message "$HEAD_MESSAGE" \
+            '{
+              text: $text,
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: ":bell: *develop 브랜치에 새 push가 올라왔습니다.*"
+                  }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: "*Repository:*\n\($repository)" },
+                    { type: "mrkdwn", text: "*Branch:*\n\($branch)" },
+                    { type: "mrkdwn", text: "*Pushed by:*\n\($actor)" },
+                    { type: "mrkdwn", text: "*Commit:*\n<\($commit_url)|\($short_sha)>" }
+                  ]
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "*Message:*\n\($head_message)"
+                  }
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "View changes" },
+                      url: $compare_url
+                    }
+                  ]
+                }
+              ]
+            }')"
+
+          curl -f -sS -X POST \
+            -H "Content-type: application/json" \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
