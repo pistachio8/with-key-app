@@ -2,7 +2,7 @@
 
 ## 사용 가능한 에이전트
 
-`~/.claude/agents/`에 위치:
+프로젝트 `.claude/agents/`에 위치 (없으면 글로벌 `~/.claude/agents/` 또는 플러그인 네임스페이스 `everything-claude-code:*` 로 해석):
 
 | 에이전트 | 용도 | 사용 시점 |
 |---------|------|----------|
