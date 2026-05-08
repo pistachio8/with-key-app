@@ -5,9 +5,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
+import { StartActionButton } from "@/app/(app)/challenge/[id]/_components/start-action-button";
 import { GroupStrip } from "./_components/group-strip";
 
-// PRD §4 · Design Brief 화면 4
+// PRD §4 · §6.2 · Design Brief 화면 4
 export default async function HomePage() {
   const supabase = await createClient();
   const {
@@ -17,6 +18,21 @@ export default async function HomePage() {
 
   const groups = await fetchCurrentChallenges(user.id);
   const hasAnyGroup = groups.length > 0;
+
+  // 진행 중인 active 챌린지가 정확히 1개일 때만 단축 "운동 시작" 노출 — 모호함 방지.
+  const activeChallenges = groups
+    .map((g) => g.challenge)
+    .filter((c): c is NonNullable<typeof c> => c?.status === "active");
+  const singleActive = activeChallenges.length === 1 ? activeChallenges[0] : null;
+
+  let pushSubscribed = false;
+  if (singleActive) {
+    const { count } = await supabase
+      .from("push_subscriptions")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    pushSubscribed = (count ?? 0) > 0;
+  }
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -29,6 +45,12 @@ export default async function HomePage() {
           설정
         </Link>
       </header>
+
+      {singleActive ? (
+        <section aria-label="운동 시작">
+          <StartActionButton challengeId={singleActive.id} pushSubscribed={pushSubscribed} />
+        </section>
+      ) : null}
 
       <GroupStrip groups={groups} />
 
