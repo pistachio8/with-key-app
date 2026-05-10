@@ -10,7 +10,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   let payload = {
-    title: "윗키",
+    title: "from. with",
     body: "",
     url: "/home",
     challengeId: null,
