@@ -37,6 +37,24 @@ export const signPledge = withUser<SignInput, SignResult>(
     );
 
     if (row.status === "active") {
+      // PR-2: 활성화 이벤트 발화. signToActiveMs = 챌린지 생성 → active 전이
+      // 소요(J-2(a) 결정). participantCount 는 코호트 분리(솔로 1 / 그룹 ≥2).
+      // RPC 0022 가 challenge_created_at 과 participant_count 를 반환한다.
+      const signToActiveMs = row.challenge_created_at
+        ? Math.max(0, Date.now() - new Date(row.challenge_created_at).getTime())
+        : 0;
+      void track(
+        {
+          name: "challenge_activated",
+          props: {
+            challengeId: parsed.data.challengeId,
+            signToActiveMs,
+            participantCount: row.participant_count ?? 1,
+          },
+        },
+        { userId: user.id },
+      );
+
       // Fire-and-forget. dispatch 실패가 서명 성공을 뒤엎지 않도록
       // 반환 전에 어떤 await 도 걸지 않는다.
       void dispatchStartNotification(parsed.data.challengeId).catch(() => {

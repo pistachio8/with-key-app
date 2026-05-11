@@ -32,6 +32,7 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       challengeId: uuid,
       penaltyAmount: z.number().int(),
       goalCount: z.number().int(),
+      participantCount: z.number().int().min(1),
     }),
   }),
   z.object({
@@ -40,7 +41,11 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   }),
   z.object({
     name: z.literal("challenge_activated"),
-    props: z.object({ challengeId: uuid, signToActiveMs: z.number().int() }),
+    props: z.object({
+      challengeId: uuid,
+      signToActiveMs: z.number().int().min(0),
+      participantCount: z.number().int().min(1),
+    }),
   }),
   z.object({ name: z.literal("action_started"), props: z.object({ challengeId: uuid }) }),
   z.object({
