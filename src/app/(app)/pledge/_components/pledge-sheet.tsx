@@ -40,9 +40,18 @@ export function PledgeSheet({ pledge, currentUserId }: Props) {
           return;
         }
         if (res.data.status === "active") {
-          toast.success(
-            isSolo ? "혼자 시작했어요. 약속을 지켜봐요!" : "전원 서명 완료! 챌린지가 시작됐어요.",
-          );
+          // 의도-결과 불일치 (Edge #2): 솔로 의도로 서명했으나 다른 멤버가 합류해
+          // 그룹으로 활성화된 경우. participantCount 는 RPC 가 반환한 실제 값.
+          const activatedAsSolo = res.data.participantCount === 1;
+          if (isSolo && !activatedAsSolo) {
+            toast.success("친구가 합류해 그룹 챌린지로 시작됐어요!");
+          } else {
+            toast.success(
+              activatedAsSolo
+                ? "혼자 시작했어요. 약속을 지켜봐요!"
+                : "전원 서명 완료! 챌린지가 시작됐어요.",
+            );
+          }
         } else {
           toast.success("서명했어요!");
         }

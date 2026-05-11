@@ -61,7 +61,10 @@ describe("signPledge", () => {
     });
     const res = await signPledge({ challengeId: CHALLENGE });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data.status).toBe("pending");
+    if (res.ok) {
+      expect(res.data.status).toBe("pending");
+      expect(res.data.participantCount).toBe(2);
+    }
     expect(dispatchStartNotification).not.toHaveBeenCalled();
     // challenge_signed 만 발화, challenge_activated 는 발화 안 함.
     const names = trackCalls.map((c) => (c.event as { name: string }).name);
@@ -82,7 +85,10 @@ describe("signPledge", () => {
     });
     const res = await signPledge({ challengeId: CHALLENGE });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data.status).toBe("active");
+    if (res.ok) {
+      expect(res.data.status).toBe("active");
+      expect(res.data.participantCount).toBe(3);
+    }
     expect(dispatchStartNotification).toHaveBeenCalledWith(CHALLENGE);
 
     const names = trackCalls.map((c) => (c.event as { name: string }).name);
@@ -111,7 +117,9 @@ describe("signPledge", () => {
       ],
       error: null,
     });
-    await signPledge({ challengeId: CHALLENGE });
+    const res = await signPledge({ challengeId: CHALLENGE });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.participantCount).toBe(1);
     const activated = trackCalls.find(
       (c) => (c.event as { name: string }).name === "challenge_activated",
     );

@@ -7,6 +7,7 @@ import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger
 import { MemberStrip } from "./_components/member-strip";
 import { AccountInfoTrigger } from "./_components/account-info-trigger";
 import { ChallengeFeed } from "./_components/challenge-feed";
+import { NextStepCta } from "./_components/next-step-cta";
 import { StartActionButton } from "./_components/start-action-button";
 
 type Params = Promise<{ id: string }>;
@@ -24,7 +25,10 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
   if (!detail) notFound();
   const feed = await fetchChallengeFeed(id, user.id);
 
-  const isParticipant = detail.members.some((m) => m.id === user.id);
+  const me = detail.members.find((m) => m.id === user.id);
+  const isParticipant = me != null;
+  const mySigned = me?.signed ?? false;
+  const isSolo = detail.participantCount === 1;
   const showStartButton = isParticipant && detail.status === "active";
   let pushSubscribed = false;
   if (showStartButton) {
@@ -45,7 +49,16 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
         <section aria-label="운동 시작">
           <StartActionButton challengeId={id} pushSubscribed={pushSubscribed} />
         </section>
-      ) : null}
+      ) : (
+        <section aria-label="다음 액션">
+          <NextStepCta
+            status={detail.status}
+            isParticipant={isParticipant}
+            mySigned={mySigned}
+            isSolo={isSolo}
+          />
+        </section>
+      )}
       <section aria-labelledby="member-progress-heading">
         <h2 id="member-progress-heading" className="mb-3 text-sm font-semibold">
           멤버 진행률

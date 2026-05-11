@@ -11,7 +11,13 @@ import { dispatchStartNotification } from "@/lib/push/dispatch";
 const signInputSchema = z.object({ challengeId: z.string().uuid() });
 type SignInput = z.infer<typeof signInputSchema>;
 
-type SignResult = { challengeId: string; status: "pending" | "accepted" | "active" | "closed" };
+type SignResult = {
+  challengeId: string;
+  status: "pending" | "accepted" | "active" | "closed";
+  // PR-2 dual-mode: 활성 시점의 실제 참가자 수. 솔로 의도 → 그룹 합류 race
+  // 감지에 사용 (Edge #2 — pledge-sheet 의 의도-결과 불일치 안내).
+  participantCount: number;
+};
 
 // BE_SCHEMA §8.4. RPC 가 원자적 상태 전이.
 export const signPledge = withUser<SignInput, SignResult>(
@@ -65,6 +71,7 @@ export const signPledge = withUser<SignInput, SignResult>(
     return success({
       challengeId: parsed.data.challengeId,
       status: row.status as SignResult["status"],
+      participantCount: row.participant_count ?? 1,
     });
   },
 );
