@@ -514,7 +514,9 @@ export type Database = {
       sign_and_maybe_activate: {
         Args: { p_challenge_id: string }
         Returns: {
+          challenge_created_at: string
           end_at: string
+          participant_count: number
           start_at: string
           status: string
         }[]

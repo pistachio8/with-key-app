@@ -42,6 +42,8 @@ export const createChallenge = withUser<CreateInput, { id: string }>(
           challengeId: row.id,
           penaltyAmount: parsed.data.penaltyAmount,
           goalCount: parsed.data.goalCount,
+          // 코호트 분리(솔로 1 / 그룹 ≥2). PR-1 RPC 반환값.
+          participantCount: row.participant_count,
         },
       },
       { userId: user.id },

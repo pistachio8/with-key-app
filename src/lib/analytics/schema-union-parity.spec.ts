@@ -22,6 +22,7 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       challengeId: "11111111-1111-4111-8111-111111111111",
       penaltyAmount: 3000,
       goalCount: 3,
+      participantCount: 1,
     },
   },
   challenge_signed: {
@@ -33,7 +34,11 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
   },
   challenge_activated: {
     name: "challenge_activated",
-    props: { challengeId: "11111111-1111-4111-8111-111111111111", signToActiveMs: 1000 },
+    props: {
+      challengeId: "11111111-1111-4111-8111-111111111111",
+      signToActiveMs: 1000,
+      participantCount: 3,
+    },
   },
   action_started: {
     name: "action_started",

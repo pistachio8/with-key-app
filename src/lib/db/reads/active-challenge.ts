@@ -16,6 +16,8 @@ export type ActiveChallengeView = {
   doneCount: number;
   daysLeft: number;
   potTotal: number;
+  // 코호트 분리(솔로 1 / 그룹 ≥2) + Kudos UI 분기에 사용 — PR-2.
+  participantCount: number;
 };
 
 type FetchActiveChallengeOptions = {
@@ -60,6 +62,7 @@ export async function fetchActiveChallenge(
       doneCount: c.doneCount,
       daysLeft: c.daysLeft,
       potTotal: c.potTotal,
+      participantCount: c.participantCount,
     };
   }
 
@@ -106,5 +109,6 @@ export async function fetchActiveChallenge(
     doneCount: doneCount ?? 0,
     daysLeft,
     potTotal: (memberCount ?? 0) * c.penalty_amount,
+    participantCount: memberCount ?? 0,
   };
 }

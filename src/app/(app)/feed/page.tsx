@@ -67,7 +67,7 @@ export default async function FeedPage() {
         <h2 id="feed-heading" className="sr-only">
           인증 피드 목록
         </h2>
-        <ChallengeFeed items={feed} viewerId={user.id} />
+        <ChallengeFeed items={feed} viewerId={user.id} participantCount={active.participantCount} />
       </section>
     </div>
   );

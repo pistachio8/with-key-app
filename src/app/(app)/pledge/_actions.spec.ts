@@ -56,29 +56,87 @@ describe("signPledge", () => {
 
   it("does not dispatch start notification when status is still pending", async () => {
     rpc.mockResolvedValueOnce({
-      data: [{ status: "pending" }],
+      data: [{ status: "pending", participant_count: 2, challenge_created_at: null }],
       error: null,
     });
     const res = await signPledge({ challengeId: CHALLENGE });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data.status).toBe("pending");
+    if (res.ok) {
+      expect(res.data.status).toBe("pending");
+      expect(res.data.participantCount).toBe(2);
+    }
     expect(dispatchStartNotification).not.toHaveBeenCalled();
+    // challenge_signed 만 발화, challenge_activated 는 발화 안 함.
+    const names = trackCalls.map((c) => (c.event as { name: string }).name);
+    expect(names).toEqual(["challenge_signed"]);
   });
 
-  it("dispatches start notification when status transitions to active", async () => {
+  it("dispatches start notification + fires challenge_activated when status transitions to active", async () => {
+    const createdAt = new Date(Date.now() - 5000).toISOString();
     rpc.mockResolvedValueOnce({
-      data: [{ status: "active" }],
+      data: [
+        {
+          status: "active",
+          participant_count: 3,
+          challenge_created_at: createdAt,
+        },
+      ],
       error: null,
     });
     const res = await signPledge({ challengeId: CHALLENGE });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data.status).toBe("active");
+    if (res.ok) {
+      expect(res.data.status).toBe("active");
+      expect(res.data.participantCount).toBe(3);
+    }
     expect(dispatchStartNotification).toHaveBeenCalledWith(CHALLENGE);
+
+    const names = trackCalls.map((c) => (c.event as { name: string }).name);
+    expect(names).toContain("challenge_signed");
+    expect(names).toContain("challenge_activated");
+
+    const activated = trackCalls.find(
+      (c) => (c.event as { name: string }).name === "challenge_activated",
+    );
+    expect(activated).toBeDefined();
+    const props = (activated!.event as { props: Record<string, unknown> }).props;
+    expect(props.challengeId).toBe(CHALLENGE);
+    expect(props.participantCount).toBe(3);
+    expect(typeof props.signToActiveMs).toBe("number");
+    expect(props.signToActiveMs as number).toBeGreaterThanOrEqual(5000);
+  });
+
+  it("fires challenge_activated with participantCount=1 for solo activation", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [
+        {
+          status: "active",
+          participant_count: 1,
+          challenge_created_at: new Date(Date.now() - 1000).toISOString(),
+        },
+      ],
+      error: null,
+    });
+    const res = await signPledge({ challengeId: CHALLENGE });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.participantCount).toBe(1);
+    const activated = trackCalls.find(
+      (c) => (c.event as { name: string }).name === "challenge_activated",
+    );
+    expect(activated).toBeDefined();
+    const props = (activated!.event as { props: { participantCount: number } }).props;
+    expect(props.participantCount).toBe(1);
   });
 
   it("returns success immediately even if dispatchStartNotification throws (fire-and-forget)", async () => {
     rpc.mockResolvedValueOnce({
-      data: [{ status: "active" }],
+      data: [
+        {
+          status: "active",
+          participant_count: 2,
+          challenge_created_at: new Date().toISOString(),
+        },
+      ],
       error: null,
     });
     dispatchStartNotification.mockRejectedValueOnce(new Error("push offline"));

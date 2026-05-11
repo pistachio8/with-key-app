@@ -87,12 +87,18 @@ describe("createChallenge", () => {
     expect(trackCalls).toHaveLength(1);
     const ev = trackCalls[0]!.event as {
       name: string;
-      props: { challengeId: string; penaltyAmount: number; goalCount: number };
+      props: {
+        challengeId: string;
+        penaltyAmount: number;
+        goalCount: number;
+        participantCount: number;
+      };
     };
     expect(ev.name).toBe("challenge_created");
     expect(ev.props.challengeId).toBe(CHALLENGE_ID);
     expect(ev.props.penaltyAmount).toBe(5000);
     expect(ev.props.goalCount).toBe(3);
+    expect(ev.props.participantCount).toBe(1);
   });
 
   it("maps 42501 to forbidden (not group owner)", async () => {

@@ -26,6 +26,16 @@ describe("RecapHero", () => {
     expect(screen.getByText("다음 주엔 같이 해봐요")).toBeTruthy();
   });
 
+  it("솔로 미달성(isSolo) 시 '다음 주엔 다시 도전해봐요'", () => {
+    render(<RecapHero {...base} viewerAchieved={false} anyoneAchieved={false} isSolo={true} />);
+    expect(screen.getByText("다음 주엔 다시 도전해봐요")).toBeTruthy();
+  });
+
+  it("솔로 달성(isSolo + viewer 달성) 시 '목표 달성!'", () => {
+    render(<RecapHero {...base} viewerAchieved={true} anyoneAchieved={true} isSolo={true} />);
+    expect(screen.getByText("목표 달성!")).toBeTruthy();
+  });
+
   it("기간을 MM.DD ~ MM.DD 포맷으로 표시", () => {
     render(<RecapHero {...base} viewerAchieved={true} anyoneAchieved={true} />);
     // ko-KR / Asia/Seoul, parts 기반 포맷 → "05.01 ~ 05.08"
