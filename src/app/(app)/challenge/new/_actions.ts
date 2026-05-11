@@ -29,20 +29,11 @@ export const createChallenge = withUser<CreateInput, { id: string }>(
     });
 
     if (error) {
-      console.error("[createChallenge] rpc error:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
       if (error.code === "P0002") return failure("not_found");
       return failure(mapSupabaseError(error));
     }
     const row = data?.[0];
-    if (!row) {
-      console.error("[createChallenge] empty data:", { data, dataType: typeof data });
-      return failure("upstream_error");
-    }
+    if (!row) return failure("upstream_error");
 
     void track(
       {
