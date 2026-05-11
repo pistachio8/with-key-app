@@ -10,7 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --ignore-pattern '.claude/skills/' --ignore-pattern '.agents/'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
     "test:ci": "vitest run --project unit --reporter=dot",
