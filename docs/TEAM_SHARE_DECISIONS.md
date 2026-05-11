@@ -64,6 +64,15 @@
 
 ---
 
+### D-022 · 솔로 챌린지 정식 모드 격상 — dual-mode reframing (2026-05-11)
+
+- **결정**: 챌린지 시작 가능 조건에서 "최소 3명" 강제를 해제. 1인 그룹(=솔로)도 정식 진행 모드로 인정. 솔로 / 그룹은 `challenge_participants` row count 로 분석 단계에서 구분 (스키마 변경 0건). 친구 합류는 `pending` 동안만 허용 (AC-6 freeze 유지).
+- **왜**: 사용자 의도가 "혼자라도 운동 기록·약속 의식을 유지" 였고, BE 의 `groups` / `challenges` / RLS 가 이미 1-N 멤버십을 그대로 다루고 있어 코드 측 강제만 풀면 됨. 대안 A (별도 `solo_challenges` 테이블) 는 코호트 분리 한 줄에 위해 모델을 두 개로 쪼개 운영 비용 ↑. 대안 B (사이드 quest UI) 는 정식 가설(친구 압박)을 약화. dual-mode 는 POC 가설을 유지하면서 솔로 코호트도 측정 가능 (H-Secondary).
+- **적용 범위**: PR-1 (`supabase/migrations/0021_create_challenge_rpc.sql` — owner 시드 + `participant_count` 반환), PR-2 (`0023_signpledge_returns_count.sql` + `analytics/track.ts` props + `pledge-sheet` / `next-step-cta` / `recap-hero` 카피 분기). PRD §3.4 Edge Cases 표 갱신.
+- **되돌릴 조건**: 솔로 코호트 비중이 활성 챌린지의 30% 를 초과하면 v1 의 핵심 가설(그룹 압박)이 무력화될 수 있다. 그 시점에 H-Primary/H-Secondary 재논의 + 솔로 모집 정책 결정 (UI 노출 / 입구 분리 등).
+
+---
+
 ### D-021 · 초대 수락을 SECURITY DEFINER RPC 로 구현 (2026-05-06)
 
 - **결정**: 초대 수락 경로를 `accept_invite(p_token text) returns uuid` RPC 로 구현.

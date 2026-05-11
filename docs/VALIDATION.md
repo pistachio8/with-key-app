@@ -50,6 +50,8 @@
 | H4 | **원탭 키워드 → AI 일기** 가 기록 부담을 줄이고 수용된다 | 재생성·편집 비율 · 키워드 선택 수 분포 · 메모 escape hatch 사용률 · 인터뷰 | 편집률 <50% · "그대로 썼다" 과반 · `memo_fallback_opened`/`action_logged` < 20% |
 | H5 | **사진 기반 피드**가 댓글 없이도 유대를 만든다 | Kudos/인증 비율 · 인터뷰 | 인증당 평균 ≥2개 Kudos · "응원받은 느낌" 발언 |
 
+**솔로 코호트 (H-Secondary, D-022).** 1인 그룹 챌린지는 정식 모드(D-022)지만 v1 핵심 가설(H3 친구 압박) 의 정공이 아님. 이벤트 `challenge_created.participantCount` / `challenge_activated.participantCount` 로 솔로(=1) / 그룹(≥2) 코호트를 분리 측정한다. 솔로 비중이 활성 챌린지의 **30% 를 초과** 하면 v1 가설 재논의 트리거 — H-Primary/Secondary 우선순위와 솔로 모집 정책 (UI 입구 분리 등) 재결정. 솔로 보조 가설 H-Secondary 는 "혼자라도 약속·인증 의식이 유지되는가" — `action_logged where counted=true` 의 솔로 코호트 평균이 ≥2회면 그룹 톤이 없어도 동작이 유지된다는 신호로 본다.
+
 ### 2.3 검증하지 않는 것 (POC 범위 밖)
 
 - 수익성 / 구독 전환율 (v1+)
