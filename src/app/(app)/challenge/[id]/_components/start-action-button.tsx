@@ -56,8 +56,9 @@ export function StartActionButton({ challengeId, pushSubscribed }: Props) {
           return;
         }
         if (recipientCount === 0) {
-          toast("받을 그룹원이 아직 없어요", {
-            description: "친구를 초대하면 시작 알림이 전송돼요.",
+          // 솔로(1인 그룹) 또는 본인만 참여 중인 그룹. PRD §3.4 dual-mode reframing.
+          toast("솔로 챌린지엔 시작 알림이 없어요", {
+            description: "운동만 잘 마치면 됩니다 💪",
           });
           return;
         }
