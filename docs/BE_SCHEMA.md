@@ -391,7 +391,10 @@ $$;
 
 ### 8.1 `createChallenge(input)`
 - 입력 검증: `challengeInputSchema` (D-006/007 반영 후)
-- 삽입: `challenges(status='pending')` + `challenge_participants(user_id=owner, signed_at=null)`
+- 구현: SECURITY DEFINER RPC `create_challenge(p_group_id, p_title, p_type, p_goal_count, p_duration_days, p_penalty_amount)` (migration `0021_create_challenge_rpc.sql`)
+- owner 검증 → `challenges(status='pending')` 삽입 → `challenge_participants` 에 **현재 `group_members` 전원** 시드(`signed_at=null`) 를 한 트랜잭션으로 처리. 이후 친구가 `acceptInvite` 로 합류하면 `accept_invite` RPC 가 pending 챌린지에 자동 편입(§8.3).
+- 반환: `(id uuid, participant_count int)` — `participant_count` 는 시드 직후 카운트. cohort 분리(솔로 1 / 그룹 ≥2)와 이벤트 props 에 사용.
+- 백필: 0021 마이그레이션이 멱등(`ON CONFLICT DO NOTHING`)으로 기존 pending 챌린지의 누락된 참가자 시드를 보정.
 - 이벤트: `challenge_created`
 
 ### 8.2 `createInvite(groupId)`

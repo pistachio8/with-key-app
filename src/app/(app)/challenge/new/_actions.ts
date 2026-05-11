@@ -9,7 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 
 type CreateInput = ChallengeInput & { groupId: string };
 
-// BE_SCHEMA §8.1. RLS 가 owner 검증 수행.
+// BE_SCHEMA §8.1. SECURITY DEFINER RPC `create_challenge` 가 challenges +
+// challenge_participants(전 group_members 시드) 를 한 트랜잭션으로 처리.
+// migration: 0021_create_challenge_rpc.sql
 export const createChallenge = withUser<CreateInput, { id: string }>(
   async (user, input): Promise<ActionResult<{ id: string }>> => {
     const { groupId, ...rest } = input;
@@ -17,27 +19,27 @@ export const createChallenge = withUser<CreateInput, { id: string }>(
     if (!parsed.success) return validationFailure(parsed.error);
 
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("challenges")
-      .insert({
-        group_id: groupId,
-        title: parsed.data.title,
-        type: parsed.data.type,
-        goal_count: parsed.data.goalCount,
-        duration_days: parsed.data.durationDays,
-        penalty_amount: parsed.data.penaltyAmount,
-      })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("create_challenge", {
+      p_group_id: groupId,
+      p_title: parsed.data.title,
+      p_type: parsed.data.type,
+      p_goal_count: parsed.data.goalCount,
+      p_duration_days: parsed.data.durationDays,
+      p_penalty_amount: parsed.data.penaltyAmount,
+    });
 
-    if (error) return failure(mapSupabaseError(error));
-    if (!data) return failure("upstream_error");
+    if (error) {
+      if (error.code === "P0002") return failure("not_found");
+      return failure(mapSupabaseError(error));
+    }
+    const row = data?.[0];
+    if (!row) return failure("upstream_error");
 
     void track(
       {
         name: "challenge_created",
         props: {
-          challengeId: data.id,
+          challengeId: row.id,
           penaltyAmount: parsed.data.penaltyAmount,
           goalCount: parsed.data.goalCount,
         },
@@ -45,6 +47,6 @@ export const createChallenge = withUser<CreateInput, { id: string }>(
       { userId: user.id },
     );
 
-    return success({ id: data.id });
+    return success({ id: row.id });
   },
 );
