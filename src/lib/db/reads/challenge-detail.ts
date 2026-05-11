@@ -25,6 +25,9 @@ export type ChallengeDetailView = {
   members: ChallengeMemberView[];
   potTotal: number;
   group: ChallengeGroupView;
+  // 코호트 분리(솔로 1 / 그룹 ≥2) + UI 분기 — PR-2.
+  // = members.length 와 동일 (시드 후 freeze).
+  participantCount: number;
 };
 
 export async function fetchChallengeDetail(
@@ -77,6 +80,7 @@ export async function fetchChallengeDetail(
     status: c.status as ChallengeDetailView["status"],
     members,
     potTotal: members.length * c.penalty_amount,
+    participantCount: members.length,
     group: {
       id: groupRow?.id ?? c.group_id,
       ownerId: groupRow?.owner_id ?? "",

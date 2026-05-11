@@ -22,6 +22,8 @@ export type GroupChallengeView = {
     doneCount: number;
     daysLeft: number;
     potTotal: number;
+    // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
+    participantCount: number;
   } | null;
 };
 
@@ -152,6 +154,7 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
         doneCount: doneByChallenge.get(c.id) ?? 0,
         daysLeft,
         potTotal: memberCount * c.penalty_amount,
+        participantCount: memberCount,
       },
     };
   });

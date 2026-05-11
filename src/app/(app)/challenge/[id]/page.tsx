@@ -78,7 +78,7 @@ export default async function ChallengeDetailPage({ params }: { params: Params }
         <h2 id="feed-heading" className="mb-3 text-sm font-semibold">
           인증 피드
         </h2>
-        <ChallengeFeed items={feed} viewerId={user.id} />
+        <ChallengeFeed items={feed} viewerId={user.id} participantCount={detail.participantCount} />
       </section>
     </div>
   );

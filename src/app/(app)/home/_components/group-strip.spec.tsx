@@ -23,6 +23,7 @@ function makeGroup(overrides: Partial<GroupChallengeView> = {}): GroupChallengeV
       doneCount: 1,
       daysLeft: 4,
       potTotal: 12000,
+      participantCount: 4,
     },
     ...overrides,
   };

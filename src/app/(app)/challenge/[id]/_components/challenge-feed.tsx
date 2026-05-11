@@ -11,6 +11,8 @@ import type { KudosEmoji } from "@/lib/validators/kudos";
 type Props = {
   items: ReadonlyArray<FeedItemView>;
   viewerId: string;
+  // PR-2: 솔로(1)면 자식 FeedCard 가 Kudos footer 미렌더.
+  participantCount: number;
 };
 
 type OptimisticAction = {
@@ -40,7 +42,7 @@ function applyToggle(items: ReadonlyArray<FeedItemView>, action: OptimisticActio
   });
 }
 
-export function ChallengeFeed({ items, viewerId }: Props) {
+export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
   const [settledItems, setSettledItems] = useState<FeedItemView[]>(() => [...items]);
   const [optimisticItems, applyOptimistic] = useOptimistic(settledItems, applyToggle);
   const [, startTransition] = useTransition();
@@ -89,6 +91,7 @@ export function ChallengeFeed({ items, viewerId }: Props) {
             kudosByEmoji={item.kudosByEmoji}
             onKudos={(emoji) => handleKudos(item.id, item.authorId, emoji)}
             disabled={item.authorId === viewerId}
+            participantCount={participantCount}
           />
         </li>
       ))}

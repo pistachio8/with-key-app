@@ -24,6 +24,7 @@ const baseProps = {
   summary: "오늘도 스쿼트 PR 갱신!",
   keywords: ["스쿼트", "PR도전"],
   kudosByEmoji: { "🔥": 3, "💪": 1, "👏": 0 } as const,
+  participantCount: 4,
 };
 
 describe("FeedCard", () => {
@@ -62,5 +63,15 @@ describe("FeedCard", () => {
   it("renders a placeholder when the signed URL is missing", () => {
     render(<FeedCard {...baseProps} photoSignedUrl={null} onKudos={() => {}} />);
     expect(screen.getByRole("img", { name: /인증 사진 없음/ })).toBeTruthy();
+  });
+
+  it("does not render Kudos footer when participantCount === 1 (solo)", () => {
+    render(<FeedCard {...baseProps} participantCount={1} onKudos={() => {}} />);
+    expect(screen.queryByRole("button", { name: /응원/ })).toBeNull();
+  });
+
+  it("renders Kudos footer when participantCount >= 2 (group)", () => {
+    render(<FeedCard {...baseProps} participantCount={2} onKudos={() => {}} />);
+    expect(screen.getAllByRole("button", { name: /응원/ }).length).toBeGreaterThan(0);
   });
 });
