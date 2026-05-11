@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "from. with",
-  description: "친구와 함께하는 운동 각서",
+  description: "혼자, 또는 친구와 함께하는 운동 기록",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",

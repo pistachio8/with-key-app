@@ -41,7 +41,7 @@ export default function LoginPage() {
         <h1 id="brand-heading" className="text-4xl font-black tracking-tight">
           윗키
         </h1>
-        <p className="text-muted-foreground break-keep">친구와 함께하는 운동 서약서</p>
+        <p className="text-muted-foreground break-keep">혼자, 또는 친구와 함께하는 운동 기록</p>
       </section>
 
       <section aria-label="로그인 방법 선택" className="flex flex-col gap-3">

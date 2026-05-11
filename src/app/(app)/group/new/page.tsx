@@ -77,7 +77,7 @@ export default function NewGroupPage() {
       <header>
         <h1 className="text-xl font-semibold">새 그룹 만들기</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          친구들과 함께할 그룹과 (선택) 벌금 정산 계좌를 설정하세요.
+          그룹과 (선택) 벌금 정산 계좌를 설정하세요. 혼자, 또는 친구와 함께 시작할 수 있어요.
         </p>
       </header>
 
@@ -89,7 +89,7 @@ export default function NewGroupPage() {
           id={nameId}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="예: 민지네 헬창 모임"
+          placeholder="예: 매일 운동 클럽"
           maxLength={30}
           autoComplete="off"
         />

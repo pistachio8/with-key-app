@@ -15,7 +15,7 @@ export function GroupStrip({ groups }: Props) {
     return (
       <section className="bg-card flex flex-col items-center gap-3 rounded-2xl border p-6 text-center">
         <p className="text-muted-foreground break-keep text-sm">
-          아직 속한 그룹이 없어요. 친구들과 새 그룹을 만들어 보세요.
+          아직 속한 그룹이 없어요. 혼자, 또는 친구와 함께 시작해 보세요.
         </p>
         <Link href="/group/new" className={cn(buttonVariants({ size: "lg" }), "h-12 w-full gap-2")}>
           <Plus aria-hidden="true" /> 새 그룹 만들기

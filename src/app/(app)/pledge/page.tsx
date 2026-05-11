@@ -18,7 +18,7 @@ export default async function PledgePage() {
       <div className="flex flex-col gap-6 p-4">
         <h1 className="text-xl font-semibold">서약서</h1>
         <p className="text-muted-foreground break-keep text-sm">
-          아직 서명할 서약서가 없어요. 홈에서 새 챌린지를 만들어 친구를 초대해 보세요.
+          아직 서명할 서약서가 없어요. 홈에서 새 챌린지를 시작해 보세요.
         </p>
       </div>
     );

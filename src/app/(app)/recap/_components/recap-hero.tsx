@@ -6,6 +6,8 @@ interface RecapHeroProps {
   endAt: string | null;
   viewerAchieved: boolean;
   anyoneAchieved: boolean;
+  // PR-2 dual-mode: 솔로(=1 참가자) 미달성 시 "같이 해봐요" 카피 부적절.
+  isSolo?: boolean;
 }
 
 // ko-KR / Asia/Seoul 로 `MM.DD` 를 생성. Node ICU 의 ko-KR은
@@ -26,8 +28,10 @@ function formatRange(startAt: string | null, endAt: string | null): string {
   return `${formatMonthDay(startAt)} ~ ${formatMonthDay(endAt)}`;
 }
 
-function verdictLabel(viewerAchieved: boolean, anyoneAchieved: boolean): string {
+function verdictLabel(viewerAchieved: boolean, anyoneAchieved: boolean, isSolo: boolean): string {
   if (viewerAchieved) return "목표 달성!";
+  // 솔로(=1)는 viewer=anyone 이므로 "같이 해봐요" 카피 대신 자기충족 톤.
+  if (isSolo) return "다음 주엔 다시 도전해봐요";
   if (anyoneAchieved) return "이번 주는 아쉬웠어요";
   return "다음 주엔 같이 해봐요";
 }
@@ -38,6 +42,7 @@ export function RecapHero({
   endAt,
   viewerAchieved,
   anyoneAchieved,
+  isSolo = false,
 }: RecapHeroProps) {
   return (
     <header className="flex flex-col gap-2">
@@ -45,7 +50,7 @@ export function RecapHero({
       <h1 className="text-xl font-semibold">{title}</h1>
       <p className="text-muted-foreground text-sm">{formatRange(startAt, endAt)}</p>
       <p className="text-primary text-lg font-semibold" data-testid="recap-verdict">
-        {verdictLabel(viewerAchieved, anyoneAchieved)}
+        {verdictLabel(viewerAchieved, anyoneAchieved, isSolo)}
       </p>
     </header>
   );

@@ -48,6 +48,7 @@ export default async function RecapPage() {
         endAt={recap.endAt}
         viewerAchieved={recap.viewerAchieved}
         anyoneAchieved={recap.anyoneAchieved}
+        isSolo={recap.members.length === 1}
       />
       <RecapStatsRow
         viewerDoneCount={recap.viewerDoneCount}
