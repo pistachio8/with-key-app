@@ -45,6 +45,7 @@ yarn.lock
 
 # Supabase CLI link-state (per-machine)
 supabase/.temp/
+supabase/.branches/
 
 # Playwright
 /test-results/
