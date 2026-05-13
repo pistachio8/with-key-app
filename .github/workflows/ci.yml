@@ -16,10 +16,17 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check-spec-required가 git diff base...HEAD를 필요로 함.
+          # fetch-depth: 0 = 전체 히스토리 (PR base와 비교 가능).
+          fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm validate:docs
+      - name: Check spec-required (soft — stderr 경고만, exit 0)
+        if: github.event_name == 'pull_request'
+        run: pnpm check:spec-required --base origin/${{ github.base_ref }}
       - run: pnpm test:ci
 
   integration:

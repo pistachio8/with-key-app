@@ -27,7 +27,8 @@
     "seed:action-log": "node scripts/dev-seed-action-log.mjs",
     "validate:docs": "node scripts/validate-doc-paths.mjs",
     "check:spec-required": "node scripts/check-spec-required.mjs",
-    "new": "node scripts/new-doc.mjs"
+    "new": "node scripts/new-doc.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -65,11 +66,22 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^17.0.4",
     "prettier": "^3.4.2",
     "supabase": "^2.2.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^2.1.8"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }
