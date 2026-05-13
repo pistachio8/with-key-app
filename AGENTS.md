@@ -137,11 +137,27 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 - 인증 플로우(`middleware.ts` · `src/lib/supabase/middleware.ts`) → 로그인 → 보호 라우트 → 로그아웃 수동 재현
 - 설정 변경(`next.config.*`, env, build) → `pnpm build`
 
-## 8. PR · 커밋
+## 8. PR · 커밋 · pre-commit hook
+
+### PR
 
 - **PR 본문은 한국어**(2026-05-01 이후 합의). 섹션 헤더(`## Summary` 등)는 영어 유지 가능. 커밋 메시지는 conventional commits 영문/한국어 혼용 허용
+- [`.github/pull_request_template.md`](.github/pull_request_template.md)가 PR 본문에 자동 prefill — Summary / Spec or ADR / 가드레일 4 체크박스 / Verification / Rollback 골격 제공
 - PR 베이스는 `develop`. main 직접 PR은 release 시점에만
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만
+
+### pre-commit hook (저마찰)
+
+`pnpm install` 시 husky가 `.husky/pre-commit`을 활성화. **동작**: `lint-staged`가 staged 파일에만 `prettier --write` + `eslint --fix` 자동 적용. 차단 거의 없음. typecheck · test · spec-check은 CI 책임이라 hook에 두지 않음.
+
+**우회 채널** (급할 때 또는 hook 자체가 버그일 때):
+
+```bash
+WITHKEY_HOOKS=skip git commit ...   # with-key 합의된 우회 신호 (의도 명시적)
+git commit --no-verify ...          # 표준 Git 우회
+```
+
+Hook이 commit을 차단하거나 1초 이상 느려지면 그 자체가 버그 — issue로 보고. CI가 최종 게이트.
 
 ## 9. 작업 종료 보고
 
