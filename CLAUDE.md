@@ -14,6 +14,7 @@
 | 품질 기준 / 검증 | `docs/QUALITY_GATE.md` |
 | 비용 / 컨텍스트 운영 | `docs/QUALITY_GATE.md` "AI 에이전트 비용과 컨텍스트 운영" → `.claude/rules/common/performance.md` |
 | 새 기능 / 리팩토링 | `docs/PRD.md` (AC) → `docs/BE_SCHEMA.md` (테이블·RLS) → `.claude/AGENTS.md` 가드레일 섹션 |
+| UI 시안 / 모킹업 | `docs/mockups/README.md` |
 | 코드 작성·수정 | `.claude/rules/common/coding-style.md` (Karpathy 4원칙·불변성) |
 | 코드 리뷰 / PR | `.claude/rules/common/code-review.md` · `.claude/rules/common/development-workflow.md` |
 | Server Action / RSC | `.claude/AGENTS.md` "with-key 가드레일 §아키텍처" |

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI 수정 사항 및 디자인 가이드 반영</title>
+    <style>
+      /* =========================================
+           디자인 가이드 (Design System)
+           ========================================= */
+      :root {
+        /* 색상 가이드 */
+        --primary: #baa4ff;
+        --secondary: #ffd468;
+        --accent: #bca6ff;
+        --pink: #ffb6c6;
+        --bg: #f7fbfb;
+        --text: #22262e;
+        --sub-text: #8891a1; /* OCR 오류 보정 (889141 -> 8891A1) */
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #e9ecef;
+        color: var(--text);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        justify-content: center;
+      }
+
+      /* 타입 스타일 가이드 */
+      h1 {
+        font-size: 32px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 10px;
+      }
+
+      h2 {
+        font-size: 16px;
+        font-weight: normal;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      p,
+      span,
+      div {
+        font-size: 14px;
+        font-weight: normal;
+        color: var(--sub-text);
+        line-height: 1.5;
+      }
+
+      /* UI 컴포넌트 & 레이아웃 */
+      .mobile-frame {
+        background-color: var(--bg);
+        width: 375px;
+        border-radius: 30px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        border: 8px solid #fff;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .status-bar {
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text);
+      }
+
+      .content {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* 버튼 스타일 */
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 16px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+
+      .btn-main {
+        background-color: var(--primary);
+        color: #ffffff;
+      }
+
+      .btn-kakao {
+        background-color: var(--secondary);
+        color: var(--text);
+      }
+
+      .btn-sub {
+        background-color: #ffffff;
+        color: var(--text);
+        border: 1px solid #e5e5e5;
+      }
+
+      /* 수정 사항 (Description) 영역 */
+      .modifications {
+        background-color: #ffffff;
+        border-top: 2px dashed var(--accent);
+        padding: 20px;
+        margin-top: auto;
+      }
+
+      .modifications h3 {
+        font-size: 15px;
+        color: var(--primary);
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      .modifications ul {
+        padding-left: 20px;
+        margin: 0;
+      }
+
+      .modifications li {
+        font-size: 13px;
+        color: var(--text);
+        margin-bottom: 6px;
+        line-height: 1.4;
+      }
+
+      .section-title {
+        width: 100%;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+      }
+
+      .page-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-wrapper">
+      <div class="section-title">1. 진입 / 온보딩</div>
+      <div class="mobile-frame">
+        <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="content" style="align-items: center; text-align: center">
+          <h1 style="color: var(--primary); margin-top: 40px">from·with</h1>
+          <h2>가입하면 바로<br />챌린지 서약서로 이동돼요</h2>
+          <div style="margin-top: auto; width: 100%">
+            <button class="btn btn-sub">로그인</button>
+            <button class="btn btn-kakao">3초만에 카카오로 시작하기</button>
+            <button class="btn btn-sub">이메일로 시작하기</button>
+          </div>
+        </div>
+        <div class="modifications">
+          <h3>📌 수정 요청 사항</h3>
+          <ul>
+            <li>페이지 내 오브젝트들 모두 첫 페이지와 동일하게 가운데 정렬</li>
+            <li>
+              초대받은 챌린지, 로그인, 카카오 로그인, 이메일로 시작 버튼의 Width를 '카카오 로그인'
+              버튼 크기로 통일
+            </li>
+            <li>배경은 첫 페이지와 동일한 배경 사용</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-wrapper">
+      <div class="section-title">2. 홈 / Home</div>
+      <div class="mobile-frame">
+        <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="content">
+          <p>5월 14일 화요일</p>
+          <h1 style="font-size: 24px">안녕, 민지</h1>
+
+          <div
+            style="
+              background: #fff;
+              padding: 20px;
+              border-radius: 16px;
+              margin: 20px 0;
+              text-align: center;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            "
+          >
+            <h2>아직 진행 중인 챌린지가 없어요</h2>
+            <p>친구들과 함께 첫 챌린지를<br />만들어보세요</p>
+            <button
+              class="btn btn-sub"
+              style="margin-top: 15px; color: var(--primary); border-color: var(--primary)"
+            >
+              + 챌린지 만들기
+            </button>
+          </div>
+        </div>
+        <div class="modifications">
+          <h3>📌 수정 요청 사항</h3>
+          <ul>
+            <li>배경 색상을 디자인 가이드의 BG 컬러(#F7FBFB)로 적용</li>
+            <li>초대받은 챌린지가 없는 경우 상단 "초대받은 챌린지" 섹션 숨김 처리</li>
+            <li>진행 중 챌린지 제목 아래에 크게 흰색 배경 영역 추가</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-wrapper">
+      <div class="section-title">3. 챌린지 생성 플로우</div>
+      <div class="mobile-frame">
+        <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="content">
+          <p>← 새 챌린지 <span style="float: right">1/2</span></p>
+          <h1 style="font-size: 24px">어떤 약속을<br />만들어 볼까요?</h1>
+          <p>운동이 아닌 다른 습관도 OK</p>
+          <button class="btn btn-main" style="margin-top: auto">동의 후 챌린지 생성</button>
+        </div>
+        <div class="modifications">
+          <h3>📌 수정 요청 사항</h3>
+          <ul>
+            <li>진행기간 선택 아래 문구를 '오늘부터 최대 3개월'을 뜻하는 문구로 변경</li>
+            <li>하단 서약서 작성 버튼 컬러를 다른 페이지와 통일된 메인 컬러(Primary)로 변경</li>
+            <li>진행기간 선택 버튼을 캘린더 형태의 버튼으로 변경</li>
+            <li>캘린더 아래 기간 설명을 '최대 3개월까지 자유롭게'로 변경</li>
+            <li>서약서 내용을 '기간, 인증 빈도, 벌금' 항목으로 교체</li>
+            <li>하단 버튼 문구를 "동의 후 챌린지 생성"으로 변경</li>
+            <li>벌금 규칙 문구를 전자서명으로 변경 및 서명칸 내부 텍스트 제거</li>
+            <li>챌린지 링크 옆 카피 버튼을 'copy' 텍스트로 변경</li>
+            <li>카카오톡으로 공유 버튼 앞의 이모티콘 제거</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-wrapper">
+      <div class="section-title">4. 초대 참여</div>
+      <div class="mobile-frame">
+        <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="content">
+          <p>← 초대장 도착</p>
+          <h1 style="font-size: 24px">민지님이 같이<br />운동하자고 해요</h1>
+
+          <div
+            style="
+              background: linear-gradient(135deg, var(--primary), var(--accent));
+              padding: 20px;
+              border-radius: 16px;
+              color: white;
+              margin-top: 20px;
+            "
+          >
+            <h2 style="color: white">from·with</h2>
+            <h1 style="color: white; font-size: 20px">30일 헬스장 출석</h1>
+            <p style="color: rgba(255, 255, 255, 0.8)">
+              5/14 - 6/12 · 30일<br />실패 시 벌금 5,000원
+            </p>
+          </div>
+
+          <button class="btn btn-main" style="margin-top: auto">참여하기</button>
+        </div>
+        <div class="modifications">
+          <h3>📌 수정 요청 사항</h3>
+          <ul>
+            <li>공유 카드 로고를 'from·with'으로 변경</li>
+            <li>외부 공유 카드 배경을 메인 컬러 및 서브 컬러 그라데이션으로 변경</li>
+            <li>기존 검은색 배경을 흰색으로 변경하고 Border 색상 조정</li>
+            <li>하단 '참여하기' 버튼을 메인 컬러(Primary)로 변경</li>
+            <li>가운데 원형 로딩바와 이미지를 지우고 텍스트 기반 '....' 로딩바 사용</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
