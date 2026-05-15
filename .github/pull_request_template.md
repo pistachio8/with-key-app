@@ -34,3 +34,12 @@ spec-required 경로 매핑은 AGENTS.md §4 참조 (supabase/migrations · src/
 ## Rollback
 
 <!-- 되돌리는 방법 1~2줄. 트리비얼하면 "1 commit revert". migration 변경이면 down 방법 또는 forward-fix 계획. -->
+
+## (시각 PR만) 캡처 · 접근성
+
+- [ ] 393×852 (iPhone 14 Pro) DevTools 모바일 캡처 첨부
+- [ ] 360×740 (중급 안드로이드) DevTools 모바일 캡처 첨부
+- [ ] 모킹업 해당 섹션과 나란히 비교 캡처
+- [ ] 빈 상태·로딩·에러 상태 각각 캡처
+- [ ] 키보드 포커스 링 확인 (Tab 한 번)
+- [ ] axe-core 통과 또는 위반 + PO 결정 링크
