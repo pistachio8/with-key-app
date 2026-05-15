@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { acceptInvite } from "../_actions";
+import { InviteLoadingDots } from "./invite-loading-dots";
 
 const userMessage = makeUserMessage({
   not_found: "만료되었거나 유효하지 않은 초대 링크예요.",
@@ -41,6 +42,32 @@ export function AcceptForm({ token, groupName }: Props) {
     });
   }
 
+  if (pending) {
+    // 모킹업 §5-B (line 741~750) — pending 동안 §5-B 전환 화면을 같은 자리에 렌더.
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex flex-col items-center gap-3 py-2 text-center"
+      >
+        <span aria-hidden="true" className="text-4xl">
+          🎉
+        </span>
+        <div>
+          <p className="t-h3">
+            초대받은 챌린지의
+            <br />
+            서약서로 이동합니다
+          </p>
+          <p className="text-muted-foreground mt-2 text-xs">서명 후 바로 챌린지에 합류돼요</p>
+        </div>
+        <div className="mt-2">
+          <InviteLoadingDots />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <p className="text-muted-foreground break-keep text-sm">
@@ -48,8 +75,8 @@ export function AcceptForm({ token, groupName }: Props) {
         <br />
         참여하면 바로 서약서 서명 화면으로 이동해요.
       </p>
-      <Button size="lg" className="h-12 w-full" onClick={onClick} disabled={pending}>
-        {pending ? "참여 중..." : "참여하고 서명하러 가기"}
+      <Button size="lg" className="h-12 w-full" onClick={onClick}>
+        참여하기
       </Button>
     </div>
   );
