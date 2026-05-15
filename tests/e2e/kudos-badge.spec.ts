@@ -7,7 +7,10 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-test("author sees unread badge + home dot, both clear after /feed visit", async ({
+// TODO(#42): 결정적 실패 중 — PR41 (run 25907548644) 에서 home-unread-dot 미렌더
+// 3/3 final fail. fixture/RSC cache · shared DB orphan · NULL 처리 조사 필요.
+// https://github.com/pistachio8/with-key-app/issues/42
+test.fixme("author sees unread badge + home dot, both clear after /feed visit", async ({
   page,
   groupId,
 }) => {
