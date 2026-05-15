@@ -400,3 +400,98 @@
 - **RSC**: React Server Component — 서버에서 렌더되는 React 컴포넌트.
 - **SoT**: Single Source of Truth — 중복 정의 없이 한 곳을 기준으로 삼는 원본. UI 리비전에서는 모킹업이 SoT.
 - **viewport**: 브라우저 표시 영역의 가로 폭. 본 매트릭스는 360/390/414 px 기준.
+
+---
+
+## 7. Google Sheets용 TSV 부록
+
+> 본문 §2 매트릭스를 행 단위(`§ × 차원`)로 정규화한 TSV(탭 구분) 블록입니다. 아래 코드 펜스를 **통째로** 복사해 Google Sheets의 빈 셀(예: `A1`)에 paste하면 자동으로 열이 분리됩니다. 헤더 포함 81행.
+>
+> 사용법: GitHub 우상단 copy 버튼(또는 펜스 안 텍스트 선택) → Google Sheets → A1 클릭 → `⌘V`(Mac) / `Ctrl+V`(Windows). `Pass/Fail` 열에 `OK` / `FAIL: #이슈번호` / `N/A` 기입.
+>
+> 본문 §2가 갱신될 때 본 TSV도 손으로 동기화해야 합니다(drift 위험). POC 회귀 1회용이라 자동화는 보류.
+
+```tsv
+§	화면	라우트	구현 PR	차원	검증 항목 (Expected)	Pass/Fail	확인자	스크린샷	비고
+§1	진입/온보딩	/login	PR3 #43	기능	카카오 로그인 + 이메일 매직링크 + 온보딩 3-슬라이드 swipe				
+§1	진입/온보딩	/login	PR3 #43	LES Loading	로그인 버튼 disabled state				
+§1	진입/온보딩	/login	PR3 #43	LES Error	매직링크 429 안내 + Resend SMTP fallback 메시지				
+§1	진입/온보딩	/login	PR3 #43	반응형 360/390/414	슬라이드 인디케이터·로그인 버튼 잘림 없음				
+§1	진입/온보딩	/login	PR3 #43	권한	anon만 접근. 로그인된 상태에서 /login 진입 시 /home redirect				
+§1	진입/온보딩	/login	PR3 #43	a11y	슬라이드 키보드 좌우 화살표 이동 + 이메일 input aria-label				
+§2	홈	/home	PR4 #44	기능	인사 + invited 배너 + stats 4컬럼 + 진행 리스트 + 중앙 FAB → /challenge/new				
+§2	홈	/home	PR4 #44	LES Loading	stats/list Skeleton 컴포넌트				
+§2	홈	/home	PR4 #44	LES Empty	"아직 챌린지가 없어요" + CTA				
+§2	홈	/home	PR4 #44	LES Error	ErrorState "다시 불러오기"				
+§2	홈	/home	PR4 #44	반응형 360/390/414	stats 4컬럼 360px 줄바꿈 없음 + FAB 60×60 안전 영역				
+§2	홈	/home	PR4 #44	권한	authenticated만. anon이면 /login redirect				
+§2	홈	/home	PR4 #44	a11y	FAB aria-label="새 챌린지 만들기" + invited 배너 role="status"				
+§3	챌린지 생성	/challenge/new	PR5 #45	기능	제목(1~30자) + FrequencyStepper(주 1~7) + EndDatePicker(7~90일) + PenaltyPicker(0~10000, 0원 허용) + 서약서 미리보기 + 생성 → /challenge/[id]/pledge				
+§3	챌린지 생성	/challenge/new	PR5 #45	LES Loading	제출 중 버튼 spinner				
+§3	챌린지 생성	/challenge/new	PR5 #45	LES Error	zod inline + 서버 5xx 토스트 + 0원 입력 23514 미발생(0025)				
+§3	챌린지 생성	/challenge/new	PR5 #45	반응형 360/390/414	PenaltyPicker stepper 터치 44×44 + EndDatePicker 캘린더 셀 잘림 없음				
+§3	챌린지 생성	/challenge/new	PR5 #45	권한	authenticated. anon이면 /login				
+§3	챌린지 생성	/challenge/new	PR5 #45	a11y	각 input label 연결 + 캘린더 키보드 좌우/Enter + 에러 aria-live				
+§4	외부 공유 OG	/share/[challengeId]/opengraph-image	PR5 후속(별도)	기능	Next.js OG 동적 이미지: 그룹명·제목·기간·주N회·벌금·참여하기 버튼				⏳ pending
+§4	외부 공유 OG	/share/[challengeId]/opengraph-image	PR5 후속(별도)	LES Error	만료/없는 challengeId 시 404 + 안내				⏳ pending
+§4	외부 공유 OG	/share/[challengeId]/opengraph-image	PR5 후속(별도)	권한	invite 토큰 + signedAt 검증, 만료(72h) 카드				⏳ pending
+§5	초대 참여	/invite/[token]	PR3 #43	기능	로딩 progress + 그룹·챌린지 미리보기 + 참여 CTA				
+§5	초대 참여	/invite/[token]	PR3 #43	LES Loading	progress 애니메이션 role="status"				
+§5	초대 참여	/invite/[token]	PR3 #43	LES Error	만료/중복/존재 안 함 각각 안내				
+§5	초대 참여	/invite/[token]	PR3 #43	반응형 360/390/414	progress 정렬 + 카드 잘림 없음				
+§5	초대 참여	/invite/[token]	PR3 #43	권한	anon이면 카카오 로그인 → 토큰 보존 자동 참여. authenticated 즉시 참여				
+§5	초대 참여	/invite/[token]	PR3 #43	a11y	로딩 role="status" + CTA aria-label				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	기능	3-탭 셸(인증 피드/현황판/정보) + StatusCard + 미서명 시 서약서 진입 + 도장 스탬프				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	LES Loading	탭 컨텐츠별 Skeleton				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	LES Empty	피드 탭 인증 0건 EmptyState				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	LES Error	챌린지 없음 404				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	반응형 360/390/414	탭 헤더 sticky + 도장 스탬프 위치 일치				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	권한 owner	⋯ 메뉴 노출 (해산·종료·수정 논의)				PR5 후속(PR7 영역)
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	권한 non-owner	⋯ 메뉴 미렌더링				
+§6	챌린지 상세 + 서약서	/challenge/[id]	PR5 #45	a11y	탭 role="tablist" + 도장 prefers-reduced-motion 존중				
+§7	참여 완료 배너	/challenge/[id]?just_joined=1	PR5 #45	기능	signPledge 후 ?just_joined=1[&activated=1] redirect + JustJoinedBanner				
+§7	참여 완료 배너	/challenge/[id]?just_joined=1	PR5 #45	LES Error	서명 실패 시 폼으로 복귀				
+§7	참여 완료 배너	/challenge/[id]?just_joined=1	PR5 #45	반응형 360/390/414	배너·도장 카피 잘림 없음				
+§7	참여 완료 배너	/challenge/[id]?just_joined=1	PR5 #45	권한	non-owner 동일. solo·activated 케이스는 ?activated=1 분기				
+§7	참여 완료 배너	/challenge/[id]?just_joined=1	PR5 #45	a11y	JustJoinedBanner role="status"				
+§8	피드·현황판	/challenge/[id]?tab=feed|dashboard	PR6	기능	피드: 인증 카드 + Kudos 3 이모지 토글 + 카메라 FAB → /action. 현황판: 멤버별 진행률 + 키워드 도넛				⏳ pending
+§8	피드·현황판	/challenge/[id]?tab=feed|dashboard	PR6	LES Empty	피드 0건 "첫 인증을 남겨주세요"				⏳ pending
+§8	피드·현황판	/challenge/[id]?tab=feed|dashboard	PR6	반응형 360/390/414	피드 카드 padding + 도넛 차트 비율 유지				⏳ pending
+§8	피드·현황판	/challenge/[id]?tab=feed|dashboard	PR6	권한	멤버 동일. RLS: non-member 진입 차단				⏳ pending
+§8	피드·현황판	/challenge/[id]?tab=feed|dashboard	PR6	a11y	Kudos 버튼 toggle state + 도넛 차트 텍스트 대체				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	기능	인증 빈도 라벨 + 기간 + 멤버 목록(서명 상태) + 초대 링크 시트				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	LES Loading	멤버 리스트 Skeleton				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	LES Error	토큰 발급 실패 안내				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	반응형 360/390/414	초대 시트 bottom-sheet 높이				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	권한 owner	"새 초대 링크" 버튼 노출				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	권한 non-owner	링크 복사만 노출				⏳ pending
+§9	초대·정보 탭	/challenge/[id]?tab=info	PR7	a11y	시트 focus trap + 복사 버튼 announce				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	기능	4-상태 슬라이드: 사진 → 운동 종류+키워드 → 메모 → AI 일기. 슬라이드 카운터 + 풀-width 등록 버튼				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	LES Loading	AI 일기 4.5s 타임아웃 spinner				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	LES Error	사진 10MB 초과·키워드 0개·기간 외 각각 안내				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	반응형 360/390/414	슬라이드 swipe 안정 + 키워드 칩 wrap				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	권한	participant만 (active 챌린지). non-member RLS 차단				⏳ pending
+§10	인증 액션 모달	/challenge/[id]/action	PR6	a11y	슬라이드 키보드 좌우 + 키워드 칩 aria-pressed + 다시 뽑기 5회 한도 announce				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	기능	결과 카드(성공/실패·달성률) + MVP + 예상 벌금 표시만 + 썸네일 격자 + 카카오 공유				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	LES Empty	인증 0건이어도 카드 노출				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	LES Error	챌린지 없음 404				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	반응형 360/390/414	썸네일 격자 3컬럼 + 정산 카드 메인컬러				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	권한	멤버 동일. closed 상태에서만 진입				⏳ pending
+§11	종료/정산 recap	/challenge/[id]/recap	PR7	a11y	결과 heading 구조 + 썸네일 alt 텍스트				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	기능	내 챌린지 목록(진행/종료/대기 필터) + 상세 진입 + 서약서 수정 버튼 제거 확인 + owner 종료/해산				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	LES Empty	0건 "아직 챌린지가 없어요" + 홈 CTA				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	반응형 360/390/414	카드 메타 정보 줄바꿈				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	권한 owner	종료/해산 CTA 노출				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	권한 non-owner	탈퇴 CTA (POC는 grayed out 허용)				⏳ pending
+§12	챌린지 관리	/me/challenges	PR7	a11y	필터 라디오 그룹				⏳ pending
+§13	알림	/notifications	PR7	기능	알림 목록(읽음/안 읽음) + 잠금화면 미리보기 + IDB 캐시(#1·#15) + 모두 읽음				⏳ pending
+§13	알림	/notifications	PR7	LES Empty	0건 "아직 알림이 없어요"				⏳ pending
+§13	알림	/notifications	PR7	LES Error	캐시 폴백				⏳ pending
+§13	알림	/notifications	PR7	반응형 360/390/414	알림 행 카드 padding + 잠금화면 카드 비율				⏳ pending
+§13	알림	/notifications	PR7	권한	authenticated 본인 알림만 (RLS)				⏳ pending
+§13	알림	/notifications	PR7	a11y	안 읽음 카운트 announce + "모두 읽음" confirm 패턴				⏳ pending
+가로	디자인 토큰·primitive	-	PR1 #38	기능	Pretendard 폰트 FOIT/FOUT 없음 + brand 토큰 일관 + 모든 primitive 사용처 일관 + tokens.spec green				
+가로	App-shell	-	PR2 #39	기능	BottomNav 제거 + AppHeader 모든 (app) 라우트 일관 + (auth) 라우트엔 미적용				
+가로	접근성 게이트	-	PR1+	a11y	axe-core 0 violations + prefers-reduced-motion 존중 + 키보드 only 전체 플로우				
+가로	RLS·migration	-	-	권한	0025_penalty_allow_zero 적용 + anon/authenticated/owner 차단 검증				
+```
