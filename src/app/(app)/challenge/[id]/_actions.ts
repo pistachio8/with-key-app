@@ -210,3 +210,79 @@ function bytesFromSupabase(raw: unknown): Buffer {
   if (raw instanceof Uint8Array) return Buffer.from(raw);
   throw new Error("unexpected bytea shape");
 }
+
+// PRD §3.4 — 운영자가 진행 중 챌린지를 즉시 종료. RLS(`challenges_update_pending_owner`)
+// 는 active→closed 갱신을 막으므로 admin client 로 owner 검증 후 status='closed' 직접 갱신.
+const challengeIdInputSchema = z.object({ challengeId: z.string().uuid() });
+type ChallengeIdInput = z.infer<typeof challengeIdInputSchema>;
+
+async function assertChallengeOwner(challengeId: string, userId: string): Promise<boolean> {
+  const admin = adminClient();
+  const { data } = await admin
+    .from("challenges")
+    .select("id, groups!inner(owner_id)")
+    .eq("id", challengeId)
+    .maybeSingle();
+  if (!data) return false;
+  const group = Array.isArray(data.groups) ? data.groups[0] : data.groups;
+  return group?.owner_id === userId;
+}
+
+export const endChallenge = withUser<ChallengeIdInput, { id: string }>(
+  async (user, input): Promise<ActionResult<{ id: string }>> => {
+    const parsed = challengeIdInputSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+    const ok = await assertChallengeOwner(parsed.data.challengeId, user.id);
+    if (!ok) return failure("forbidden");
+
+    const admin = adminClient();
+    const { error } = await admin
+      .from("challenges")
+      .update({ status: "closed" })
+      .eq("id", parsed.data.challengeId);
+    if (error) return failure(mapSupabaseError(error));
+    return success({ id: parsed.data.challengeId });
+  },
+);
+
+// CASCADE 로 action_logs · kudos · challenge_participants 함께 삭제 (FK on delete cascade).
+export const deleteChallenge = withUser<ChallengeIdInput, { id: string }>(
+  async (user, input): Promise<ActionResult<{ id: string }>> => {
+    const parsed = challengeIdInputSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+    const ok = await assertChallengeOwner(parsed.data.challengeId, user.id);
+    if (!ok) return failure("forbidden");
+
+    const admin = adminClient();
+    const { error } = await admin.from("challenges").delete().eq("id", parsed.data.challengeId);
+    if (error) return failure(mapSupabaseError(error));
+    return success({ id: parsed.data.challengeId });
+  },
+);
+
+// PRD §3.4 — 참여자가 챌린지에서 빠지기. RLS 에 DELETE 정책 없음 → admin client 로
+// 본인 row 만 삭제. action_logs/kudos 는 ON DELETE CASCADE 로 자동 정리.
+export const leaveChallenge = withUser<ChallengeIdInput, { id: string }>(
+  async (user, input): Promise<ActionResult<{ id: string }>> => {
+    const parsed = challengeIdInputSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+
+    const admin = adminClient();
+    // 운영자는 leave 대신 deleteChallenge 를 써야 한다 (그룹·챌린지 일관성).
+    const { data: ch } = await admin
+      .from("challenges")
+      .select("groups!inner(owner_id)")
+      .eq("id", parsed.data.challengeId)
+      .maybeSingle();
+    const g = Array.isArray(ch?.groups) ? ch.groups[0] : ch?.groups;
+    if (g?.owner_id === user.id) return failure("forbidden");
+
+    const { error } = await admin
+      .from("challenge_participants")
+      .delete()
+      .eq("challenge_id", parsed.data.challengeId)
+      .eq("user_id", user.id);
+    if (error) return failure(mapSupabaseError(error));
+    return success({ id: parsed.data.challengeId });
+  },
+);

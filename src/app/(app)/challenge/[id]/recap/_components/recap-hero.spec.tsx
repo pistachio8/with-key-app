@@ -10,35 +10,34 @@ describe("RecapHero", () => {
     endAt: "2026-05-08T00:00:00Z",
   };
 
-  it("viewer 달성 시 '목표 달성!' 표시", () => {
+  it("viewer 달성 시 '챌린지가 종료되었어요!' 표시", () => {
     render(<RecapHero {...base} viewerAchieved={true} anyoneAchieved={true} />);
-    expect(screen.getByText("목표 달성!")).toBeTruthy();
+    expect(screen.getByText("챌린지가 종료되었어요!")).toBeTruthy();
     expect(screen.getByText("주 3회 헬스장")).toBeTruthy();
   });
 
-  it("viewer 미달 · 타인 달성 시 '이번 주는 아쉬웠어요'", () => {
+  it("viewer 미달 · 타인 달성 시 '이번엔 아쉬웠어요'", () => {
     render(<RecapHero {...base} viewerAchieved={false} anyoneAchieved={true} />);
-    expect(screen.getByText("이번 주는 아쉬웠어요")).toBeTruthy();
+    expect(screen.getByText("이번엔 아쉬웠어요")).toBeTruthy();
   });
 
-  it("전원 미달성 시 '다음 주엔 같이 해봐요'", () => {
+  it("전원 미달성 시 '다음엔 같이 해봐요'", () => {
     render(<RecapHero {...base} viewerAchieved={false} anyoneAchieved={false} />);
-    expect(screen.getByText("다음 주엔 같이 해봐요")).toBeTruthy();
+    expect(screen.getByText("다음엔 같이 해봐요")).toBeTruthy();
   });
 
-  it("솔로 미달성(isSolo) 시 '다음 주엔 다시 도전해봐요'", () => {
+  it("솔로 미달성(isSolo) 시 '다음엔 다시 도전해봐요'", () => {
     render(<RecapHero {...base} viewerAchieved={false} anyoneAchieved={false} isSolo={true} />);
-    expect(screen.getByText("다음 주엔 다시 도전해봐요")).toBeTruthy();
+    expect(screen.getByText("다음엔 다시 도전해봐요")).toBeTruthy();
   });
 
-  it("솔로 달성(isSolo + viewer 달성) 시 '목표 달성!'", () => {
+  it("솔로 달성(isSolo + viewer 달성) 시 종료 카피", () => {
     render(<RecapHero {...base} viewerAchieved={true} anyoneAchieved={true} isSolo={true} />);
-    expect(screen.getByText("목표 달성!")).toBeTruthy();
+    expect(screen.getByText("챌린지가 종료되었어요!")).toBeTruthy();
   });
 
   it("기간을 MM.DD ~ MM.DD 포맷으로 표시", () => {
     render(<RecapHero {...base} viewerAchieved={true} anyoneAchieved={true} />);
-    // ko-KR / Asia/Seoul, parts 기반 포맷 → "05.01 ~ 05.08"
     expect(screen.getByText(/05\.01\s*~\s*05\.08/)).toBeTruthy();
   });
 });

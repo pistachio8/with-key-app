@@ -5,7 +5,7 @@ import {
   clearMyPushSubscriptions,
   registerPushSubscription,
   updateNotificationPrefs,
-} from "@/app/(app)/settings/_actions";
+} from "../_actions";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "@/lib/push/subscribe";
 import type { NotificationPrefs } from "@/lib/validators/push";
 

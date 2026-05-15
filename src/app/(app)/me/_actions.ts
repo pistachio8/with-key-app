@@ -1,9 +1,17 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { withUser } from "@/lib/auth/with-user";
 import { createClient } from "@/lib/supabase/server";
 import { failure, success, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
+
+// /me 로그아웃 — supabase 세션 정리 후 /login 으로 이동.
+export async function signOut(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
 import {
   notificationPrefsSchema,
   pushSubscriptionSchema,

@@ -3,9 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { track } from "@/lib/analytics/track";
+import { AccountInlinePrompt } from "./_components/account-inline-prompt";
+import { RecapActions } from "./_components/recap-actions";
+import { RecapEndCard } from "./_components/recap-end-card";
 import { RecapHero } from "./_components/recap-hero";
-import { RecapStatsRow } from "./_components/recap-stats-row";
 import { RecapMembersList } from "./_components/recap-members-list";
+import { RecapStatsRow } from "./_components/recap-stats-row";
 
 type Params = Promise<{ id: string }>;
 
@@ -42,8 +45,20 @@ export default async function RecapPage({ params }: { params: Params }) {
     { userId: user.id },
   );
 
+  const isOwner = recap.group?.ownerId === user.id;
+  const hasAccount = !!(
+    recap.group?.bankCode &&
+    recap.group?.accountHolder &&
+    recap.group?.accountNumberLast4
+  );
+  // 모킹업 §11 — "최종 벌금" = 미달성자 수 × penalty_amount.
+  const totalPenalty = recap.members.reduce(
+    (sum, m) => sum + (m.achieved ? 0 : recap.penaltyAmount),
+    0,
+  );
+
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-4 p-4">
       <RecapHero
         title={recap.title}
         startAt={recap.startAt}
@@ -52,12 +67,22 @@ export default async function RecapPage({ params }: { params: Params }) {
         anyoneAchieved={recap.anyoneAchieved}
         isSolo={recap.members.length === 1}
       />
+      <RecapEndCard totalPenalty={totalPenalty} viewerPerHeadPenalty={recap.viewerPerHeadPenalty} />
       <RecapStatsRow
         viewerDoneCount={recap.viewerDoneCount}
         goalCount={recap.goalCount}
         viewerPerHeadPenalty={recap.viewerPerHeadPenalty}
       />
       <RecapMembersList goalCount={recap.goalCount} members={recap.members} />
+      {recap.group && !hasAccount && (
+        <AccountInlinePrompt
+          groupId={recap.group.id}
+          isOwner={isOwner}
+          bankCode={recap.group.bankCode}
+          accountHolder={recap.group.accountHolder}
+        />
+      )}
+      <RecapActions title={recap.title} totalPenalty={totalPenalty} />
     </div>
   );
 }

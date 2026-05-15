@@ -1,4 +1,6 @@
-// PRD §10 화면 8 · §11.1~.2 — 결과 헤더. Design Brief §1.4 완곡 톤.
+// PRD §10 화면 8 · 모킹업 §11 - 결과 헤더. Trophy 썸네일 + 완곡 톤 카피.
+
+import { Trophy } from "lucide-react";
 
 interface RecapHeroProps {
   title: string;
@@ -6,12 +8,10 @@ interface RecapHeroProps {
   endAt: string | null;
   viewerAchieved: boolean;
   anyoneAchieved: boolean;
-  // PR-2 dual-mode: 솔로(=1 참가자) 미달성 시 "같이 해봐요" 카피 부적절.
+  // 솔로(=1 참가자) 미달성 시 "같이 해봐요" 카피 부적절.
   isSolo?: boolean;
 }
 
-// ko-KR / Asia/Seoul 로 `MM.DD` 를 생성. Node ICU 의 ko-KR은
-// "05. 01." 처럼 literal 을 끼워 넣으므로 parts 에서 month/day 만 결합.
 function formatMonthDay(iso: string): string {
   const parts = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -29,11 +29,10 @@ function formatRange(startAt: string | null, endAt: string | null): string {
 }
 
 function verdictLabel(viewerAchieved: boolean, anyoneAchieved: boolean, isSolo: boolean): string {
-  if (viewerAchieved) return "목표 달성!";
-  // 솔로(=1)는 viewer=anyone 이므로 "같이 해봐요" 카피 대신 자기충족 톤.
-  if (isSolo) return "다음 주엔 다시 도전해봐요";
-  if (anyoneAchieved) return "이번 주는 아쉬웠어요";
-  return "다음 주엔 같이 해봐요";
+  if (viewerAchieved) return "챌린지가 종료되었어요!";
+  if (isSolo) return "다음엔 다시 도전해봐요";
+  if (anyoneAchieved) return "이번엔 아쉬웠어요";
+  return "다음엔 같이 해봐요";
 }
 
 export function RecapHero({
@@ -45,11 +44,13 @@ export function RecapHero({
   isSolo = false,
 }: RecapHeroProps) {
   return (
-    <header className="flex flex-col gap-2">
-      <p className="text-muted-foreground text-xs font-medium">주간 정산</p>
-      <h1 className="text-xl font-semibold">{title}</h1>
-      <p className="text-muted-foreground text-sm">{formatRange(startAt, endAt)}</p>
-      <p className="text-primary text-lg font-semibold" data-testid="recap-verdict">
+    <header className="flex flex-col items-center gap-3 pt-2 text-center">
+      <div className="bg-brand-primary-soft text-primary flex size-16 items-center justify-center rounded-full">
+        <Trophy className="size-7" aria-hidden="true" />
+      </div>
+      <p className="text-muted-foreground t-caption">{formatRange(startAt, endAt)}</p>
+      <h1 className="t-h1 font-bold">{title}</h1>
+      <p className="text-primary t-body font-semibold" data-testid="recap-verdict">
         {verdictLabel(viewerAchieved, anyoneAchieved, isSolo)}
       </p>
     </header>

@@ -11,11 +11,20 @@ export type RecapMemberView = {
   isMvp: boolean;
 };
 
+export type RecapGroupView = {
+  id: string;
+  ownerId: string;
+  bankCode: string | null;
+  accountHolder: string | null;
+  accountNumberLast4: string | null;
+};
+
 export type RecapView = {
   challengeId: string;
   title: string;
   goalCount: number;
   durationDays: number;
+  penaltyAmount: number;
   startAt: string | null;
   endAt: string | null;
   status: "active" | "closed";
@@ -23,6 +32,8 @@ export type RecapView = {
   viewerAchieved: boolean;
   viewerDoneCount: number;
   viewerPerHeadPenalty: number;
+  // PRD §10 / 모킹업 §11 — 정산 시점 그룹 계좌 lazy prompt 에 필요.
+  group: RecapGroupView | null;
   members: ReadonlyArray<RecapMemberView>;
   anyoneAchieved: boolean;
 };
@@ -49,6 +60,7 @@ export function buildRecapView(input: {
   participants: ReadonlyArray<ParticipantRow>;
   viewerId: string;
   now: Date;
+  group?: RecapGroupView | null;
 }): RecapView {
   const { challenge, participants, viewerId } = input;
   const mvpIds = pickMvpIds({
@@ -72,6 +84,7 @@ export function buildRecapView(input: {
     title: challenge.title,
     goalCount: challenge.goal_count,
     durationDays: challenge.duration_days,
+    penaltyAmount: challenge.penalty_amount,
     startAt: challenge.start_at,
     endAt: challenge.end_at,
     status: challenge.status,
@@ -83,6 +96,7 @@ export function buildRecapView(input: {
       goalCount: challenge.goal_count,
       penaltyAmount: challenge.penalty_amount,
     }),
+    group: input.group ?? null,
     members,
     anyoneAchieved: members.some((m) => m.achieved),
   };
@@ -105,14 +119,36 @@ export async function fetchRecap(
 
   let cq = supabase
     .from("challenges")
-    .select("id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at")
+    .select(
+      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
+    )
     .in("status", ["active", "closed"])
     .lte("end_at", nowIso);
   if (options.challengeId) cq = cq.eq("id", options.challengeId);
   const { data: challenges, error } = await cq.order("end_at", { ascending: false }).limit(1);
 
   if (error || !challenges?.[0]) return null;
-  const challenge = challenges[0] as ChallengeRow;
+  const raw = challenges[0];
+  const challenge: ChallengeRow = {
+    id: raw.id as string,
+    title: raw.title as string,
+    goal_count: raw.goal_count as number,
+    duration_days: raw.duration_days as number,
+    penalty_amount: raw.penalty_amount as number,
+    status: raw.status as ChallengeRow["status"],
+    start_at: raw.start_at as string | null,
+    end_at: raw.end_at as string | null,
+  };
+  const groupRow = Array.isArray(raw.groups) ? raw.groups[0] : raw.groups;
+  const group: RecapGroupView | null = groupRow
+    ? {
+        id: groupRow.id as string,
+        ownerId: groupRow.owner_id as string,
+        bankCode: (groupRow.bank_code as string | null) ?? null,
+        accountHolder: (groupRow.account_holder as string | null) ?? null,
+        accountNumberLast4: (groupRow.account_number_last4 as string | null) ?? null,
+      }
+    : null;
 
   const { data: parts } = await supabase
     .from("challenge_participants")
@@ -138,5 +174,5 @@ export async function fetchRecap(
     };
   });
 
-  return buildRecapView({ challenge, participants, viewerId, now });
+  return buildRecapView({ challenge, participants, viewerId, now, group });
 }
