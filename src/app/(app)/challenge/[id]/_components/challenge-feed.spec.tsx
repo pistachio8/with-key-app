@@ -68,9 +68,11 @@ describe("ChallengeFeed", () => {
   it("disables kudos buttons on the viewer's own log (RLS forbids self-kudos)", () => {
     const ownLog = { ...baseItem, authorId: "viewer-1" };
     render(<ChallengeFeed items={[ownLog]} viewerId="viewer-1" participantCount={4} />);
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const btn of buttons) {
+    const kudosButtons = screen
+      .getAllByRole("button")
+      .filter((b) => /응원/.test(b.getAttribute("aria-label") ?? ""));
+    expect(kudosButtons.length).toBeGreaterThan(0);
+    for (const btn of kudosButtons) {
       expect((btn as HTMLButtonElement).disabled).toBe(true);
     }
   });

@@ -1,8 +1,10 @@
 "use client";
 
 // 모킹업 §6/§8/§9 상단 `.tabs` — 인증 피드 / 현황판 / 정보.
+// URL ?tab= 동기화 (F8 결과 모달 CTA에서 사용). FAB slot은 info 탭에서만 숨김 (§9-A·B 카메라 FAB 제거 명시).
+// active 는 URL searchParams 에서 직접 도출 — 로컬 state 없음 (single source of truth).
 
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export type TabKey = "feed" | "dashboard" | "info";
@@ -12,6 +14,7 @@ interface ChallengeTabsProps {
   dashboard: React.ReactNode;
   info: React.ReactNode;
   defaultTab?: TabKey;
+  fab?: React.ReactNode;
 }
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -20,9 +23,35 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "info", label: "정보" },
 ];
 
-export function ChallengeTabs({ feed, dashboard, info, defaultTab = "feed" }: ChallengeTabsProps) {
-  const [active, setActive] = useState<TabKey>(defaultTab);
+function parseTab(value: string | null, fallback: TabKey): TabKey {
+  if (value === "feed" || value === "dashboard" || value === "info") return value;
+  return fallback;
+}
+
+export function ChallengeTabs({
+  feed,
+  dashboard,
+  info,
+  defaultTab = "feed",
+  fab,
+}: ChallengeTabsProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const active = parseTab(searchParams.get("tab"), defaultTab);
+
+  function handleSelect(next: TabKey) {
+    if (next === active) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "feed") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
+
   const content = active === "feed" ? feed : active === "dashboard" ? dashboard : info;
+  const showFab = fab != null && active !== "info";
+
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" aria-label="챌린지 보기" className="bg-muted flex gap-1 rounded-full p-1">
@@ -34,7 +63,7 @@ export function ChallengeTabs({ feed, dashboard, info, defaultTab = "feed" }: Ch
               role="tab"
               aria-selected={on}
               tabIndex={on ? 0 : -1}
-              onClick={() => setActive(key)}
+              onClick={() => handleSelect(key)}
               className={cn(
                 "flex-1 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
                 "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
@@ -49,6 +78,7 @@ export function ChallengeTabs({ feed, dashboard, info, defaultTab = "feed" }: Ch
         })}
       </div>
       <div role="tabpanel">{content}</div>
+      {showFab && fab}
     </div>
   );
 }

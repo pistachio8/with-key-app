@@ -35,7 +35,7 @@ describe("NextStepCta", () => {
     expect(screen.getByText(/다른 멤버 서명 대기 중/)).toBeTruthy();
   });
 
-  it("active 상태는 null 반환 (StartActionButton 이 처리)", () => {
+  it("active 상태는 null 반환 (FAB 으로 인증 진입)", () => {
     const { container } = render(
       <NextStepCta status="active" isParticipant={true} mySigned={true} isSolo={false} />,
     );

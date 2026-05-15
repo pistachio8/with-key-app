@@ -1,0 +1,128 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+
+const push = vi.fn();
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }) }));
+
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+const toastInfo = vi.fn();
+vi.mock("sonner", () => ({
+  toast: Object.assign((...args: unknown[]) => toastInfo(...args), {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+  }),
+}));
+
+const submitActionLog = vi.fn();
+vi.mock("../_actions", () => ({
+  submitActionLog: (...args: unknown[]) => submitActionLog(...args),
+}));
+
+const prepareForUpload = vi.fn();
+vi.mock("@/lib/image/prepare-upload", () => ({
+  prepareForUpload: (...args: unknown[]) => prepareForUpload(...args),
+}));
+
+import { ActionForm } from "./action-form";
+
+function getHiddenInputs() {
+  return Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
+}
+
+function selectPhoto(file: File) {
+  // 첫 번째 hidden input(camera) 으로 파일 주입 — 라이브러리 input과 동등.
+  const inputs = getHiddenInputs();
+  fireEvent.change(inputs[0], { target: { files: [file] } });
+}
+
+function selectFirstKeyword() {
+  const group = screen.getByRole("group", { name: "키워드 선택" });
+  fireEvent.click(within(group).getAllByRole("button")[0]);
+}
+
+const challengeId = "00000000-0000-4000-8000-000000000001";
+
+describe("ActionForm", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    submitActionLog.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "log-1",
+        photoAttached: true,
+        isFirstAction: false,
+        currentDay: 3,
+        totalDays: 30,
+      },
+    });
+    prepareForUpload.mockImplementation((file: File) => Promise.resolve(file));
+    URL.createObjectURL = vi.fn().mockReturnValue("blob:preview");
+    URL.revokeObjectURL = vi.fn();
+    window.localStorage.clear();
+  });
+
+  it("renders the empty-state dual entry (camera Fab + library link) when no photo", () => {
+    render(<ActionForm challengeId={challengeId} />);
+    expect(screen.getByRole("button", { name: /사진 찍기/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /사진에서 선택/ })).toBeTruthy();
+    // 키워드/등록 UI는 empty state에서 미렌더.
+    expect(screen.queryByRole("group", { name: "키워드 선택" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /등록하기/ })).toBeNull();
+  });
+
+  it("shows a preview after selecting a photo", async () => {
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    expect(await screen.findByAltText("사진 미리보기")).toBeTruthy();
+    expect(prepareForUpload).toHaveBeenCalledWith(file);
+  });
+
+  it("removes the preview and revokes the blob URL", async () => {
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    await screen.findByAltText("사진 미리보기");
+    fireEvent.click(screen.getByRole("button", { name: /사진 제거/ }));
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+    expect(screen.queryByAltText("사진 미리보기")).toBeNull();
+  });
+
+  it("submits a FormData payload with the prepared photo", async () => {
+    const prepared = new File([new Uint8Array(5)], "photo.jpg", { type: "image/jpeg" });
+    prepareForUpload.mockResolvedValueOnce(prepared);
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    await screen.findByAltText("사진 미리보기");
+    selectFirstKeyword();
+    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+
+    await waitFor(() => expect(submitActionLog).toHaveBeenCalledTimes(1));
+    const formData = submitActionLog.mock.calls[0][0] as FormData;
+    expect(formData.get("challengeId")).toBe(challengeId);
+    expect(formData.get("photo")).toBe(prepared);
+    // 성공 시 ActionResultDialog 가 열리고, router.push 는 호출되지 않음.
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("saves draft on submit failure (F10)", async () => {
+    submitActionLog.mockResolvedValueOnce({ ok: false, error: "forbidden" });
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    await screen.findByAltText("사진 미리보기");
+    selectFirstKeyword();
+    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    const draftRaw = window.localStorage.getItem(`withkey:action-draft:${challengeId}`);
+    expect(draftRaw).not.toBeNull();
+    const draft = JSON.parse(draftRaw ?? "{}") as { selected: string[]; savedAt: number };
+    expect(draft.selected.length).toBeGreaterThan(0);
+    expect(typeof draft.savedAt).toBe("number");
+  });
+});
