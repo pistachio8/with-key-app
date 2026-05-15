@@ -57,10 +57,10 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
       const joinerPage = await joinerContext.newPage();
       // Session cookie already set — direct navigation lands on the authed page.
       await joinerPage.goto(inviteUrl);
-      await expect(joinerPage.getByRole("button", { name: "참여하고 서명하러 가기" })).toBeVisible({
+      await expect(joinerPage.getByRole("button", { name: "참여하기" })).toBeVisible({
         timeout: 15_000,
       });
-      await joinerPage.getByRole("button", { name: "참여하고 서명하러 가기" }).click();
+      await joinerPage.getByRole("button", { name: "참여하기" }).click();
 
       // Joiner should land on /pledge and see the pending pledge for signing.
       await expect(joinerPage).toHaveURL(/\/pledge$/, { timeout: 10_000 });
