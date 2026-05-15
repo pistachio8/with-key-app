@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
-import { StartActionButton } from "@/app/(app)/challenge/[id]/_components/start-action-button";
-import { GroupStrip } from "./_components/group-strip";
+import { fetchMyDisplayName } from "@/lib/db/reads/me";
+import { HomeGreeting } from "./_components/home-greeting";
+import {
+  InvitedChallengeBanner,
+  type InvitedChallenge,
+} from "./_components/invited-challenge-banner";
+import { StatsGrid } from "./_components/stats-grid";
+import { RunningChallengeList } from "./_components/running-challenge-list";
 
-// PRD §4 · §6.2 · Design Brief 화면 4
+// 모킹업 §2 — 빈/진행 두 상태. AppHeader 는 (app)/layout.tsx 가 렌더.
 export default async function HomePage() {
   const supabase = await createClient();
   const {
@@ -16,51 +23,74 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const groups = await fetchCurrentChallenges(user.id);
-  const hasAnyGroup = groups.length > 0;
+  const [groups, displayName] = await Promise.all([
+    fetchCurrentChallenges(user.id),
+    fetchMyDisplayName(user.id),
+  ]);
 
-  // 진행 중인 active 챌린지가 정확히 1개일 때만 단축 "운동 시작" 노출 — 모호함 방지.
   const activeChallenges = groups
     .map((g) => g.challenge)
     .filter((c): c is NonNullable<typeof c> => c?.status === "active");
-  const singleActive = activeChallenges.length === 1 ? activeChallenges[0] : null;
+  const pendingChallenges = groups
+    .map((g) => ({ groupName: g.groupName, challenge: g.challenge }))
+    .filter(
+      (g): g is { groupName: string | null; challenge: NonNullable<typeof g.challenge> } =>
+        g.challenge?.status === "pending",
+    );
 
-  let pushSubscribed = false;
-  if (singleActive) {
-    const { count } = await supabase
-      .from("push_subscriptions")
-      .select("user_id", { count: "exact", head: true })
-      .eq("user_id", user.id);
-    pushSubscribed = (count ?? 0) > 0;
+  let invites: InvitedChallenge[] = [];
+  if (pendingChallenges.length > 0) {
+    const pendingIds = pendingChallenges.map((p) => p.challenge.id);
+    const { data: myParts } = await supabase
+      .from("challenge_participants")
+      .select("challenge_id, signed_at")
+      .eq("user_id", user.id)
+      .in("challenge_id", pendingIds)
+      .is("signed_at", null);
+    const unsignedIds = new Set((myParts ?? []).map((r) => r.challenge_id));
+    invites = pendingChallenges
+      .filter((p) => unsignedIds.has(p.challenge.id))
+      .map((p) => ({
+        challengeId: p.challenge.id,
+        title: p.challenge.title,
+        groupName: p.groupName,
+      }));
   }
 
+  const stats = {
+    activeCount: activeChallenges.length,
+    completedToday: activeChallenges.filter((c) => c.verifiedToday).length,
+    pendingToday: activeChallenges.filter((c) => !c.verifiedToday).length,
+    totalPenalty: activeChallenges.reduce((sum, c) => sum + c.potTotal, 0),
+  };
+
+  const hasAnyGroup = groups.length > 0;
+
   return (
-    <div className="flex flex-col gap-6 p-4">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">오늘도 수고하셨어요</h1>
-        <Link
-          href="/settings"
-          className="text-muted-foreground text-sm underline-offset-4 hover:underline"
-        >
-          설정
-        </Link>
-      </header>
+    <div className="flex flex-col gap-4 p-4">
+      <HomeGreeting displayName={displayName ?? "친구"} />
 
-      {singleActive ? (
-        <section aria-label="운동 시작">
-          <StartActionButton challengeId={singleActive.id} pushSubscribed={pushSubscribed} />
-        </section>
-      ) : null}
-
-      <GroupStrip groups={groups} />
-
-      {hasAnyGroup && (
-        <Link
-          href="/group/new"
-          className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-11 w-full gap-2")}
-        >
-          <Plus aria-hidden="true" /> 새 그룹 만들기
-        </Link>
+      {hasAnyGroup ? (
+        <>
+          <InvitedChallengeBanner invites={invites} />
+          <StatsGrid {...stats} />
+          <RunningChallengeList groups={groups} />
+        </>
+      ) : (
+        <EmptyState
+          icon={Sparkles}
+          title="아직 진행 중인 챌린지가 없어요"
+          description="친구들과 함께 첫 챌린지를 만들어보세요"
+          action={
+            <Link
+              href="/challenge/new"
+              className={cn(buttonVariants({ size: "lg" }), "h-11 gap-2 px-4")}
+            >
+              <Sparkles aria-hidden="true" className="size-4" />
+              챌린지 만들기
+            </Link>
+          }
+        />
       )}
     </div>
   );
