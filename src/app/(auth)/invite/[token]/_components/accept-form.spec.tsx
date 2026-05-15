@@ -34,7 +34,7 @@ describe("<AcceptForm />", () => {
     });
 
     render(<AcceptForm token="TOK" groupName="민지네" />);
-    fireEvent.click(screen.getByRole("button", { name: "참여하고 서명하러 가기" }));
+    fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/pledge"));
   });
@@ -43,7 +43,7 @@ describe("<AcceptForm />", () => {
     acceptInviteMock.mockResolvedValueOnce({ ok: false, error: "not_found" });
 
     render(<AcceptForm token="TOK" groupName="민지네" />);
-    fireEvent.click(screen.getByRole("button", { name: "참여하고 서명하러 가기" }));
+    fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     expect(toastError.mock.calls[0]![0]).toMatch(/만료|다시|유효/);

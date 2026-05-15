@@ -1,20 +1,39 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Suspense, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { MessageCircle } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requestMagicLink } from "./_actions";
-import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "@/lib/actions/error-messages";
+import { OnboardingSlides } from "./_components/onboarding-slides";
+import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 
 const messageFor = makeUserMessage({
   upstream_error: "로그인 링크를 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
 });
 
 export default function LoginPage() {
+  return (
+    // useSearchParams 는 Suspense 경계 안에서 호출돼야 한다 (Next.js 16).
+    <Suspense fallback={null}>
+      <LoginScreen />
+    </Suspense>
+  );
+}
+
+function LoginScreen() {
+  const sp = useSearchParams();
+  const onboard = sp.get("onboard") === "1";
+  if (onboard) return <OnboardingSlides />;
+  return <LoginForm hasInvite={Boolean(sp.get("next"))} />;
+}
+
+function LoginForm({ hasInvite }: { hasInvite: boolean }) {
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
 
   function submit() {
     startTransition(async () => {
@@ -24,7 +43,7 @@ export default function LoginPage() {
           toast.error(messageFor(res.error));
           return;
         }
-        toast.success("로그인 링크를 이메일로 보냈어요. 메일함을 확인해 주세요.");
+        setSentEmail(email);
       } catch (e) {
         console.error(e);
         toast.error(FALLBACK_ERROR_MESSAGE);
@@ -34,6 +53,26 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-screen-sm flex-col justify-between px-6 py-10">
+      {hasInvite && (
+        <section
+          aria-label="초대받은 챌린지 안내"
+          // 모킹업 §1-B (line 409) invite-banner 톤. 안내 텍스트는 token 미해석이라
+          // 구체 챌린지 제목을 못 보여줌 — 로그인 후 /invite/[token] 에서 정식 미리보기.
+          className="border-border/60 bg-card/80 flex items-center gap-3 rounded-2xl border px-4 py-3 backdrop-blur"
+        >
+          <span
+            aria-hidden="true"
+            className="bg-primary/10 text-primary grid size-9 place-items-center rounded-full"
+          >
+            <Mail className="size-4" />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-foreground text-sm font-semibold">초대받은 챌린지</span>
+            <span className="text-muted-foreground text-xs">로그인 후 바로 서약서로 이동해요</span>
+          </div>
+        </section>
+      )}
+
       <section
         aria-labelledby="brand-heading"
         className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
@@ -41,45 +80,55 @@ export default function LoginPage() {
         <h1 id="brand-heading" className="text-4xl font-black tracking-tight">
           윗키
         </h1>
-        <p className="text-muted-foreground break-keep">혼자, 또는 친구와 함께하는 운동 기록</p>
+        <p className="text-muted-foreground break-keep">
+          {hasInvite
+            ? "가입하면 바로 챌린지 서약서로 이동돼요"
+            : "친구들과 함께 운동 내기 시작하기"}
+        </p>
       </section>
 
       <section aria-label="로그인 방법 선택" className="flex flex-col gap-3">
-        <Button
-          size="lg"
-          disabled
-          aria-describedby="consent-note"
-          className="h-12 w-full bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90"
-        >
-          <MessageCircle aria-hidden="true" />
-          카카오로 시작하기 (v1)
-        </Button>
-
-        <div className="flex flex-col gap-2">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="h-12"
-            aria-label="이메일"
-            autoComplete="email"
-          />
-          <Button
-            size="lg"
-            variant="outline"
-            aria-describedby="consent-note"
-            className="h-12 w-full"
-            onClick={submit}
-            disabled={pending || email.length === 0}
+        {sentEmail ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-primary/5 border-primary/20 flex flex-col gap-1 rounded-2xl border px-4 py-4 text-center text-sm"
           >
-            {pending ? "링크 보내는 중..." : "이메일로 로그인 링크 받기"}
-          </Button>
-        </div>
+            <span className="text-foreground font-semibold">
+              {sentEmail} 으로 로그인 링크를 보냈어요
+            </span>
+            <span className="text-muted-foreground text-xs">
+              메일함을 확인하고 링크를 눌러 주세요
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="h-12"
+                aria-label="이메일"
+                autoComplete="email"
+              />
+              <Button
+                size="lg"
+                aria-describedby="consent-note"
+                className="h-12 w-full"
+                onClick={submit}
+                disabled={pending || email.length === 0}
+              >
+                {pending ? "링크 보내는 중..." : "이메일로 로그인 링크 받기"}
+              </Button>
+            </div>
 
-        <p id="consent-note" className="text-muted-foreground text-center text-xs">
-          계속하면 이용약관 및 개인정보 수집·이용에 동의한 것으로 간주돼요.
-        </p>
+            <p id="consent-note" className="text-muted-foreground text-center text-xs">
+              계속하면 이용약관 및 개인정보 수집·이용에 동의한 것으로 간주돼요.
+            </p>
+          </>
+        )}
       </section>
     </main>
   );
