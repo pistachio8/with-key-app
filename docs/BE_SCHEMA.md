@@ -35,11 +35,9 @@
 |---|---|---|---|
 | **D-005** "각서 → 서약서" | 내부 식별자는 영문 `challenge`/`pledge` 유지 | 동일 — DB 식별자 영향 없음. UI 카피 이슈이므로 본 문서는 식별자 유지. | — |
 | **D-006** 서약서 최대 기간 3개월 | `duration_days: 7` 고정 | `duration_days: 1~90` 허용 (7 default) | `challenges.duration_days CHECK (1..90)` |
-| **D-007** 최대 금액 10,000원 | `penalty_amount 1,000~20,000` | `penalty_amount 1,000~10,000` | `challenges.penalty_amount CHECK (1000..10000 & %1000=0)` |
+| **D-007** 최대 금액 10,000원 + 0원 허용 | `penalty_amount 1,000~20,000` | `penalty_amount 0~10,000` | `challenges.penalty_amount CHECK (0..10000 & %1000=0)` ← **migration 0025 적용 완료** |
 
-> ⚠️ **현 [src/lib/validators/challenge.ts](src/lib/validators/challenge.ts)는 구버전**(`durationDays: literal(7)` · `penaltyAmount max 20000`)을 반영 중. 본 문서 확정과 동시에 validator를 업데이트하고, 두 레이어 제약을 D-006/D-007 기준으로 일치시킨다.
->
-> ⚠️ **PRD §3.3 AC-1 미업데이트**: PRD는 "기간 POC 고정: 1주" 로 기록되어 D-006과 충돌. `goal_count`(주 N회)의 **측정 단위가 3개월 챌린지에서 어떻게 적용되는지** 미정의(매주 독립 평가? 누적?). 본 문서는 DB 제약만 D-006에 맞추고, **주간 반복 평가 로직은 PRD 업데이트 전까지 FE에서 `duration_days=7`로 가드**한다. PRD 업데이트는 §11 Follow-up 으로 이관.
+> ✅ **2026-05-15 업데이트**: PRD §3.3 AC-1, [src/lib/validators/challenge.ts](src/lib/validators/challenge.ts), DB CHECK 모두 D-006/D-007에 정합. `supabase/migrations/0025_penalty_allow_zero.sql`이 PR5(#45)에 함께 머지되며 0001_init.sql의 `BETWEEN 1000 AND 10000` 제약을 `BETWEEN 0 AND 10000`으로 완화. 1000원 단위 제약은 유지.
 
 ---
 
@@ -251,7 +249,7 @@ stateDiagram-v2
 | `type` | text | NO | `'fitness'` | `CHECK IN ('fitness')` — POC |
 | `goal_count` | int | NO | `3` | `CHECK BETWEEN 1 AND 7` (주 단위) |
 | `duration_days` | int | NO | `7` | `CHECK BETWEEN 1 AND 90` ← **D-006** · ⚠️ FE는 PRD 업데이트 전까지 `7`로 가드(§1 참조) |
-| `penalty_amount` | int | NO | — | `CHECK BETWEEN 1000 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** |
+| `penalty_amount` | int | NO | — | `CHECK BETWEEN 0 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** (migration 0025_penalty_allow_zero.sql에서 0원 허용으로 완화됨, PR #45) |
 | `status` | text | NO | `'pending'` | `CHECK IN ('pending','accepted','active','closed')` |
 | `start_at` | timestamptz | YES | null | `active` 전이 시 서버가 `now()`로 채움 |
 | `end_at` | timestamptz | YES | null | `start_at + duration_days` |
@@ -432,8 +430,8 @@ $$;
 |---|---|---|---|
 | `challenges.title` | `min(1).max(30)` | `char_length BETWEEN 1 AND 30` | ✅ 일치 |
 | `challenges.goal_count` | `int.min(1).max(7)` | `CHECK BETWEEN 1 AND 7` | ✅ |
-| `challenges.duration_days` | ⚠️ 현 코드 `literal(7)` | `CHECK BETWEEN 1 AND 90` | ❌ **validator 업데이트 필요**(D-006) |
-| `challenges.penalty_amount` | ⚠️ 현 코드 `min(1000).max(20000)` | `CHECK BETWEEN 1000 AND 10000` | ❌ **validator 업데이트 필요**(D-007) |
+| `challenges.duration_days` | `int.min(7).max(90)` | `CHECK BETWEEN 1 AND 90` | ✅ (D-006 + ADR-0004 반영 — 코드는 최소 7일로 더 엄격) |
+| `challenges.penalty_amount` | `int.min(0).max(10000)` + `%1000` | `CHECK BETWEEN 0 AND 10000` (migration 0025) | ✅ (D-007 반영, PR #45 머지 시 함께 적용) |
 | `action_logs.selected_keywords` | `array.min(1).max(3)` + 풀 검증 | `array_length BETWEEN 1 AND 3` | ✅ (풀은 앱 전용) |
 | `action_logs.reroll_count` | `int.min(0).max(5)` | `CHECK BETWEEN 0 AND 5` | ✅ |
 | `action_logs.memo` | `string.max(100).optional()` | `char_length <= 100` | ✅ |
@@ -455,8 +453,9 @@ $$;
 
 ## 11. Follow-up (문서 확정 후 태스크)
 
-- [ ] **PRD §3.3 AC-1 업데이트** — D-006(3개월) 반영 시 `goal_count`(주 N회)의 측정 단위 정의(매주 독립 vs 누적). 정의 전까지 FE는 `duration_days=7` 가드.
-- [ ] [src/lib/validators/challenge.ts](src/lib/validators/challenge.ts) 를 **D-006/007 반영**(`durationDays: int.min(1).max(90)` · `penaltyAmount max(10000)`) — zod/DB 정합성 매트릭스(§9) 기준.
+- [x] ~~**PRD §3.3 AC-1 업데이트**~~ — 2026-05-15 ADR-0004(최소 1주, 사용자 선택) + D-007(0~10,000) 반영 완료. `goal_count`는 주 단위 독립 평가로 코드(`progress.ts`)에 구현됨.
+- [x] ~~[src/lib/validators/challenge.ts](src/lib/validators/challenge.ts) D-006/007 반영~~ — 2026-05-15 코드 적용 완료(`durationDays.min(7).max(90)` · `penaltyAmount.min(0).max(10000)`).
+- [x] ~~**`supabase/migrations/0025_penalty_allow_zero.sql` 추가**~~ — PR5 (#45, 2026-05-15) 머지와 함께 적용 완료. `penalty_amount BETWEEN 0 AND 10000`으로 완화.
 - [ ] `supabase/migrations/0001_init.sql` 실DDL 작성 — 본 문서 §5 테이블 순서대로 + 상태 가드 포함.
 - [ ] `supabase/migrations/0002_rls.sql` 작성 — `is_group_member` 헬퍼 + §7 정책(+ `action_logs` AI 컬럼 column-level 보호).
 - [ ] `supabase/seed.sql` — 테스트 유저 4명 + `pending` 챌린지 1개(D-006/007 범위 내 샘플 값).
