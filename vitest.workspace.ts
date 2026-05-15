@@ -14,8 +14,8 @@ export default defineWorkspace([
         ["**/_components/**", "jsdom"],
         ["**", "node"],
       ],
-      include: ["src/**/*.{test,spec}.{ts,tsx}"],
-      exclude: ["tests/integration/**"],
+      include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/unit/**/*.{test,spec}.{ts,tsx}"],
+      exclude: ["tests/integration/**", "tests/e2e/**", "tests/a11y/**"],
     },
   },
   {
