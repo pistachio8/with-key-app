@@ -67,7 +67,9 @@
   --secondary: oklch(0.886 0.107 87); /* #FFD46B */
   --secondary-foreground: oklch(0.235 0.014 268);
   --muted: oklch(0.955 0.005 264);
-  --muted-foreground: oklch(0.605 0.015 264); /* #8B91A1 */
+  /* AA 보정 — 모킹업 #8B91A1(L≈0.605)은 #F7F8FB 배경 대비 3.6:1로 small text AA 미달.
+     L=0.50까지 darken하여 4.5:1 이상 확보 (WCAG 2.2 SC 1.4.3). */
+  --muted-foreground: oklch(0.5 0.015 264);
   --accent: oklch(0.78 0.106 295); /* #BCA6FF */
   --accent-foreground: oklch(0.235 0.014 268);
   --destructive: oklch(0.66 0.207 22); /* #FF6B6B */
