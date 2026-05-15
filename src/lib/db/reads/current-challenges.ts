@@ -24,6 +24,8 @@ export type GroupChallengeView = {
     potTotal: number;
     // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
     participantCount: number;
+    // 모킹업 §2-B 홈 stats/list — 오늘 본인 인증 여부. KST 자정 기준.
+    verifiedToday: boolean;
   } | null;
 };
 
@@ -100,14 +102,24 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
   }
 
   const doneByChallenge = new Map<string, number>();
+  const verifiedTodayByChallenge = new Set<string>();
+  // KST(UTC+9) 자정 기준 오늘 구간 — 서버 TZ 무관하게 결정.
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const kstMidnightUtc = new Date(
+    Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) -
+      9 * 60 * 60 * 1000,
+  );
   const { data: myLogs } = await supabase
     .from("action_logs")
-    .select("challenge_id")
+    .select("challenge_id, created_at")
     .eq("user_id", userId)
     .in("challenge_id", challengeIds);
   for (const row of myLogs ?? []) {
-    const id = (row as { challenge_id: string }).challenge_id;
-    doneByChallenge.set(id, (doneByChallenge.get(id) ?? 0) + 1);
+    const r = row as { challenge_id: string; created_at: string };
+    doneByChallenge.set(r.challenge_id, (doneByChallenge.get(r.challenge_id) ?? 0) + 1);
+    if (new Date(r.created_at).getTime() >= kstMidnightUtc.getTime()) {
+      verifiedTodayByChallenge.add(r.challenge_id);
+    }
   }
 
   const memberCountByChallenge = new Map<string, number>();
@@ -155,6 +167,7 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
         daysLeft,
         potTotal: memberCount * c.penalty_amount,
         participantCount: memberCount,
+        verifiedToday: verifiedTodayByChallenge.has(c.id),
       },
     };
   });
