@@ -22,6 +22,8 @@ export type ChallengeDetailView = {
   durationDays: number;
   penaltyAmount: number;
   status: "pending" | "accepted" | "active" | "closed";
+  startAt: string | null;
+  endAt: string | null;
   members: ChallengeMemberView[];
   potTotal: number;
   group: ChallengeGroupView;
@@ -39,7 +41,7 @@ export async function fetchChallengeDetail(
   const { data: c, error } = await supabase
     .from("challenges")
     .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
+      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
     )
     .eq("id", challengeId)
     .maybeSingle();
@@ -78,6 +80,8 @@ export async function fetchChallengeDetail(
     durationDays: c.duration_days,
     penaltyAmount: c.penalty_amount,
     status: c.status as ChallengeDetailView["status"],
+    startAt: c.start_at,
+    endAt: c.end_at,
     members,
     potTotal: members.length * c.penalty_amount,
     participantCount: members.length,

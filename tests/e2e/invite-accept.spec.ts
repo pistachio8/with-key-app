@@ -35,6 +35,8 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
   if (!challenge) throw new Error("failed to seed challenge");
 
   await page.goto(`/challenge/${challenge.id}`);
+  // PR5: 초대 링크는 챌린지 상세의 "정보" 탭 안.
+  await page.getByRole("tab", { name: "정보" }).click();
   await page.getByRole("button", { name: "친구 초대 링크 공유" }).click();
 
   // Wait for toast, then read clipboard.
@@ -62,8 +64,11 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
       });
       await joinerPage.getByRole("button", { name: "참여하기" }).click();
 
-      // Joiner should land on /pledge and see the pending pledge for signing.
-      await expect(joinerPage).toHaveURL(/\/pledge$/, { timeout: 10_000 });
+      // ADR-0002: pledge 는 /challenge/[id]/pledge sub-route.
+      // accept-form 이 /pledge 로 push → /pledge 가 본인의 pending pledge 로 redirect.
+      await expect(joinerPage).toHaveURL(/\/challenge\/[0-9a-f-]{36}\/pledge$/, {
+        timeout: 10_000,
+      });
       await expect(joinerPage.getByText("e2e-invite")).toBeVisible({ timeout: 10_000 });
 
       // Direct DB check: joiner is group_members row AND participant of pending challenge.

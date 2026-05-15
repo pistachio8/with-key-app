@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, type KeyboardEvent } from "react";
-import { PENALTY_PRESETS, formatKRW } from "@/lib/challenge/penalty";
+import { PENALTY_PRESETS, formatKRW, penaltyLabel } from "@/lib/challenge/penalty";
 import { cn } from "@/lib/utils";
 
 type Props = { value: number; onChange: (amount: number) => void };
@@ -77,13 +77,15 @@ export function PenaltyPicker({ value, onChange }: Props) {
                   : "bg-muted text-muted-foreground hover:bg-muted/80",
               )}
             >
-              {formatKRW(amount)}
+              {penaltyLabel(amount)}
             </button>
           );
         })}
       </div>
       <p className="text-muted-foreground text-xs">
-        달성 못 하면 {formatKRW(value)}을 지정 계좌에 입금해요 <span aria-hidden="true">😅</span>
+        {value === 0
+          ? "강제력 없이 가볍게 시작해요"
+          : `인증 못한 날 ${formatKRW(value)}이 자동으로 누적돼요`}
       </p>
     </fieldset>
   );

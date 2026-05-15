@@ -1,54 +1,121 @@
 "use server";
 
-import { challengeInputSchema, type ChallengeInput } from "@/lib/validators/challenge";
+import { headers } from "next/headers";
+import { z } from "zod";
+import { challengeInputSchema } from "@/lib/validators/challenge";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
+import { generateInviteToken } from "@/lib/invite/token";
+import { buildInviteUrl } from "@/lib/invite/share-url";
 
-type CreateInput = ChallengeInput & { groupId: string };
+// ADR-0003: 그룹 명시 UI 폐기 — groupId 없으면 운영자 단독 그룹 자동 생성.
+// plan §PR5: createChallenge 가 그룹/챌린지/운영자 자가 서명/invite 토큰 까지 처리.
+const createChallengeInputSchema = challengeInputSchema.extend({
+  groupId: z.string().uuid().optional(),
+  /** 보관 안 함(plan §5.1 Step 7b) — 길이>0 이면 서명 완료로 간주. */
+  ownerSignatureDataUrl: z.string().min(1).optional(),
+});
 
-// BE_SCHEMA §8.1. SECURITY DEFINER RPC `create_challenge` 가 challenges +
-// challenge_participants(전 group_members 시드) 를 한 트랜잭션으로 처리.
-// migration: 0021_create_challenge_rpc.sql
-export const createChallenge = withUser<CreateInput, { id: string }>(
-  async (user, input): Promise<ActionResult<{ id: string }>> => {
-    const { groupId, ...rest } = input;
-    const parsed = challengeInputSchema.safeParse(rest);
+export type CreateChallengeInput = z.infer<typeof createChallengeInputSchema>;
+export type CreateChallengeResult = { id: string; inviteUrl: string };
+
+export const createChallenge = withUser<CreateChallengeInput, CreateChallengeResult>(
+  async (user, input): Promise<ActionResult<CreateChallengeResult>> => {
+    const parsed = createChallengeInputSchema.safeParse(input);
     if (!parsed.success) return validationFailure(parsed.error);
+    const { groupId: maybeGroupId, ownerSignatureDataUrl, ...challengeFields } = parsed.data;
 
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("create_challenge", {
-      p_group_id: groupId,
-      p_title: parsed.data.title,
-      p_type: parsed.data.type,
-      p_goal_count: parsed.data.goalCount,
-      p_duration_days: parsed.data.durationDays,
-      p_penalty_amount: parsed.data.penaltyAmount,
-    });
 
-    if (error) {
-      if (error.code === "P0002") return failure("not_found");
-      return failure(mapSupabaseError(error));
+    // 1) 그룹 — 미제공 시 자동 그룹 생성 (ADR-0003)
+    let groupId = maybeGroupId;
+    if (!groupId) {
+      const { data: me } = await supabase
+        .from("users")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      const displayName = me?.display_name ?? "내";
+      const { data: createdGroupId, error: groupErr } = await supabase.rpc(
+        "create_group_with_owner",
+        {
+          p_name: `${displayName}님과 친구들`,
+          p_bank_code: null,
+          p_account_holder: null,
+          p_account_number_encrypted: null,
+          p_account_number_last4: null,
+        },
+      );
+      if (groupErr) return failure(mapSupabaseError(groupErr));
+      if (!createdGroupId || typeof createdGroupId !== "string") return failure("upstream_error");
+      groupId = createdGroupId;
+      void track(
+        {
+          name: "group_created",
+          props: { groupId, memberTarget: 4, hasAccount: false },
+        },
+        { userId: user.id },
+      );
     }
-    const row = data?.[0];
-    if (!row) return failure("upstream_error");
+
+    // 2) 챌린지 생성 (RPC: challenges + challenge_participants 시드)
+    const { data: challengeRows, error: challengeErr } = await supabase.rpc("create_challenge", {
+      p_group_id: groupId,
+      p_title: challengeFields.title,
+      p_type: challengeFields.type,
+      p_goal_count: challengeFields.goalCount,
+      p_duration_days: challengeFields.durationDays,
+      p_penalty_amount: challengeFields.penaltyAmount,
+    });
+    if (challengeErr) {
+      if (challengeErr.code === "P0002") return failure("not_found");
+      return failure(mapSupabaseError(challengeErr));
+    }
+    const challengeRow = challengeRows?.[0];
+    if (!challengeRow) return failure("upstream_error");
+    const challengeId = challengeRow.id;
 
     void track(
       {
         name: "challenge_created",
         props: {
-          challengeId: row.id,
-          penaltyAmount: parsed.data.penaltyAmount,
-          goalCount: parsed.data.goalCount,
-          // 코호트 분리(솔로 1 / 그룹 ≥2). PR-1 RPC 반환값.
-          participantCount: row.participant_count,
+          challengeId,
+          penaltyAmount: challengeFields.penaltyAmount,
+          goalCount: challengeFields.goalCount,
+          participantCount: challengeRow.participant_count,
         },
       },
       { userId: user.id },
     );
 
-    return success({ id: row.id });
+    // 3) 운영자 자가 서명 — 캔버스 stroke 가 있으면 즉시 서명.
+    if (ownerSignatureDataUrl) {
+      const { error: signErr } = await supabase.rpc("sign_and_maybe_activate", {
+        p_challenge_id: challengeId,
+      });
+      if (signErr) return failure(mapSupabaseError(signErr));
+      void track(
+        { name: "challenge_signed", props: { challengeId, userId: user.id } },
+        { userId: user.id },
+      );
+    }
+
+    // 4) Invite 토큰 — 공유 URL.
+    const token = generateInviteToken();
+    const { error: inviteErr } = await supabase
+      .from("invites")
+      .insert({ group_id: groupId, token, created_by: user.id });
+    if (inviteErr) return failure(mapSupabaseError(inviteErr));
+    void track({ name: "invite_sent", props: { groupId } }, { userId: user.id });
+
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+    const inviteUrl = buildInviteUrl(`${proto}://${host}`, token);
+
+    return success({ id: challengeId, inviteUrl });
   },
 );

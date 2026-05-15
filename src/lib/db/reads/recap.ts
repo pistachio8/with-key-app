@@ -88,11 +88,12 @@ export function buildRecapView(input: {
   };
 }
 
-type Options = { client?: SupabaseClient; now?: Date };
+type Options = { client?: SupabaseClient; now?: Date; challengeId?: string };
 
 /**
  * 내가 참가 중인 챌린지 중 "이미 끝났거나 end_at 이 지난" 가장 최근 챌린지 1개의 정산 뷰.
- * 없으면 null. RLS 가 챌린지/참가자/로그 접근을 자동 필터링.
+ * options.challengeId 지정 시 그 특정 챌린지만. 없으면 null.
+ * RLS 가 챌린지/참가자/로그 접근을 자동 필터링.
  */
 export async function fetchRecap(
   viewerId: string,
@@ -102,13 +103,13 @@ export async function fetchRecap(
   const now = options.now ?? new Date();
   const nowIso = now.toISOString();
 
-  const { data: challenges, error } = await supabase
+  let cq = supabase
     .from("challenges")
     .select("id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at")
     .in("status", ["active", "closed"])
-    .lte("end_at", nowIso)
-    .order("end_at", { ascending: false })
-    .limit(1);
+    .lte("end_at", nowIso);
+  if (options.challengeId) cq = cq.eq("id", options.challengeId);
+  const { data: challenges, error } = await cq.order("end_at", { ascending: false }).limit(1);
 
   if (error || !challenges?.[0]) return null;
   const challenge = challenges[0] as ChallengeRow;
