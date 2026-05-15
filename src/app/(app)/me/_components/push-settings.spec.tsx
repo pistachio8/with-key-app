@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 const registerPushSubscription = vi.fn();
 const clearMyPushSubscriptions = vi.fn();
 const updateNotificationPrefs = vi.fn();
-vi.mock("@/app/(app)/settings/_actions", () => ({
+vi.mock("@/app/(app)/me/_actions", () => ({
   registerPushSubscription: (...a: unknown[]) => registerPushSubscription(...a),
   clearMyPushSubscriptions: (...a: unknown[]) => clearMyPushSubscriptions(...a),
   updateNotificationPrefs: (...a: unknown[]) => updateNotificationPrefs(...a),

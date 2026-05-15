@@ -123,10 +123,15 @@ async function dispatch(
 }
 
 export async function dispatchStartNotification(challengeId: string): Promise<DispatchSummary> {
+  const targetUrl = `/challenge/${challengeId}`;
   return dispatch(challengeId, "start", {
     title: "챌린지 시작이에요",
     body: "모두 서명했어요. 오늘부터 시작!",
-    url: `/challenge/${challengeId}`,
+    url: targetUrl,
+    type: "start",
+    category: "reminder",
+    targetUrl,
+    challengeId,
   });
 }
 
@@ -136,22 +141,32 @@ export async function dispatchActionStartNotification(
   challengeId: string,
   actor: { userId: string; displayName: string },
 ): Promise<DispatchSummary> {
+  const targetUrl = `/challenge/${challengeId}`;
   return dispatch(
     challengeId,
     "start",
     {
       title: "운동 시작",
       body: `${actor.displayName}님이 운동을 시작했어요!`,
-      url: `/challenge/${challengeId}`,
+      url: targetUrl,
+      type: "friend_action",
+      category: "friend_action",
+      targetUrl,
+      challengeId,
     },
     { excludeUserId: actor.userId },
   );
 }
 
 export async function dispatchDeadlineNotification(challengeId: string): Promise<DispatchSummary> {
+  const targetUrl = `/challenge/${challengeId}/action`;
   return dispatch(challengeId, "deadline", {
     title: "마감 24시간 전",
     body: "아직 못 한 날이 있다면 지금!",
-    url: `/challenge/${challengeId}`,
+    url: targetUrl,
+    type: "deadline",
+    category: "reminder",
+    targetUrl,
+    challengeId,
   });
 }

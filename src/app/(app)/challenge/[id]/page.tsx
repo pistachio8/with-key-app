@@ -6,6 +6,8 @@ import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { createClient } from "@/lib/supabase/server";
 import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger";
 import { AccountInfoTrigger } from "./_components/account-info-trigger";
+import { ChallengeEndedBanner } from "./_components/challenge-ended-banner";
+import { ChallengeOwnerMenu } from "./_components/challenge-owner-menu";
 import { ChallengeTabs } from "./_components/challenge-tabs";
 import { DashboardTab } from "./_components/dashboard-tab";
 import { FeedTab } from "./_components/feed-tab";
@@ -56,6 +58,11 @@ export default async function ChallengeDetailPage({
   const me = detail.members.find((m) => m.id === user.id);
   const isParticipant = me != null;
   const mySigned = me?.signed ?? false;
+  const isOwner = detail.group.ownerId === user.id;
+  // F17 — endAt 지난 active 챌린지는 시각만 종료 표시. 서버 status 갱신은 후속 cron.
+  const isEndedByDate =
+    detail.status === "active" && detail.endAt != null && new Date(detail.endAt) < new Date();
+  const showEndedBanner = detail.status === "closed" || isEndedByDate;
 
   const owner = detail.members.find((m) => m.id === detail.group.ownerId);
   const ownerName = owner?.displayName ?? "운영자";
@@ -97,6 +104,12 @@ export default async function ChallengeDetailPage({
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-24">
+      {isOwner && (
+        <div className="flex justify-end">
+          <ChallengeOwnerMenu challengeId={id} isOwner={isOwner} status={detail.status} />
+        </div>
+      )}
+      {showEndedBanner && <ChallengeEndedBanner challengeId={id} />}
       {justJoined && (
         <JustJoinedBanner
           activated={activated}

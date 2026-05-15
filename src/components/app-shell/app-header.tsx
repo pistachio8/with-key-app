@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { Bell, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GroupSwitcherTrigger } from "./group-switcher-trigger";
+import type { GroupSwitcherItem } from "./group-switcher-sheet";
 
 interface AppHeaderProps {
-  /** ADR-0003 §"헤더 chevron-down sheet" — PR2에서는 redirect, PR7에서 sheet로 교체. */
+  /** ADR-0003 — 그룹 2개+는 sheet, 1개는 직진입, 0개는 라벨만. */
   groupLabel?: string;
-  groupHref?: string;
-  /** DESIGN_BRIEF §1.5 — 미읽음 Kudos 존재 시 알림 아이콘에 dot. presence only. */
+  /** F15 — 사용자 소속 그룹 목록. */
+  groups?: ReadonlyArray<GroupSwitcherItem>;
+  /** DESIGN_BRIEF §1.5 — 미읽음 Kudos/알림 dot. presence only. */
   unreadNotifications?: boolean;
 }
 
@@ -18,18 +21,27 @@ const ICON_LINK_CLASSES = cn(
 
 export function AppHeader({
   groupLabel = "from. with",
-  groupHref = "/group",
+  groups = [],
   unreadNotifications = false,
 }: AppHeaderProps) {
+  const groupCount = groups.length;
+  const multipleGroups = groupCount >= 2;
+  const singleGroup = groupCount === 1 ? groups[0] : null;
+
   return (
     <header className="bg-background/90 sticky top-0 z-30 flex items-center justify-between px-4 py-3 backdrop-blur">
-      <Link
-        href={groupHref}
-        className="t-h3 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded-md hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-      >
-        {groupLabel}
-        <ChevronDownIcon />
-      </Link>
+      {multipleGroups ? (
+        <GroupSwitcherTrigger label={groupLabel} groups={groups} />
+      ) : singleGroup ? (
+        <Link
+          href={`/group/${singleGroup.id}`}
+          className="t-h3 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded-md hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        >
+          {singleGroup.name ?? groupLabel}
+        </Link>
+      ) : (
+        <span className="t-h3 inline-flex items-center gap-1.5">{groupLabel}</span>
+      )}
       <div className="flex items-center gap-1">
         <Link
           href="/notifications"
@@ -45,26 +57,10 @@ export function AppHeader({
             />
           )}
         </Link>
-        <Link href="/settings" aria-label="마이페이지" className={ICON_LINK_CLASSES}>
+        <Link href="/me" aria-label="마이페이지" className={ICON_LINK_CLASSES}>
           <User className="size-5" aria-hidden="true" />
         </Link>
       </div>
     </header>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   );
 }
