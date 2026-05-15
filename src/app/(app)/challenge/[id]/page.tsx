@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { AlertCircle, Camera } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Fab } from "@/components/ui/fab";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { createClient } from "@/lib/supabase/server";
@@ -93,7 +92,8 @@ export default async function ChallengeDetailPage({
     </section>
   );
 
-  const fab = isParticipant && detail.status === "active" ? <ActionFab id={id} /> : null;
+  const actionHref =
+    isParticipant && detail.status === "active" ? `/challenge/${id}/action` : undefined;
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-24">
@@ -154,19 +154,8 @@ export default async function ChallengeDetailPage({
           />
         }
         defaultTab={justJoined ? "info" : "feed"}
-        fab={fab}
+        actionHref={actionHref}
       />
     </div>
-  );
-}
-
-function ActionFab({ id }: { id: string }) {
-  return (
-    <Fab
-      href={`/challenge/${id}/action`}
-      label="인증하기"
-      icon={Camera}
-      className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2"
-    />
   );
 }

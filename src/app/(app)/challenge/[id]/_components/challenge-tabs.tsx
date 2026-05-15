@@ -1,10 +1,13 @@
 "use client";
 
 // 모킹업 §6/§8/§9 상단 `.tabs` — 인증 피드 / 현황판 / 정보.
-// URL ?tab= 동기화 (F8 결과 모달 CTA에서 사용). FAB slot은 info 탭에서만 숨김 (§9-A·B 카메라 FAB 제거 명시).
+// URL ?tab= 동기화 (F8 결과 모달 CTA에서 사용). FAB은 info 탭에서만 숨김 (§9-A·B 카메라 FAB 제거 명시).
 // active 는 URL searchParams 에서 직접 도출 — 로컬 state 없음 (single source of truth).
+// FAB은 RSC→Client 경계 회피 위해 컴포넌트 내부에서 렌더 (Camera forwardRef 직렬화 불가).
 
+import { Camera } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Fab } from "@/components/ui/fab";
 import { cn } from "@/lib/utils";
 
 export type TabKey = "feed" | "dashboard" | "info";
@@ -14,7 +17,8 @@ interface ChallengeTabsProps {
   dashboard: React.ReactNode;
   info: React.ReactNode;
   defaultTab?: TabKey;
-  fab?: React.ReactNode;
+  // 직렬화 가능한 string 만 전달 (Camera 컴포넌트 참조를 server→client 로 못 보냄).
+  actionHref?: string;
 }
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -33,7 +37,7 @@ export function ChallengeTabs({
   dashboard,
   info,
   defaultTab = "feed",
-  fab,
+  actionHref,
 }: ChallengeTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -50,7 +54,7 @@ export function ChallengeTabs({
   }
 
   const content = active === "feed" ? feed : active === "dashboard" ? dashboard : info;
-  const showFab = fab != null && active !== "info";
+  const showFab = actionHref != null && active !== "info";
 
   return (
     <div className="flex flex-col gap-3">
@@ -78,7 +82,14 @@ export function ChallengeTabs({
         })}
       </div>
       <div role="tabpanel">{content}</div>
-      {showFab && fab}
+      {showFab && actionHref && (
+        <Fab
+          href={actionHref}
+          label="인증하기"
+          icon={Camera}
+          className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2"
+        />
+      )}
     </div>
   );
 }
