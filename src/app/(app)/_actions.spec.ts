@@ -16,7 +16,7 @@ import { markFeedSeen } from "./_actions";
 describe("markFeedSeen", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("users.last_feed_seen_at 를 now() 기준으로 업데이트하고 홈/피드 revalidate", async () => {
+  it("users.last_feed_seen_at 를 now() 기준으로 업데이트하고 홈 revalidate", async () => {
     const eq = vi.fn().mockResolvedValue({ error: null });
     const update = vi.fn().mockReturnValue({ eq });
     (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -30,7 +30,6 @@ describe("markFeedSeen", () => {
     expect(typeof payload.last_feed_seen_at).toBe("string");
     expect(Number.isFinite(new Date(payload.last_feed_seen_at).getTime())).toBe(true);
     expect(eq).toHaveBeenCalledWith("id", "u-viewer");
-    expect(revalidatePath).toHaveBeenCalledWith("/feed");
     expect(revalidatePath).toHaveBeenCalledWith("/home");
   });
 

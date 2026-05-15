@@ -57,14 +57,16 @@ function makeFormData(file?: File): FormData {
   return formData;
 }
 
-function stubDb() {
+function stubDb(opts: { priorActionCount?: number } = {}) {
+  const priorActionCount = opts.priorActionCount ?? 0;
   const maybeSingleParticipant = vi.fn().mockResolvedValue({
     data: {
       user_id: mocks.user.id,
       challenges: {
         status: "active",
         start_at: new Date(Date.now() - 60_000).toISOString(),
-        end_at: new Date(Date.now() + 86_400_000).toISOString(),
+        end_at: new Date(Date.now() + 86_400_000 * 30).toISOString(),
+        duration_days: 30,
       },
     },
     error: null,
@@ -81,7 +83,14 @@ function stubDb() {
       eq: vi.fn().mockReturnValue({ maybeSingle: mocks.userProfile }),
     }),
   };
+  // action_logs 는 (a) prior count select + (b) insert.single 두 경로.
+  const countResult = Promise.resolve({ count: priorActionCount, data: null, error: null });
   const actionLogs = {
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue(countResult),
+      }),
+    }),
     insert: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({ data: { id: actionLogId }, error: null }),
@@ -132,14 +141,12 @@ describe("submitActionLog", () => {
 
   it("tracks events with userId (D-017)", async () => {
     await submitActionLog(makeFormData());
-    expect(mocks.track).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "action_logged" }),
-      { userId: mocks.user.id },
-    );
-    expect(mocks.track).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "ai_generated" }),
-      { userId: mocks.user.id },
-    );
+    expect(mocks.track).toHaveBeenCalledWith(expect.objectContaining({ name: "action_logged" }), {
+      userId: mocks.user.id,
+    });
+    expect(mocks.track).toHaveBeenCalledWith(expect.objectContaining({ name: "ai_generated" }), {
+      userId: mocks.user.id,
+    });
   });
 
   it("succeeds without a photo and tracks photoAttached=false", async () => {

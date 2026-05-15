@@ -12,7 +12,7 @@ type Props = {
 };
 
 // PRD §3.4 dual-mode reframing · §4 상태머신. 챌린지 상세 진입 시 "다음에 뭘
-// 해야 할지" 를 명시한다. active 는 StartActionButton 이 별도 처리하므로 여기서는
+// 해야 할지" 를 명시한다. active 상태는 FAB(카메라)로 인증 진입하므로 여기서는
 // 그 외 상태(비참가자 / pending / accepted / closed)만 분기.
 export function NextStepCta({ status, isParticipant, mySigned, isSolo }: Props) {
   if (!isParticipant) {

@@ -2,88 +2,129 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import type { KudosEmoji } from "@/lib/validators/kudos";
+import { KudosBar } from "./kudos-bar";
 
-type Props = {
+interface FeedCardProps {
   authorName: string;
   photoSignedUrl: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Partial<Record<KudosEmoji, number>>>;
+  viewerKudos?: ReadonlyArray<KudosEmoji>;
   onKudos: (emoji: KudosEmoji) => void;
   disabled?: boolean;
-  // PR-2: 솔로 챌린지(1명)면 Kudos footer 미렌더. 본인 인증에 본인 Kudos 금지
-  // (PRD §7.3 AC-4) 와 호응 — 솔로엔 응원 대상이 없음. 친구 합류로 ≥2 가
-  // 되면 자동 노출 (과거 솔로 카드에도 소급 응원 가능).
+  // 솔로(1명)면 Kudos footer 미렌더. 본인 인증에 본인 Kudos 금지 (PRD §7.3 AC-4) 호응.
   participantCount: number;
-};
+  // 자기 글이면 muted 톤 + "편집" 링크 (#25 보류 — UI만, 편집 동작은 추후 PO 확인)
+  isSelfAuthor?: boolean;
+  createdAtLabel?: string;
+  dayNumber?: number | null;
+}
 
-// PRD §7 · Design Brief 화면 6 — Kudos 3 이모지 피드 카드.
+// 모킹업 §8-A `.feed-card` — header(아바타·이름·시간·DAY) + 16:9 photo + 태그 Chip + body + KudosBar.
 export function FeedCard({
   authorName,
   photoSignedUrl,
   summary,
   keywords,
   kudosByEmoji,
+  viewerKudos = [],
   onKudos,
   disabled = false,
   participantCount,
-}: Props) {
+  isSelfAuthor = false,
+  createdAtLabel,
+  dayNumber = null,
+}: FeedCardProps) {
   const showKudos = participantCount >= 2;
-  // Chrome/Firefox can't decode HEIC — fall back to the no-photo placeholder
-  // when <Image> fails to load so the card doesn't show a broken icon.
   const [imageFailed, setImageFailed] = useState(false);
   const hasImage = Boolean(photoSignedUrl) && !imageFailed;
 
+  function handleEditClick() {
+    toast("편집 기능은 곧 열어드릴게요");
+  }
+
   return (
-    <article className="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
-      <header className="flex items-center gap-2">
-        <span className="font-semibold">{authorName}</span>
-      </header>
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+    <article>
+      <Card
+        tone={isSelfAuthor ? "muted" : "default"}
+        padding="sm"
+        className={cn("flex flex-col gap-2", isSelfAuthor && "border-transparent")}
+      >
+        <header className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "bg-brand-secondary-soft flex size-[18px] items-center justify-center rounded-full text-[11px]",
+              isSelfAuthor && "bg-brand-secondary",
+            )}
+          >
+            {authorName.slice(0, 1)}
+          </span>
+          <span className="text-foreground font-semibold">
+            {authorName}
+            {isSelfAuthor && " (나)"}
+          </span>
+          {createdAtLabel && <span>· {createdAtLabel}</span>}
+          {isSelfAuthor ? (
+            <button
+              type="button"
+              onClick={handleEditClick}
+              className="focus-visible:ring-ring ml-auto rounded text-[10px] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            >
+              편집
+            </button>
+          ) : dayNumber != null ? (
+            <Chip tone="primary" className="ml-auto text-[10px]">
+              DAY {dayNumber}
+            </Chip>
+          ) : null}
+        </header>
         {hasImage && photoSignedUrl ? (
-          <Image
-            src={photoSignedUrl}
-            alt={`${authorName}의 인증 사진`}
-            fill
-            sizes="(max-width: 640px) 100vw, 640px"
-            className="object-cover"
-            onError={() => setImageFailed(true)}
-            unoptimized
-          />
-        ) : (
+          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[10px]">
+            <Image
+              src={photoSignedUrl}
+              alt={`${authorName}의 인증 사진`}
+              fill
+              sizes="(max-width: 640px) 100vw, 640px"
+              className="object-cover"
+              onError={() => setImageFailed(true)}
+              unoptimized
+            />
+          </div>
+        ) : photoSignedUrl ? (
           <div
             aria-label={`${authorName}의 인증 사진 없음`}
             role="img"
-            className="from-muted to-muted/60 absolute inset-0 bg-gradient-to-br"
+            className="from-muted to-muted/60 aspect-[16/9] w-full rounded-[10px] bg-gradient-to-br"
           />
+        ) : null}
+        {keywords.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {keywords.map((k) => (
+              <li key={k}>
+                <Chip tone="neutral" className="text-[10px]">
+                  #{k}
+                </Chip>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-      <p className="text-sm leading-relaxed break-keep">{summary}</p>
-      <ul className="text-muted-foreground flex flex-wrap gap-1.5 text-xs">
-        {keywords.map((k) => (
-          <li key={k} className="bg-muted rounded-full px-2 py-0.5">
-            #{k}
-          </li>
-        ))}
-      </ul>
-      {showKudos ? (
-        <footer className="flex gap-2">
-          {KUDOS_EMOJIS.map((e) => (
-            <button
-              key={e}
-              type="button"
-              onClick={() => onKudos(e)}
-              disabled={disabled}
-              aria-label={`${e} 응원 (${kudosByEmoji[e] ?? 0}개)`}
-              className="bg-muted hover:bg-muted/80 focus-visible:ring-ring flex items-center gap-1 rounded-full px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span aria-hidden="true">{e}</span>
-              <span className="tabular-nums">{kudosByEmoji[e] ?? 0}</span>
-            </button>
-          ))}
-        </footer>
-      ) : null}
+        <p className="t-body break-keep">{summary}</p>
+        {showKudos ? (
+          <KudosBar
+            counts={kudosByEmoji}
+            viewerKudos={viewerKudos}
+            onToggle={onKudos}
+            disabled={disabled}
+          />
+        ) : null}
+      </Card>
     </article>
   );
 }

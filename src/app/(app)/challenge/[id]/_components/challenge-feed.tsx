@@ -11,7 +11,7 @@ import type { KudosEmoji } from "@/lib/validators/kudos";
 type Props = {
   items: ReadonlyArray<FeedItemView>;
   viewerId: string;
-  // PR-2: 솔로(1)면 자식 FeedCard 가 Kudos footer 미렌더.
+  // 솔로(1)면 자식 FeedCard 가 Kudos footer 미렌더.
   participantCount: number;
 };
 
@@ -80,7 +80,7 @@ export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
   }
 
   return (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-3">
       {optimisticItems.map((item) => (
         <li key={item.id}>
           <FeedCard
@@ -89,9 +89,11 @@ export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
             summary={item.summary}
             keywords={item.keywords}
             kudosByEmoji={item.kudosByEmoji}
+            viewerKudos={item.viewerKudos}
             onKudos={(emoji) => handleKudos(item.id, item.authorId, emoji)}
             disabled={item.authorId === viewerId}
             participantCount={participantCount}
+            isSelfAuthor={item.authorId === viewerId}
           />
         </li>
       ))}

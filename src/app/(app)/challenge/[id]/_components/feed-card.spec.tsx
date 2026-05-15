@@ -60,9 +60,27 @@ describe("FeedCard", () => {
     expect(alt).toContain("민지");
   });
 
-  it("renders a placeholder when the signed URL is missing", () => {
+  it("omits the photo entirely when photoSignedUrl is null (mockup §8-A 자기 글 카드)", () => {
     render(<FeedCard {...baseProps} photoSignedUrl={null} onKudos={() => {}} />);
-    expect(screen.getByRole("img", { name: /인증 사진 없음/ })).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("renders muted card + (나) suffix + 편집 link when isSelfAuthor (#25)", () => {
+    render(<FeedCard {...baseProps} isSelfAuthor onKudos={() => {}} photoSignedUrl={null} />);
+    expect(screen.getByText(/민지 \(나\)/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "편집" })).toBeTruthy();
+  });
+
+  it("renders DAY chip when dayNumber is provided", () => {
+    render(<FeedCard {...baseProps} dayNumber={15} onKudos={() => {}} />);
+    expect(screen.getByText("DAY 15")).toBeTruthy();
+  });
+
+  it("marks viewer-pressed kudos via aria-pressed", () => {
+    render(<FeedCard {...baseProps} viewerKudos={["🔥"]} onKudos={() => {}} />);
+    expect(
+      screen.getByRole("button", { name: /🔥 응원 3 · 내가 누름/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("does not render Kudos footer when participantCount === 1 (solo)", () => {
