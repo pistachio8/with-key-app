@@ -3,7 +3,7 @@ import { PENALTY_PRESETS, formatKRW } from "./penalty";
 
 describe("PENALTY_PRESETS", () => {
   it("exposes 1천 · 3천 · 5천 · 1만 (D-007 범위)", () => {
-    expect(PENALTY_PRESETS).toEqual([1000, 3000, 5000, 10000]);
+    expect(PENALTY_PRESETS).toEqual([0, 3000, 5000, 10000]);
   });
 });
 

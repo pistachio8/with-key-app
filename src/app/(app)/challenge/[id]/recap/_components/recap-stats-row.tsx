@@ -14,10 +14,7 @@ export function RecapStatsRow({
   viewerPerHeadPenalty,
 }: RecapStatsRowProps) {
   return (
-    <section
-      aria-label="내 주간 통계"
-      className="grid grid-cols-2 gap-3"
-    >
+    <section aria-label="내 주간 통계" className="grid grid-cols-2 gap-3">
       <div className="bg-muted/40 rounded-lg p-4">
         <p className="text-muted-foreground text-xs font-medium">내 인증</p>
         <p className="mt-1 text-2xl font-semibold tabular-nums">

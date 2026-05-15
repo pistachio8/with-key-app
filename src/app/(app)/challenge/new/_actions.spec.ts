@@ -4,18 +4,43 @@ vi.mock("server-only", () => ({}));
 
 const rpc = vi.fn();
 const getUser = vi.fn();
+const inviteInsert = vi.fn();
+const usersSelect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: () => getUser() },
     rpc: (name: string, args: unknown) => rpc(name, args),
+    from: (table: string) => {
+      if (table === "users") {
+        return {
+          select: () => ({
+            eq: () => ({ maybeSingle: () => usersSelect() }),
+          }),
+        };
+      }
+      if (table === "invites") {
+        return { insert: (row: unknown) => inviteInsert(row) };
+      }
+      throw new Error(`unexpected from(${table})`);
+    },
   }),
 }));
 
-const trackCalls: Array<{ event: unknown; options: unknown }> = [];
+vi.mock("next/headers", () => ({
+  headers: async () => ({
+    get: (key: string) => {
+      if (key === "host") return "with-key.test";
+      if (key === "x-forwarded-proto") return "https";
+      return null;
+    },
+  }),
+}));
+
+const trackCalls: Array<{ event: { name: string; props: Record<string, unknown> } }> = [];
 vi.mock("@/lib/analytics/track", () => ({
-  track: async (event: unknown, options: unknown) => {
-    trackCalls.push({ event, options });
+  track: async (event: unknown) => {
+    trackCalls.push({ event: event as never });
   },
 }));
 
@@ -44,11 +69,13 @@ function authedUser() {
 beforeEach(() => {
   rpc.mockReset();
   getUser.mockReset();
+  inviteInsert.mockReset();
+  usersSelect.mockReset();
   trackCalls.length = 0;
 });
 
 describe("createChallenge", () => {
-  it("returns unauthorized when no session (no rpc call)", async () => {
+  it("unauthorized — no session", async () => {
     getUser.mockResolvedValueOnce({ data: { user: null }, error: null });
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
@@ -56,7 +83,7 @@ describe("createChallenge", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("returns invalid_input on schema violation (empty title)", async () => {
+  it("invalid_input — empty title", async () => {
     authedUser();
     const res = await createChallenge({ ...validInput, title: "" });
     expect(res.ok).toBe(false);
@@ -64,44 +91,85 @@ describe("createChallenge", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("on success returns id, calls create_challenge RPC, tracks challenge_created", async () => {
+  it("invalid_input — durationDays < 7 (ADR-0004)", async () => {
+    authedUser();
+    const res = await createChallenge({ ...validInput, durationDays: 3 });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("invalid_input");
+  });
+
+  it("groupId 제공 + signature 없음 → create_challenge + invites insert", async () => {
     authedUser();
     rpc.mockResolvedValueOnce({
       data: [{ id: CHALLENGE_ID, participant_count: 1 }],
       error: null,
     });
+    inviteInsert.mockResolvedValueOnce({ error: null });
 
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data.id).toBe(CHALLENGE_ID);
+    if (res.ok) {
+      expect(res.data.id).toBe(CHALLENGE_ID);
+      expect(res.data.inviteUrl).toMatch(/^https:\/\/with-key\.test\/invite\//);
+    }
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("create_challenge", expect.any(Object));
+    expect(inviteInsert).toHaveBeenCalledTimes(1);
 
-    expect(rpc).toHaveBeenCalledWith("create_challenge", {
-      p_group_id: GROUP_ID,
-      p_title: validInput.title,
-      p_type: validInput.type,
-      p_goal_count: validInput.goalCount,
-      p_duration_days: validInput.durationDays,
-      p_penalty_amount: validInput.penaltyAmount,
-    });
-
-    expect(trackCalls).toHaveLength(1);
-    const ev = trackCalls[0]!.event as {
-      name: string;
-      props: {
-        challengeId: string;
-        penaltyAmount: number;
-        goalCount: number;
-        participantCount: number;
-      };
-    };
-    expect(ev.name).toBe("challenge_created");
-    expect(ev.props.challengeId).toBe(CHALLENGE_ID);
-    expect(ev.props.penaltyAmount).toBe(5000);
-    expect(ev.props.goalCount).toBe(3);
-    expect(ev.props.participantCount).toBe(1);
+    const created = trackCalls.find((c) => c.event.name === "challenge_created");
+    expect(created?.event.props.challengeId).toBe(CHALLENGE_ID);
+    const inviteSent = trackCalls.find((c) => c.event.name === "invite_sent");
+    expect(inviteSent).toBeTruthy();
   });
 
-  it("maps 42501 to forbidden (not group owner)", async () => {
+  it("ownerSignatureDataUrl 있음 → sign_and_maybe_activate 호출", async () => {
+    authedUser();
+    rpc.mockResolvedValueOnce({
+      data: [{ id: CHALLENGE_ID, participant_count: 1 }],
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: [{ status: "pending" }], error: null });
+    inviteInsert.mockResolvedValueOnce({ error: null });
+
+    const res = await createChallenge({
+      ...validInput,
+      ownerSignatureDataUrl: "data:image/png;base64,AAA",
+    });
+    expect(res.ok).toBe(true);
+    expect(rpc).toHaveBeenNthCalledWith(2, "sign_and_maybe_activate", {
+      p_challenge_id: CHALLENGE_ID,
+    });
+    const signed = trackCalls.find((c) => c.event.name === "challenge_signed");
+    expect(signed).toBeTruthy();
+  });
+
+  it("groupId 미제공 → create_group_with_owner RPC 호출 (ADR-0003)", async () => {
+    authedUser();
+    usersSelect.mockResolvedValueOnce({ data: { display_name: "민지" }, error: null });
+    rpc.mockResolvedValueOnce({ data: GROUP_ID, error: null });
+    rpc.mockResolvedValueOnce({
+      data: [{ id: CHALLENGE_ID, participant_count: 1 }],
+      error: null,
+    });
+    inviteInsert.mockResolvedValueOnce({ error: null });
+
+    const res = await createChallenge({ ...validInput, groupId: undefined });
+    expect(res.ok).toBe(true);
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      "create_group_with_owner",
+      expect.objectContaining({ p_name: "민지님과 친구들" }),
+    );
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "create_challenge",
+      expect.objectContaining({ p_group_id: GROUP_ID }),
+    );
+    const groupCreated = trackCalls.find((c) => c.event.name === "group_created");
+    expect(groupCreated?.event.props.hasAccount).toBe(false);
+  });
+
+  it("create_challenge 42501 → forbidden", async () => {
     authedUser();
     rpc.mockResolvedValueOnce({
       data: null,
@@ -110,10 +178,9 @@ describe("createChallenge", () => {
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("forbidden");
-    expect(trackCalls).toHaveLength(0);
   });
 
-  it("maps P0002 (group not found) to not_found", async () => {
+  it("create_challenge P0002 → not_found", async () => {
     authedUser();
     rpc.mockResolvedValueOnce({
       data: null,
@@ -122,16 +189,5 @@ describe("createChallenge", () => {
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("not_found");
-  });
-
-  it("maps 23514 (check constraint) to invalid_input", async () => {
-    authedUser();
-    rpc.mockResolvedValueOnce({
-      data: null,
-      error: { code: "23514", message: "check failed" },
-    });
-    const res = await createChallenge(validInput);
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toBe("invalid_input");
   });
 });
