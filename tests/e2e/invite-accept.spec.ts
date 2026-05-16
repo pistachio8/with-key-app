@@ -41,8 +41,12 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
 
   // Wait for toast, then read clipboard.
   await expect(page.getByText("초대 링크를 복사했어요")).toBeVisible({ timeout: 10_000 });
-  const inviteUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(inviteUrl).toMatch(/\/invite\//);
+  // Clipboard payload is "<메시지>\n\n<URL>" (카톡 등에 줄바꿈을 강제하기 위해 묶어서 복사).
+  // 본 E2E 는 URL 자체만 필요하므로 정규식으로 추출.
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  const urlMatch = clipboardText.match(/https?:\/\/\S+\/invite\/\S+/);
+  if (!urlMatch) throw new Error(`invite URL not found in clipboard: ${clipboardText}`);
+  const inviteUrl = urlMatch[0];
 
   // Second user: seed a fresh @supabase/ssr cookie onto a new context. The
   // dev-login route is disabled in production (playwright uses `pnpm start`),
