@@ -18,22 +18,24 @@ export async function GET(request: NextRequest) {
   }
 
   // 초대 진입(?next=/invite/...) 이면 invite flow 가 onboarding 보다 우선 — 즉시 이동.
+  // ADR-0006 — invite 사용자는 두 번째 비-invite 로그인에서 처음 슬라이드를 본다 (의도된 지연).
   if (next) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
-  // 신규 가입자 판정: group_members 0건 = 아직 어떤 그룹에도 속하지 않은 사용자.
-  // 본 분기는 plan PR3 §3.2 Step 4 — onboarding 트리거. localStorage gate 는
-  // /login?onboard=1 도착 후 OnboardingSlides 컴포넌트가 한 번 더 거른다.
+  // ADR-0006 — onboarding 판정은 public.users.onboarded_at 단일 SoT.
+  // NULL = 아직 슬라이드 미시청 → /login?onboard=1 로 보내 슬라이드를 띄운다.
+  // 종료 시 markOnboarded() Server Action 이 컬럼을 set 하므로 다음 로그인엔 /home 직행.
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (user) {
-    const { count } = await supabase
-      .from("group_members")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
-    if ((count ?? 0) === 0) {
+    const { data } = await supabase
+      .from("users")
+      .select("onboarded_at")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!data?.onboarded_at) {
       return NextResponse.redirect(`${origin}/login?onboard=1`);
     }
   }

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-
-const ONBOARDED_KEY = "withkey:onboarded";
+import { markOnboarded } from "../_actions";
 
 type Slide = {
   illust: string;
@@ -52,23 +51,18 @@ export function OnboardingSlides() {
   const router = useRouter();
   const [idx, setIdx] = useState(0);
 
-  // 이미 본 사용자는 즉시 /home 으로 — flicker 막기 위해 useEffect 안에서 redirect.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(ONBOARDED_KEY) === "1") {
-      router.replace("/home");
-    }
-  }, [router]);
+  // ADR-0006 — "이미 봤는지" 판정은 서버(public.users.onboarded_at)가 callback 단계에서 처리.
+  // /login?onboard=1 에 도달한 시점에 이미 "보여야 함"이 확정된 상태이므로 클라이언트는 mount-time 검사를 하지 않는다.
 
   const isLast = idx === SLIDES.length - 1;
   const slide = SLIDES[idx];
 
   function finish() {
-    try {
-      window.localStorage.setItem(ONBOARDED_KEY, "1");
-    } catch {
-      // localStorage 차단된 환경(시크릿 모드 일부)에서도 onboarding 종료는 진행.
-    }
+    // 결과 무관하게 /home 으로 라우팅 — 사용자를 슬라이드에 가두지 않는다 (ADR-0006).
+    // 실패해도 회귀 비용은 "다음 로그인 1회 더 노출" 뿐. 분석/관측은 console 로만.
+    void markOnboarded().catch((error) => {
+      console.error("[OnboardingSlides] markOnboarded failed:", error);
+    });
     router.replace("/home");
   }
 
