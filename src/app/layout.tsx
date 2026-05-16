@@ -16,8 +16,16 @@ export const metadata: Metadata = {
   description: "혼자, 또는 친구와 함께하는 운동 기록",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon-180.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "from. with",
+    statusBarStyle: "default",
   },
 };
 

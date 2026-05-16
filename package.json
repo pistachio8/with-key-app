@@ -29,6 +29,7 @@
     "validate:docs": "node scripts/validate-doc-paths.mjs",
     "check:spec-required": "node scripts/check-spec-required.mjs",
     "new": "node scripts/new-doc.mjs",
+    "icons:pwa": "node scripts/generate-pwa-icons.mjs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -76,6 +77,7 @@
     "jsdom": "^25.0.1",
     "lint-staged": "^17.0.4",
     "prettier": "^3.4.2",
+    "sharp": "^0.34.5",
     "supabase": "^2.2.1",
     "tailwindcss": "^4",
     "typescript": "^5",
