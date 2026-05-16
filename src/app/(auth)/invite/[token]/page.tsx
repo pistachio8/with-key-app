@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -69,6 +70,15 @@ export default async function InvitePage({ params }: { params: Params }) {
         >
           <ArrowLeft className="size-5" aria-hidden="true" />
         </Link>
+        <Image
+          src="/logo-from-with.svg"
+          alt="from.with"
+          width={123}
+          height={24}
+          priority
+          unoptimized
+          className="h-6 w-auto"
+        />
       </header>
 
       <section className="mt-2">
@@ -125,8 +135,19 @@ export default async function InvitePage({ params }: { params: Params }) {
 
 function InviteShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-screen-sm flex-col justify-center gap-4 px-6 py-10">
-      <section className="bg-card flex flex-col gap-4 rounded-2xl border p-6">{children}</section>
+    <main className="mx-auto flex min-h-svh w-full max-w-screen-sm flex-col items-center justify-center gap-6 px-6 py-10">
+      <Image
+        src="/logo-from-with.svg"
+        alt="from.with"
+        width={164}
+        height={32}
+        priority
+        unoptimized
+        className="h-8 w-auto"
+      />
+      <section className="bg-card flex w-full flex-col gap-4 rounded-2xl border p-6">
+        {children}
+      </section>
     </main>
   );
 }

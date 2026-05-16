@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useTransition } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
@@ -80,8 +81,16 @@ function LoginForm({ next }: { next: string | null }) {
         aria-labelledby="brand-heading"
         className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
       >
-        <h1 id="brand-heading" className="text-4xl font-black tracking-tight">
-          윗키
+        <h1 id="brand-heading" className="flex justify-center">
+          <Image
+            src="/logo-from-with.svg"
+            alt="from.with"
+            width={287}
+            height={56}
+            priority
+            unoptimized
+            className="h-14 w-auto"
+          />
         </h1>
         <p className="text-muted-foreground break-keep">
           {hasInvite

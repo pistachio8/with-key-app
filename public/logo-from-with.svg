@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 328 64" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">from with logo</title>
+  <desc id="logo-desc">Rounded wordmark reading from, dot, with in blue, dark brown, and yellow.</desc>
+  <text
+    x="7"
+    y="50"
+    fill="#4e78df"
+    font-family="Arial Rounded MT Bold, Avenir Next Rounded, Nunito, Quicksand, sans-serif"
+    font-size="54"
+    font-weight="800"
+    letter-spacing="-0.5"
+    textLength="142"
+    lengthAdjust="spacingAndGlyphs"
+  >from</text>
+  <circle cx="162" cy="37" r="5.2" fill="#6a5018" />
+  <text
+    x="183"
+    y="50"
+    fill="#f9b514"
+    font-family="Arial Rounded MT Bold, Avenir Next Rounded, Nunito, Quicksand, sans-serif"
+    font-size="54"
+    font-weight="800"
+    letter-spacing="-0.5"
+    textLength="132"
+    lengthAdjust="spacingAndGlyphs"
+  >with</text>
+</svg>
