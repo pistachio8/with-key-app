@@ -73,7 +73,7 @@ describe("<InviteTrigger />", () => {
       expect(shareSpy).toHaveBeenCalledTimes(1);
     });
     const payload = shareSpy.mock.calls[0]![0] as { title: string; text: string; url?: string };
-    expect(payload.title).toBe("윗키 초대");
+    expect(payload.title).toBe("from.with 초대");
     expect(payload.text).toMatch(/함께 운동 서약서를 써볼래\?\n\nhttps?:\/\/[^\s]*\/invite\/XYZ$/);
     // url 필드를 따로 두면 OS 가 "text url" 한 줄로 join 해버려 줄바꿈이 사라진다 — text 에 묶고 url 은 빼야 한다.
     expect(payload.url).toBeUndefined();

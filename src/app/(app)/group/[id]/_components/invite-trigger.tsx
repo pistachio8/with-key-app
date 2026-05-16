@@ -79,7 +79,7 @@ async function tryWebShare(text: string): Promise<boolean> {
     // url 필드를 굳이 두지 않는 이유: 메시지·URL 사이의 줄바꿈을 OS·앱마다 다르게 처리하므로
     // text 한 덩이로 보내 layout 을 우리가 결정한다.
     await navigator.share({
-      title: "윗키 초대",
+      title: "from.with 초대",
       text,
     });
     return true;
