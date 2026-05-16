@@ -27,18 +27,21 @@ function LoginScreen() {
   const sp = useSearchParams();
   const onboard = sp.get("onboard") === "1";
   if (onboard) return <OnboardingSlides />;
-  return <LoginForm hasInvite={Boolean(sp.get("next"))} />;
+  const next = sp.get("next");
+  return <LoginForm next={next} />;
 }
 
-function LoginForm({ hasInvite }: { hasInvite: boolean }) {
+function LoginForm({ next }: { next: string | null }) {
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
   const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const hasInvite = Boolean(next);
 
   function submit() {
     startTransition(async () => {
       try {
-        const res = await requestMagicLink(email);
+        // invite 진입에서 받은 next 를 매직링크에 묶어 보낸다 — 클릭 후 callback 의 ?next= 분기가 살아난다.
+        const res = await requestMagicLink(email, next ?? undefined);
         if (!res.ok) {
           toast.error(messageFor(res.error));
           return;
