@@ -4,7 +4,9 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test("login form submits and surfaces success or recoverable failure", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { level: 1, name: "윗키" })).toBeVisible();
+  // PR #55 브랜딩 변경: h1 텍스트 "윗키" → <Image alt="from.with"> 로 교체.
+  // accessible name 은 이미지 alt 에서 오므로 새 브랜드명으로 매칭한다.
+  await expect(page.getByRole("heading", { level: 1, name: "from.with" })).toBeVisible();
 
   const emailInput = page.getByLabel("이메일");
   const submitBtn = page.getByRole("button", { name: "이메일로 로그인 링크 받기" });
