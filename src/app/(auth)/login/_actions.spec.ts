@@ -103,6 +103,42 @@ describe("requestMagicLink", () => {
     );
   });
 
+  it("appends a valid internal next path to emailRedirectTo so the callback ?next= branch fires", async () => {
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
+
+    await requestMagicLink("user@example.com", "/invite/abc-token-123");
+
+    const call = signInWithOtp.mock.calls[0][0] as {
+      options: { emailRedirectTo: string };
+    };
+    const redirect = new URL(call.options.emailRedirectTo);
+    expect(redirect.origin).toBe("https://example.com");
+    expect(redirect.pathname).toBe("/auth/callback");
+    expect(redirect.searchParams.get("next")).toBe("/invite/abc-token-123");
+  });
+
+  it("drops next when it is an absolute URL (open-redirect guard)", async () => {
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
+
+    await requestMagicLink("user@example.com", "https://evil.example/steal");
+
+    const call = signInWithOtp.mock.calls[0][0] as {
+      options: { emailRedirectTo: string };
+    };
+    expect(call.options.emailRedirectTo).toBe("https://example.com/auth/callback");
+  });
+
+  it("drops next when it is protocol-relative (//host)", async () => {
+    headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
+
+    await requestMagicLink("user@example.com", "//evil.example/steal");
+
+    const call = signInWithOtp.mock.calls[0][0] as {
+      options: { emailRedirectTo: string };
+    };
+    expect(call.options.emailRedirectTo).toBe("https://example.com/auth/callback");
+  });
+
   it("returns upstream_error when Supabase signInWithOtp fails", async () => {
     headersGet.mockImplementation((name) => (name === "origin" ? "https://example.com" : null));
     signInWithOtp.mockResolvedValueOnce({ error: { message: "boom" } });
