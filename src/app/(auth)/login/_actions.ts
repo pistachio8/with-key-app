@@ -51,3 +51,30 @@ function isRateLimitError(err: { status?: number; code?: string | null }): boole
   const code = err.code ?? "";
   return /^over_.*_rate_limit$/.test(code);
 }
+
+// ADR-0006 — 온보딩 슬라이드 종료(시작하기·건너뛰기) 시 호출되는 단일 write 경로.
+// callback 의 분기 기준이 public.users.onboarded_at 이므로 finish() 가 이걸 set 해야
+// 다음 로그인부터 슬라이드가 노출되지 않는다.
+//
+// 실패는 silent — 사용자를 슬라이드에 가두지 않기 위해 클라이언트는 결과 무관하게 /home 으로 라우팅한다.
+// 회귀 비용은 "다음 로그인 한 번 더 슬라이드 노출"뿐이며 데이터 손실은 없다.
+export async function markOnboarded(): Promise<ActionResult<{ onboardedAt: string }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return failure("unauthorized");
+
+  const { data, error } = await supabase
+    .from("users")
+    .update({ onboarded_at: new Date().toISOString() })
+    .eq("id", user.id)
+    .select("onboarded_at")
+    .single();
+
+  if (error) {
+    console.error("[markOnboarded] update failed:", error.message);
+    return failure("upstream_error");
+  }
+  return success({ onboardedAt: data.onboarded_at as string });
+}
