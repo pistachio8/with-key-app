@@ -91,7 +91,7 @@ export function InstallBanner({ className }: { className?: string }) {
     <section
       aria-label="홈 화면에 앱 추가 안내"
       className={cn(
-        "border-border/60 bg-card/80 flex items-start gap-3 rounded-2xl border px-4 py-3 backdrop-blur",
+        "border-border/60 bg-card/80 flex items-center gap-3 rounded-2xl border px-4 py-3 backdrop-blur",
         className,
       )}
     >
