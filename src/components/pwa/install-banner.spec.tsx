@@ -13,6 +13,10 @@ describe("InstallBanner", () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(Date, "now").mockReturnValue(FIXED_NOW);
+    // module-level cachedDeferred 를 비운다 — appinstalled 핸들러가 cache 를 null 로 만든다.
+    // 테스트 시작 시 컴포넌트는 unmount 상태이므로 컴포넌트 내부 핸들러는 영향 없다.
+    fireEvent(window, new Event("appinstalled"));
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -94,5 +98,21 @@ describe("InstallBanner", () => {
     render(<InstallBanner />);
     expect(screen.queryByRole("button", { name: "설치" })).toBeNull();
     expect(screen.getByText(/공유.*홈 화면에 추가/)).toBeInTheDocument();
+  });
+
+  it("beforeinstallprompt 잡힌 후 unmount/remount 해도 cached deferred 로 '설치' 버튼이 다시 노출된다", async () => {
+    // 라우트 이동 시뮬레이션: 첫 mount 에서 이벤트 캐치 → unmount → 재마운트.
+    // beforeinstallprompt 는 다시 발화하지 않으므로 module-level cache 가 동작해야 한다.
+    const { unmount } = render(<InstallBanner />);
+    const prompt = vi.fn().mockResolvedValue(undefined);
+    const fakeEvent = Object.assign(new Event("beforeinstallprompt"), {
+      prompt,
+      userChoice: Promise.resolve({ outcome: "accepted", platform: "web" }),
+    });
+    fireEvent(window, fakeEvent);
+    await screen.findByRole("button", { name: "설치" });
+    unmount();
+    render(<InstallBanner />);
+    expect(screen.getByRole("button", { name: "설치" })).toBeInTheDocument();
   });
 });

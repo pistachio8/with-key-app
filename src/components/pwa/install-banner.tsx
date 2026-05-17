@@ -15,6 +15,22 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+// beforeinstallprompt 는 page 첫 진입에 1회만 발화한다. InstallBanner 가 라우트 이동으로
+// unmount 되었다가 재마운트되면 컴포넌트 내부 state 의 deferred 는 사라지고 이벤트는 다시
+// 안 오므로 "설치" 버튼이 영원히 안 보이는 회귀가 생긴다. 모듈 수준에서 한 번 캐치해 두면
+// mount/unmount 사이에 보존된다. appinstalled 시점에 명시적으로 null 로 비운다.
+let cachedDeferred: BeforeInstallPromptEvent | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    cachedDeferred = e as BeforeInstallPromptEvent;
+  });
+  window.addEventListener("appinstalled", () => {
+    cachedDeferred = null;
+  });
+}
+
 function readDismissedUntil(): number {
   try {
     const v = window.localStorage.getItem(DISMISS_KEY);
@@ -46,12 +62,15 @@ export function InstallBanner({ className }: { className?: string }) {
     if (typeof window === "undefined") return false;
     return readDismissedUntil() > Date.now();
   });
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  // module-level cache 에서 초기값 — 라우트 이동 후 재마운트에서도 즉시 복원.
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(() => cachedDeferred);
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      cachedDeferred = promptEvent;
+      setDeferred(promptEvent);
     };
     // 설치 완료 시 즉시 hidden + everInstalled set — 같은 세션에서 배너가 재노출되는 회귀 방지.
     const onInstalled = () => {
@@ -76,9 +95,10 @@ export function InstallBanner({ className }: { className?: string }) {
 
   async function install() {
     if (!deferred) return;
-    // prompt() 는 1회 소비 — 호출 후 deferred 를 null 로 reset.
+    // prompt() 는 1회 소비 — 호출 후 deferred (state + module cache) 를 null 로 reset.
     await deferred.prompt();
     const choice = await deferred.userChoice;
+    cachedDeferred = null;
     setDeferred(null);
     if (choice.outcome === "dismissed") {
       // 거부한 사용자를 같은 prompt 로 반복 괴롭히지 않는다.
