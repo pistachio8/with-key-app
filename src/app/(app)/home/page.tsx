@@ -14,6 +14,7 @@ import {
 } from "./_components/invited-challenge-banner";
 import { StatsGrid } from "./_components/stats-grid";
 import { RunningChallengeList } from "./_components/running-challenge-list";
+import { PwaGate } from "./_components/pwa-gate";
 
 // 모킹업 §2 — 빈/진행 두 상태. AppHeader 는 (app)/layout.tsx 가 렌더.
 export default async function HomePage() {
@@ -68,6 +69,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <PwaGate />
       <HomeGreeting displayName={displayName ?? "친구"} />
 
       {hasAnyGroup ? (
