@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { requestMagicLink } from "./_actions";
 import { OnboardingSlides } from "./_components/onboarding-slides";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
@@ -116,15 +115,22 @@ function LoginForm({ next }: { next: string | null }) {
         ) : (
           <>
             <div className="flex flex-col gap-2">
-              <Input
+              {/* DIAG (iOS WebKit input 회귀) — base-ui InputPrimitive 가 원인인지 분리하기 위해 native input 으로 교체. 진단 후 되돌릴 것. */}
+              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
                 placeholder="you@example.com"
-                className="h-12"
+                className="border-input bg-card focus:border-ring h-12 w-full rounded-lg border px-4 text-base outline-none"
                 aria-label="이메일"
                 autoComplete="email"
+                inputMode="email"
               />
+              {/* DIAG — email state 가 실제 갱신되는지 화면에 표시. 진단 후 제거. */}
+              <p className="text-destructive break-all text-xs">
+                DEBUG email={JSON.stringify(email)} len={email.length}
+              </p>
               <Button
                 size="lg"
                 aria-describedby="consent-note"
