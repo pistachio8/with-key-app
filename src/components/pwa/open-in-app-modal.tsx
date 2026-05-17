@@ -60,8 +60,8 @@ export function OpenInAppModal() {
       // 오직 두 버튼을 통해서만 닫힌다.
       disablePointerDismissal
       onOpenChange={(next, eventDetails) => {
-        // escapeKey reason 은 무시 — 강제 선택 모달이므로
-        if (!next && eventDetails?.reason === "escapeKey") return;
+        // escape-key reason 은 무시 — 강제 선택 모달이므로
+        if (!next && eventDetails?.reason === "escape-key") return;
         if (!next) return;
         setOpen(next);
       }}
