@@ -17,14 +17,38 @@ const userMessage = makeUserMessage({
 type Props = {
   token: string;
   groupName: string | null;
+  isAuthed: boolean;
 };
 
 // PRD §3.2 원본 유저 플로우: 참여 → 서약서 확인 → 서명.
 // 수락 성공 시 /pledge 로 보내 기존 서약 UI 를 재사용한다.
 // pending 챌린지가 없으면 /pledge 가 "서명할 서약서 없음" empty state 를 보여준다.
-export function AcceptForm({ token, groupName }: Props) {
+//
+// isAuthed=false (카톡 등 cold-land 익명 진입) 는 spec 2026-05-17-invite-og-preview C2:
+// 미리보기는 보여주되 수락 액션만 로그인 게이트. callback 의 ?next= 분기(#53)가
+// 로그인 후 같은 /invite/{token} 으로 복귀시킨다.
+export function AcceptForm({ token, groupName, isAuthed }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  if (!isAuthed) {
+    const next = encodeURIComponent(`/invite/${encodeURIComponent(token)}`);
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-muted-foreground break-keep text-sm">
+          <span className="font-semibold">{groupName ?? "이름 없는 그룹"}</span> 에 참여하려면 먼저
+          로그인해주세요.
+        </p>
+        <Button
+          size="lg"
+          className="h-12 w-full"
+          onClick={() => router.push(`/login?next=${next}`)}
+        >
+          로그인하고 참여하기
+        </Button>
+      </div>
+    );
+  }
 
   function onClick() {
     startTransition(async () => {
