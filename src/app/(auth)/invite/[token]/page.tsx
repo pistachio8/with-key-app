@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { fetchInvitePreview } from "@/lib/db/reads/invite";
 import { ShareCard } from "@/components/ui/share-card";
@@ -9,7 +9,42 @@ import { AcceptForm } from "./_components/accept-form";
 
 type Params = Promise<{ token: string }>;
 
+// spec 2026-05-17-invite-og-preview C5 — KakaoTalk 카드 텍스트는 (image · title · description)
+// 3중 안전망. 이미지 미표시 클라이언트를 위해 og:title 이 이미지 hook 과 동일.
+// noindex 는 토큰 bearer 시크릿 인덱싱 차단.
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { token } = await params;
+  const preview = await fetchInvitePreview(token);
+
+  const groupLabel = preview?.groupName ?? "친구";
+  const title = `${groupLabel}이 같이 운동하자고 해요`;
+  const challenge = preview?.pendingChallenge ?? null;
+  const description = challenge
+    ? `${challenge.title} · ${challenge.durationDays}일 · 주 ${challenge.goalCount}회 · 탭해서 함께 시작하기`
+    : "탭해서 그룹에 참여하기";
+
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: {
+      title,
+      description,
+      siteName: "from. with",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 // PRD §3.3 AC-2/AC-3/AC-4 · §3.4 만료/꽉참 edge cases.
+// spec 2026-05-17-invite-og-preview C1 — 진입 redirect 제거: 익명 사용자도 미리보기를
+// 보고 AcceptForm 에서만 로그인 게이트. Server Component redirect() 가 HTML(메타 포함)을
+// 송출하지 않으므로 카톡 OG 크롤러를 위해서도 필수.
 export default async function InvitePage({ params }: { params: Params }) {
   const { token } = await params;
 
@@ -17,11 +52,6 @@ export default async function InvitePage({ params }: { params: Params }) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    const next = encodeURIComponent(`/invite/${encodeURIComponent(token)}`);
-    redirect(`/login?next=${next}`);
-  }
 
   const preview = await fetchInvitePreview(token);
 
@@ -127,7 +157,7 @@ export default async function InvitePage({ params }: { params: Params }) {
       </p>
 
       <div className="mt-auto pt-6">
-        <AcceptForm token={token} groupName={preview.groupName} />
+        <AcceptForm token={token} groupName={preview.groupName} isAuthed={user !== null} />
       </div>
     </main>
   );
