@@ -3,17 +3,30 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
+  const token_hash = searchParams.get("token_hash");
   const code = searchParams.get("code");
   const next = searchParams.get("next");
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=auth`);
-  }
-
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    console.error("[auth/callback] exchange failed:", error.message);
+
+  // 매직링크는 두 flow 중 하나로 도착한다.
+  //   1) token_hash flow (ADR-0007 결정 2) — 이메일 템플릿이 ?token_hash=...&type=email
+  //      을 보낼 때. verifier 쿠키 의존 없음 → 모바일 in-app browser/cross-browser 강건.
+  //   2) PKCE flow — 옛 ConfirmationURL 링크용 마이그레이션 안전망. verifier 쿠키 부재
+  //      시(모바일/cross-device) 구조적 fail. POC 안정화 후 별도 PR로 제거 예정.
+  if (token_hash) {
+    const { error } = await supabase.auth.verifyOtp({ type: "email", token_hash });
+    if (error) {
+      console.error("[auth/callback] verifyOtp failed:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=auth`);
+    }
+  } else if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("[auth/callback] exchange failed:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=auth`);
+    }
+  } else {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
