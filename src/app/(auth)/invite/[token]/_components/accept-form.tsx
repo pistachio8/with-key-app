@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { InAppBrowserGuard } from "@/components/auth/in-app-browser-guard";
+import type { InAppBrowserKind } from "@/lib/auth/in-app-browser";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { acceptInvite } from "../_actions";
 import { InviteLoadingDots } from "./invite-loading-dots";
@@ -18,6 +20,8 @@ type Props = {
   token: string;
   groupName: string | null;
   isAuthed: boolean;
+  // ADR-0008 — isAuthed=false 분기에서 인앱뷰 가드 노출용. optional 로 두어 기존 호출자 호환.
+  inAppKind?: InAppBrowserKind | null;
 };
 
 // PRD §3.2 원본 유저 플로우: 참여 → 서약서 확인 → 서명.
@@ -27,26 +31,36 @@ type Props = {
 // isAuthed=false (카톡 등 cold-land 익명 진입) 는 spec 2026-05-17-invite-og-preview C2:
 // 미리보기는 보여주되 수락 액션만 로그인 게이트. callback 의 ?next= 분기(#53)가
 // 로그인 후 같은 /invite/{token} 으로 복귀시킨다.
-export function AcceptForm({ token, groupName, isAuthed }: Props) {
+export function AcceptForm({ token, groupName, isAuthed, inAppKind = null }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  // 가드 외부 열기 target = 현재 invite 페이지 URL. 인앱뷰에서 외부 브라우저 전환 시 같은
+  // URL 재진입 → 외부에서도 동일 OG 카드/챌린지 컨텍스트 보존 (ADR-0008 Decision).
+  const inviteUrl = useMemo(() => {
+    const path = `/invite/${encodeURIComponent(token)}`;
+    if (typeof window === "undefined") return path;
+    return `${window.location.origin}${path}`;
+  }, [token]);
 
   if (!isAuthed) {
     const next = encodeURIComponent(`/invite/${encodeURIComponent(token)}`);
     return (
-      <div className="flex flex-col gap-3">
-        <p className="text-muted-foreground break-keep text-sm">
-          <span className="font-semibold">{groupName ?? "이름 없는 그룹"}</span> 에 참여하려면 먼저
-          로그인해주세요.
-        </p>
-        <Button
-          size="lg"
-          className="h-12 w-full"
-          onClick={() => router.push(`/login?next=${next}`)}
-        >
-          로그인하고 참여하기
-        </Button>
-      </div>
+      <InAppBrowserGuard kind={inAppKind} targetUrl={inviteUrl}>
+        <div className="flex flex-col gap-3">
+          <p className="text-muted-foreground break-keep text-sm">
+            <span className="font-semibold">{groupName ?? "이름 없는 그룹"}</span> 에 참여하려면
+            먼저 로그인해주세요.
+          </p>
+          <Button
+            size="lg"
+            className="h-12 w-full"
+            onClick={() => router.push(`/login?next=${next}`)}
+          >
+            로그인하고 참여하기
+          </Button>
+        </div>
+      </InAppBrowserGuard>
     );
   }
 
