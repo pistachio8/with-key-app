@@ -57,6 +57,28 @@ describe("accept_invite RPC", () => {
     expect(count).toBe(1);
   });
 
+  it("adds an existing group member to the pending challenge when accepting an invite", async () => {
+    const owner = await createUser();
+    const joiner = await createUser();
+    const g = await createGroup(owner.id);
+    await addMember(g.id, joiner.id);
+    const c = await createPendingChallenge(g.id);
+    await admin.from("challenge_participants").insert({ challenge_id: c.id, user_id: owner.id });
+    const invite = await createInviteRow(g.id, owner.id);
+
+    const client = await asUser(joiner);
+    const { data, error } = await client.rpc("accept_invite", { p_token: invite.token });
+    expect(error).toBeNull();
+    expect(data).toBe(g.id);
+
+    const { count } = await admin
+      .from("challenge_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("challenge_id", c.id)
+      .eq("user_id", joiner.id);
+    expect(count).toBe(1);
+  });
+
   it("rejects expired token with not_found-ish error (P0002)", async () => {
     const owner = await createUser();
     const joiner = await createUser();

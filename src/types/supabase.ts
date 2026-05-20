@@ -523,6 +523,16 @@ export type Database = {
           status: string;
         }[];
       };
+      start_challenge_with_signed_participants: {
+        Args: { p_challenge_id: string };
+        Returns: {
+          challenge_created_at: string;
+          end_at: string;
+          participant_count: number;
+          start_at: string;
+          status: string;
+        }[];
+      };
       truncate_test_data: { Args: never; Returns: undefined };
       update_action_log_photo_path: {
         Args: { p_log_id: string; p_photo_path: string };

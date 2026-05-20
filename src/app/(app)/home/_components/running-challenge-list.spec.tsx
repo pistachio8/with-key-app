@@ -27,6 +27,7 @@ function makeGroup(
       daysLeft: 15,
       potTotal: 4000,
       participantCount: 4,
+      userIsParticipant: true,
       verifiedToday: false,
       ...overrides,
     },
@@ -55,6 +56,14 @@ describe("RunningChallengeList", () => {
     render(<RunningChallengeList groups={[makeGroup({ status: "pending" })]} />);
     expect(screen.getByText("대기")).toBeTruthy();
     expect(screen.getByText("서명 대기")).toBeTruthy();
+  });
+
+  it("active 이지만 내가 participant 가 아니면 다음 챌린지 안내 톤", () => {
+    render(<RunningChallengeList groups={[makeGroup({ userIsParticipant: false })]} />);
+    expect(screen.getByText("이미 시작됨")).toBeTruthy();
+    expect(screen.getByText("다음 챌린지부터 함께해요")).toBeTruthy();
+    expect(screen.getByText("다음부터")).toBeTruthy();
+    expect(screen.queryByText("오늘 미인증")).toBeNull();
   });
 
   it("link href 는 /challenge/{id}", () => {

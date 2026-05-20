@@ -13,10 +13,16 @@ import { DashboardTab } from "./_components/dashboard-tab";
 import { FeedTab } from "./_components/feed-tab";
 import { InfoTab } from "./_components/info-tab";
 import { JustJoinedBanner } from "./_components/just-joined-banner";
+import { StartChallengeCard } from "./_components/start-challenge-card";
 import { StatusCard } from "./_components/status-card";
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ just_joined?: string; activated?: string; tab?: string }>;
+type SearchParams = Promise<{
+  just_joined?: string;
+  activated?: string;
+  joined_late?: string;
+  tab?: string;
+}>;
 
 function computeDaysLeft(endAtIso: string | null): number | null {
   if (!endAtIso) return null;
@@ -44,6 +50,7 @@ export default async function ChallengeDetailPage({
   const sp = await searchParams;
   const justJoined = sp.just_joined === "1";
   const activated = sp.activated === "1";
+  const joinedLate = sp.joined_late === "1";
 
   const supabase = await createClient();
   const {
@@ -67,6 +74,7 @@ export default async function ChallengeDetailPage({
   const owner = detail.members.find((m) => m.id === detail.group.ownerId);
   const ownerName = owner?.displayName ?? "운영자";
   const totalSigned = detail.members.filter((m) => m.signed).length;
+  const unsignedCount = detail.members.length - totalSigned;
   const daysLeft = computeDaysLeft(detail.endAt);
 
   // 오늘 인증한 멤버 = 오늘 created_at 인 action_logs 의 authorId set.
@@ -98,6 +106,14 @@ export default async function ChallengeDetailPage({
       />
     </section>
   );
+  const startSlot =
+    isOwner && detail.status === "pending" && mySigned ? (
+      <StartChallengeCard
+        challengeId={id}
+        signedCount={totalSigned}
+        unsignedCount={unsignedCount}
+      />
+    ) : null;
 
   const actionHref =
     isParticipant && detail.status === "active" ? `/challenge/${id}/action` : undefined;
@@ -116,6 +132,13 @@ export default async function ChallengeDetailPage({
           totalSigned={totalSigned}
           totalMembers={detail.members.length}
         />
+      )}
+      {joinedLate && (
+        <Card padding="sm" className="bg-muted/50 border-transparent">
+          <p className="text-muted-foreground break-keep text-xs">
+            이미 시작된 챌린지예요. 그룹에는 합류했고, 다음 챌린지부터 함께할 수 있어요.
+          </p>
+        </Card>
       )}
       <StatusCard
         title={detail.title}
@@ -164,6 +187,7 @@ export default async function ChallengeDetailPage({
             ownerName={ownerName}
             inviteSlot={inviteSlot}
             accountSlot={accountSlot}
+            startSlot={startSlot}
           />
         }
         defaultTab={justJoined ? "info" : "feed"}

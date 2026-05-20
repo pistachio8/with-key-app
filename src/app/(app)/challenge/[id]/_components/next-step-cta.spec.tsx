@@ -4,9 +4,14 @@ import { render, screen } from "@testing-library/react";
 import { NextStepCta } from "./next-step-cta";
 
 describe("NextStepCta", () => {
-  it("비참가자엔 '참가자가 아니에요' 안내", () => {
+  it("pending 비참가자엔 '참가자가 아니에요' 안내", () => {
     render(<NextStepCta status="pending" isParticipant={false} mySigned={false} isSolo={false} />);
     expect(screen.getByText(/참가자가 아니에요/)).toBeTruthy();
+  });
+
+  it("active 비참가자엔 다음 챌린지 안내", () => {
+    render(<NextStepCta status="active" isParticipant={false} mySigned={false} isSolo={false} />);
+    expect(screen.getByText(/다음 챌린지부터 함께해요/)).toBeTruthy();
   });
 
   it("closed 상태엔 '종료된 챌린지' 안내", () => {
@@ -25,14 +30,14 @@ describe("NextStepCta", () => {
     expect(screen.getByRole("link", { name: /서약서 쓰러 가기/ })).toBeTruthy();
   });
 
-  it("pending + 서명완료 + 솔로면 '잠시 후 시작됩니다' 안내", () => {
+  it("pending + 서명완료 + 솔로면 '혼자 시작' 안내", () => {
     render(<NextStepCta status="pending" isParticipant={true} mySigned={true} isSolo={true} />);
-    expect(screen.getByText(/잠시 후 시작됩니다/)).toBeTruthy();
+    expect(screen.getByText(/혼자 시작/)).toBeTruthy();
   });
 
-  it("pending + 서명완료 + 그룹이면 '다른 멤버 서명 대기 중' 안내", () => {
+  it("pending + 서명완료 + 그룹이면 운영자 확정 안내", () => {
     render(<NextStepCta status="pending" isParticipant={true} mySigned={true} isSolo={false} />);
-    expect(screen.getByText(/다른 멤버 서명 대기 중/)).toBeTruthy();
+    expect(screen.getByText(/운영자가 멤버를 확정하면 시작/)).toBeTruthy();
   });
 
   it("active 상태는 null 반환 (FAB 으로 인증 진입)", () => {

@@ -108,20 +108,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=auth`);
     }
 
-    // welcome cushion + pending challenge 분기 — 두 SELECT 병렬.
-    const [groupNameRes, pendingChallengeRes] = await Promise.all([
+    // welcome cushion + latest pending/active challenge 분기 — 두 SELECT 병렬.
+    const [groupNameRes, latestChallengeRes] = await Promise.all([
       supabase.from("groups").select("name").eq("id", groupId).maybeSingle(),
       supabase
         .from("challenges")
-        .select("id")
+        .select("id, status")
         .eq("group_id", groupId)
-        .eq("status", "pending")
+        .in("status", ["pending", "active"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
     const groupName = groupNameRes.data?.name ?? null;
-    const pendingChallengeId = pendingChallengeRes.data?.id ?? null;
+    const latestChallenge = latestChallengeRes.data ?? null;
 
     // AcceptForm 수동 경로(_actions.ts:38)와 동일 — invite_opened 는 가입 성공 시 1회.
     void track(
@@ -133,9 +133,14 @@ export async function GET(request: NextRequest) {
     }
 
     const welcomeQuery = groupName ? `?welcome=${encodeURIComponent(groupName)}` : "";
-    const target = pendingChallengeId
-      ? `/challenge/${pendingChallengeId}/pledge${welcomeQuery}`
-      : `/group/${groupId}${welcomeQuery}`;
+    let target: string;
+    if (latestChallenge?.status === "pending") {
+      target = `/challenge/${latestChallenge.id}/pledge${welcomeQuery}`;
+    } else if (latestChallenge?.status === "active") {
+      target = `/challenge/${latestChallenge.id}?joined_late=1`;
+    } else {
+      target = `/group/${groupId}${welcomeQuery || "?joined=1"}`;
+    }
     return NextResponse.redirect(`${origin}${target}`);
   }
 

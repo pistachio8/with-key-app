@@ -58,7 +58,7 @@
 | 용어                         | 정의                                                                                                 |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **챌린지 (Challenge)**       | 그룹이 함께 수행하는 주간 단위 목표. 내부적으로는 범용 액션, UI는 "운동 챌린지".                     |
-| **서약서 (Pledge)**          | 챌린지에 대한 전원 서명 절차. `pending → accepted → active` 상태 전이.                               |
+| **서약서 (Pledge)**          | 챌린지 참여 의사를 기록하는 서명 절차. `pending` 동안 초대·서명·멤버 확정을 진행한다.                |
 | **인증 (ActionLog)**         | 개별 운동 수행 기록. **사진 + 운동 종류 + 키워드 칩(1~3개)** 이 핵심. 자유 메모는 선택 escape hatch. |
 | **키워드 칩 (Keyword Chip)** | 운동 종류별로 랜덤 노출되는 6~9개의 태그 버튼. 1~3개까지 다중 선택. AI 일기 프롬프트의 주 입력.      |
 | **🎲 다시 뽑기 (Reroll)**    | 키워드 칩을 새 랜덤 셋으로 교체. 풀에서 비복원 추출.                                                 |
@@ -81,6 +81,7 @@
 ### 3.2 UX 흐름
 
 > 2026-05-14 UI 리비전 반영: 그룹 명시 생성 UI 폐기, 챌린지 생성 시 자동 그룹 (ADR-0003).
+> 2026-05-20 초대 플로우 보정: `pending` 은 초대/서명/멤버 확정 창, `active` 는 코호트 고정 상태 (ADR-0009).
 
 ```text
 [그룹장]                                [멤버]
@@ -93,8 +94,10 @@
   │                                      ├─ 참여 (`/challenge/[id]/pledge`)
   │                                      ├─ 서약서 내용 확인
   │                                      └─ 서명
-  ◀──── 전원 서명 완료 ──────────────────┤
-  ├─ `active` 전이                        │
+  ◀──── 서명 응답 확인 ──────────────────┤
+  ├─ "혼자 시작하기" 또는
+  │  "서명한 멤버로 시작하기"
+  ├─ `active` 전이 (서명한 멤버만 코호트 고정)
   └─ 챌린지 시작!                         │
 ```
 
@@ -111,22 +114,22 @@
 - **AC-2** 그룹장은 초대 링크를 생성할 수 있다. 링크는 토큰 기반, **72시간 만료**.
 - **AC-3** 초대 링크를 연 사용자는 **카카오 로그인(1차) 또는 이메일 매직링크(비상 fallback, `NEXT_PUBLIC_ENABLE_MAGIC_LINK` env 토글)**로 가입/로그인 후 그룹에 참여할 수 있다. 카카오톡 등 SNS 인앱브라우저 진입 시 외부 브라우저 전환 가드 노출. 근거: [ADR-0008](./adr/0008-kakao-oauth-introduction.md).
 - **AC-4** 그룹 멤버는 **1~4명** (그룹장 포함). 솔로(1인) 모드도 정식 — 자세한 동작은 §3.4. 5명째 참여 시 **차단** 안내. 근거: [ADR-0003](./adr/0003-2026-05-14-group-ux-implicit-auto-creation.md)
-- **AC-5** 모든 멤버가 서명을 완료하면 `Challenge.status`가 `active`로 전이하고, **전원에게 "시작" 푸시** 전송.
-- **AC-6** 챌린지가 `active` 된 후에는 **멤버 추가/제거 불가** (freeze).
+- **AC-5** 그룹장이 "혼자 시작하기" 또는 "서명한 멤버로 시작하기"를 명시적으로 누르면 `Challenge.status`가 `active`로 전이하고, **전원에게 "시작" 푸시** 전송.
+- **AC-6** 챌린지가 `active` 된 후에는 현재 챌린지의 **참가자 추가/제거 불가** (freeze). 이후 초대 수락자는 그룹 멤버로만 합류하고 다음 챌린지부터 참가한다.
 - **AC-7** 그룹장은 `pending` 상태에서만 조건 수정 가능.
 
 ### 3.4 Edge Cases
 
-**솔로 챌린지 (1인 그룹) — POC 정식 모드.** 그룹장이 그룹에 혼자인 상태에서도 챌린지 생성·서명·진행 가능. 친구 합류 시 자연스럽게 그룹 모드로 격상되며, 친구 합류는 챌린지가 `pending` 상태일 때만 가능 (AC-6 freeze 유지 — `active` 전이 후엔 신규 합류 불가). 코호트 분리는 `participant_count` 로 분석 단계에서 수행.
+**솔로 챌린지 (1인 그룹) — POC 정식 모드.** 그룹장이 그룹에 혼자인 상태에서도 챌린지 생성·서명·진행 가능. 다만 생성 중 자가 서명만으로 자동 시작하지 않고, 그룹장이 "혼자 시작하기"를 눌러야 `active` 로 전이한다. 친구 합류는 챌린지가 `pending` 상태일 때 현재 챌린지 참가자로 편입되고, `active` 이후에는 그룹 멤버로만 합류해 다음 챌린지부터 함께한다. 코호트 분리는 `participant_count` 로 분석 단계에서 수행.
 
 | 상황                                      | 동작                                                                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 초대 링크 72시간 경과 후 접근             | "만료된 링크" 페이지 + 그룹장에게 "새 링크 요청" 버튼                                                                                                  |
-| 서명 거부 멤버 발생 (그룹)                | 그룹장에게 알림 · `pending` 유지 · 그룹장이 해당 멤버 제외 후 재시도                                                                                   |
-| 솔로 의도로 서명 중 친구가 합류 (Edge #2) | RPC 가 `participant_count` 를 반환해 client 에서 의도-결과 비교 → "친구가 합류해 그룹 챌린지로 시작됐어요" 안내 토스트                                 |
+| 서명 거부/미응답 멤버 발생 (그룹)         | `pending` 유지 · 그룹장이 서명한 멤버만으로 시작하면 미서명자는 현재 챌린지에서 제외되고 다음 챌린지부터 함께함                                        |
+| 솔로 의도로 초대 중 친구가 합류 (Edge #2) | 친구가 `pending` 중 서명하면 "서명한 멤버로 시작하기"로 함께 시작 가능. 친구가 미응답이면 "혼자 시작하기" 가능                                         |
 | 그룹장이 그룹을 이탈                      | POC는 **그룹 해산**. 다른 멤버 승격은 v1 이후.                                                                                                         |
 | 같은 사용자가 2번 초대 수락               | idempotent 처리. 참여 중복 방지.                                                                                                                       |
-| 시작일 지났는데 서명 미완                 | 자동 기한 연장 없음. 그룹장이 재시작.                                                                                                                  |
+| 시작 전 미서명자가 남아 있음              | 자동 기한 연장/자동 시작 없음. 그룹장이 기다리거나 서명한 멤버로 명시 시작.                                                                            |
 | `groups.name` 빈 값                       | UI 에서 "이름 없는 그룹" 공통 fallback (home/group-strip, invite/accept-form 양쪽 일관).                                                               |
 | 그룹 없이 챌린지 생성 시도 (첫 챌린지)    | `createChallenge` Server Action 이 그룹을 자동 생성 (`{displayName}님과 친구들`, 계좌 없이). 사용자에게는 그룹 생성 단계가 보이지 않음. 근거: ADR-0003 |
 | 챌린지 삭제 시 자동 생성된 그룹           | 챌린지만 CASCADE 삭제, 그룹은 빈 채 유지. 그룹 자체 해산은 POC 후 (PR8 백로그 #108 G3).                                                                |
@@ -487,7 +490,7 @@ push_subscriptions
 | duration_days  | int         | 7~90 (사용자 종료일 picker 선택, 최소 1주 — ADR-0004)       |
 | penalty_amount | int         | KRW, 0~10,000 / 1천 단위 (0원 허용 — D-007, migration 0025) |
 | status         | text        | `pending` \| `accepted` \| `active` \| `closed`             |
-| start_at       | timestamptz | active 전이 시각                                            |
+| start_at       | timestamptz | 그룹장이 명시적으로 시작한 시각                             |
 | end_at         | timestamptz | start_at + duration_days                                    |
 
 **action_logs**
@@ -553,7 +556,7 @@ push_subscriptions
 | `invite_opened`        | 링크 열림                                                     | groupId, fromOrganicUser                                                                     |
 | `challenge_created`    | 챌린지 생성                                                   | challengeId, penaltyAmount, goalCount                                                        |
 | `challenge_signed`     | 서명 완료                                                     | challengeId, userId                                                                          |
-| `challenge_activated`  | 전원 서명 → active                                            | challengeId, signToActiveMs                                                                  |
+| `challenge_activated`  | 그룹장 명시 시작 → active                                     | challengeId, signToActiveMs, participantCount                                                |
 | `action_started`       | 챌린지 상세 FAB 카메라 클릭 (challenge action sub-route 진입) | challengeId                                                                                  |
 | `keywords_shown`       | 키워드 칩 랜덤 노출                                           | activityType, shownKeywords[], source(`initial` \| `reroll`)                                 |
 | `keywords_reroll`      | "다시 뽑기" 탭                                                | activityType, rerollCount                                                                    |
@@ -586,9 +589,9 @@ push_subscriptions
 | #   | 모킹업 §              | 화면                       | 라우트 (신)                                             | 핵심 구성                                                                                   |
 | --- | --------------------- | -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 1   | §1                    | 온보딩 / 로그인            | `/login` (+ 첫 진입 4-슬라이드 온보딩)                  | 카카오 OAuth (1차) · 매직링크 fallback (env 토글) · 인앱뷰 가드 · 초대 토큰 보존 (ADR-0008) |
-| 2   | §3 (생성) + §4 (공유) | 챌린지 생성 wizard         | `/challenge/new` + `/share/[id]` OG                     | 3-step (조건 → 서약서/서명 → 초대 링크). 자동 그룹 (ADR-0003)                               |
+| 2   | §3 (생성) + §4 (공유) | 챌린지 생성 wizard         | `/challenge/new` + `/share/[id]` OG                     | 3-step (조건 → 오너 서명 → 초대 링크). 자동 그룹 (ADR-0003), 명시 시작 (ADR-0009)           |
 | 3   | §6                    | 서약서 서명                | `/challenge/[id]/pledge`                                | 조건 미리보기 · 서약서 본문 · 서명 캔버스 · 멤버 상태                                       |
-| 4   | §2                    | 홈 (챌린지 진행 중)        | `/home`                                                 | 인사·invited 배너·4-stats grid·진행 리스트                                                  |
+| 4   | §2                    | 홈 (챌린지 진행 중)        | `/home`                                                 | 인사·invited 배너·4-stats grid·진행 리스트·active 비참가자 "다음 챌린지부터" 상태           |
 | 5   | §10-A                 | 인증 화면                  | `/challenge/[id]/action`                                | 사진 dual-entry · 운동 종류 · 키워드 칩 · 다시 뽑기 · 메모 escape                           |
 | 6   | §8                    | 인증 피드                  | `/challenge/[id]` (피드 탭)                             | 인증 카드 리스트 · Kudos 바 · day 슬라이드                                                  |
 | 7   | §10-A·B·C·D           | 일기/누적/신기록/실패 모달 | `/challenge/[id]/action` (등록 후 결과 모달, 4 variant) | AI 일기 · Day Slider · PR 갱신 · 벌금 누적                                                  |
@@ -608,9 +611,9 @@ push_subscriptions
 > 2026-05-14 UI 리비전 반영: 라우트가 모두 challenge sub-route 로 통합됨 (ADR-0002). 옛 `/feed`·`/action`·`/pledge`·`/recap`·`/settings` 는 redirect 로만 존재.
 
 1. 민지가 단톡방에서 초대 링크를 받는다 → `/invite/[token]` ([invite_opened])
-2. **카카오 OAuth 로그인** (ADR-0008 — 1차 경로) → `/auth/callback` 이 `accept_invite` RPC 자동 호출 → `/challenge/[id]/pledge?welcome={그룹}` 진입 (welcome 배너 노출) ([user_signed_up provider=kakao], [invite_opened]). 매직링크는 `NEXT_PUBLIC_ENABLE_MAGIC_LINK=true` 토글 시 비상 fallback.
+2. **카카오 OAuth 로그인** (ADR-0008 — 1차 경로) → `/auth/callback` 이 `accept_invite` RPC 자동 호출 → pending 챌린지가 있으면 `/challenge/[id]/pledge?welcome={그룹}` 진입, 이미 active 라면 `/challenge/[id]?joined_late=1` 에서 "다음 챌린지부터 함께해요" 상태 노출 ([user_signed_up provider=kakao], [invite_opened]). 매직링크는 `NEXT_PUBLIC_ENABLE_MAGIC_LINK=true` 토글 시 비상 fallback.
 3. 서약서 내용 확인 → 서명 캔버스 ([challenge_signed])
-4. 전원 서명 완료 → 챌린지 `active` ([challenge_activated]) → 시작 푸시 (카테고리: 리마인더)
+4. 그룹장이 서명 응답을 확인하고 "혼자 시작하기" 또는 "서명한 멤버로 시작하기" 선택 → 챌린지 `active` ([challenge_activated]) → 시작 푸시 (카테고리: 리마인더)
 5. Day 1 저녁, 헬스장에서 운동 후 `/challenge/[id]` 접속:
    - 챌린지 상세에서 **FAB 카메라** 클릭 → `/challenge/[id]/action` 진입 ([action_started])
    - 사진 dual-entry (카메라/라이브러리) · 🏋️ 헬스 선택 → 키워드 칩 자동 랜덤 노출 ([keywords_shown])
@@ -703,6 +706,12 @@ push_subscriptions
 
 ## 17. Changelog
 
+- **v0.7** (2026-05-20) — **초대 중 pending 유지 + 오너 명시 시작** (Ian · ADR-0009)
+  - §2/§3: 서약서를 "자동 active 전이"가 아니라 pending 동안의 초대·서명·멤버 확정 절차로 재정의.
+  - §3.3 AC-5/AC-6: 전원 서명 자동 시작 → 그룹장의 "혼자 시작하기" / "서명한 멤버로 시작하기" 명시 시작으로 변경. active 이후 초대자는 그룹 멤버로만 합류.
+  - §3.4 Edge Cases: 미응답 친구가 있어도 서명한 멤버로 시작 가능, active 이후 친구는 다음 챌린지부터 참가하는 UX 명시.
+  - §9.1: `challenge_activated` 발생 시점을 그룹장 명시 시작으로 변경하고 `participantCount` 속성 반영.
+  - §10/§11: 홈의 active 비참가자 "다음 챌린지부터 함께해요" 상태와 카카오 초대 콜백 분기 반영.
 - **v0.6** (2026-05-20) — **카카오 OAuth 1차 경로 도입 + 인앱뷰 가드** (Ian · ADR-0008 · PR #61)
   - §3.3 AC-3: 카카오 로그인 1차 / 매직링크는 `NEXT_PUBLIC_ENABLE_MAGIC_LINK` env 토글 비상 fallback 으로 격하.
   - §10 화면 #1: 카카오 OAuth + 인앱뷰 가드(카카오톡·인스타·페북·네이버·라인) + welcome cushion 명시.

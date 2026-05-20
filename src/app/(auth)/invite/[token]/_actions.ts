@@ -24,8 +24,8 @@ function mapAcceptInviteError(err: PgErrorLike): ErrorCode {
 
 // PRD §3.3 AC-3 · BE_SCHEMA §8.3.
 // RPC accept_invite 가 만료·중복·꽉참을 한 번에 판정. 이 Action 은 매핑만.
-export const acceptInvite = withUser<string, { groupId: string }>(
-  async (user, token): Promise<ActionResult<{ groupId: string }>> => {
+export const acceptInvite = withUser<string, { groupId: string; redirectTo: string }>(
+  async (user, token): Promise<ActionResult<{ groupId: string; redirectTo: string }>> => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) return validationFailure(parsed.error);
 
@@ -40,6 +40,22 @@ export const acceptInvite = withUser<string, { groupId: string }>(
       { userId: user.id },
     );
 
-    return success({ groupId: data });
+    const { data: latest } = await supabase
+      .from("challenges")
+      .select("id, status")
+      .eq("group_id", data)
+      .in("status", ["pending", "active"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const redirectTo =
+      latest?.status === "pending"
+        ? `/challenge/${latest.id}/pledge`
+        : latest?.status === "active"
+          ? `/challenge/${latest.id}?joined_late=1`
+          : `/group/${data}?joined=1`;
+
+    return success({ groupId: data, redirectTo });
   },
 );

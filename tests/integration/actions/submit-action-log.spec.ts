@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { asUser, admin } from "../setup";
-import { createUser, createGroup, createPendingChallenge } from "../factories";
+import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
 
 async function makeActiveChallenge() {
   const owner = await createUser();
@@ -15,7 +15,7 @@ async function makeActiveChallenge() {
       end_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     })
     .eq("id", c.id);
-  return { owner, challengeId: c.id };
+  return { owner, groupId: g.id, challengeId: c.id };
 }
 
 describe("action_logs insert (RLS)", () => {
@@ -38,6 +38,24 @@ describe("action_logs insert (RLS)", () => {
       .single();
     expect(error).toBeNull();
     expect(data?.template_fallback).toBe(false);
+  });
+
+  it("group member who is not a participant cannot insert", async () => {
+    const { groupId, challengeId } = await makeActiveChallenge();
+    const outsider = await createUser();
+    await addMember(groupId, outsider.id);
+    const client = await asUser(outsider);
+    const { error } = await client.from("action_logs").insert({
+      challenge_id: challengeId,
+      user_id: outsider.id,
+      activity_type: "gym",
+      photo_path: null,
+      selected_keywords: ["펌핑"],
+      shown_keywords: ["펌핑", "하체"],
+      ai_summary: "참가자가 아니면 막혀야 해요",
+      prompt_version: "v1",
+    });
+    expect(error).toBeTruthy();
   });
 
   it("AI columns update is blocked by trigger (42501)", async () => {

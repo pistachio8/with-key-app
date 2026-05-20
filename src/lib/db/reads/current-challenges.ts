@@ -24,6 +24,8 @@ export type GroupChallengeView = {
     potTotal: number;
     // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
     participantCount: number;
+    // 그룹 멤버이지만 이미 시작된 챌린지 코호트에는 없을 수 있다.
+    userIsParticipant: boolean;
     // 모킹업 §2-B 홈 stats/list — 오늘 본인 인증 여부. KST 자정 기준.
     verifiedToday: boolean;
   } | null;
@@ -123,13 +125,16 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
   }
 
   const memberCountByChallenge = new Map<string, number>();
+  const myParticipantChallengeIds = new Set<string>();
   const { data: parts } = await supabase
     .from("challenge_participants")
-    .select("challenge_id")
+    .select("challenge_id, user_id")
     .in("challenge_id", challengeIds);
   for (const row of parts ?? []) {
-    const id = (row as { challenge_id: string }).challenge_id;
+    const r = row as { challenge_id: string; user_id: string };
+    const id = r.challenge_id;
     memberCountByChallenge.set(id, (memberCountByChallenge.get(id) ?? 0) + 1);
+    if (r.user_id === userId) myParticipantChallengeIds.add(id);
   }
 
   return groupRows.map((g) => {
@@ -167,6 +172,7 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
         daysLeft,
         potTotal: memberCount * c.penalty_amount,
         participantCount: memberCount,
+        userIsParticipant: myParticipantChallengeIds.has(c.id),
         verifiedToday: verifiedTodayByChallenge.has(c.id),
       },
     };

@@ -126,7 +126,7 @@ export async function dispatchStartNotification(challengeId: string): Promise<Di
   const targetUrl = `/challenge/${challengeId}`;
   return dispatch(challengeId, "start", {
     title: "챌린지 시작이에요",
-    body: "모두 서명했어요. 오늘부터 시작!",
+    body: "오늘부터 시작!",
     url: targetUrl,
     type: "start",
     category: "reminder",

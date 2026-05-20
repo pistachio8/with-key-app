@@ -72,7 +72,7 @@ export function AcceptForm({ token, groupName, isAuthed, inAppKind = null }: Pro
           toast.error(userMessage(res.error));
           return;
         }
-        router.push("/pledge");
+        router.push(res.data.redirectTo);
       } catch (err) {
         console.error("[AcceptForm] unexpected throw:", err);
         toast.error(FALLBACK_ERROR_MESSAGE);

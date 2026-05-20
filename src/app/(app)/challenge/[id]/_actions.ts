@@ -9,7 +9,7 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { dispatchActionStartNotification } from "@/lib/push/dispatch";
+import { dispatchActionStartNotification, dispatchStartNotification } from "@/lib/push/dispatch";
 import { isQuietHoursKST } from "@/lib/push/send";
 
 type KudosResult = { toggled: "added" | "removed" };
@@ -244,6 +244,45 @@ export const endChallenge = withUser<ChallengeIdInput, { id: string }>(
     return success({ id: parsed.data.challengeId });
   },
 );
+
+export const startChallengeWithSignedParticipants = withUser<
+  ChallengeIdInput,
+  { id: string; participantCount: number }
+>(async (user, input): Promise<ActionResult<{ id: string; participantCount: number }>> => {
+  const parsed = challengeIdInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailure(parsed.error);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("start_challenge_with_signed_participants", {
+    p_challenge_id: parsed.data.challengeId,
+  });
+  if (error) return failure(mapSupabaseError(error));
+  const row = data?.[0];
+  if (!row || row.status !== "active") return failure("upstream_error");
+
+  const participantCount = row.participant_count ?? 1;
+  const signToActiveMs = row.challenge_created_at
+    ? Math.max(0, Date.now() - new Date(row.challenge_created_at).getTime())
+    : 0;
+
+  void track(
+    {
+      name: "challenge_activated",
+      props: {
+        challengeId: parsed.data.challengeId,
+        signToActiveMs,
+        participantCount,
+      },
+    },
+    { userId: user.id },
+  );
+
+  void dispatchStartNotification(parsed.data.challengeId).catch(() => {
+    // dispatch 내부에서 per-recipient outcome 을 기록한다. 시작 성공을 되돌리지 않음.
+  });
+
+  return success({ id: parsed.data.challengeId, participantCount });
+});
 
 // CASCADE 로 action_logs · kudos · challenge_participants 함께 삭제 (FK on delete cascade).
 export const deleteChallenge = withUser<ChallengeIdInput, { id: string }>(

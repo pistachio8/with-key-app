@@ -16,9 +16,7 @@ export function JustJoinedBanner({ activated, totalSigned, totalMembers }: JustJ
         <Stamp label="시작" tone="success" />
         <div>
           <div className="t-h3">챌린지 시작!</div>
-          <div className="t-sub text-primary-foreground/85">
-            전원 서명 완료 · 오늘부터 인증 시작
-          </div>
+          <div className="t-sub text-primary-foreground/85">오늘부터 인증 시작</div>
         </div>
       </Card>
     );
@@ -29,7 +27,7 @@ export function JustJoinedBanner({ activated, totalSigned, totalMembers }: JustJ
       <div>
         <div className="t-h3">참여 완료</div>
         <div className="t-sub">
-          서명 {totalSigned}/{totalMembers} · 전원 서명 시 자동 시작돼요
+          서명 {totalSigned}/{totalMembers} · 운영자가 멤버를 확정하면 시작돼요
         </div>
       </div>
     </Card>
