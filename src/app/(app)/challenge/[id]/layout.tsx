@@ -5,48 +5,28 @@ import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { ChallengeEndedBanner } from "./_components/challenge-ended-banner";
 import { ChallengeOwnerMenu } from "./_components/challenge-owner-menu";
-import { JustJoinedBanner } from "./_components/just-joined-banner";
+import { JustJoinedBannerSlot, JoinedLateCard } from "./_components/query-aware-banners";
 import { StartChallengeCard } from "./_components/start-challenge-card";
 import { StatusCard } from "./_components/status-card";
 import { TabNav } from "./_components/tab-nav";
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{
-  tab?: string;
-  just_joined?: string;
-  activated?: string;
-  joined_late?: string;
-}>;
 
 function computeDaysLeft(endAtIso: string | null): number | null {
   if (!endAtIso) return null;
   return Math.max(0, Math.ceil((new Date(endAtIso).getTime() - Date.now()) / 86_400_000));
 }
 
+// Next.js 16: layout 은 searchParams 를 받지 않는다. ?tab=·?just_joined redirect 는
+// root page.tsx 에서 처리. query 의존 banner 는 client wrapper (query-aware-banners) 사용.
 export default async function ChallengeDetailLayout({
   children,
   params,
-  searchParams,
 }: {
   children: React.ReactNode;
   params: Params;
-  searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const sp = await searchParams;
-
-  // 호환 redirect: tab 제외 query 보존 + just_joined 진입은 info 탭으로.
-  const preserved = new URLSearchParams();
-  if (sp.just_joined === "1") preserved.set("just_joined", "1");
-  if (sp.activated === "1") preserved.set("activated", "1");
-  if (sp.joined_late === "1") preserved.set("joined_late", "1");
-  const preservedQuery = preserved.toString() ? `?${preserved.toString()}` : "";
-
-  if (sp.tab === "dashboard") redirect(`/challenge/${id}/dashboard${preservedQuery}`);
-  if (sp.tab === "info") redirect(`/challenge/${id}/info${preservedQuery}`);
-  if (sp.tab === undefined && sp.just_joined === "1") {
-    redirect(`/challenge/${id}/info${preservedQuery}`);
-  }
 
   const { user } = await getAuthedUser();
   if (!user) redirect("/login");
@@ -68,10 +48,6 @@ export default async function ChallengeDetailLayout({
   const unsignedCount = detail.members.length - totalSigned;
   const daysLeft = computeDaysLeft(detail.endAt);
 
-  const justJoined = sp.just_joined === "1";
-  const activated = sp.activated === "1";
-  const joinedLate = sp.joined_late === "1";
-
   return (
     <div className="flex flex-col gap-4 p-4 pb-24">
       {isOwner && (
@@ -80,20 +56,8 @@ export default async function ChallengeDetailLayout({
         </div>
       )}
       {showEndedBanner && <ChallengeEndedBanner challengeId={id} />}
-      {justJoined && (
-        <JustJoinedBanner
-          activated={activated}
-          totalSigned={totalSigned}
-          totalMembers={detail.members.length}
-        />
-      )}
-      {joinedLate && (
-        <Card padding="sm" className="bg-muted/50 border-transparent">
-          <p className="text-muted-foreground break-keep text-xs">
-            이미 시작된 챌린지예요. 그룹에는 합류했고, 다음 챌린지부터 함께할 수 있어요.
-          </p>
-        </Card>
-      )}
+      <JustJoinedBannerSlot totalSigned={totalSigned} totalMembers={detail.members.length} />
+      <JoinedLateCard />
       <StatusCard
         title={detail.title}
         status={detail.status}

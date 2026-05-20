@@ -7,6 +7,12 @@ import { getAuthedUser } from "@/lib/supabase/auth";
 import { FeedTab } from "./_components/feed-tab";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{
+  tab?: string;
+  just_joined?: string;
+  activated?: string;
+  joined_late?: string;
+}>;
 
 function isSameLocalDay(iso: string, now = new Date()): boolean {
   const d = new Date(iso);
@@ -17,8 +23,32 @@ function isSameLocalDay(iso: string, now = new Date()): boolean {
   );
 }
 
-export default async function ChallengeFeedPage({ params }: { params: Params }) {
+// Next.js 16: layout 은 searchParams 를 받지 못하므로 ?tab=·?just_joined 호환
+// redirect 와 root feed segment 의 query 처리는 본 page 에서 담당한다.
+export default async function ChallengeFeedPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+
+  // tab 제외 query 보존하며 새 segment 로 redirect.
+  const preserved = new URLSearchParams();
+  if (sp.just_joined === "1") preserved.set("just_joined", "1");
+  if (sp.activated === "1") preserved.set("activated", "1");
+  if (sp.joined_late === "1") preserved.set("joined_late", "1");
+  const preservedQuery = preserved.toString() ? `?${preserved.toString()}` : "";
+
+  if (sp.tab === "dashboard") redirect(`/challenge/${id}/dashboard${preservedQuery}`);
+  if (sp.tab === "info") redirect(`/challenge/${id}/info${preservedQuery}`);
+  // 초대 직후 진입은 info 탭에서 시작 — 기존 동작 보존.
+  if (sp.tab === undefined && sp.just_joined === "1") {
+    redirect(`/challenge/${id}/info${preservedQuery}`);
+  }
+
   const { user } = await getAuthedUser();
   if (!user) redirect("/login");
 
