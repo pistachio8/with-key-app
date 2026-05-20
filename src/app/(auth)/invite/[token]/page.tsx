@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { fetchInvitePreview } from "@/lib/db/reads/invite";
+import { detectInAppBrowser } from "@/lib/auth/in-app-browser";
 import { ShareCard } from "@/components/ui/share-card";
 import { AcceptForm } from "./_components/accept-form";
 
@@ -52,6 +54,10 @@ export default async function InvitePage({ params }: { params: Params }) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // ADR-0008 — SSR 단계 인앱뷰 kind 결정. AcceptForm 의 isAuthed=false 분기 가드 wrap 용.
+  const h = await headers();
+  const inAppKind = detectInAppBrowser(h.get("user-agent"));
 
   const preview = await fetchInvitePreview(token);
 
@@ -157,7 +163,12 @@ export default async function InvitePage({ params }: { params: Params }) {
       </p>
 
       <div className="mt-auto pt-6">
-        <AcceptForm token={token} groupName={preview.groupName} isAuthed={user !== null} />
+        <AcceptForm
+          token={token}
+          groupName={preview.groupName}
+          isAuthed={user !== null}
+          inAppKind={inAppKind}
+        />
       </div>
     </main>
   );
