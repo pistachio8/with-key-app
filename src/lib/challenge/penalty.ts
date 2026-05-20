@@ -11,3 +11,12 @@ export function penaltyLabel(amount: number): string {
   if (amount === 10000) return "만원";
   return `${(amount / 1000).toLocaleString("ko-KR")}천원`;
 }
+
+// stats-grid 등에서 숫자와 "원" 단위를 별도 span 으로 렌더하기 위한 helper.
+// formatKRW 가 결합된 문자열을 반환하는 반면 본 함수는 부분을 반환한다.
+export function formatKRWParts(amount: number): { number: string; unit: "원" } {
+  return {
+    number: amount.toLocaleString("ko-KR"),
+    unit: "원",
+  };
+}
