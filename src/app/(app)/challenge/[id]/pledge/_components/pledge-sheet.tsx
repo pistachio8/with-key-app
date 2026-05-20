@@ -47,9 +47,7 @@ export function PledgeSheet({ pledge, currentUserId }: Props) {
           toast.error(firstField ?? userMessage(res.error));
           return;
         }
-        const activated = res.data.status === "active";
-        const search = activated ? "?just_joined=1&activated=1" : "?just_joined=1";
-        router.replace(`/challenge/${pledge.id}${search}`);
+        router.replace(`/challenge/${pledge.id}?just_joined=1`);
       } catch (err) {
         console.error("[signPledge] unexpected throw:", err);
         toast.error(FALLBACK_ERROR_MESSAGE);

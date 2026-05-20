@@ -47,7 +47,7 @@ export function CreationCompleteSheet({ challengeId, inviteUrl }: CreationComple
       <p className="t-sub break-keep text-center">
         링크를 친구들에게 공유하면
         <br />
-        전원 서명 후 자동 시작돼요
+        서명한 멤버로 시작할 수 있어요
       </p>
       <div className="border-border/60 bg-muted/40 mt-2 flex w-full items-center justify-between gap-2 rounded-[12px] border px-3 py-2.5">
         <span className="t-sub flex-1 truncate font-mono text-[12px]">{inviteUrl}</span>

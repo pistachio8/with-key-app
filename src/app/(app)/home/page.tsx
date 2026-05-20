@@ -31,7 +31,7 @@ export default async function HomePage() {
 
   const activeChallenges = groups
     .map((g) => g.challenge)
-    .filter((c): c is NonNullable<typeof c> => c?.status === "active");
+    .filter((c): c is NonNullable<typeof c> => c?.status === "active" && c.userIsParticipant);
   const pendingChallenges = groups
     .map((g) => ({ groupName: g.groupName, challenge: g.challenge }))
     .filter(

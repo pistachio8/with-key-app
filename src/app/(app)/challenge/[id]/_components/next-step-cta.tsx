@@ -16,6 +16,9 @@ type Props = {
 // 그 외 상태(비참가자 / pending / accepted / closed)만 분기.
 export function NextStepCta({ status, isParticipant, mySigned, isSolo }: Props) {
   if (!isParticipant) {
+    if (status === "active") {
+      return <Notice text="이미 시작된 챌린지예요. 다음 챌린지부터 함께해요." />;
+    }
     return <Notice text="이 챌린지의 참가자가 아니에요." />;
   }
   if (status === "closed") {
@@ -32,7 +35,9 @@ export function NextStepCta({ status, isParticipant, mySigned, isSolo }: Props) 
     return (
       <Notice
         text={
-          isSolo ? "서명 완료. 잠시 후 시작됩니다." : "서명 완료. 다른 멤버 서명 대기 중이에요."
+          isSolo
+            ? "서명 완료. 정보 탭에서 혼자 시작할 수 있어요."
+            : "서명 완료. 운영자가 멤버를 확정하면 시작돼요."
         }
       />
     );

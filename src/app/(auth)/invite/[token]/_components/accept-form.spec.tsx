@@ -16,7 +16,7 @@ const toastError = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     error: (m: string) => toastError(m),
-    success: (_: string) => {},
+    success: () => {},
   },
 }));
 
@@ -27,16 +27,23 @@ beforeEach(() => {
 });
 
 describe("<AcceptForm />", () => {
-  it("on success, pushes to /pledge so the user can sign the pledge", async () => {
+  it("on success, pushes to the server-selected invite destination", async () => {
     acceptInviteMock.mockResolvedValueOnce({
       ok: true,
-      data: { groupId: "22222222-2222-4222-8222-222222222222" },
+      data: {
+        groupId: "22222222-2222-4222-8222-222222222222",
+        redirectTo: "/challenge/33333333-3333-4333-8333-333333333333/pledge",
+      },
     });
 
     render(<AcceptForm token="TOK" groupName="민지네" isAuthed={true} />);
     fireEvent.click(screen.getByRole("button", { name: "참여하기" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/pledge"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(
+        "/challenge/33333333-3333-4333-8333-333333333333/pledge",
+      ),
+    );
   });
 
   it("on not_found, shows expired-friendly error and does not navigate", async () => {

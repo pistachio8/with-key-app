@@ -41,17 +41,45 @@ export async function fetchActiveChallenge(
   userId: string,
   options: FetchActiveChallengeOptions = {},
 ): Promise<ActiveChallengeView | null> {
-  // 기본 status 사용 시 — 멀티 그룹 환경에서 첫 그룹의 최신 챌린지를 그대로 반환하여
-  // 레거시 홈/스펙 호출자와 계약 유지.
+  // 기본 status 사용 시 — active 챌린지는 내가 참가자인 경우만 현재 챌린지로 취급한다.
+  // active 이후 초대 유입자는 다음 챌린지 대기 상태이므로 레거시 /action, /feed 진입에서 제외.
   const usingDefaults = options.statuses === undefined;
   if (usingDefaults) {
     const groups = await fetchCurrentChallenges(userId);
-    const firstWithChallenge = groups.find((g) => g.challenge !== null);
+    const firstWithChallenge = groups.find(
+      (g) =>
+        g.challenge !== null && (g.challenge.status !== "active" || g.challenge.userIsParticipant),
+    );
     if (!firstWithChallenge || !firstWithChallenge.challenge) return null;
     const c = firstWithChallenge.challenge;
     return {
       id: c.id,
       groupId: firstWithChallenge.groupId,
+      title: c.title,
+      goalCount: c.goalCount,
+      durationDays: c.durationDays,
+      penaltyAmount: c.penaltyAmount,
+      status: c.status,
+      startAt: c.startAt,
+      endAt: c.endAt,
+      doneCount: c.doneCount,
+      daysLeft: c.daysLeft,
+      potTotal: c.potTotal,
+      participantCount: c.participantCount,
+    };
+  }
+
+  const requestedStatuses = options.statuses;
+  if (requestedStatuses?.length === 1 && requestedStatuses[0] === "active") {
+    const groups = await fetchCurrentChallenges(userId);
+    const firstActiveParticipantChallenge = groups.find(
+      (g) => g.challenge?.status === "active" && g.challenge.userIsParticipant,
+    );
+    if (!firstActiveParticipantChallenge?.challenge) return null;
+    const c = firstActiveParticipantChallenge.challenge;
+    return {
+      id: c.id,
+      groupId: firstActiveParticipantChallenge.groupId,
       title: c.title,
       goalCount: c.goalCount,
       durationDays: c.durationDays,
