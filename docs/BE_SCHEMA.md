@@ -259,6 +259,9 @@ stateDiagram-v2
 | `end_at`         | timestamptz | YES  | null                | `start_at + duration_days`                                                                                                                                                       |
 | `created_at`     | timestamptz | NO   | `now()`             |                                                                                                                                                                                  |
 
+- **그룹당 동시 1개 제약**: partial unique index `challenges_one_open_per_group on challenges(group_id) where status in ('pending','accepted','active')` (migration 0029). closed 는 제외하여 종료 챌린지 history 누적 보존.
+- `created_by` 컬럼은 POC 에서 추가하지 않음 — owner=creator 모델 유지 (ADR-0011).
+
 ### 5.6 `challenge_participants`
 
 | 컬럼           | 타입        | Null | Default | 제약/비고                            |

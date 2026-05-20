@@ -18,7 +18,10 @@ import { createChallenge } from "./_actions";
 
 type Step = 1 | 2 | 3;
 
-const userMessage = makeUserMessage();
+const userMessage = makeUserMessage({
+  forbidden: "그룹장만 챌린지를 만들 수 있어요",
+  conflict: "이미 진행 중인 챌린지가 있어요",
+});
 
 // 모킹업 §3 — 2-step wizard + 완료 시트.
 export default function NewChallengePage() {

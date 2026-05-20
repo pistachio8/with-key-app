@@ -65,6 +65,8 @@ export default async function ChallengeDetailLayout({
         durationDays={detail.durationDays}
         penaltyAmount={detail.penaltyAmount}
         participantCount={detail.participantCount}
+        signedCount={totalSigned}
+        isOwner={isOwner}
         ownerName={ownerName}
         daysLeft={daysLeft}
       />

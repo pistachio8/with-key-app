@@ -1,4 +1,5 @@
 // 모킹업 §8-B 현황판 탭 — primary bg status-card (누적 벌금 + KPI pills) + 멤버 strip.
+// daysPill 라벨은 status 로 직접 분기 (spec C5).
 
 import { Card } from "@/components/ui/card";
 import { MemberStrip } from "./member-strip";
@@ -9,8 +10,16 @@ interface DashboardTabProps {
   totalActions: number;
   totalFailures: number;
   daysRemaining: number | null;
+  status: "pending" | "accepted" | "active" | "closed";
   members: ReadonlyArray<ChallengeMemberView>;
   goalCount: number;
+}
+
+function daysPillLabel(status: DashboardTabProps["status"], daysRemaining: number | null): string {
+  if (status === "pending") return "시작 전";
+  if (status === "accepted") return "곧 시작";
+  if (status === "active") return daysRemaining != null ? `남은 ${daysRemaining}일` : "—";
+  return "종료";
 }
 
 export function DashboardTab({
@@ -18,6 +27,7 @@ export function DashboardTab({
   totalActions,
   totalFailures,
   daysRemaining,
+  status,
   members,
   goalCount,
 }: DashboardTabProps) {
@@ -32,7 +42,7 @@ export function DashboardTab({
         <div className="mt-3 grid grid-cols-3 gap-1.5">
           <KpiPill label={`총 인증 ${totalActions}회`} />
           <KpiPill label={`실패 ${totalFailures}회`} />
-          <KpiPill label={daysRemaining != null ? `남은 ${daysRemaining}일` : "종료"} />
+          <KpiPill label={daysPillLabel(status, daysRemaining)} />
         </div>
       </Card>
       <MemberStrip goalCount={goalCount} members={members} />

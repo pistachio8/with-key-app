@@ -1,5 +1,5 @@
 // 모킹업 §6 상단 — primary bg 상태 카드.
-// "FROM·WITH · 운영자 {name}" 라벨 + 챌린지 이름 + 사회증명 (#33).
+// socialProof 는 status × isSolo × isOwner 3축으로 분기 (spec C4).
 
 import { goalCountLabel } from "@/lib/challenge/frequency";
 import { penaltyLabel } from "@/lib/challenge/penalty";
@@ -11,8 +11,32 @@ interface StatusCardProps {
   durationDays: number;
   penaltyAmount: number;
   participantCount: number;
+  signedCount: number;
+  isOwner: boolean;
   ownerName: string;
   daysLeft: number | null;
+}
+
+function socialProofFor(
+  status: StatusCardProps["status"],
+  participantCount: number,
+  signedCount: number,
+  isOwner: boolean,
+): string {
+  const isSolo = participantCount === 1;
+  if (status === "pending") {
+    if (isSolo) return isOwner ? "서명 대기 · 지금 초대하면 함께 시작해요" : "서명 대기 중";
+    return `${signedCount}/${participantCount}명 서명`;
+  }
+  if (status === "accepted") {
+    return `${participantCount}명 모두 서명 완료 · 곧 시작`;
+  }
+  if (status === "active") {
+    if (isSolo) return isOwner ? "혼자 시작했어요 · 다음 챌린지엔 함께해요" : "혼자 진행 중";
+    return `${participantCount}명이 함께해요`;
+  }
+  // closed
+  return isSolo ? "혼자 마쳤어요" : `${participantCount}명이 함께했어요`;
 }
 
 export function StatusCard({
@@ -22,13 +46,12 @@ export function StatusCard({
   durationDays,
   penaltyAmount,
   participantCount,
+  signedCount,
+  isOwner,
   ownerName,
   daysLeft,
 }: StatusCardProps) {
-  const isSolo = participantCount === 1;
-  const socialProof = isSolo
-    ? "혼자 시작했어요 · 친구를 초대해보세요"
-    : `${participantCount}명이 함께해요`;
+  const socialProof = socialProofFor(status, participantCount, signedCount, isOwner);
   const meta = `${goalCountLabel(goalCount).detail} · ${durationDays}일 · ${penaltyLabel(penaltyAmount)}`;
   const dayLabel =
     status === "active" && daysLeft !== null
