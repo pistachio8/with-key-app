@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
-import { ActionFab } from "./_components/action-fab";
-import { FeedTab } from "./_components/feed-tab";
+import { ActionFab } from "../_components/action-fab";
+import { FeedTab } from "../_components/feed-tab";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{

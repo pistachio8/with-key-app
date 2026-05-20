@@ -2,9 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger";
-import { AccountInfoTrigger } from "../_components/account-info-trigger";
-import { InfoTab } from "../_components/info-tab";
-import { StartChallengeCard } from "../_components/start-challenge-card";
+import { AccountInfoTrigger } from "../../_components/account-info-trigger";
+import { InfoTab } from "../../_components/info-tab";
+import { StartChallengeCard } from "../../_components/start-challenge-card";
 
 type Params = Promise<{ id: string }>;
 

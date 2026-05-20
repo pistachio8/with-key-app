@@ -3,12 +3,12 @@ import { AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
-import { ChallengeEndedBanner } from "./_components/challenge-ended-banner";
-import { ChallengeOwnerMenu } from "./_components/challenge-owner-menu";
-import { JustJoinedBannerSlot, JoinedLateCard } from "./_components/query-aware-banners";
-import { StartChallengeCard } from "./_components/start-challenge-card";
-import { StatusCard } from "./_components/status-card";
-import { TabNav } from "./_components/tab-nav";
+import { ChallengeEndedBanner } from "../_components/challenge-ended-banner";
+import { ChallengeOwnerMenu } from "../_components/challenge-owner-menu";
+import { JustJoinedBannerSlot, JoinedLateCard } from "../_components/query-aware-banners";
+import { StartChallengeCard } from "../_components/start-challenge-card";
+import { StatusCard } from "../_components/status-card";
+import { TabNav } from "../_components/tab-nav";
 
 type Params = Promise<{ id: string }>;
 
