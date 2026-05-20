@@ -12,12 +12,16 @@ describe("StatsGrid", () => {
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
     expect(screen.getByText("1")).toBeTruthy();
-    expect(screen.getByText("5,000원")).toBeTruthy();
+    // 벌금 셀: 숫자 + "원" 분리 렌더
+    expect(screen.getByText("5,000")).toBeTruthy();
+    expect(screen.getByText("원")).toBeTruthy();
   });
 
   it("값이 0이면 그대로 0 노출 (빈 상태도 비주얼 유지)", () => {
     render(<StatsGrid activeCount={0} completedToday={0} pendingToday={0} totalPenalty={0} />);
-    expect(screen.getAllByText("0").length).toBe(3);
-    expect(screen.getByText("0원")).toBeTruthy();
+    // 4개 셀 모두 "0" — 동일 텍스트 4번 등장.
+    expect(screen.getAllByText("0").length).toBe(4);
+    // 벌금 단위 "원" 노출
+    expect(screen.getByText("원")).toBeTruthy();
   });
 });
