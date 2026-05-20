@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChallengeMemberView = {
@@ -32,65 +33,65 @@ export type ChallengeDetailView = {
   participantCount: number;
 };
 
-export async function fetchChallengeDetail(
-  challengeId: string,
-): Promise<ChallengeDetailView | null> {
-  const supabase = await createClient();
-  // D-016: groups 계좌 필드는 마스킹·표시용 3개만 SELECT. 암호문(account_number_encrypted)
-  // 은 revealAccountNumber Server Action 한 경로로만 조회.
-  const { data: c, error } = await supabase
-    .from("challenges")
-    .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
-    )
-    .eq("id", challengeId)
-    .maybeSingle();
-  if (error || !c) return null;
+export const fetchChallengeDetail = cache(
+  async (challengeId: string): Promise<ChallengeDetailView | null> => {
+    const supabase = await createClient();
+    // D-016: groups 계좌 필드는 마스킹·표시용 3개만 SELECT. 암호문(account_number_encrypted)
+    // 은 revealAccountNumber Server Action 한 경로로만 조회.
+    const { data: c, error } = await supabase
+      .from("challenges")
+      .select(
+        "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
+      )
+      .eq("id", challengeId)
+      .maybeSingle();
+    if (error || !c) return null;
 
-  const groupRow = Array.isArray(c.groups) ? c.groups[0] : c.groups;
+    const groupRow = Array.isArray(c.groups) ? c.groups[0] : c.groups;
 
-  const { data: parts } = await supabase
-    .from("challenge_participants")
-    .select("user_id, signed_at, users!inner(display_name)")
-    .eq("challenge_id", challengeId);
+    const { data: parts } = await supabase
+      .from("challenge_participants")
+      .select("user_id, signed_at, users!inner(display_name)")
+      .eq("challenge_id", challengeId);
 
-  const counts = new Map<string, number>();
-  const { data: logs } = await supabase
-    .from("action_logs")
-    .select("user_id")
-    .eq("challenge_id", challengeId);
-  for (const l of logs ?? []) {
-    counts.set(l.user_id, (counts.get(l.user_id) ?? 0) + 1);
-  }
+    const counts = new Map<string, number>();
+    const { data: logs } = await supabase
+      .from("action_logs")
+      .select("user_id")
+      .eq("challenge_id", challengeId);
+    for (const l of logs ?? []) {
+      counts.set(l.user_id, (counts.get(l.user_id) ?? 0) + 1);
+    }
 
-  const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
-    const u = Array.isArray(p.users) ? p.users[0] : p.users;
+    const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
+      const u = Array.isArray(p.users) ? p.users[0] : p.users;
+      return {
+        id: p.user_id,
+        displayName: u?.display_name ?? "익명",
+        doneCount: counts.get(p.user_id) ?? 0,
+        signed: p.signed_at != null,
+      };
+    });
+
     return {
-      id: p.user_id,
-      displayName: u?.display_name ?? "익명",
-      doneCount: counts.get(p.user_id) ?? 0,
-      signed: p.signed_at != null,
+      id: c.id,
+      title: c.title,
+      goalCount: c.goal_count,
+      durationDays: c.duration_days,
+      penaltyAmount: c.penalty_amount,
+      status: c.status as ChallengeDetailView["status"],
+      startAt: c.start_at,
+      endAt: c.end_at,
+      members,
+      potTotal: members.length * c.penalty_amount,
+      participantCount: members.length,
+      group: {
+        id: groupRow?.id ?? c.group_id,
+        ownerId: groupRow?.owner_id ?? "",
+        bankCode: groupRow?.bank_code ?? null,
+        accountHolder: groupRow?.account_holder ?? null,
+        accountNumberLast4: groupRow?.account_number_last4 ?? null,
+      },
     };
-  });
-
-  return {
-    id: c.id,
-    title: c.title,
-    goalCount: c.goal_count,
-    durationDays: c.duration_days,
-    penaltyAmount: c.penalty_amount,
-    status: c.status as ChallengeDetailView["status"],
-    startAt: c.start_at,
-    endAt: c.end_at,
-    members,
-    potTotal: members.length * c.penalty_amount,
-    participantCount: members.length,
-    group: {
-      id: groupRow?.id ?? c.group_id,
-      ownerId: groupRow?.owner_id ?? "",
-      bankCode: groupRow?.bank_code ?? null,
-      accountHolder: groupRow?.account_holder ?? null,
-      accountNumberLast4: groupRow?.account_number_last4 ?? null,
-    },
-  };
-}
+  },
+);
