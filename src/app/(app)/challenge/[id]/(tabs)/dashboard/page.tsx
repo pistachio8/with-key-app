@@ -38,6 +38,7 @@ export default async function ChallengeDashboardPage({ params }: { params: Param
         totalActions={feed.length}
         totalFailures={totalFailures}
         daysRemaining={daysLeft}
+        status={detail.status}
         members={detail.members}
         goalCount={detail.goalCount}
       />
