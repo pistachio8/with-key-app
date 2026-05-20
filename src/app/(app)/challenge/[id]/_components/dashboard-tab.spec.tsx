@@ -9,6 +9,7 @@ const baseProps = {
   totalFailures: 3,
   daysRemaining: 15,
   goalCount: 30,
+  status: "active" as const,
   members: [
     { id: "u1", displayName: "두두", doneCount: 13, signed: true },
     { id: "u2", displayName: "민지", doneCount: 15, signed: true },
@@ -29,8 +30,23 @@ describe("DashboardTab", () => {
     expect(screen.getByText("남은 15일")).toBeTruthy();
   });
 
-  it("shows '종료' when daysRemaining is null (closed challenge)", () => {
-    render(<DashboardTab {...baseProps} daysRemaining={null} />);
+  it("shows '시작 전' when status is pending", () => {
+    render(<DashboardTab {...baseProps} status="pending" daysRemaining={null} />);
+    expect(screen.getByText("시작 전")).toBeTruthy();
+  });
+
+  it("shows '곧 시작' when status is accepted", () => {
+    render(<DashboardTab {...baseProps} status="accepted" daysRemaining={null} />);
+    expect(screen.getByText("곧 시작")).toBeTruthy();
+  });
+
+  it("shows '종료' when status is closed", () => {
+    render(<DashboardTab {...baseProps} status="closed" daysRemaining={0} />);
     expect(screen.getByText("종료")).toBeTruthy();
+  });
+
+  it("does NOT show '종료' for pending with null daysRemaining (regression: endAt-null bug)", () => {
+    render(<DashboardTab {...baseProps} status="pending" daysRemaining={null} />);
+    expect(screen.queryByText("종료")).toBeNull();
   });
 });
