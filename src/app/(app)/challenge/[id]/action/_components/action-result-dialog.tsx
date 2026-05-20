@@ -47,7 +47,7 @@ export function ActionResultDialog({
   function handleViewDashboard() {
     onOpenChange(false);
     // F8: 현황판 탭 (?tab=dashboard).
-    router.replace(`/challenge/${challengeId}?tab=dashboard`);
+    router.replace(`/challenge/${challengeId}/dashboard`);
   }
 
   return (

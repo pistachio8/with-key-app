@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
 import { generateDiary } from "@/lib/ai/diary";
@@ -199,6 +200,12 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       },
       { userId: user.id },
     );
+
+    // nested layout 구조에서는 layout 의 fetch 결과 + page 의 feed/dashboard fetch 가
+    // Next.js Router cache 로 보관됨. 인증 완료 후 client navigation 으로 돌아왔을 때
+    // 새 action_log 가 반영되려면 revalidatePath 가 필수.
+    revalidatePath(`/challenge/${parsed.input.challengeId}`);
+    revalidatePath(`/challenge/${parsed.input.challengeId}/dashboard`);
 
     return success({
       id: data.id,

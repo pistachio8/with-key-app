@@ -6,6 +6,7 @@ import { Activity, Check, Circle, Clock, Users } from "lucide-react";
 import { formatKRW } from "@/lib/challenge/penalty";
 import { cn } from "@/lib/utils";
 import type { GroupChallengeView } from "@/lib/db/reads/current-challenges";
+import { RowPendingIndicator } from "./row-pending-indicator";
 
 type ChallengeView = NonNullable<GroupChallengeView["challenge"]>;
 type ChallengeStatus = ChallengeView["status"];
@@ -74,9 +75,11 @@ export function RunningChallengeList({ groups }: Props) {
                     potTotal={c.potTotal}
                   />
                 </div>
-                <span className="t-caption shrink-0 tabular-nums">
-                  {joinedLate ? "다음부터" : c.status === "active" ? `D-${c.daysLeft}` : "대기"}
-                </span>
+                <RowPendingIndicator
+                  daysLeft={c.daysLeft}
+                  joinedLate={joinedLate}
+                  status={c.status}
+                />
               </Link>
             </li>
           );
