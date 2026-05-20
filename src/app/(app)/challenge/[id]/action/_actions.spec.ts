@@ -41,6 +41,11 @@ vi.mock("@/lib/analytics/track", () => ({
   track: (...args: unknown[]) => mocks.track(...args),
 }));
 
+// revalidatePath 는 Next.js runtime store 에 의존 — unit test 에서는 no-op mock.
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 import { submitActionLog } from "./_actions";
 
 const challengeId = "22222222-2222-4222-8222-222222222222";
