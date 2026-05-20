@@ -113,7 +113,7 @@ export function AccountInputSheet({
                 const v = e.target.value;
                 setBankCode(isBankCode(v) ? v : "");
               }}
-              className="border-border bg-card rounded-lg border px-3 py-2 text-[13px]"
+              className="border-border bg-card h-11 rounded-lg border px-3 text-sm"
             >
               <option value="">선택</option>
               {BANK_CODES.map((c) => (
@@ -132,6 +132,7 @@ export function AccountInputSheet({
               value={accountHolder}
               onChange={(e) => setAccountHolder(e.target.value)}
               maxLength={30}
+              className="h-11 text-base"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -145,6 +146,7 @@ export function AccountInputSheet({
               inputMode="numeric"
               maxLength={16}
               placeholder="숫자만 8~16자리"
+              className="h-11 text-base"
             />
             <p className="text-muted-foreground text-[10px]">
               계좌번호는 서버에서 암호화되어 저장돼요
@@ -152,10 +154,16 @@ export function AccountInputSheet({
           </div>
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
+          <Button
+            variant="ghost"
+            size="lg"
+            className="h-11 text-sm"
+            onClick={() => setOpen(false)}
+            disabled={pending}
+          >
             취소
           </Button>
-          <Button onClick={submit} disabled={pending}>
+          <Button size="lg" className="h-11 text-sm" onClick={submit} disabled={pending}>
             {pending ? "저장 중..." : isEdit ? "변경 저장" : "계좌 추가"}
           </Button>
         </DialogFooter>
