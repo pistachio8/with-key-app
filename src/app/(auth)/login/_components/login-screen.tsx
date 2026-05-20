@@ -83,7 +83,12 @@ function LoginForm({ next, inAppKind, searchString }: LoginFormProps) {
       const callback = `${origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "kakao",
-        options: { redirectTo: callback },
+        // ADR-0008: 카카오 콘솔 동의항목과 1:1 정렬. nickname 필수 + image 선택.
+        // Supabase default scopes 가 account_email 을 포함하므로 명시적으로 덮어써서 배제 (개인 개발자 앱은 이메일 동의항목 등록 불가).
+        options: {
+          redirectTo: callback,
+          scopes: "profile_nickname profile_image",
+        },
       });
       if (error) {
         console.error("[LoginForm] signInWithOAuth kakao failed:", error.message);
