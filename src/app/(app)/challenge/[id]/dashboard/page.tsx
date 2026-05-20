@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { Camera } from "lucide-react";
-import { Fab } from "@/components/ui/fab";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
+import { ActionFab } from "../_components/action-fab";
 import { DashboardTab } from "../_components/dashboard-tab";
 
 type Params = Promise<{ id: string }>;
@@ -42,14 +41,7 @@ export default async function ChallengeDashboardPage({ params }: { params: Param
         members={detail.members}
         goalCount={detail.goalCount}
       />
-      {actionHref && (
-        <Fab
-          href={actionHref}
-          label="인증하기"
-          icon={Camera}
-          className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2"
-        />
-      )}
+      <ActionFab href={actionHref} />
     </>
   );
 }
