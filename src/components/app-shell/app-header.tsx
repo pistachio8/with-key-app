@@ -6,8 +6,9 @@ import { GroupSwitcherTrigger } from "./group-switcher-trigger";
 import type { GroupSwitcherItem } from "./group-switcher-sheet";
 
 interface AppHeaderProps {
-  /** F15 — 사용자 소속 그룹 목록. 0개: /group/new, 1개: 직진입, 2개+: sheet. */
+  /** F15/ADR-0012 — 사용자 소속 그룹 목록. 0개: /group/new, 1개+: sheet. */
   groups?: ReadonlyArray<GroupSwitcherItem>;
+  newGroupNamePreview?: string;
   /** DESIGN_BRIEF §1.5 — 미읽음 Kudos/알림 dot. presence only. */
   unreadNotifications?: boolean;
 }
@@ -18,10 +19,13 @@ const ICON_LINK_CLASSES = cn(
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 );
 
-export function AppHeader({ groups = [], unreadNotifications = false }: AppHeaderProps) {
+export function AppHeader({
+  groups = [],
+  newGroupNamePreview = "내님과 친구들",
+  unreadNotifications = false,
+}: AppHeaderProps) {
   const groupCount = groups.length;
-  const multipleGroups = groupCount >= 2;
-  const singleGroup = groupCount === 1 ? groups[0] : null;
+  const hasGroups = groupCount >= 1;
 
   return (
     <header className="bg-background/90 sticky top-0 z-30 flex items-center justify-between px-4 py-3 backdrop-blur">
@@ -55,16 +59,12 @@ export function AppHeader({ groups = [], unreadNotifications = false }: AppHeade
             />
           )}
         </Link>
-        {multipleGroups ? (
-          <GroupSwitcherTrigger variant="icon" groups={groups} />
-        ) : singleGroup ? (
-          <Link
-            href={`/group/${singleGroup.id}`}
-            aria-label={`그룹: ${singleGroup.name ?? "이름 없는 그룹"}`}
-            className={ICON_LINK_CLASSES}
-          >
-            <Users className="size-5" aria-hidden="true" />
-          </Link>
+        {hasGroups ? (
+          <GroupSwitcherTrigger
+            variant="icon"
+            groups={groups}
+            newGroupNamePreview={newGroupNamePreview}
+          />
         ) : (
           <Link href="/group/new" aria-label="새 그룹 만들기" className={ICON_LINK_CLASSES}>
             <Users className="size-5" aria-hidden="true" />

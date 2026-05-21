@@ -13,6 +13,7 @@ interface GroupSwitcherTriggerProps {
   label?: string;
   groups: ReadonlyArray<GroupSwitcherItem>;
   activeId?: string;
+  newGroupNamePreview: string;
 }
 
 const ICON_BUTTON_CLASSES = cn(
@@ -31,6 +32,7 @@ export function GroupSwitcherTrigger({
   label,
   groups,
   activeId,
+  newGroupNamePreview,
 }: GroupSwitcherTriggerProps) {
   const [open, setOpen] = useState(false);
   const isIcon = variant === "icon";
@@ -63,7 +65,13 @@ export function GroupSwitcherTrigger({
           </>
         )}
       </button>
-      <GroupSwitcherSheet open={open} onOpenChange={setOpen} groups={groups} activeId={activeId} />
+      <GroupSwitcherSheet
+        open={open}
+        onOpenChange={setOpen}
+        groups={groups}
+        activeId={activeId}
+        newGroupNamePreview={newGroupNamePreview}
+      />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupInputSchema } from "./group";
+import { groupInputSchema, renameGroupInputSchema } from "./group";
 import { inviteTokenSchema } from "./invite";
 
 const VALID = {
@@ -90,5 +90,32 @@ describe("inviteTokenSchema", () => {
 
   it("rejects empty string", () => {
     expect(inviteTokenSchema.safeParse("").success).toBe(false);
+  });
+});
+
+describe("renameGroupInputSchema", () => {
+  it("trims and accepts a valid group name", () => {
+    const result = renameGroupInputSchema.safeParse({
+      groupId: "11111111-1111-4111-8111-111111111111",
+      name: "  러닝 크루  ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.name).toBe("러닝 크루");
+  });
+
+  it("rejects blank or overlong names", () => {
+    expect(
+      renameGroupInputSchema.safeParse({
+        groupId: "11111111-1111-4111-8111-111111111111",
+        name: " ",
+      }).success,
+    ).toBe(false);
+    expect(
+      renameGroupInputSchema.safeParse({
+        groupId: "11111111-1111-4111-8111-111111111111",
+        name: "x".repeat(31),
+      }).success,
+    ).toBe(false);
   });
 });

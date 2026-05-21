@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 
 import { AppHeader } from "./app-header";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
 
 describe("AppHeader", () => {
   it("좌측 로고 링크가 /home 으로 이동하고 aria-label='홈'", () => {
@@ -18,7 +25,7 @@ describe("AppHeader", () => {
     const rightCluster = header!.querySelector("div.flex.items-center.gap-1");
     expect(rightCluster).not.toBeNull();
 
-    const labels = Array.from(within(rightCluster as HTMLElement).getAllByRole("link")).map(
+    const labels = Array.from((rightCluster as HTMLElement).querySelectorAll("a,button")).map(
       (el) => el.getAttribute("aria-label") ?? "",
     );
     expect(labels).toEqual(["알림", "새 그룹 만들기", "마이페이지"]);
@@ -30,16 +37,16 @@ describe("AppHeader", () => {
     expect(link.getAttribute("href")).toBe("/group/new");
   });
 
-  it("그룹 1개면 그룹 아이콘이 /group/{id} 직진입 + '그룹: {name}' 라벨", () => {
+  it("그룹 1개면 그룹 아이콘이 sheet 트리거 버튼 + '그룹 선택' 라벨", () => {
     render(<AppHeader groups={[{ id: "g1", name: "러닝 크루" }]} />);
-    const link = screen.getByRole("link", { name: "그룹: 러닝 크루" });
-    expect(link.getAttribute("href")).toBe("/group/g1");
+    const btn = screen.getByRole("button", { name: "그룹 선택" });
+    expect(btn.getAttribute("aria-haspopup")).toBe("dialog");
   });
 
-  it("그룹 1개에 이름이 null 이면 라벨은 '그룹: 이름 없는 그룹'", () => {
+  it("그룹 1개에 이름이 null 이어도 sheet 트리거 버튼을 렌더", () => {
     render(<AppHeader groups={[{ id: "g1", name: null }]} />);
-    const link = screen.getByRole("link", { name: "그룹: 이름 없는 그룹" });
-    expect(link.getAttribute("href")).toBe("/group/g1");
+    const btn = screen.getByRole("button", { name: "그룹 선택" });
+    expect(btn.getAttribute("aria-haspopup")).toBe("dialog");
   });
 
   it("그룹 2개+면 그룹 아이콘이 sheet 트리거 버튼 + '그룹 선택' 라벨", () => {

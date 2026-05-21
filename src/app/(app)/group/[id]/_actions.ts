@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
+import { renameGroupInputSchema, type RenameGroupInput } from "@/lib/validators/group";
 import { track } from "@/lib/analytics/track";
 import { generateInviteToken } from "@/lib/invite/token";
 import { encryptAccountNumber } from "@/lib/crypto/account-cipher";
@@ -56,6 +57,78 @@ export const updateGroupAccount = withUser<UpdateGroupAccountInput, { id: string
     if (!data) return failure("forbidden");
 
     return success({ id: data.id as string });
+  },
+);
+
+export const renameGroup = withUser<RenameGroupInput, { id: string; name: string }>(
+  async (user, input): Promise<ActionResult<{ id: string; name: string }>> => {
+    const parsed = renameGroupInputSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+
+    const { groupId, name } = parsed.data;
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("groups")
+      .update({ name })
+      .eq("id", groupId)
+      .eq("owner_id", user.id)
+      .select("id, name")
+      .maybeSingle();
+
+    if (error) return failure(mapSupabaseError(error));
+    if (!data) return failure("forbidden");
+
+    return success({ id: data.id as string, name: data.name as string });
+  },
+);
+
+export const deleteGroup = withUser<string, { id: string }>(
+  async (user, input): Promise<ActionResult<{ id: string }>> => {
+    const parsed = groupIdSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+
+    const groupId = parsed.data;
+    const supabase = await createClient();
+    const { data: group, error: groupError } = await supabase
+      .from("groups")
+      .select("id, owner_id")
+      .eq("id", groupId)
+      .maybeSingle();
+
+    if (groupError) return failure(mapSupabaseError(groupError));
+    if (!group) return failure("not_found");
+    if (group.owner_id !== user.id) return failure("forbidden");
+
+    const { count: memberCount, error: memberError } = await supabase
+      .from("group_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("group_id", groupId);
+    if (memberError) return failure(mapSupabaseError(memberError));
+    if ((memberCount ?? 0) !== 1) {
+      return failure("invalid_input", {
+        groupId: ["친구와 함께한 그룹은 삭제할 수 없어요"],
+      });
+    }
+
+    const { count: challengeCount, error: challengeError } = await supabase
+      .from("challenges")
+      .select("id", { count: "exact", head: true })
+      .eq("group_id", groupId);
+    if (challengeError) return failure(mapSupabaseError(challengeError));
+    if ((challengeCount ?? 0) > 0) {
+      return failure("invalid_input", {
+        groupId: ["한 번이라도 챌린지를 시작한 그룹은 삭제할 수 없어요"],
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from("groups")
+      .delete()
+      .eq("id", groupId)
+      .eq("owner_id", user.id);
+
+    if (deleteError) return failure(mapSupabaseError(deleteError));
+    return success({ id: groupId });
   },
 );
 

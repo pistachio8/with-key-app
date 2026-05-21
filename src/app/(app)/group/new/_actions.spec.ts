@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const rpc = vi.fn();
+const usersMaybeSingle = vi.fn();
+const ownerGroupsSelect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -15,6 +17,23 @@ vi.mock("@/lib/supabase/server", () => ({
       }),
     },
     rpc: (name: string, args: unknown) => rpc(name, args),
+    from: (table: string) => {
+      if (table === "users") {
+        return {
+          select: () => ({
+            eq: () => ({ maybeSingle: usersMaybeSingle }),
+          }),
+        };
+      }
+      if (table === "groups") {
+        return {
+          select: () => ({
+            eq: () => ({ is: () => ownerGroupsSelect() }),
+          }),
+        };
+      }
+      throw new Error(`unexpected from(${table})`);
+    },
   }),
 }));
 
@@ -46,6 +65,8 @@ const VALID = {
 
 beforeEach(() => {
   rpc.mockReset();
+  usersMaybeSingle.mockReset();
+  ownerGroupsSelect.mockReset();
   trackCalls.length = 0;
 });
 
@@ -96,6 +117,55 @@ describe("createGroup", () => {
     });
     const ev = trackCalls[0]!.event as { props: { hasAccount: boolean } };
     expect(ev.props.hasAccount).toBe(false);
+  });
+
+  it("name 생략 + owner default 그룹 0개 → 기본 이름으로 RPC 호출", async () => {
+    const groupId = "44444444-4444-4444-8444-444444444444";
+    usersMaybeSingle.mockResolvedValueOnce({ data: { display_name: "민지" }, error: null });
+    ownerGroupsSelect.mockResolvedValueOnce({ data: [], error: null });
+    rpc.mockResolvedValueOnce({ data: groupId, error: null });
+
+    const res = await createGroup({});
+
+    expect(res.ok).toBe(true);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_group_with_owner",
+      expect.objectContaining({ p_name: "민지님과 친구들" }),
+    );
+  });
+
+  it("name 생략 + owner default 그룹 1개 → #2 suffix를 붙인다", async () => {
+    usersMaybeSingle.mockResolvedValueOnce({ data: { display_name: "민지" }, error: null });
+    ownerGroupsSelect.mockResolvedValueOnce({
+      data: [{ name: "민지님과 친구들" }],
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: "55555555-5555-4555-8555-555555555555", error: null });
+
+    const res = await createGroup({ name: "   " });
+
+    expect(res.ok).toBe(true);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_group_with_owner",
+      expect.objectContaining({ p_name: "민지님과 친구들 #2" }),
+    );
+  });
+
+  it("name 생략 + owner default 그룹 2개 → #3 suffix를 붙인다", async () => {
+    usersMaybeSingle.mockResolvedValueOnce({ data: { display_name: "민지" }, error: null });
+    ownerGroupsSelect.mockResolvedValueOnce({
+      data: [{ name: "민지님과 친구들" }, { name: "민지님과 친구들 #2" }],
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: "66666666-6666-4666-8666-666666666666", error: null });
+
+    const res = await createGroup({});
+
+    expect(res.ok).toBe(true);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_group_with_owner",
+      expect.objectContaining({ p_name: "민지님과 친구들 #3" }),
+    );
   });
 
   it("encrypts accountNumber and sends bytea + last4 to RPC; hasAccount=true", async () => {

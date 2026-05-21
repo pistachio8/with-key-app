@@ -1,7 +1,7 @@
 # ADR-0003: 그룹 UX — 자동 그룹 생성 + 명시 UI 폐기
 
 **Date**: 2026-05-14
-**Status**: accepted
+**Status**: accepted, extended by [ADR-0012](./0012-group-persistent-crew-model.md)
 **Deciders**: ian.jung@gbike.io (PO)
 
 ## Context
