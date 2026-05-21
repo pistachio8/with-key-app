@@ -65,14 +65,17 @@ export default async function HomePage() {
     totalPenalty: activeChallenges.reduce((sum, c) => sum + c.potTotal, 0),
   };
 
-  const hasAnyGroup = groups.length > 0;
+  // 모킹업 §2-A — 빈 상태 분기 기준은 "그룹 존재"가 아니라 "진행/대기 챌린지 존재".
+  // fetchCurrentChallenges 가 status IN (pending, accepted, active) 만 채우므로,
+  // challenge !== null ↔ 현재 활성/대기 챌린지가 그 그룹에 있다.
+  const hasAnyChallenge = groups.some((g) => g.challenge !== null);
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <PwaGate />
       <HomeGreeting displayName={displayName ?? "친구"} />
 
-      {hasAnyGroup ? (
+      {hasAnyChallenge ? (
         <>
           <InvitedChallengeBanner invites={invites} />
           <StatsGrid {...stats} />
