@@ -107,6 +107,14 @@
   --motion-stamp: 520ms;
   --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-soft: cubic-bezier(0.8, 0.2, 1, 0.6);
+
+  /* 청첩장 정산 (recap §11-C/D) */
+  --invite-bg: #faf6ef;
+  --invite-ink: #2a221c;
+  --invite-muted: #5e4838;
+  --invite-accent: #b07a4d;
+  --invite-gold: #c9a878;
+  --invite-line: #e5d8c2;
 }
 
 /* Dark mode 토큰 — POC light-only. 인프라 보존, 활성화 안 함. */
