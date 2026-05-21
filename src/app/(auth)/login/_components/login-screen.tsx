@@ -183,7 +183,6 @@ function LoginForm({ next, inAppKind, searchString }: LoginFormProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="h-12"
                     aria-label="이메일"
                     autoComplete="email"
                   />

@@ -52,7 +52,7 @@ export function ActionResultDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-sm">
         {variant === "completed" && (
           <CompletedBody currentDay={currentDay ?? 1} totalDays={totalDays ?? 1} />
         )}
@@ -67,15 +67,15 @@ export function ActionResultDialog({
         <footer className="mt-2 flex gap-2">
           {variant === "failed" ? (
             <>
-              <Button variant="outline" className="h-12 flex-1" onClick={handleConfirm}>
+              <Button variant="outline" className="h-11 flex-1" onClick={handleConfirm}>
                 닫기
               </Button>
-              <Button className="h-12 flex-1" onClick={handleViewDashboard}>
+              <Button className="h-11 flex-1" onClick={handleViewDashboard}>
                 내 현황 보기
               </Button>
             </>
           ) : (
-            <Button className="h-12 w-full" onClick={handleConfirm}>
+            <Button className="h-11 w-full" onClick={handleConfirm}>
               확인
             </Button>
           )}

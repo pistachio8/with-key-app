@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BANK_CODES, BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { updateGroupAccount } from "../_actions";
@@ -96,7 +103,7 @@ export function AccountInputSheet({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger ?? defaultTrigger} />
-      <DialogContent>
+      <DialogContent className="max-h-[85svh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>정산용 계좌</DialogTitle>
           <DialogDescription>챌린지 종료 후 멤버들이 벌금을 송금할 계좌예요.</DialogDescription>
@@ -106,22 +113,23 @@ export function AccountInputSheet({
             <label htmlFor={bankId} className="t-caption">
               은행
             </label>
-            <select
+            <Select
               id={bankId}
               value={bankCode}
-              onChange={(e) => {
-                const v = e.target.value;
-                setBankCode(isBankCode(v) ? v : "");
-              }}
-              className="border-border bg-card h-11 rounded-lg border px-3 text-sm"
+              onValueChange={(v) => setBankCode(v && isBankCode(v) ? v : "")}
+              items={BANK_NAMES}
             >
-              <option value="">선택</option>
-              {BANK_CODES.map((c) => (
-                <option key={c} value={c}>
-                  {BANK_NAMES[c]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {BANK_CODES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {BANK_NAMES[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor={holderId} className="t-caption">
@@ -132,7 +140,6 @@ export function AccountInputSheet({
               value={accountHolder}
               onChange={(e) => setAccountHolder(e.target.value)}
               maxLength={30}
-              className="h-11 text-base"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -146,7 +153,6 @@ export function AccountInputSheet({
               inputMode="numeric"
               maxLength={16}
               placeholder="숫자만 8~16자리"
-              className="h-11 text-base"
             />
             <p className="text-muted-foreground text-[10px]">
               계좌번호는 서버에서 암호화되어 저장돼요
