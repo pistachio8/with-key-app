@@ -8,13 +8,13 @@ status: draft
 
 ## 목표
 
-- **G1**: `push-settings.tsx` 의 `ensureSubscription` 이 `pushManager.getSubscription()` 으로 브라우저 실제 구독을 진실 원천으로 사용, server `push_subscriptions` row 와 항상 silent 동기화.
-  - Stale state 우회 차단을 위해 **(a)** `if (subscribed) return true` early-return 제거 + **(b)** 호출 분기 `if (turningOn && !subscribed)` 를 `if (turningOn)` 으로 변경. `syncBrowserSubscription` 이 idempotent(reuse) 라 매 ON 클릭 안전.
+- **G1**: `push-settings.tsx` 의 `ensureSubscription` 이 `pushManager.getSubscription()` 으로 브라우저 실제 구독을 진실 원천으로 사용, server `push_subscriptions` row 와 항상 silent 동기화. `if (subscribed) return true` early-return 제거 + `handlePrefChange` 분기 `if (turningOn && !subscribed)` → `if (turningOn)` 로 stale client state 우회 차단.
 - **G2**: 신규 가입자 기본값을 OFF 로 변경.
-  - **(a)** `notification-prefs.ts` 의 `DEFAULT_PREFS` 를 `{start:false, deadline:false}` (UI fallback 정합) + **(b)** `users.notification_prefs` column default 를 `'{"start":false,"deadline":false}'::jsonb` 으로 migration. 기존 row 는 ALTER COLUMN DEFAULT 특성상 영향 없음.
-- **G3**: 호출처 1곳 교체로 dead code 된 `subscribeToPush` 와 관련 spec 정리.
+  - `notification-prefs.ts` 의 `DEFAULT_PREFS` 를 `{start:false, deadline:false}` (UI fallback) + `users.notification_prefs` column default 를 `'{"start":false,"deadline":false}'::jsonb` 으로 migration. 기존 row 는 ALTER COLUMN DEFAULT 특성상 영향 없음.
+- **G3**: `subscribeToPush` 제거 (호출처 1곳뿐 → dead code) 및 spec 정리.
+- **G4**: G2 의 후속 — 신규 가입자가 OFF 로 시작하면 invite/[token] 안내 문구 "참여하면 바로 알림을 받아요" 가 거짓 약속이 됨. 문구 수정 + accept 직후 서버가 `prefs.start=false` 신호 보내면 toast("설정 열기" 액션) 노출.
 
-PRD §6.2/6.3 (시작·마감 푸시 AC). 운영 환경에서 `notification_prefs.start=true` ∧ `push_subscriptions=∅` 정합 깨짐 상태가 코드 흐름상 생성 가능함을 확인 — 본 plan 으로 invariant 복원.
+PRD §6.2/6.3 (시작·마감 푸시 AC). 운영 환경에서 `notification_prefs.start=true` ∧ `push_subscriptions=∅` 정합 깨짐 상태가 코드 흐름상 생성 가능함을 확인 — 본 plan 으로 invariant 복원 + 신규 가입자 onboarding 가이드 추가.
 
 ## 영향 범위
 
@@ -26,49 +26,31 @@ PRD §6.2/6.3 (시작·마감 푸시 AC). 운영 환경에서 `notification_pref
   - `src/lib/db/reads/notification-prefs.ts` — `DEFAULT_PREFS = {start:false, deadline:false}`
   - `supabase/migrations/0031_notification_prefs_default_off.sql` — 신규 (column default 변경)
   - `docs/adr/0013-notification-prefs-default-off.md` — 신규 (가드레일 §4: migration → ADR)
+  - `src/app/(auth)/invite/[token]/_actions.ts` — `acceptInvite` 응답에 `notifPromptRequired: boolean` 추가 (server-side `fetchNotificationPrefs(user.id).start === false` 체크)
+  - `src/app/(auth)/invite/[token]/_actions.spec.ts` — `fetchNotificationPrefs` mock + 케이스 2개 (true/false)
+  - `src/app/(auth)/invite/[token]/_components/accept-form.tsx` — 성공 분기에서 `notifPromptRequired:true` 시 toast(action="설정 열기") 노출
+  - `src/app/(auth)/invite/[token]/_components/accept-form.spec.tsx` — sonner mock 재구성 + 케이스 2개
+  - `src/app/(auth)/invite/[token]/page.tsx:157` — 거짓 약속 문구 수정 ("바로 알림을 받아요" → "알림을 켜두면 받아볼 수 있어요")
 - 데이터/RLS 영향:
-  - migration 1건 — `users.notification_prefs` column default 만 변경. 기존 row 데이터·RLS·인덱스 무변경. 신규 INSERT 부터 OFF.
-- 외부 서비스: Web Push (브라우저 PushManager · iOS APNs) — API 호출 흐름 동일, idempotent reuse 만 추가.
+  - migration 1건 — `users.notification_prefs` column default 만 변경. 기존 row 데이터·RLS·인덱스 무변경.
+- 외부 서비스: Web Push (브라우저 PushManager · iOS APNs) — API 호출 흐름 동일.
 - 재사용 후보:
   - `registerPushSubscription` Server Action (`me/_actions.ts`) — 그대로. upsert `onConflict:"endpoint"` 멱등.
-  - `urlBase64ToUint8Array` 유틸 — 기존 함수 재사용.
+  - `fetchNotificationPrefs` helper — `acceptInvite` 에서 재사용해 spec mock 간결화.
+  - sonner `toast` + Toaster (root layout) — 이미 마운트되어 navigation 후에도 살아남음.
 
 ## 작업 단계
 
-1. **(RED) `src/lib/push/subscribe.spec.ts` 갱신** — 검증: `pnpm test src/lib/push/subscribe.spec.ts` 신규 케이스 실패 확인
-   - 기존 `describe("subscribeToPush", ...)` 블록 제거
-   - 신규 `describe("syncBrowserSubscription", ...)`:
-     - 기존 sub 있음 → `subscribe()` 미호출, endpoint/keys 반환
-     - 기존 sub 없음 → `subscribe()` 호출
-     - incomplete endpoint/keys → throw `subscription_incomplete`
-     - `!isPushSupported()` → throw `push_unsupported`
-2. **(GREEN) `src/lib/push/subscribe.ts`** — 검증: 위 spec pass + `pnpm typecheck`
-   - `subscribeToPush` export 제거
-   - `syncBrowserSubscription(vapidPublicKey)` 추가:
-     - `serviceWorker.ready` → `pushManager.getSubscription()` → 있으면 reuse, 없으면 `subscribe({userVisibleOnly,applicationServerKey})`
-     - `toJSON()` validation → endpoint/keys 누락 시 throw
-3. **(RED) `push-settings.spec.tsx` 갱신** — 검증: `pnpm test push-settings` 신규 케이스 실패 확인
-   - `vi.mock("@/lib/push/subscribe", ...)` 에 `syncBrowserSubscription` mock 추가, `subscribeToPush` 제거
-   - 기존 케이스 갱신: `subscribeToPush` → `syncBrowserSubscription`
-   - 신규 케이스: **stale `initialSubscribedEndpoint != null` ∧ 토글 OFF→ON → `syncBrowserSubscription` 호출됨** (early-return + 분기 우회 둘 다 풀림 검증)
-   - 신규 케이스: 권한 거부 throw → catch → prefs 롤백 + errorMsg
-4. **(GREEN) `push-settings.tsx` ensureSubscription 재설계** — 검증: 위 spec pass
-   - import: `subscribeToPush` → `syncBrowserSubscription`
-   - `ensureSubscription` 내부:
-     - `if (subscribed) return true` 제거
-     - `await subscribeToPush(vapidPublicKey)` → `await syncBrowserSubscription(vapidPublicKey)`
-   - `handlePrefChange` 분기:
-     - `if (turningOn && !subscribed)` → `if (turningOn)` 변경
-5. **`src/lib/db/reads/notification-prefs.ts`** — 검증: 기존 spec 또는 push-settings spec 으로 간접 검증
-   - `DEFAULT_PREFS = {start:false, deadline:false}`
-6. **`supabase/migrations/0031_notification_prefs_default_off.sql`** — 검증: `pnpm supabase db reset` (로컬) 후 `\d users` 또는 information_schema 로 default 변경 확인
-   - `ALTER TABLE users ALTER COLUMN notification_prefs SET DEFAULT '{"start":false,"deadline":false}'::jsonb;`
-   - down 스크립트 없음 (POC 단방향 정책)
-7. **`docs/adr/0013-notification-prefs-default-off.md`** — `pnpm new adr notification-prefs-default-off` 로 scaffold 후 본문 작성
-   - 컨텍스트: 정합 깨짐(prefs.true ∧ row=∅) + 신규 가입자 함정
-   - 결정: column default OFF + DEFAULT_PREFS OFF
-   - 결과: 신규 가입자 명시적 ON 시점에 iOS 권한 프롬프트 발생, 기존 사용자 무영향
-   - 트레이드오프: 기존 가입자가 "처음 가입 시 자동 ON" 경험을 잃지만, 그건 정합 깨짐의 원인이었음
+1. **(RED) `src/lib/push/subscribe.spec.ts` 갱신** — 검증: `pnpm test src/lib/push/subscribe.spec.ts`
+2. **(GREEN) `src/lib/push/subscribe.ts`** — `subscribeToPush` 제거, `syncBrowserSubscription` 신규
+3. **(RED) `push-settings.spec.tsx` 갱신** — stale subscribed 케이스, rollback 케이스
+4. **(GREEN) `push-settings.tsx` ensureSubscription 재설계** — early-return + 분기 변경
+5. **`src/lib/db/reads/notification-prefs.ts`** — `DEFAULT_PREFS` OFF
+6. **`supabase/migrations/0031_notification_prefs_default_off.sql`** — column default OFF
+7. **`docs/adr/0013-notification-prefs-default-off.md`** — ADR 작성
+8. **`src/app/(auth)/invite/[token]/_actions.ts` + spec** — `acceptInvite` 응답에 `notifPromptRequired` 추가, `fetchNotificationPrefs(user.id)` 호출. spec 에 mock + 2 케이스
+9. **`src/app/(auth)/invite/[token]/_components/accept-form.tsx` + spec** — toast 분기 추가 (action="설정 열기"). spec 에 sonner mock 재구성 + 2 케이스
+10. **`src/app/(auth)/invite/[token]/page.tsx:157`** — 거짓 약속 문구 수정
 
 ## 검증
 
@@ -88,18 +70,23 @@ psql $LOCAL_DB_URL -c "SELECT column_default FROM information_schema.columns WHE
 수동 확인 항목:
 
 - [ ] 모바일 viewport (DevTools iPhone) 에서 /me 토글 OFF→ON 동작
-- [ ] stale state 시뮬레이션 — `initialSubscribedEndpoint` 가 있는 상태로 진입해 토글 OFF→ON → server row 생성 확인
+- [ ] stale state 시뮬레이션 — `initialSubscribedEndpoint` 가 있는 상태에서 토글 OFF→ON → server row 생성 확인
 - [ ] 신규 가입 시뮬레이션 (마이그레이션 적용 후 새 row INSERT) → `notification_prefs` 가 OFF 로 박힘 확인
-- [ ] 기존 사용자 row 변경 없음 확인 (운영 데이터로 spot check)
+- [ ] invite/[token] 진입 → 참여하기 → 다음 페이지에서 "알림을 켜 두면 더 좋아요" toast 노출 확인
+- [ ] toast 의 "설정 열기" 클릭 시 /me 로 이동 확인
+- [ ] 기존 사용자 (`prefs.start=true` 명시 박힘) 에서는 invite 수락 후 toast 안 뜸 확인
 
 ## 리스크 / 미해결
 
-- **`getSubscription` stale endpoint cycle**: 브라우저 sub 객체가 stale(서버 cleanup 후 잔존) 상태면 `syncBrowserSubscription` 이 reuse → register → 다음 dispatch 시 410 → cleanup → 다음 토글 시 같은 stale 반환 cycle 가능. 자연 해소 경로: iOS 시스템 알림 권한 토글 / PWA 재설치 / 명시 `unsubscribe()`. 후속 PR 에서 force-refresh 옵션 검토.
-- **migration 적용 순서**: 0030 까지 production 적용된 상태로 가정. 본 0031 이 단순 column default 변경이라 데이터 손상 없음 (ALTER COLUMN DEFAULT 는 future row 만 영향). down 없음 (POC 정책) — 롤백 필요 시 0032 추가 migration 으로 처리.
-- **stash 충돌 가능성**: 본 작업 종료 후 `fix/home-empty-state-no-challenges` 로 돌아가 `git stash pop` 시 `src/app/(app)/home/page.tsx` 가 develop fast-forward 로 변경됐으므로 충돌 가능. 해당 시점 사용자 판단으로 conflict 해소.
+- **`getSubscription` stale endpoint cycle**: 브라우저 sub 객체가 stale 상태면 reuse → register → dispatch 시 410 → cleanup → 다음 토글 시 같은 stale 반환 cycle 가능. 자연 해소 경로: iOS 시스템 알림 권한 토글 / PWA 재설치 / 명시 `unsubscribe()`. 후속 PR 에서 force-refresh 옵션 검토.
+- **toast UX**: 다음 페이지 (/pledge 등) 에서 사용자가 서명에 집중하느라 toast 를 놓칠 가능성. duration=10s 로 완화했으나 더 persistent 한 banner UX 는 후속 PR.
+- **acceptInvite 의 server-side check 한계**: `prefs.start=false` 만 보고 toast 트리거. 정합 깨짐 상태(`prefs.start=true` ∧ row=∅) 사용자는 toast 안 뜸 — 그들은 본 PR 의 ensureSubscription 재설계로 /me 들렀을 때 자동 회복하지만, /me 까지 가도록 유도하는 추가 신호는 후속.
+- **migration 적용 순서**: 0030 까지 production 적용된 상태로 가정. 본 0031 이 단순 column default 변경이라 데이터 손상 없음. down 없음 (POC 정책).
+- **stash 충돌 가능성**: 본 작업 종료 후 `fix/home-empty-state-no-challenges` 로 돌아가 `git stash pop` 시 `src/app/(app)/home/page.tsx` 가 develop fast-forward 됐으므로 충돌 가능.
 - **후속 (Out-of-scope)**:
   - **B3** `dispatchStartNotification` 의 actor 제외 — PRD §6 재확인 후 별도 PR
   - **B4** 권한 거부 시 iOS 설정 안내 UX 강화 — 별도 PR
-  - **end-to-end 검증** — 친구가 새 챌린지에서 자연 인증 시 `notification_sent` 이벤트로 자동 확인
   - **isPushSupported 강화** — iOS standalone 검사 추가
   - **dropSubscription 분기 정리** — `if (!anyOn && subscribed)` → `if (!anyOn)` (zombie row 방지)
+  - **toast → persistent banner** — invite/수락 직후 /pledge 페이지에 banner 로 변경 검토
+  - **정합 깨짐 사용자도 toast** — `notifPromptRequired = prefs.start === false || !hasActiveSubscription` 으로 강화

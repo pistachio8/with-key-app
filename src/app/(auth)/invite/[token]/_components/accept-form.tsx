@@ -72,6 +72,17 @@ export function AcceptForm({ token, groupName, isAuthed, inAppKind = null }: Pro
           toast.error(userMessage(res.error));
           return;
         }
+        // ADR-0013 — 신규 가입자 default OFF. server 가 prefs.start=false 신호를 주면
+        // 토글 ON 안내를 toast 로 노출. Toaster 가 root layout 에 있어 navigation 후에도
+        // 살아남아 다음 페이지 (/pledge 등) 에서 사용자가 볼 수 있다.
+        if (res.data.notifPromptRequired) {
+          toast("알림을 켜 두면 더 좋아요", {
+            description:
+              "그룹원의 인증 · 챌린지 시작을 푸시로 받으려면 마이페이지에서 토글을 켜주세요.",
+            action: { label: "설정 열기", onClick: () => router.push("/me") },
+            duration: 10000,
+          });
+        }
         router.push(res.data.redirectTo);
       } catch (err) {
         console.error("[AcceptForm] unexpected throw:", err);

@@ -154,7 +154,8 @@ export default async function InvitePage({ params }: { params: Params }) {
         </div>
       ) : (
         <p className="text-muted-foreground mt-6 break-keep text-xs">
-          아직 진행 중인 서약서가 없어요. 참여하면 그룹장이 서약서를 만들 때 바로 알림을 받아요.
+          아직 진행 중인 서약서가 없어요. 참여 후 알림을 켜두면 그룹장이 서약서를 만들 때 받아볼 수
+          있어요.
         </p>
       )}
 
