@@ -7,15 +7,15 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-// #42 fix: PR#70 시점에 `/pledge` 가 redirect 페이지로 바뀌면서
-// `fetchPendingPledge(user.id)` (정렬 없는 `.limit(1)`) 가 잔여 pending challenge 로
-// redirect 해, spec 이 만든 "서명 전이 테스트" 가 표시되지 않는 결정적 실패였다.
-// 결정성 확보를 위해 `/challenge/${ch.id}/pledge` 로 직접 진입.
-//
-// 또한 PledgeSheet 는 `disabled={!agreed || !signature || pending}` — checkbox 외에
-// 전자 서명 캔버스 입력이 추가됐다. PointerEvent stroke 를 시뮬레이션해 `hasInk` →
-// `onChange(dataURL)` 경로를 흐르게 한 뒤 버튼 enabled 를 기다린다.
-test("last signer transitions challenge to active", async ({ page, groupId }) => {
+// #42 fix: 새 흐름 반영 (migration 0028 `pending_invite_start_flow`):
+// - `/pledge` 는 redirect 페이지 — `/challenge/${ch.id}/pledge` 로 직접 진입.
+// - PledgeSheet 는 `!agreed || !signature || pending` 로 disabled — PointerEvent
+//   stroke 시뮬레이션으로 캔버스 서명 후 `서명하고 참여` 가 enabled 된다.
+// - `sign_and_maybe_activate` 가 자동 activate 를 멈추고 서명만 기록 (0028 명시).
+//   active 전이는 owner 가 `StartChallengeCard` 의 "서명한 멤버로 시작하기" 버튼을
+//   명시적으로 누르는 흐름이다. fixture group 의 `owner_id` 는 viewer 자신이므로
+//   같은 spec 안에서 자연스럽게 양쪽 단계를 모두 실행할 수 있다.
+test("owner signs pledge and starts challenge with signed members", async ({ page, groupId }) => {
   // 1) Create a pending challenge with 2 participants: current user (unsigned)
   //    and a second user (already signed). The current user's sign via UI
   //    should fire sign_and_maybe_activate and flip the status to 'active'.
@@ -91,7 +91,14 @@ test("last signer transitions challenge to active", async ({ page, groupId }) =>
   await expect(submit).toBeEnabled({ timeout: 5_000 });
   await submit.click();
 
-  // 3) Assert — poll status in DB (Server Action + redirect may race).
+  // 3) 서명 직후 challenge 서브 페이지로 router.replace 됨. owner 로서 명시적으로
+  //    "서명한 멤버로 시작하기" 를 눌러야 active 로 전이된다 (0028 결정).
+  //    같은 카드가 헤더 영역과 정보 탭 안에 동시에 렌더되므로 `.first()` 로 잡는다.
+  const startButton = page.getByRole("button", { name: "서명한 멤버로 시작하기" }).first();
+  await expect(startButton).toBeVisible({ timeout: 10_000 });
+  await startButton.click();
+
+  // 4) Assert — poll status in DB (Server Action + redirect may race).
   await expect
     .poll(
       async () => {
