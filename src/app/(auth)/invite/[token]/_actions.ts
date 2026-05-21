@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { track } from "@/lib/analytics/track";
+import { fetchNotificationPrefs } from "@/lib/db/reads/notification-prefs";
 
 const tokenSchema = z.string().min(1);
 
@@ -24,8 +25,17 @@ function mapAcceptInviteError(err: PgErrorLike): ErrorCode {
 
 // PRD §3.3 AC-3 · BE_SCHEMA §8.3.
 // RPC accept_invite 가 만료·중복·꽉참을 한 번에 판정. 이 Action 은 매핑만.
-export const acceptInvite = withUser<string, { groupId: string; redirectTo: string }>(
-  async (user, token): Promise<ActionResult<{ groupId: string; redirectTo: string }>> => {
+// notifPromptRequired: 신규 가입자 DEFAULT_PREFS=OFF (ADR-0013) 와 정합 — 알림 미옵트인
+// 상태로 invite 를 수락하면 그룹원 인증/시작 푸시를 못 받으므로, client 가 toast 로
+// /me 토글 ON 을 안내하도록 신호를 보낸다.
+type AcceptInviteResult = {
+  groupId: string;
+  redirectTo: string;
+  notifPromptRequired: boolean;
+};
+
+export const acceptInvite = withUser<string, AcceptInviteResult>(
+  async (user, token): Promise<ActionResult<AcceptInviteResult>> => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) return validationFailure(parsed.error);
 
@@ -56,6 +66,9 @@ export const acceptInvite = withUser<string, { groupId: string; redirectTo: stri
           ? `/challenge/${latest.id}?joined_late=1`
           : `/group/${data}?joined=1`;
 
-    return success({ groupId: data, redirectTo });
+    const prefs = await fetchNotificationPrefs(user.id);
+    const notifPromptRequired = prefs.start === false;
+
+    return success({ groupId: data, redirectTo, notifPromptRequired });
   },
 );

@@ -33,6 +33,11 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
+const fetchNotificationPrefs = vi.fn();
+vi.mock("@/lib/db/reads/notification-prefs", () => ({
+  fetchNotificationPrefs: (userId: string) => fetchNotificationPrefs(userId),
+}));
+
 import { acceptInvite } from "./_actions";
 
 beforeEach(() => {
@@ -40,6 +45,9 @@ beforeEach(() => {
   getUser.mockReset();
   maybeSingle.mockReset();
   trackCalls.length = 0;
+  fetchNotificationPrefs.mockReset();
+  // 기본은 알림 ON 상태 — 신규 가입자 / OFF 케이스는 개별 it 에서 override.
+  fetchNotificationPrefs.mockResolvedValue({ start: true, deadline: true });
 });
 
 describe("acceptInvite", () => {
@@ -135,5 +143,41 @@ describe("acceptInvite", () => {
     const res = await acceptInvite("tok");
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("not_found");
+  });
+
+  it("sets notifPromptRequired=true when prefs.start is false", async () => {
+    const groupId = "22222222-2222-4222-8222-222222222222";
+    getUser.mockResolvedValueOnce({
+      data: { user: { id: "u1", email: "u@test.local" } },
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: groupId, error: null });
+    maybeSingle.mockResolvedValueOnce({
+      data: { id: "33333333-3333-4333-8333-333333333333", status: "pending" },
+      error: null,
+    });
+    fetchNotificationPrefs.mockResolvedValueOnce({ start: false, deadline: false });
+
+    const res = await acceptInvite("tok");
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.notifPromptRequired).toBe(true);
+  });
+
+  it("sets notifPromptRequired=false when prefs.start is true", async () => {
+    const groupId = "22222222-2222-4222-8222-222222222222";
+    getUser.mockResolvedValueOnce({
+      data: { user: { id: "u1", email: "u@test.local" } },
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: groupId, error: null });
+    maybeSingle.mockResolvedValueOnce({
+      data: { id: "33333333-3333-4333-8333-333333333333", status: "pending" },
+      error: null,
+    });
+    fetchNotificationPrefs.mockResolvedValueOnce({ start: true, deadline: true });
+
+    const res = await acceptInvite("tok");
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.notifPromptRequired).toBe(false);
   });
 });

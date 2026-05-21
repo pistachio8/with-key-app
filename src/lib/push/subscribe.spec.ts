@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "./subscribe";
+import { isPushSupported, syncBrowserSubscription, unsubscribeFromPush } from "./subscribe";
 
 // 65-byte VAPID public key (1 + 32 + 32), base64url 로 인코딩하면 87 chars.
 const VAPID_BASE64URL =
@@ -30,38 +30,71 @@ describe("isPushSupported", () => {
   });
 });
 
-describe("subscribeToPush", () => {
+describe("syncBrowserSubscription", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
   });
 
   it("throws when push is unsupported", async () => {
     vi.stubGlobal("navigator", {});
-    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow("push_unsupported");
+    await expect(syncBrowserSubscription(VAPID_BASE64URL)).rejects.toThrow("push_unsupported");
   });
 
-  it("calls pushManager.subscribe with VAPID key and userVisibleOnly", async () => {
-    const fakeSub = {
-      endpoint: "https://fcm.googleapis.com/fcm/send/abc",
+  it("reuses existing subscription without calling subscribe()", async () => {
+    const existingSub = {
+      endpoint: "https://web.push.apple.com/abc",
       toJSON: () => ({
-        endpoint: "https://fcm.googleapis.com/fcm/send/abc",
-        keys: { p256dh: "p256", auth: "authKey" },
+        endpoint: "https://web.push.apple.com/abc",
+        keys: { p256dh: "p", auth: "a" },
       }),
     };
-    const subscribeFn = vi.fn().mockResolvedValue(fakeSub);
+    const subscribeFn = vi.fn();
+    const getSubscriptionFn = vi.fn().mockResolvedValue(existingSub);
     vi.stubGlobal("navigator", {
       serviceWorker: {
-        ready: Promise.resolve({ pushManager: { subscribe: subscribeFn } }),
+        ready: Promise.resolve({
+          pushManager: { subscribe: subscribeFn, getSubscription: getSubscriptionFn },
+        }),
       },
     });
     vi.stubGlobal("window", { PushManager: class {} });
 
-    const out = await subscribeToPush(VAPID_BASE64URL);
+    const out = await syncBrowserSubscription(VAPID_BASE64URL);
 
     expect(out).toEqual({
-      endpoint: "https://fcm.googleapis.com/fcm/send/abc",
-      p256dh: "p256",
-      auth: "authKey",
+      endpoint: "https://web.push.apple.com/abc",
+      p256dh: "p",
+      auth: "a",
+    });
+    expect(getSubscriptionFn).toHaveBeenCalledTimes(1);
+    expect(subscribeFn).not.toHaveBeenCalled();
+  });
+
+  it("subscribes when no existing subscription", async () => {
+    const newSub = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/xyz",
+      toJSON: () => ({
+        endpoint: "https://fcm.googleapis.com/fcm/send/xyz",
+        keys: { p256dh: "p2", auth: "a2" },
+      }),
+    };
+    const subscribeFn = vi.fn().mockResolvedValue(newSub);
+    const getSubscriptionFn = vi.fn().mockResolvedValue(null);
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        ready: Promise.resolve({
+          pushManager: { subscribe: subscribeFn, getSubscription: getSubscriptionFn },
+        }),
+      },
+    });
+    vi.stubGlobal("window", { PushManager: class {} });
+
+    const out = await syncBrowserSubscription(VAPID_BASE64URL);
+
+    expect(out).toEqual({
+      endpoint: "https://fcm.googleapis.com/fcm/send/xyz",
+      p256dh: "p2",
+      auth: "a2",
     });
     expect(subscribeFn).toHaveBeenCalledTimes(1);
     const arg = subscribeFn.mock.calls[0][0];
@@ -70,23 +103,28 @@ describe("subscribeToPush", () => {
     expect((arg.applicationServerKey as Uint8Array).length).toBeGreaterThan(0);
   });
 
-  it("throws when subscription JSON is missing keys", async () => {
+  it("throws subscription_incomplete when keys missing", async () => {
     const incomplete = {
       endpoint: "https://fcm.googleapis.com/fcm/send/abc",
       toJSON: () => ({
         endpoint: "https://fcm.googleapis.com/fcm/send/abc",
-        keys: { p256dh: "", auth: "authKey" },
+        keys: { p256dh: "", auth: "a" },
       }),
     };
     const subscribeFn = vi.fn().mockResolvedValue(incomplete);
+    const getSubscriptionFn = vi.fn().mockResolvedValue(null);
     vi.stubGlobal("navigator", {
       serviceWorker: {
-        ready: Promise.resolve({ pushManager: { subscribe: subscribeFn } }),
+        ready: Promise.resolve({
+          pushManager: { subscribe: subscribeFn, getSubscription: getSubscriptionFn },
+        }),
       },
     });
     vi.stubGlobal("window", { PushManager: class {} });
 
-    await expect(subscribeToPush(VAPID_BASE64URL)).rejects.toThrow("subscription_incomplete");
+    await expect(syncBrowserSubscription(VAPID_BASE64URL)).rejects.toThrow(
+      "subscription_incomplete",
+    );
   });
 });
 

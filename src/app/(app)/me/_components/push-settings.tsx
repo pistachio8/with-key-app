@@ -6,7 +6,11 @@ import {
   registerPushSubscription,
   updateNotificationPrefs,
 } from "../_actions";
-import { isPushSupported, subscribeToPush, unsubscribeFromPush } from "@/lib/push/subscribe";
+import {
+  isPushSupported,
+  syncBrowserSubscription,
+  unsubscribeFromPush,
+} from "@/lib/push/subscribe";
 import type { NotificationPrefs } from "@/lib/validators/push";
 
 type Props = {
@@ -59,13 +63,16 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
   }
 
   const ensureSubscription = async (): Promise<boolean> => {
-    if (subscribed) return true;
     if (!vapidPublicKey) {
       setErrorMsg("알림 설정이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.");
       return false;
     }
     try {
-      const sub = await subscribeToPush(vapidPublicKey);
+      // 브라우저 PushManager 를 진실 원천으로 사용 — 기존 구독이 있으면 reuse(idempotent),
+      // 없으면 새 subscribe. server `push_subscriptions` row 와 매 호출 시 자동 정합화되어
+      // client `subscribed` state 가 stale (server 가 cleanup 했지만 mount 캐시가 남은 경우)
+      // 인 상태에서도 토글 ON 우회를 차단한다.
+      const sub = await syncBrowserSubscription(vapidPublicKey);
       const res = await registerPushSubscription(sub);
       if (!res.ok) return false;
       setSubscribed(true);
@@ -95,7 +102,10 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
     start(async () => {
       const turningOn = value === true;
       const anyOn = next.start || next.deadline;
-      if (turningOn && !subscribed) {
+      // turn-on 클릭은 client subscribed state 와 무관하게 항상 ensureSubscription 을 호출.
+      // syncBrowserSubscription 이 reuse-or-subscribe idempotent 라 매 호출 안전하고, server row
+      // 가 비어 있던 경우(정합 깨짐) 도 토글 ON 한 번으로 자동 복원된다.
+      if (turningOn) {
         const ok = await ensureSubscription();
         if (!ok) {
           setPrefs(prev);
