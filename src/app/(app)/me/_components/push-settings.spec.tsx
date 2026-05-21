@@ -12,11 +12,11 @@ vi.mock("@/app/(app)/me/_actions", () => ({
 }));
 
 const isPushSupported = vi.fn();
-const subscribeToPush = vi.fn();
+const syncBrowserSubscription = vi.fn();
 const unsubscribeFromPush = vi.fn();
 vi.mock("@/lib/push/subscribe", () => ({
   isPushSupported: () => isPushSupported(),
-  subscribeToPush: (...a: unknown[]) => subscribeToPush(...a),
+  syncBrowserSubscription: (...a: unknown[]) => syncBrowserSubscription(...a),
   unsubscribeFromPush: () => unsubscribeFromPush(),
 }));
 
@@ -28,7 +28,7 @@ beforeEach(() => {
   registerPushSubscription.mockResolvedValue({ ok: true });
   clearMyPushSubscriptions.mockResolvedValue({ ok: true });
   updateNotificationPrefs.mockResolvedValue({ ok: true });
-  subscribeToPush.mockResolvedValue({
+  syncBrowserSubscription.mockResolvedValue({
     endpoint: "https://fcm.googleapis.com/fcm/send/x",
     p256dh: "p",
     auth: "a",
@@ -45,7 +45,6 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    // useEffect sets supported → wait for toggles
     const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
     const deadlineSwitch = await screen.findByRole("switch", {
       name: "마감 임박 알림",
@@ -54,7 +53,7 @@ describe("PushSettings", () => {
     expect((deadlineSwitch as HTMLInputElement).checked).toBe(false);
   });
 
-  it("subscribes when first pref is turned on", async () => {
+  it("syncs subscription when first pref is turned on", async () => {
     render(
       <PushSettings
         initialPrefs={{ start: false, deadline: false }}
@@ -64,7 +63,7 @@ describe("PushSettings", () => {
     );
     const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
     fireEvent.click(startSwitch);
-    await waitFor(() => expect(subscribeToPush).toHaveBeenCalled());
+    await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
     await waitFor(() =>
       expect(registerPushSubscription).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -89,7 +88,7 @@ describe("PushSettings", () => {
       />,
     );
     const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
-    fireEvent.click(startSwitch); // now start=false, deadline=false → no kinds on
+    fireEvent.click(startSwitch); // start=false, deadline=false → no kinds on
     await waitFor(() => expect(unsubscribeFromPush).toHaveBeenCalled());
     await waitFor(() => expect(clearMyPushSubscriptions).toHaveBeenCalled());
     await waitFor(() =>
@@ -100,7 +99,7 @@ describe("PushSettings", () => {
     );
   });
 
-  it("does not re-subscribe when turning one pref OFF while the other stays ON", async () => {
+  it("does not call syncBrowserSubscription when turning a pref OFF", async () => {
     render(
       <PushSettings
         initialPrefs={{ start: true, deadline: true }}
@@ -109,15 +108,62 @@ describe("PushSettings", () => {
       />,
     );
     const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
-    fireEvent.click(startSwitch); // start true → false, deadline stays true
+    fireEvent.click(startSwitch); // start true → false
     await waitFor(() =>
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: false,
         deadline: true,
       }),
     );
-    expect(subscribeToPush).not.toHaveBeenCalled();
+    expect(syncBrowserSubscription).not.toHaveBeenCalled();
     expect(registerPushSubscription).not.toHaveBeenCalled();
+  });
+
+  // 핵심 회귀 케이스 — stale subscribed=true 상태에서 토글 OFF→ON 시, 기존 분기
+  // `if (turningOn && !subscribed)` 는 ensureSubscription 호출 자체를 건너뛰어
+  // server `push_subscriptions` row 가 비어있는 채로 prefs.start=true 가 박히는
+  // 정합 깨짐을 만들었다. 새 분기 `if (turningOn)` + syncBrowserSubscription 의
+  // idempotent reuse 가 이 우회를 차단해야 한다.
+  it("syncs subscription on toggle ON even when initial subscribed state is stale", async () => {
+    render(
+      <PushSettings
+        initialPrefs={{ start: false, deadline: true }}
+        initialSubscribedEndpoint="https://web.push.apple.com/stale-from-server"
+        vapidPublicKey="BFN..."
+      />,
+    );
+    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    fireEvent.click(startSwitch); // start false → true
+    await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(registerPushSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endpoint: "https://fcm.googleapis.com/fcm/send/x",
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(updateNotificationPrefs).toHaveBeenCalledWith({
+        start: true,
+        deadline: true,
+      }),
+    );
+  });
+
+  it("rolls back prefs without saving when sync fails", async () => {
+    syncBrowserSubscription.mockRejectedValueOnce(new Error("permission_denied"));
+    render(
+      <PushSettings
+        initialPrefs={{ start: false, deadline: false }}
+        initialSubscribedEndpoint={null}
+        vapidPublicKey="BFN..."
+      />,
+    );
+    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    fireEvent.click(startSwitch);
+    await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
+    expect(updateNotificationPrefs).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toBeTruthy();
   });
 
   it("shows the unsupported banner when browser lacks support", async () => {
