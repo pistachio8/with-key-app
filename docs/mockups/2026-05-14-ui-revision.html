@@ -23,6 +23,13 @@
     --danger:#FF6B6B;
     --warn:#FF8A4E;
     --success:#52C28C;
+    /* 청첩장 정산 (§11-C/D) — light inspired 톤 */
+    --invite-bg:#FAF6EF;
+    --invite-ink:#2A221C;
+    --invite-muted:#5E4838;
+    --invite-accent:#B07A4D;
+    --invite-gold:#C9A878;
+    --invite-line:#E5D8C2;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{font-family:'Pretendard',system-ui,-apple-system,sans-serif;color:var(--text);background:#EDEEF3;-webkit-font-smoothing:antialiased;}
@@ -1054,7 +1061,7 @@
 
 <!-- 11. 종료 / 정산 -->
 <section class="section">
-  <div class="section-title"><h2>11. 종료 / 정산</h2><span>썸네일·정산 메인컬러 · 안내 문구 정리 · 카카오 아이콘 제거</span></div>
+  <div class="section-title"><h2>11. 종료 / 정산</h2><span>썸네일·정산 메인컬러 · 안내 문구 정리 · 카카오 아이콘 제거 · 청첩장 정산(11-C/D)</span></div>
   <div class="grid">
 
     <div class="frame-wrap">
@@ -1100,6 +1107,105 @@
       </div>
       <div class="frame-label">11-B · 벌금 정산</div>
       <div class="frame-note">정산 카드 메인컬러 · "정산 요청" / 단톡 안내 제거 · 공유 버튼 아이콘 제거.</div>
+    </div>
+
+    <!-- 11-C · 청첩장 정산 (light inspired) -->
+    <div class="frame-wrap">
+      <div class="phone" style="background:var(--invite-bg);color:var(--invite-ink);">
+        <div class="status"><span>9:41</span><span>.ıl 📶</span></div>
+        <div class="top-bar" style="border-bottom:1px solid var(--invite-line);"><span class="back" style="color:var(--invite-ink);">←</span><span class="title" style="color:var(--invite-ink);">정산</span><span></span></div>
+
+        <!-- 오너 안내 (계좌 미등록) — 살구 톤 -->
+        <div style="background:#fff;border:1px solid var(--invite-line);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--invite-muted);margin-top:10px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--invite-accent);"></span>
+          정산 계좌가 아직 등록되지 않았어요 · <span style="color:var(--invite-accent);font-weight:600;">등록</span>
+        </div>
+
+        <!-- MyPenaltyCard (with-key 톤 — 청첩장 X) -->
+        <div class="card" style="margin-top:10px;background:var(--white);padding:12px;">
+          <div style="font-size:10px;letter-spacing:.1em;color:var(--sub);">나의 정산</div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:4px;">
+            <div style="font-size:22px;font-weight:700;color:var(--text);">5,000<span style="font-size:11px;font-weight:500;color:var(--sub);">원</span></div>
+            <div style="font-size:11px;color:var(--sub);">9 / 12회</div>
+          </div>
+          <div style="height:4px;background:var(--border-soft);border-radius:2px;margin-top:8px;overflow:hidden;">
+            <div style="width:75%;height:100%;background:var(--primary);"></div>
+          </div>
+        </div>
+
+        <!-- InvitationHeader -->
+        <div style="text-align:center;margin-top:18px;">
+          <div style="font-size:9px;letter-spacing:.35em;color:var(--invite-accent);text-transform:uppercase;">A Memoir</div>
+          <div style="font-family:'Times New Roman',serif;font-weight:600;font-size:17px;line-height:1.35;margin-top:6px;color:var(--invite-ink);">우리들의 5월 챌린지<br/>그 16일의 기록</div>
+          <div style="font-size:10px;color:var(--invite-muted);margin-top:6px;letter-spacing:.05em;">2026 · 05 · 05 — 05 · 20</div>
+        </div>
+
+        <!-- PhotoGallery 3×3 -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:14px;">
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#e8d6c2,#d6b89a);border-radius:3px;"></div>
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#d8c7b0,#bfa085);border-radius:3px;"></div>
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#ead8c0,#c8a87f);border-radius:3px;"></div>
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#c9b79b,#a98a64);border-radius:3px;"></div>
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#e8d6c2,#bfa085);border-radius:3px;"></div>
+          <div style="aspect-ratio:1/1;background:linear-gradient(135deg,#d6b89a,#a98a64);border-radius:3px;"></div>
+        </div>
+
+        <!-- divider -->
+        <div style="display:flex;align-items:center;gap:8px;color:var(--invite-accent);font-size:9px;letter-spacing:.3em;justify-content:center;margin-top:18px;">
+          <span style="height:1px;background:var(--invite-line);flex:1;"></span>
+          SETTLEMENT
+          <span style="height:1px;background:var(--invite-line);flex:1;"></span>
+        </div>
+
+        <!-- MemberRoster -->
+        <div style="text-align:center;font-size:13px;line-height:1.85;color:var(--invite-ink);margin-top:10px;">
+          <span style="font-weight:600;">김주은</span>
+          <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:var(--invite-gold);fill:none;stroke-width:2;stroke-linejoin:round;vertical-align:-1px;margin-left:2px;"><path d="M2 17l3-10 5 4 4-8 4 8 5-4 3 10z"/><path d="M2 21h20"/></svg>
+          ·
+          <span style="font-weight:600;">최소원</span><br/>
+          <span style="font-weight:600;">이성훈</span>
+          ·
+          <span style="font-weight:600;">박지민</span>
+        </div>
+
+        <!-- SettlementAccount -->
+        <div style="background:var(--white);border:1px solid var(--invite-line);border-radius:10px;padding:10px 12px;text-align:center;font-size:11px;color:var(--invite-muted);margin-top:14px;">
+          신한은행 · 110-***-****56 · <span style="color:var(--invite-ink);font-weight:600;">김주은</span>
+        </div>
+
+        <!-- ShareCardAction (with-key 톤) -->
+        <div style="margin-top:auto;display:flex;gap:8px;padding-top:14px;">
+          <button class="btn btn-secondary" style="flex:1;">결과 공유</button>
+          <button class="btn btn-primary" style="flex:1;">공유 카드 저장</button>
+        </div>
+      </div>
+      <div class="frame-label">11-C · 청첩장 정산</div>
+      <div class="frame-note">살구·아이보리 톤 본문 4섹션(헤더·갤러리·멤버·계좌). 위/아래는 with-key 톤. MVP에 작은 황금 왕관.</div>
+    </div>
+
+    <!-- 11-D · 공유 카드 PNG (1080×1080 정사각, 텍스트 중심) -->
+    <div class="frame-wrap">
+      <div style="width:280px;aspect-ratio:1/1;background:var(--invite-bg);color:var(--invite-ink);border-radius:14px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(20,24,36,.06);border:1px solid var(--invite-line);">
+        <div style="text-align:center;">
+          <div style="font-size:8px;letter-spacing:.4em;color:var(--invite-accent);text-transform:uppercase;">with-key</div>
+          <div style="font-family:'Times New Roman',serif;font-style:italic;font-size:18px;line-height:1.25;margin-top:10px;color:var(--invite-ink);">a memoir of<br/>our challenge</div>
+        </div>
+        <div style="text-align:center;font-size:13px;line-height:1.8;">
+          <span style="font-weight:600;">김주은</span>
+          <svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:var(--invite-gold);fill:none;stroke-width:2;stroke-linejoin:round;vertical-align:-1px;"><path d="M2 17l3-10 5 4 4-8 4 8 5-4 3 10z"/><path d="M2 21h20"/></svg>
+          ·
+          <span style="font-weight:600;">최소원</span><br/>
+          <span style="font-weight:600;">이성훈</span>
+          ·
+          <span style="font-weight:600;">박지민</span>
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--invite-muted);letter-spacing:.05em;">
+          신한 110-***-****56 · 김주은<br/>
+          <span style="color:var(--invite-accent);">2026 · 05 · 05 — 05 · 20</span>
+        </div>
+      </div>
+      <div class="frame-label">11-D · 공유 카드 PNG</div>
+      <div class="frame-note">1080×1080 정사각 · Next.js ImageResponse · 텍스트 중심(사진 미포함). Web Share API <code>files</code>로 SNS 직접 첨부 또는 다운로드.</div>
     </div>
 
   </div>
