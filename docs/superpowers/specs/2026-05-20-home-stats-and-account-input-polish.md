@@ -172,6 +172,7 @@ export function formatKRWParts(amount: number): { number: string; unit: "원" } 
 
 - input sheet 의 CTA Button(`size="lg" h-11`) 은 view sheet 의 reveal Button(`size="lg" h-12 w-full`) 과 동일한 톤. h-1px 차이는 무시.
 - 향후 view sheet 도 h-11 로 통일하려면 별도 작업.
+- **후속 PR**: 본 spec 의 SoT(시트 내부 h-11 / 페이지 CTA h-12)를 앱 전체로 확장 — [`../plans/2026-05-21-ui-input-button-h11-sot.md`](../plans/2026-05-21-ui-input-button-h11-sot.md). Input default 자체 변경 + Textarea/Select 신규 컴포넌트 + 시트 6개 Button 일괄 통일.
 
 ## Alternatives Considered
 
