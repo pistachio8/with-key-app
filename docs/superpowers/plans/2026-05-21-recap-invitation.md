@@ -1073,6 +1073,7 @@ describe("GET /api/og/recap-card", () => {
       members: [{ id: "u1", displayName: "민지", isMvp: false }],
       group: {
         id: "g1",
+        name: "우리 그룹",
         ownerId: "u1",
         bankCode: "088",
         accountHolder: "민지",
@@ -1154,7 +1155,10 @@ export async function GET(req: Request): Promise<Response> {
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div style={{ fontSize: 24, letterSpacing: 12, color: "#B07A4D" }}>WITH-KEY</div>
-          <div style={{ fontSize: 60, marginTop: 36, textAlign: "center", lineHeight: 1.2 }}>
+          <div style={{ fontSize: 28, marginTop: 24, color: "#5E4838" }}>
+            {recap.group?.name ?? "우리 그룹"}
+          </div>
+          <div style={{ fontSize: 56, marginTop: 16, textAlign: "center", lineHeight: 1.2 }}>
             {recap.title}
           </div>
           <div style={{ fontSize: 24, marginTop: 24, color: "#5E4838" }}>
@@ -1400,7 +1404,6 @@ export default async function RecapPage({ params }: { params: Params }) {
           isOwner={isOwner}
           bankCode={recap.group.bankCode}
           accountHolder={recap.group.accountHolder}
-          accountNumberLast4={recap.group.accountNumberLast4}
         />
       )}
 

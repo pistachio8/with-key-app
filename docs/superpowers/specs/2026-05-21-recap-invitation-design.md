@@ -194,7 +194,7 @@ const [recap, photos] = await Promise.all([
 
 | 케이스 | 처리 |
 |---|---|
-| `recap.status === 'active'` | 기존 "아직 결과가 없어요" 빈 상태 유지 (page.tsx 기존 로직) |
+| `end_at` 미도래 | `fetchRecap`이 null 반환 → 기존 "아직 결과가 없어요" 빈 상태 (`.lte("end_at", now)` 필터). `status==='active'`라도 `end_at` 지났으면 청첩장 표시 — `challenge-ended-banner` 동선 호환 |
 | 사진 0장 | `PhotoGallery` null — 헤더→divider→멤버 흐름 자연스럽게 |
 | 일부 signed URL 발급 실패 | 발급된 사진만 표시 + 메타 로그(`fallback: true`). UI에 에러 표시 X |
 | 멤버 1명 (혼자 챌린지) | 청첩장 본문 4섹션 렌더 X (`recap-hero`의 `isSolo` 동작과 동등) — `MyPenaltyCard`만 |
