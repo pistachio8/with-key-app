@@ -1,9 +1,3 @@
-# AI 작업 지침
-
-한국어로 답변하고, 코드 주석/커밋/PR도 한국어로 작성합니다. 기술 용어와 코드 식별자는 원문 유지. 실행하지 않은 검증은 했다고 말하지 않습니다.
-
----
-
 @AGENTS.md
 @docs/QUALITY_GATE.md
 @.claude/AGENTS.md
@@ -15,21 +9,21 @@
 
 ## 작업 종류별 진입 문서
 
-| 작업 | 먼저 읽을 곳 |
-|------|--------------|
-| 품질 기준 / 검증 | `docs/QUALITY_GATE.md` |
+| 작업                 | 먼저 읽을 곳                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| 품질 기준 / 검증     | `docs/QUALITY_GATE.md`                                                                            |
 | 비용 / 컨텍스트 운영 | `docs/QUALITY_GATE.md` "AI 에이전트 비용과 컨텍스트 운영" → `.claude/rules/common/performance.md` |
-| 새 기능 / 리팩토링 | `docs/PRD.md` (AC) → `docs/BE_SCHEMA.md` (테이블·RLS) → `.claude/AGENTS.md` 가드레일 섹션 |
-| UI 시안 / 모킹업 | `docs/mockups/README.md` |
-| 코드 작성·수정 | `.claude/rules/common/coding-style.md` (Karpathy 4원칙·불변성) |
-| 코드 리뷰 / PR | `.claude/rules/common/code-review.md` · `.claude/rules/common/development-workflow.md` |
-| Server Action / RSC | `.claude/AGENTS.md` "with-key 가드레일 §아키텍처" |
-| Supabase migration | `.claude/AGENTS.md` "with-key 가드레일 §Supabase / RLS" · `docs/BE_SCHEMA.md` |
-| AI 일기 / OpenAI | `.claude/AGENTS.md` "with-key 가드레일 §AI 일기" · `src/lib/ai/**` |
-| 분석 이벤트 | `.claude/AGENTS.md` "with-key 가드레일 §이벤트 로깅" · `docs/PRD.md §9.1` |
-| 문서 작성 | `.claude/rules/common/doc-readability.md` |
-| 룰 전체 색인 | `.claude/rules/INDEX.md` |
-| docs/ 색인 | `docs/README.md` |
+| 새 기능 / 리팩토링   | `docs/PRD.md` (AC) → `docs/BE_SCHEMA.md` (테이블·RLS) → `.claude/AGENTS.md` 가드레일 섹션         |
+| UI 시안 / 모킹업     | `docs/mockups/README.md`                                                                          |
+| 코드 작성·수정       | `.claude/rules/common/coding-style.md` (Karpathy 4원칙·불변성)                                    |
+| 코드 리뷰 / PR       | `.claude/rules/common/code-review.md` · `.claude/rules/common/development-workflow.md`            |
+| Server Action / RSC  | `.claude/AGENTS.md` "with-key 가드레일 §아키텍처"                                                 |
+| Supabase migration   | `.claude/AGENTS.md` "with-key 가드레일 §Supabase / RLS" · `docs/BE_SCHEMA.md`                     |
+| AI 일기 / OpenAI     | `.claude/AGENTS.md` "with-key 가드레일 §AI 일기" · `src/lib/ai/**`                                |
+| 분석 이벤트          | `.claude/AGENTS.md` "with-key 가드레일 §이벤트 로깅" · `docs/PRD.md §9.1`                         |
+| 문서 작성            | `.claude/rules/common/doc-readability.md`                                                         |
+| 룰 전체 색인         | `.claude/rules/INDEX.md`                                                                          |
+| docs/ 색인           | `docs/README.md`                                                                                  |
 
 ## 참고
 
