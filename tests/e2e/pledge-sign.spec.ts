@@ -7,10 +7,11 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-// TODO(#42): PR41 누적 3/4 final fail — "서명 전이 테스트" 챌린지 텍스트가 /pledge 에서 미렌더.
-// kudos-badge 와 동일 가설(shared DB orphan · RSC cache · 데이터 가시성 race) 후보.
-// https://github.com/pistachio8/with-key-app/issues/42
-test.fixme("last signer transitions challenge to active", async ({ page, groupId }) => {
+// #42 fix: PR#70 시점에 `/pledge` 가 redirect 페이지로 바뀌면서
+// `fetchPendingPledge(user.id)` (정렬 없는 `.limit(1)`) 가 잔여 pending challenge 로
+// redirect 해, spec 이 만든 "서명 전이 테스트" 가 표시되지 않는 결정적 실패였다.
+// 결정성 확보를 위해 `/challenge/${ch.id}/pledge` 로 직접 진입.
+test("last signer transitions challenge to active", async ({ page, groupId }) => {
   // 1) Create a pending challenge with 2 participants: current user (unsigned)
   //    and a second user (already signed). The current user's sign via UI
   //    should fire sign_and_maybe_activate and flip the status to 'active'.
@@ -61,7 +62,9 @@ test.fixme("last signer transitions challenge to active", async ({ page, groupId
   ]);
 
   // 2) Current user signs via UI.
-  await page.goto("/pledge");
+  //    `/pledge` 진입점은 잔여 pending challenge 의존성이 있으므로 본 spec 의
+  //    challenge 로 직접 진입한다 (#42).
+  await page.goto(`/challenge/${ch.id}/pledge`);
   await expect(page.getByText("서명 전이 테스트")).toBeVisible({ timeout: 10_000 });
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "서명하고 참여" }).click();

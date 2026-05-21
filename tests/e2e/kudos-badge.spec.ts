@@ -7,13 +7,10 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-// TODO(#42): 결정적 실패 중 — PR41 (run 25907548644) 에서 home-unread-dot 미렌더
-// 3/3 final fail. fixture/RSC cache · shared DB orphan · NULL 처리 조사 필요.
-// https://github.com/pistachio8/with-key-app/issues/42
-test.fixme("author sees unread badge + home dot, both clear after /feed visit", async ({
-  page,
-  groupId,
-}) => {
+// #42 fix: PR#39 에서 BottomNav 폐기 + AppHeader 신설로 unread dot 위치가
+// `home-unread-dot` → `header-unread-dot` (Bell 아이콘 옆) 로 이동했는데 spec 이
+// stale testid 를 그대로 가지고 있어 결정적 timeout 이었다. AppHeader 기준으로 갱신.
+test("author sees unread header dot, clears after /feed visit", async ({ page, groupId }) => {
   const userId = await page.evaluate(async () => {
     const res = await fetch("/api/me");
     return res.ok ? ((await res.json()) as { id: string }).id : null;
@@ -81,9 +78,9 @@ test.fixme("author sees unread badge + home dot, both clear after /feed visit", 
     emoji: "🔥",
   });
 
-  // --- /home 진입 시 홈 탭 dot 보임 ---
+  // --- /home 진입 시 AppHeader 의 알림 dot 보임 ---
   await page.goto("/home");
-  await expect(page.getByTestId("home-unread-dot")).toBeVisible();
+  await expect(page.getByTestId("header-unread-dot")).toBeVisible();
 
   // --- /feed 진입 시 '새 응원 1건' 배지 ---
   await page.goto("/feed");
@@ -91,7 +88,7 @@ test.fixme("author sees unread badge + home dot, both clear after /feed visit", 
 
   // --- /home 재진입 시 dot 사라짐 ---
   await page.goto("/home");
-  await expect(page.getByTestId("home-unread-dot")).toHaveCount(0);
+  await expect(page.getByTestId("header-unread-dot")).toHaveCount(0);
 
   // Cleanup — fixture 가 groups/challenges 는 지우지만 이 테스트가 생성한 challenge·log·kudos 는 별도 관리.
   await admin.from("kudos").delete().eq("action_log_id", log.id);
