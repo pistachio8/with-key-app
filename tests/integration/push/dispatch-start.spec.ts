@@ -28,8 +28,12 @@ describe("dispatchStartNotification (integration)", () => {
       { challenge_id: c.id, user_id: owner.id },
       { challenge_id: c.id, user_id: other.id },
     ]);
-    // owner 만 구독. prefs 는 기본값 { start: true, deadline: true } 가 migration
-    // default 로 채워져 있다.
+    // ADR-0013 이후 신규 가입 default 는 OFF. owner 는 명시적으로 ON 박아 dispatch
+    // 대상이 되도록 한다. owner 만 구독한다.
+    await admin
+      .from("users")
+      .update({ notification_prefs: { start: true, deadline: true } })
+      .eq("id", owner.id);
     await admin.from("push_subscriptions").insert({
       user_id: owner.id,
       endpoint: `https://fcm.googleapis.com/fcm/send/${owner.id}`,
