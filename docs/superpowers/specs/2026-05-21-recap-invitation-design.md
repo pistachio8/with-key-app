@@ -178,8 +178,8 @@ export async function fetchChallengePhotos(
 ): Promise<ReadonlyArray<RecapPhotoView>>;
 ```
 
-- 쿼리: `actions` → `inner join users(display_name)` → `inner join action_photos(photo_path)`. `where challenge_id = $1 and photo_path is not null order by created_at asc`.
-- signed URL: 기존 `getPhotoSignedUrls(paths)` 재사용.
+- 쿼리: `action_logs` → `inner join users(display_name)`. `where challenge_id = $1 and photo_path is not null order by created_at asc`. (`challenge-feed.ts`와 동일 패턴 — `photo_path`는 `action_logs` 컬럼)
+- signed URL: 기존 `getPhotoSignedUrls(paths, supabase)` 재사용.
 - 페이지네이션 없음(POC 가정 ≤ ~100장). 200장 이상은 후속 이슈.
 
 `page.tsx`:
