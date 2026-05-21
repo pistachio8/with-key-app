@@ -242,6 +242,10 @@ const [recap, photos] = await Promise.all([
 - `ImageResponse` 한글 폰트 등록 누락 시 PNG 카드 텍스트 사각형 깨짐. **방지**: Pretendard ttf 서버 로드 + 단위 테스트로 응답 헤더 + size 검증.
 - 사진 100장 초과 시 단일 페이지 lazy 이미지로 초기 paint·메모리 부담. **방지**: 후속 이슈 — 사용자 평균 사진 수 모니터링 후 페이지네이션.
 - 시간이 지난 청첩장에서 "₩X 정산하세요"가 계속 노출 → 정산 완료된 사용자에게 노이즈. **방지**: 후속 이슈로 정산 완료 상태 추적.
+- **storage signed URL 만료 600초**: 사용자가 페이지를 백그라운드에 둔 채 10분 이상 경과 후 라이트박스 열면 사진 broken. POC 가정에서는 일반적으로 문제 없으나, `next/image`의 `onError` 폴백을 후속 polish로.
+- **iOS Safari `<a download>` 미지원**: 공유 카드 다운로드 폴백이 새 탭에서 PNG로 열림 → 길게 눌러서 저장. 안내 토스트 후속 polish.
+- **storage 파일 부재 photo_path**: 사용자가 자기 사진을 삭제했지만 `action_logs` 행이 남은 케이스 → broken image. `next/image`의 `onError` 또는 사전 fallback URL 검증 후속.
+- **이모지 포함 displayName**: Pretendard에 이모지 글리프 없음 → PNG에서 사각형. 별도 emoji font 등록(Noto Color Emoji)은 후속 polish.
 
 ## Open Questions
 
