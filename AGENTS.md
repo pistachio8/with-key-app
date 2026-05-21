@@ -141,7 +141,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 
 ### PR
 
-- **PR 본문은 한국어**(2026-05-01 이후 합의). 섹션 헤더(`## Summary` 등)는 영어 유지 가능. 커밋 메시지는 conventional commits 영문/한국어 혼용 허용
+- **PR 본문 · 커밋 메시지 주제는 한국어**(2026-05-21 합의). 섹션 헤더(`## Summary` 등)는 영어 유지 가능. 기술 용어 · 코드 식별자 · 라이브러리/API 이름은 원문(영어) 유지(예: `feat(ui): Textarea + Select primitives 추가`). conventional commits `타입(스코프):` 접두는 영문. 상세는 [`.claude/rules/common/git-workflow.md`](.claude/rules/common/git-workflow.md) §PR 본문 · 커밋 메시지 언어
 - [`.github/pull_request_template.md`](.github/pull_request_template.md)가 PR 본문에 자동 prefill — Summary / Spec or ADR / 가드레일 4 체크박스 / Verification / Rollback 골격 제공
 - PR 베이스는 `develop`. main 직접 PR은 release 시점에만
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만
