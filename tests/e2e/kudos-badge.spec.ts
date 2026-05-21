@@ -7,10 +7,16 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-// #42 fix: PR#39 에서 BottomNav 폐기 + AppHeader 신설로 unread dot 위치가
-// `home-unread-dot` → `header-unread-dot` (Bell 아이콘 옆) 로 이동했는데 spec 이
-// stale testid 를 그대로 가지고 있어 결정적 timeout 이었다. AppHeader 기준으로 갱신.
-test("author sees unread header dot, clears after /feed visit", async ({ page, groupId }) => {
+// #42 fix: UI 리비전 시리즈가 unread 노출 경로를 바꿨다.
+// - PR#39: BottomNav 폐기 + AppHeader 신설 → dot 위치 `home-unread-dot` → `header-unread-dot`.
+// - ADR-0002: `/feed` 라우트 폐기 → 옛 "/feed 진입 시 새 응원 N건" 배지는 사라짐.
+// - 현재 develop 의 `/notifications` 는 IDB `markAllRead` 만 호출하고 server `markFeedSeen`
+//   은 트리거하지 않음(후속 PR). 따라서 spec 은 admin client 로 `last_feed_seen_at` 을
+//   갱신해 read-model 의 dot 소멸만 검증한다 (UI 클리어 경로는 별도 검증 대상).
+test("author sees unread header dot after kudos, dot clears once feed is marked seen", async ({
+  page,
+  groupId,
+}) => {
   const userId = await page.evaluate(async () => {
     const res = await fetch("/api/me");
     return res.ok ? ((await res.json()) as { id: string }).id : null;
@@ -82,9 +88,11 @@ test("author sees unread header dot, clears after /feed visit", async ({ page, g
   await page.goto("/home");
   await expect(page.getByTestId("header-unread-dot")).toBeVisible();
 
-  // --- /feed 진입 시 '새 응원 1건' 배지 ---
-  await page.goto("/feed");
-  await expect(page.getByText(/새 응원 1건/)).toBeVisible();
+  // --- markFeedSeen 시뮬레이션 (UI 트리거가 develop 에서 미연결 — read 모델만 검증) ---
+  await admin
+    .from("users")
+    .update({ last_feed_seen_at: new Date().toISOString() })
+    .eq("id", userId);
 
   // --- /home 재진입 시 dot 사라짐 ---
   await page.goto("/home");

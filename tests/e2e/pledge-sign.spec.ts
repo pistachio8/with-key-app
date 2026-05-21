@@ -11,6 +11,10 @@ const admin = createClient(
 // `fetchPendingPledge(user.id)` (정렬 없는 `.limit(1)`) 가 잔여 pending challenge 로
 // redirect 해, spec 이 만든 "서명 전이 테스트" 가 표시되지 않는 결정적 실패였다.
 // 결정성 확보를 위해 `/challenge/${ch.id}/pledge` 로 직접 진입.
+//
+// 또한 PledgeSheet 는 `disabled={!agreed || !signature || pending}` — checkbox 외에
+// 전자 서명 캔버스 입력이 추가됐다. PointerEvent stroke 를 시뮬레이션해 `hasInk` →
+// `onChange(dataURL)` 경로를 흐르게 한 뒤 버튼 enabled 를 기다린다.
 test("last signer transitions challenge to active", async ({ page, groupId }) => {
   // 1) Create a pending challenge with 2 participants: current user (unsigned)
   //    and a second user (already signed). The current user's sign via UI
@@ -67,7 +71,25 @@ test("last signer transitions challenge to active", async ({ page, groupId }) =>
   await page.goto(`/challenge/${ch.id}/pledge`);
   await expect(page.getByText("서명 전이 테스트")).toBeVisible({ timeout: 10_000 });
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "서명하고 참여" }).click();
+
+  // 전자 서명 캔버스에 stroke 입력 — `hasInk` 가 true 가 되어야 `onChange` 가 발화하고
+  // `signature` state 가 채워져 "서명하고 참여" 버튼이 enabled 된다.
+  const signatureCanvas = page.getByRole("img", { name: "전자 서명 캔버스" });
+  await signatureCanvas.waitFor({ state: "visible" });
+  const box = await signatureCanvas.boundingBox();
+  if (!box) throw new Error("signature canvas has no bounding box");
+  const startX = box.x + box.width * 0.2;
+  const startY = box.y + box.height * 0.3;
+  const endX = box.x + box.width * 0.8;
+  const endY = box.y + box.height * 0.7;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY, { steps: 10 });
+  await page.mouse.up();
+
+  const submit = page.getByRole("button", { name: "서명하고 참여" });
+  await expect(submit).toBeEnabled({ timeout: 5_000 });
+  await submit.click();
 
   // 3) Assert — poll status in DB (Server Action + redirect may race).
   await expect
