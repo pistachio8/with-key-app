@@ -75,7 +75,7 @@ export function AccountInfoSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>정산 계좌</DialogTitle>
           <DialogDescription>
@@ -106,7 +106,7 @@ export function AccountInfoSheet({
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <Button
             size="lg"
-            className="h-12 w-full gap-2"
+            className="h-11 w-full gap-2"
             onClick={copy}
             disabled={!hasAccount || copying}
           >

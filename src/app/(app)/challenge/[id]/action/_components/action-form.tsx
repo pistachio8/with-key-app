@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
+import { Textarea } from "@/components/ui/textarea";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
 import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
@@ -338,12 +339,12 @@ export function ActionForm({ challengeId }: Props) {
             {memoOpen ? "✏️ 메모 접기" : "✏️ 직접 쓰고 싶어요"}
           </button>
           {memoOpen && (
-            <textarea
+            <Textarea
               id="action-memo"
               value={memo}
               onChange={(event) => setMemo(event.target.value.slice(0, 100))}
               placeholder="자유롭게 남겨도 돼요 (0~100자)"
-              className="focus-visible:ring-ring min-h-20 rounded-xl border p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              className="min-h-20"
               maxLength={100}
             />
           )}
