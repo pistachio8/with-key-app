@@ -73,6 +73,11 @@ describe("dispatchStartNotification (integration)", () => {
     const g = await createGroup(owner.id);
     const c = await createPendingChallenge(g.id);
     await admin.from("challenge_participants").insert({ challenge_id: c.id, user_id: owner.id });
+    // ADR-0013 이후 신규 가입 default 는 OFF — dispatch 가 410 cleanup 까지 도달하려면 ON.
+    await admin
+      .from("users")
+      .update({ notification_prefs: { start: true, deadline: true } })
+      .eq("id", owner.id);
     const endpoint = `https://fcm.googleapis.com/fcm/send/gone-${owner.id}`;
     await admin
       .from("push_subscriptions")

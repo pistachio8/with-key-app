@@ -3,7 +3,8 @@ import { admin } from "../setup";
 import { createUser } from "../factories";
 
 describe("users.notification_prefs migration", () => {
-  it("defaults new rows to { start: true, deadline: true }", async () => {
+  // ADR-0013 — migration 0031 이후 신규 가입자 default 는 OFF.
+  it("defaults new rows to { start: false, deadline: false }", async () => {
     const user = await createUser();
     const { data, error } = await admin
       .from("users")
@@ -11,7 +12,7 @@ describe("users.notification_prefs migration", () => {
       .eq("id", user.id)
       .single();
     expect(error).toBeNull();
-    expect(data?.notification_prefs).toEqual({ start: true, deadline: true });
+    expect(data?.notification_prefs).toEqual({ start: false, deadline: false });
   });
 
   it("allows updating to valid boolean shape", async () => {
