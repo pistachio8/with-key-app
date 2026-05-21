@@ -46,7 +46,8 @@ async function downloadCard(challengeId: string): Promise<void> {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return;
     toast.error("공유 카드 생성에 실패했어요.");
   }
 }
