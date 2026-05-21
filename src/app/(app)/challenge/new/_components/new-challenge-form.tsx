@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +64,10 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
 
   const singleGroup = ownerGroups.length === 1 ? ownerGroups[0] : null;
   const needsGroupSelection = ownerGroups.length >= 2;
+  const groupItems = useMemo<Record<string, string>>(
+    () => Object.fromEntries(ownerGroups.map((g) => [g.id, groupName(g.name)])),
+    [ownerGroups],
+  );
 
   function gotoStep2() {
     if (!title.trim()) {
@@ -172,6 +176,7 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
               <Select
                 value={selectedGroupId}
                 onValueChange={(value) => setSelectedGroupId(value ?? "")}
+                items={groupItems}
               >
                 <SelectTrigger id={groupSelectId}>
                   <SelectValue placeholder="그룹 선택" />
