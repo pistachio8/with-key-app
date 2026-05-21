@@ -29,3 +29,10 @@ export const groupInputSchema = baseSchema.superRefine((val, ctx) => {
 });
 
 export type GroupInput = z.infer<typeof groupInputSchema>;
+
+export const renameGroupInputSchema = z.object({
+  groupId: z.string().uuid(),
+  name: z.string().trim().min(1).max(30),
+});
+
+export type RenameGroupInput = z.infer<typeof renameGroupInputSchema>;

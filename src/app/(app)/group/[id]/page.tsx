@@ -28,6 +28,7 @@ export default async function GroupDetailPage({
   if (!detail) notFound();
 
   const isOwner = detail.ownerId === user.id;
+  const hasOpenChallenge = detail.challenges.some((challenge) => challenge.status !== "closed");
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -41,7 +42,14 @@ export default async function GroupDetailPage({
           <p className="text-muted-foreground mt-1 text-xs">여기서 챌린지를 함께 시작해 보세요</p>
         </div>
       )}
-      <GroupHeader name={detail.name} isOwner={isOwner} memberCount={detail.members.length} />
+      <GroupHeader
+        groupId={detail.id}
+        name={detail.name}
+        isOwner={isOwner}
+        memberCount={detail.members.length}
+        challengeCount={detail.challenges.length}
+        hasOpenChallenge={hasOpenChallenge}
+      />
       <GroupAccountCard
         groupId={detail.id}
         bankCode={detail.bankCode}
