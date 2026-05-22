@@ -97,8 +97,8 @@ function queueHappyPath(
   tablePlans.push({
     table: "users",
     rows: overrides.users ?? [
-      { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      { id: "user-b", notification_prefs: { start: true, deadline: true } },
+      { id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } },
+      { id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } },
     ],
   });
   tablePlans.push({
@@ -136,8 +136,8 @@ describe("dispatchStartNotification", () => {
   it("sends push only to participants opted in with prefs.start=true", async () => {
     queueHappyPath({
       users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-        { id: "user-b", notification_prefs: { start: false, deadline: true } },
+        { id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } },
+        { id: "user-b", notification_prefs: { start: false, deadline: true, kudos: false } },
       ],
       subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
@@ -174,7 +174,7 @@ describe("dispatchStartNotification", () => {
   it("cleans up subscriptions on 410 Gone and records outcome=cleaned", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true } }],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } }],
       subs: [{ user_id: "user-a", endpoint: "ep-gone", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("gone"), { statusCode: 410 });
@@ -190,7 +190,7 @@ describe("dispatchStartNotification", () => {
   it("records outcome=failed on non-Gone errors without deleting subscription", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true } }],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } }],
       subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("boom"), { statusCode: 500 });
@@ -208,7 +208,7 @@ describe("dispatchStartNotification", () => {
       participants: [{ user_id: "user-x" }, { user_id: "user-y" }],
       users: [
         { id: "user-x", notification_prefs: "garbage" },
-        { id: "user-y", notification_prefs: { start: true, deadline: true } },
+        { id: "user-y", notification_prefs: { start: true, deadline: true, kudos: false } },
       ],
       subs: [{ user_id: "user-y", endpoint: "ep-y", p256dh: "p", auth: "a" }],
     });
@@ -229,8 +229,8 @@ describe("dispatchActionStartNotification", () => {
       participants: [{ user_id: "actor" }, { user_id: "user-b" }, { user_id: "user-c" }],
       users: [
         // actor is filtered out before users lookup so prefs row not required
-        { id: "user-b", notification_prefs: { start: true, deadline: true } },
-        { id: "user-c", notification_prefs: { start: true, deadline: true } },
+        { id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } },
+        { id: "user-c", notification_prefs: { start: true, deadline: true, kudos: false } },
       ],
       subs: [
         { user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" },

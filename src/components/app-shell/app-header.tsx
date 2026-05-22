@@ -1,16 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, User, Users } from "lucide-react";
+import { User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GroupSwitcherTrigger } from "./group-switcher-trigger";
+import { NotificationBell } from "./notification-bell";
 import type { GroupSwitcherItem } from "./group-switcher-sheet";
 
 interface AppHeaderProps {
   /** F15/ADR-0012 — 사용자 소속 그룹 목록. 0개: /group/new, 1개+: sheet. */
   groups?: ReadonlyArray<GroupSwitcherItem>;
   newGroupNamePreview?: string;
-  /** DESIGN_BRIEF §1.5 — 미읽음 Kudos/알림 dot. presence only. */
-  unreadNotifications?: boolean;
 }
 
 const ICON_LINK_CLASSES = cn(
@@ -19,13 +18,8 @@ const ICON_LINK_CLASSES = cn(
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 );
 
-export function AppHeader({
-  groups = [],
-  newGroupNamePreview = "내님과 친구들",
-  unreadNotifications = false,
-}: AppHeaderProps) {
-  const groupCount = groups.length;
-  const hasGroups = groupCount >= 1;
+export function AppHeader({ groups = [], newGroupNamePreview = "내님과 친구들" }: AppHeaderProps) {
+  const hasGroups = groups.length >= 1;
 
   return (
     <header className="bg-background/90 sticky top-0 z-30 flex items-center justify-between px-4 py-3 backdrop-blur">
@@ -45,20 +39,7 @@ export function AppHeader({
         />
       </Link>
       <div className="flex items-center gap-1">
-        <Link
-          href="/notifications"
-          aria-label={unreadNotifications ? "알림 (새 응원 있음)" : "알림"}
-          className={ICON_LINK_CLASSES}
-        >
-          <Bell className="size-5" aria-hidden="true" />
-          {unreadNotifications && (
-            <span
-              data-testid="header-unread-dot"
-              aria-hidden="true"
-              className="bg-destructive absolute right-2.5 top-2.5 size-2 rounded-full"
-            />
-          )}
-        </Link>
+        <NotificationBell />
         {hasGroups ? (
           <GroupSwitcherTrigger
             variant="icon"

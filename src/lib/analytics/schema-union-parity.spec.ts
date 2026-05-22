@@ -122,3 +122,35 @@ describe("TS union ↔ Zod schema parity", () => {
     });
   }
 });
+
+describe("notification_sent kudos_received variant (ADR-0017)", () => {
+  it("type=kudos_received + actionLogId + actorUserId 채워진 fixture 통과", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "kudos_received",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: false,
+        outcome: "sent",
+        actionLogId: "22222222-2222-4222-8222-222222222222",
+        actorUserId: "33333333-3333-4333-8333-333333333333",
+      },
+    };
+    const r = analyticsEventSchema.safeParse(fixture);
+    expect(r.success, JSON.stringify(r, null, 2)).toBe(true);
+  });
+
+  it("optional 필드 누락 (kudos_received 이지만 actionLogId/actorUserId 없음) 도 parse 성공", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "kudos_received",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: true,
+        outcome: "suppressed",
+      },
+    };
+    const r = analyticsEventSchema.safeParse(fixture);
+    expect(r.success).toBe(true);
+  });
+});

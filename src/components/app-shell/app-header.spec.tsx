@@ -9,6 +9,12 @@ vi.mock("next/navigation", () => ({
     push: vi.fn(),
     refresh: vi.fn(),
   }),
+  usePathname: () => "/home",
+}));
+
+// NotificationBell 내부 IDB 호출 차단 — dot 상세 검증은 notification-bell.spec.tsx.
+vi.mock("@/lib/notifications/store", () => ({
+  unreadCount: () => Promise.resolve(0),
 }));
 
 describe("AppHeader", () => {
@@ -62,16 +68,10 @@ describe("AppHeader", () => {
     expect(btn.getAttribute("aria-haspopup")).toBe("dialog");
   });
 
-  it("unreadNotifications=false 이면 dot 미렌더 + 기본 알림 라벨", () => {
-    render(<AppHeader unreadNotifications={false} />);
-    expect(screen.queryByTestId("header-unread-dot")).toBeNull();
-    expect(screen.getByRole("link", { name: "알림" })).toBeTruthy();
-  });
-
-  it("unreadNotifications=true 이면 dot + 확장된 알림 라벨", () => {
-    render(<AppHeader unreadNotifications={true} />);
-    expect(screen.getByTestId("header-unread-dot")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "알림 (새 응원 있음)" })).toBeTruthy();
+  it("알림 링크는 /notifications 로 이동 + 기본 라벨 '알림'", () => {
+    render(<AppHeader />);
+    const link = screen.getByRole("link", { name: "알림" });
+    expect(link.getAttribute("href")).toBe("/notifications");
   });
 
   it("마이페이지 링크는 /me 로 이동", () => {

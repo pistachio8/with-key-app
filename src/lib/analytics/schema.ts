@@ -108,10 +108,13 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("notification_sent"),
     props: z.object({
-      type: z.enum(["start", "deadline"]),
+      type: z.enum(["start", "deadline", "kudos_received"]),
       challengeId: uuid,
       suppressed: z.boolean(),
       outcome: z.enum(["sent", "cleaned", "failed", "suppressed"]),
+      // kudos_received 만 채움. start/deadline 발송에는 의미 없음.
+      actionLogId: uuid.optional(),
+      actorUserId: uuid.optional(),
     }),
   }),
   z.object({

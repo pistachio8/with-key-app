@@ -40,7 +40,7 @@ describe("PushSettings", () => {
   it("renders toggles reflecting initialPrefs", async () => {
     render(
       <PushSettings
-        initialPrefs={{ start: true, deadline: false }}
+        initialPrefs={{ start: true, deadline: false, kudos: false }}
         initialSubscribedEndpoint="https://fcm.googleapis.com/fcm/send/x"
         vapidPublicKey="BFN..."
       />,
@@ -56,7 +56,7 @@ describe("PushSettings", () => {
   it("syncs subscription when first pref is turned on", async () => {
     render(
       <PushSettings
-        initialPrefs={{ start: false, deadline: false }}
+        initialPrefs={{ start: false, deadline: false, kudos: false }}
         initialSubscribedEndpoint={null}
         vapidPublicKey="BFN..."
       />,
@@ -75,6 +75,7 @@ describe("PushSettings", () => {
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: true,
         deadline: false,
+        kudos: false,
       }),
     );
   });
@@ -82,7 +83,7 @@ describe("PushSettings", () => {
   it("unsubscribes when both prefs go off", async () => {
     render(
       <PushSettings
-        initialPrefs={{ start: true, deadline: false }}
+        initialPrefs={{ start: true, deadline: false, kudos: false }}
         initialSubscribedEndpoint="https://fcm.googleapis.com/fcm/send/x"
         vapidPublicKey="BFN..."
       />,
@@ -95,6 +96,7 @@ describe("PushSettings", () => {
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: false,
         deadline: false,
+        kudos: false,
       }),
     );
   });
@@ -102,7 +104,7 @@ describe("PushSettings", () => {
   it("does not call syncBrowserSubscription when turning a pref OFF", async () => {
     render(
       <PushSettings
-        initialPrefs={{ start: true, deadline: true }}
+        initialPrefs={{ start: true, deadline: true, kudos: false }}
         initialSubscribedEndpoint={null}
         vapidPublicKey="BFN..."
       />,
@@ -113,6 +115,7 @@ describe("PushSettings", () => {
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: false,
         deadline: true,
+        kudos: false,
       }),
     );
     expect(syncBrowserSubscription).not.toHaveBeenCalled();
@@ -127,7 +130,7 @@ describe("PushSettings", () => {
   it("syncs subscription on toggle ON even when initial subscribed state is stale", async () => {
     render(
       <PushSettings
-        initialPrefs={{ start: false, deadline: true }}
+        initialPrefs={{ start: false, deadline: true, kudos: false }}
         initialSubscribedEndpoint="https://web.push.apple.com/stale-from-server"
         vapidPublicKey="BFN..."
       />,
@@ -146,6 +149,7 @@ describe("PushSettings", () => {
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
         start: true,
         deadline: true,
+        kudos: false,
       }),
     );
   });
@@ -154,7 +158,7 @@ describe("PushSettings", () => {
     syncBrowserSubscription.mockRejectedValueOnce(new Error("permission_denied"));
     render(
       <PushSettings
-        initialPrefs={{ start: false, deadline: false }}
+        initialPrefs={{ start: false, deadline: false, kudos: false }}
         initialSubscribedEndpoint={null}
         vapidPublicKey="BFN..."
       />,
@@ -170,7 +174,7 @@ describe("PushSettings", () => {
     isPushSupported.mockReturnValue(false);
     render(
       <PushSettings
-        initialPrefs={{ start: true, deadline: true }}
+        initialPrefs={{ start: true, deadline: true, kudos: false }}
         initialSubscribedEndpoint={null}
         vapidPublicKey="BFN..."
       />,

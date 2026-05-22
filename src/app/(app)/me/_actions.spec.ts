@@ -137,7 +137,7 @@ describe("clearMyPushSubscriptions", () => {
 describe("updateNotificationPrefs", () => {
   it("updates users.notification_prefs for caller", async () => {
     updateEq.mockResolvedValue({ error: null });
-    const res = await updateNotificationPrefs({ start: true, deadline: false });
+    const res = await updateNotificationPrefs({ start: true, deadline: false, kudos: false });
     expect(res.ok).toBe(true);
     expect(updateEq).toHaveBeenCalledWith("id", USER_ID);
   });
@@ -145,7 +145,7 @@ describe("updateNotificationPrefs", () => {
   it("rejects when a key is missing", async () => {
     const res = await updateNotificationPrefs({
       start: true,
-    } as unknown as { start: boolean; deadline: boolean });
+    } as unknown as { start: boolean; deadline: boolean; kudos: boolean });
     expect(res.ok).toBe(false);
     expect(updateEq).not.toHaveBeenCalled();
   });

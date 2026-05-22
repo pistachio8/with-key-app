@@ -10,7 +10,8 @@ export type NotificationType =
   | "deadline" // 마감 24h 전
   | "missed_yesterday" // 어제 미인증 (POC 후)
   | "friend_action" // 친구 인증 완료
-  | "penalty_added"; // 벌금 누적
+  | "penalty_added" // 벌금 누적
+  | "kudos_received"; // 내 인증글에 응원 도착 (ADR-0017)
 
 export interface StoredNotification {
   id: string;

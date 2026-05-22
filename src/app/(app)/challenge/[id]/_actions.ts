@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { kudosInputSchema, type KudosInput } from "@/lib/validators/kudos";
 import { decryptAccountNumber } from "@/lib/crypto/account-cipher";
@@ -10,12 +11,17 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { dispatchActionStartNotification, dispatchStartNotification } from "@/lib/push/dispatch";
+import {
+  dispatchActionStartNotification,
+  dispatchKudosReceivedNotification,
+  dispatchStartNotification,
+} from "@/lib/push/dispatch";
 import { isQuietHoursKST } from "@/lib/push/send";
 
 type KudosResult = { toggled: "added" | "removed" };
 
 // BE_SCHEMA §8.6. UNIQUE (action_log_id, user_id, emoji) 로 토글.
+// plan 2026-05-22-kudos-received-notification — INSERT 분기 후 작성자에게 push 발송 (after() 로 fire).
 export const toggleKudos = withUser<KudosInput, KudosResult>(
   async (user, input): Promise<ActionResult<KudosResult>> => {
     const parsed = kudosInputSchema.safeParse(input);
@@ -51,6 +57,39 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
       },
       { userId: user.id },
     );
+
+    // INSERT 성공 후 recipient (action_log 작성자) 에게 push 발송.
+    // recipient/challenge lookup 은 일반 supabase client 로 충분 — kudos INSERT 성공이 곧
+    // actor 가 같은 그룹 멤버임을 보장 (kudos_insert_self_not_own → al_select_member 통과).
+    // actor display_name 도 본인 row 라 users_select_self_or_group 정책 통과.
+    const [{ data: log }, { data: profile }] = await Promise.all([
+      supabase
+        .from("action_logs")
+        .select("user_id, challenge_id")
+        .eq("id", parsed.data.actionLogId)
+        .maybeSingle(),
+      supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
+    ]);
+
+    if (log && log.user_id && log.challenge_id) {
+      const recipientUserId = log.user_id as string;
+      const challengeId = log.challenge_id as string;
+      const actorDisplayName = profile?.display_name?.trim() || "친구";
+      // after() — Vercel waitUntil 보장으로 응답 후에도 promise 완주 (ADR-0017 H3).
+      // 응답 latency 에 push 발송이 더해지지 않도록 fire-and-forget.
+      after(() =>
+        dispatchKudosReceivedNotification({
+          recipientUserId,
+          actorUserId: user.id,
+          actorDisplayName,
+          actionLogId: parsed.data.actionLogId,
+          challengeId,
+          emoji: parsed.data.emoji,
+        }).catch((e) => {
+          console.error("[toggleKudos] kudos dispatch failed", e);
+        }),
+      );
+    }
 
     return success({ toggled: "added" });
   },
@@ -281,9 +320,13 @@ export const startChallengeWithSignedParticipants = withUser<
     { userId: user.id },
   );
 
-  void dispatchStartNotification(parsed.data.challengeId).catch(() => {
-    // dispatch 내부에서 per-recipient outcome 을 기록한다. 시작 성공을 되돌리지 않음.
-  });
+  // after() — Vercel waitUntil 보장으로 응답 후에도 push dispatch 완주 (H3).
+  // dispatch 내부에서 per-recipient outcome 을 기록한다. 시작 성공을 되돌리지 않음.
+  after(() =>
+    dispatchStartNotification(parsed.data.challengeId).catch((e) => {
+      console.error("[startChallengeWithSignedParticipants] dispatch failed", e);
+    }),
+  );
 
   // status 'pending' → 'active' 가 /home RunningChallengeList · /challenge/[id] 의
   // StartChallengeCard 표시 여부 등 광범위에 영향. PR #77 패턴.

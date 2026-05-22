@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
 
 // 신규 가입자 / parse 실패 fallback 은 OFF — 명시적 토글 ON 시점에 iOS 권한 프롬프트가
-// 트리거되도록 한다. DB column default 도 같이 OFF 로 migration (0031) 적용해 정합 유지.
-const DEFAULT_PREFS: NotificationPrefs = { start: false, deadline: false };
+// 트리거되도록 한다. DB column default 도 같이 OFF 로 migration (0031, 0033) 적용해 정합 유지.
+const DEFAULT_PREFS: NotificationPrefs = { start: false, deadline: false, kudos: false };
 
 export async function fetchNotificationPrefs(userId: string): Promise<NotificationPrefs> {
   const supabase = await createClient();

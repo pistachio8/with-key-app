@@ -101,7 +101,7 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
     setErrorMsg(null);
     start(async () => {
       const turningOn = value === true;
-      const anyOn = next.start || next.deadline;
+      const anyOn = next.start || next.deadline || next.kudos;
       // turn-on 클릭은 client subscribed state 와 무관하게 항상 ensureSubscription 을 호출.
       // syncBrowserSubscription 이 reuse-or-subscribe idempotent 라 매 호출 안전하고, server row
       // 가 비어 있던 경우(정합 깨짐) 도 토글 ON 한 번으로 자동 복원된다.
@@ -143,6 +143,12 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
         description="마감 24시간 전"
         checked={prefs.deadline}
         onChange={(v) => handlePrefChange("deadline", v)}
+      />
+      <Toggle
+        label="응원 받음 알림"
+        description="내 인증글에 응원이 달리면 알려드려요"
+        checked={prefs.kudos}
+        onChange={(v) => handlePrefChange("kudos", v)}
       />
       <p className="text-muted-foreground text-xs">새벽 2~7시(KST)는 자동 차단돼요.</p>
       {errorMsg && (
