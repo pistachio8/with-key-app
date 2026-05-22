@@ -55,51 +55,54 @@
 }
 
 :root {
-  /* 모킹업 v4 팔레트 — hex → oklch */
-  --background: oklch(0.975 0.005 264); /* #F7F8FB */
-  --foreground: oklch(0.235 0.014 268); /* #22262E */
+  /* 모킹업 v4 팔레트 — hex SoT (docs/mockups/2026-05-14-ui-revision.html §색상 가이드).
+     OKLCH 값은 hex의 sRGB→OkLab 정밀 변환. 눈대중 추정 금지. */
+  --background: oklch(0.979 0.004 271.4); /* #F7F8FB */
+  --foreground: oklch(0.268 0.016 264.3); /* #22262E */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.014 268);
+  --card-foreground: oklch(0.268 0.016 264.3);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.014 268);
-  --primary: oklch(0.72 0.106 268); /* #8AA4FF */
+  --popover-foreground: oklch(0.268 0.016 264.3);
+  --primary: oklch(0.737 0.135 270.7); /* #8AA4FF */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.886 0.107 87); /* #FFD46B */
-  --secondary-foreground: oklch(0.235 0.014 268);
+  --secondary: oklch(0.887 0.132 87.2); /* #FFD46B */
+  --secondary-foreground: oklch(0.268 0.016 264.3);
   --muted: oklch(0.955 0.005 264);
-  /* AA 보정 — 모킹업 #8B91A1(L≈0.605)은 #F7F8FB 배경 대비 3.6:1로 small text AA 미달.
+  /* AA 보정 — 모킹업 #8B91A1(L≈0.657)은 #F7F8FB 배경 대비 3.6:1로 small text AA 미달.
      L=0.50까지 darken하여 4.5:1 이상 확보 (WCAG 2.2 SC 1.4.3). */
   --muted-foreground: oklch(0.5 0.015 264);
-  --accent: oklch(0.78 0.106 295); /* #BCA6FF */
-  --accent-foreground: oklch(0.235 0.014 268);
-  --destructive: oklch(0.66 0.207 22); /* #FF6B6B */
-  --border: oklch(0.93 0.008 264);
-  --input: oklch(0.93 0.008 264);
-  --ring: oklch(0.72 0.106 268);
-  --chart-1: oklch(0.72 0.106 268);
-  --chart-2: oklch(0.886 0.107 87);
-  --chart-3: oklch(0.78 0.106 295);
-  --chart-4: oklch(0.79 0.115 12);
-  --chart-5: oklch(0.74 0.155 145);
+  --accent: oklch(0.778 0.126 294.6); /* #BCA6FF */
+  --accent-foreground: oklch(0.268 0.016 264.3);
+  --destructive: oklch(0.712 0.181 22.8); /* #FF6B6B */
+  --border: oklch(0.939 0.007 260.7); /* #E8EBF0 */
+  --input: oklch(0.939 0.007 260.7);
+  --ring: oklch(0.737 0.135 270.7);
+  --chart-1: oklch(0.737 0.135 270.7);
+  --chart-2: oklch(0.887 0.132 87.2);
+  --chart-3: oklch(0.778 0.126 294.6);
+  --chart-4: oklch(0.849 0.087 4.6);
+  --chart-5: oklch(0.735 0.13 159.6);
   --radius: 0.875rem;
 
-  --brand-accent: oklch(0.78 0.106 295);
-  --brand-pink: oklch(0.79 0.115 12);
-  --brand-danger: oklch(0.66 0.207 22);
-  --brand-warn: oklch(0.69 0.18 45);
-  --brand-success: oklch(0.74 0.155 145);
-  --brand-primary-soft: oklch(0.945 0.022 268);
-  --brand-secondary-soft: oklch(0.973 0.04 87);
-  --brand-primary-deep: oklch(0.66 0.13 268); /* AA 보정용 */
+  --brand-accent: oklch(0.778 0.126 294.6);
+  --brand-pink: oklch(0.849 0.087 4.6); /* #FFB6C6 */
+  --brand-danger: oklch(0.712 0.181 22.8);
+  --brand-warn: oklch(0.752 0.16 46.2); /* #FF8A4E */
+  --brand-success: oklch(0.735 0.13 159.6); /* #52C28C */
+  --brand-primary-soft: oklch(0.948 0.025 273.5); /* #E8EDFF */
+  --brand-secondary-soft: oklch(0.971 0.037 90.1); /* #FFF5DA */
+  --brand-primary-deep: oklch(
+    0.66 0.13 268
+  ); /* AA 보정용 — mockup #6F8DF5(C≈0.158)에서 chroma 낮춰 onPrimary 대비 확보 */
 
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.014 268);
-  --sidebar-primary: oklch(0.72 0.106 268);
+  --sidebar-foreground: oklch(0.268 0.016 264.3);
+  --sidebar-primary: oklch(0.737 0.135 270.7);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.955 0.005 264);
-  --sidebar-accent-foreground: oklch(0.235 0.014 268);
-  --sidebar-border: oklch(0.93 0.008 264);
-  --sidebar-ring: oklch(0.72 0.106 268);
+  --sidebar-accent-foreground: oklch(0.268 0.016 264.3);
+  --sidebar-border: oklch(0.939 0.007 260.7);
+  --sidebar-ring: oklch(0.737 0.135 270.7);
 
   --motion-fast: 120ms;
   --motion-base: 200ms;
@@ -117,7 +120,8 @@
   --invite-line: #e5d8c2;
 }
 
-/* Dark mode 토큰 — POC light-only. 인프라 보존, 활성화 안 함. */
+/* Dark mode 토큰 — POC light-only. 인프라 보존, 활성화 안 함.
+   primary/accent/destructive/ring은 light과 동일 mockup hex 정밀화 값을 사용. */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -125,26 +129,26 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.106 268);
+  --primary: oklch(0.737 0.135 270.7);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.78 0.106 295);
+  --accent: oklch(0.778 0.126 294.6);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: oklch(0.712 0.181 22.8);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.106 268);
+  --ring: oklch(0.737 0.135 270.7);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.72 0.106 268);
+  --sidebar-primary: oklch(0.737 0.135 270.7);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.106 268);
+  --sidebar-ring: oklch(0.737 0.135 270.7);
 }
 
 @layer base {
@@ -196,6 +200,84 @@
     letter-spacing: 0.04em;
     color: var(--color-muted-foreground);
   }
+}
+
+/* 챌린지 생성 캘린더(react-day-picker v10) — secondary 토큰 매핑 + range 시각화.
+   Why: mockup .btn-pill.on 의 secondary 톤을 종료일 캘린더에도 일관 적용.
+   mode="single" 유지하면서 modifiers 로 today→endDate range 를 칠한다 (start_at 은
+   서명 시점 RPC 가 결정하는 도메인 SoT — 사용자 입력은 단일 종료일).
+   주의: rdp v10 의 style.css 는 unlayered 로 로드되므로 우리 override 는
+   @layer 밖(=unlayered)에 두어야 cascade 에서 v10 기본을 이긴다. */
+.dp-with-key {
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-nav_button-width: 36px;
+  --rdp-nav-height: 36px;
+  --rdp-accent-color: var(--secondary);
+  --rdp-accent-background-color: var(--brand-secondary-soft);
+  --rdp-range_middle-background-color: var(--brand-secondary-soft);
+  --rdp-range_middle-color: var(--foreground);
+  --rdp-range_start-color: var(--secondary-foreground);
+  --rdp-range_start-date-background-color: var(--secondary);
+  --rdp-range_end-date-background-color: var(--secondary);
+  --rdp-selected-border: 0;
+  --rdp-today-color: var(--secondary-foreground);
+}
+
+.dp-with-key .rdp-day_button {
+  border-radius: 9999px;
+}
+
+.dp-with-key .rdp-button_previous,
+.dp-with-key .rdp-button_next {
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  width: 36px;
+  height: 36px;
+  color: #22262e;
+}
+.dp-with-key .rdp-button_previous:hover,
+.dp-with-key .rdp-button_next:hover {
+  background: var(--muted);
+}
+/* chevron 아이콘 색 — mockup §색상가이드 text(#22262E). v10 기본 accent-color 무시 */
+.dp-with-key .rdp-chevron {
+  fill: #22262e;
+}
+
+.dp-with-key .rdp-caption_label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #22262e;
+}
+
+/* range modifiers (single mode + 수동 적용).
+   .rdp-selected 의 border 가 동시 적용되지 않도록 unlayered 에서 명시. */
+.dp-with-key .day-range-start .rdp-day_button,
+.dp-with-key .day-range-end .rdp-day_button,
+.dp-with-key .rdp-selected .rdp-day_button {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 700;
+  border: 0;
+}
+.dp-with-key .day-range-middle .rdp-day_button {
+  background: var(--brand-secondary-soft);
+  color: var(--foreground);
+  border-radius: 6px;
+  border: 0;
+}
+
+/* today=range_start 는 disabled 여도 secondary 유지 (시작점 의미 우선) */
+.dp-with-key .day-range-start.rdp-disabled .rdp-day_button,
+.dp-with-key .day-range-start .rdp-day_button:disabled {
+  opacity: 1;
+}
+/* today+1..today+6: range 안이지만 클릭 불가 — 색은 살리고 opacity 로 약화 */
+.dp-with-key .day-range-middle.rdp-disabled .rdp-day_button,
+.dp-with-key .day-range-middle .rdp-day_button:disabled {
+  opacity: 0.7;
 }
 
 @layer utilities {
