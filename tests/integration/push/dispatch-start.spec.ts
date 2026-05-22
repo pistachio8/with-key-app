@@ -32,7 +32,7 @@ describe("dispatchStartNotification (integration)", () => {
     // 대상이 되도록 한다. owner 만 구독한다.
     await admin
       .from("users")
-      .update({ notification_prefs: { start: true, deadline: true } })
+      .update({ notification_prefs: { start: true, deadline: true, kudos: false } })
       .eq("id", owner.id);
     await admin.from("push_subscriptions").insert({
       user_id: owner.id,
@@ -43,7 +43,7 @@ describe("dispatchStartNotification (integration)", () => {
     // other 는 start 만 꺼둔다 — 타겟에서 제외돼야 한다.
     await admin
       .from("users")
-      .update({ notification_prefs: { start: false, deadline: true } })
+      .update({ notification_prefs: { start: false, deadline: true, kudos: false } })
       .eq("id", other.id);
 
     await dispatchStartNotification(c.id);
@@ -80,7 +80,7 @@ describe("dispatchStartNotification (integration)", () => {
     // ADR-0013 이후 신규 가입 default 는 OFF — dispatch 가 410 cleanup 까지 도달하려면 ON.
     await admin
       .from("users")
-      .update({ notification_prefs: { start: true, deadline: true } })
+      .update({ notification_prefs: { start: true, deadline: true, kudos: false } })
       .eq("id", owner.id);
     const endpoint = `https://fcm.googleapis.com/fcm/send/gone-${owner.id}`;
     await admin

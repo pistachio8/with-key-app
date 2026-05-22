@@ -405,6 +405,51 @@ export type Database = {
           },
         ];
       };
+      // NOTE: migration 0034 (ADR-0017) 신설. supabase CLI 미설치 환경에서 수동 patch.
+      // CI/dogfood 단계의 `pnpm db:types` 재생성 결과로 덮어쓰임 — 동일 shape 유지 보장.
+      kudos_push_log: {
+        Row: {
+          action_log_id: string;
+          actor_user_id: string;
+          recipient_user_id: string;
+          sent_at: string;
+        };
+        Insert: {
+          action_log_id: string;
+          actor_user_id: string;
+          recipient_user_id: string;
+          sent_at?: string;
+        };
+        Update: {
+          action_log_id?: string;
+          actor_user_id?: string;
+          recipient_user_id?: string;
+          sent_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kudos_push_log_action_log_id_fkey";
+            columns: ["action_log_id"];
+            isOneToOne: false;
+            referencedRelation: "action_logs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "kudos_push_log_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "kudos_push_log_recipient_user_id_fkey";
+            columns: ["recipient_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       push_subscriptions: {
         Row: {
           auth: string;

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-shell/app-header";
 import { createClient } from "@/lib/supabase/server";
-import { fetchUnreadKudosCount } from "@/lib/db/reads/unread-kudos";
 import { fetchMyGroups } from "@/lib/db/reads/my-groups";
 import { fetchOwnerGroupsForChallengeForm } from "@/lib/db/reads/owner-groups-for-challenge-form";
 import { nextDefaultGroupName } from "@/lib/groups/default-name";
@@ -14,10 +13,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
-  // DESIGN_BRIEF §1.5 — 미읽음 Kudos 존재 시 AppHeader 알림 dot. RLS 가 멤버십 필터.
   // F15 — 그룹 수에 따라 헤더 chevron sheet/직진입/라벨 분기.
-  const [unreadCount, groups, ownerGroups, profile] = await Promise.all([
-    fetchUnreadKudosCount(user.id),
+  // 알림 dot 은 NotificationBell 이 클라이언트에서 IDB unreadCount 구독 (plan 2026-05-22-header-unread-dot-source).
+  const [groups, ownerGroups, profile] = await Promise.all([
     fetchMyGroups(),
     fetchOwnerGroupsForChallengeForm(user.id),
     supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
@@ -29,11 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="bg-background mx-auto flex min-h-svh w-full max-w-screen-sm flex-col">
-      <AppHeader
-        groups={groups}
-        newGroupNamePreview={newGroupNamePreview}
-        unreadNotifications={unreadCount > 0}
-      />
+      <AppHeader groups={groups} newGroupNamePreview={newGroupNamePreview} />
       <main id="main" className="flex-1">
         {children}
       </main>

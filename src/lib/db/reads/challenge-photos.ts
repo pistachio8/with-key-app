@@ -49,7 +49,16 @@ export const fetchChallengePhotos = cache(
     const supabase = options.client ?? (await createClient());
     const { data, error } = await supabase
       .from("action_logs")
-      .select(["id", "photo_path", "created_at", "users!inner(display_name)"].join(","))
+      .select(
+        // ADR-0017 kudos_push_log 가 action_logs ↔ users 사이 M2M 관계를 추가해
+        // PostgREST embed 모호함(PGRST201) 발생 — 작성자 FK 를 명시.
+        [
+          "id",
+          "photo_path",
+          "created_at",
+          "users!action_logs_user_id_fkey!inner(display_name)",
+        ].join(","),
+      )
       .eq("challenge_id", challengeId)
       .not("photo_path", "is", null)
       .order("created_at", { ascending: true });

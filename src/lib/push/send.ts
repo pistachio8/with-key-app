@@ -12,7 +12,13 @@ export type PushPayload = {
   url?: string;
   // 알림 센터(IDB) 적재용 — SW 가 payload.type/category/targetUrl/id 를 사용.
   // PRD §9.1 notification_sent 의 type 과 동일 값 + 카테고리 그룹.
-  type?: "start" | "deadline" | "missed_yesterday" | "friend_action" | "penalty_added";
+  type?:
+    | "start"
+    | "deadline"
+    | "missed_yesterday"
+    | "friend_action"
+    | "penalty_added"
+    | "kudos_received";
   category?: "reminder" | "friend_action" | "penalty";
   targetUrl?: string;
   id?: string;

@@ -34,7 +34,7 @@ async function seedActiveEndingIn(hours: number) {
   // ADR-0013 이후 신규 가입 default 는 OFF — deadline 푸시 대상이 되려면 deadline ON.
   await admin
     .from("users")
-    .update({ notification_prefs: { start: true, deadline: true } })
+    .update({ notification_prefs: { start: true, deadline: true, kudos: false } })
     .eq("id", owner.id);
   await admin.from("push_subscriptions").insert({
     user_id: owner.id,

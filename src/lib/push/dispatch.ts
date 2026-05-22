@@ -8,6 +8,7 @@ import {
   type PushSubscriptionRow,
 } from "@/lib/push/send";
 import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
+import type { KudosEmoji } from "@/lib/validators/kudos";
 
 type NotificationKind = "start" | "deadline";
 type Outcome = "sent" | "cleaned" | "failed" | "suppressed";
@@ -169,4 +170,124 @@ export async function dispatchDeadlineNotification(challengeId: string): Promise
     targetUrl,
     challengeId,
   });
+}
+
+// ADR-0016 / ADR-0017 / plan 2026-05-22-kudos-received-notification
+// 내 인증글에 다른 사용자가 kudos INSERT 시 작성자에게 1:1 push 발송.
+// DELETE 는 호출자가 차단(toggleKudos 의 INSERT 분기만 호출). closed/pending 챌린지는 skip.
+// dedup 은 kudos_push_log UNIQUE PK 로 atomic — race-free.
+export async function dispatchKudosReceivedNotification(args: {
+  recipientUserId: string;
+  actorUserId: string;
+  actorDisplayName: string;
+  actionLogId: string;
+  challengeId: string;
+  emoji: KudosEmoji;
+}): Promise<DispatchSummary> {
+  const { recipientUserId, actorUserId, actorDisplayName, actionLogId, challengeId, emoji } = args;
+  const quietHours = isQuietHoursKST();
+  const admin = adminClient();
+
+  // 1. 본인→본인 방어 (RLS 가 1차 차단하지만 dispatch 단 2차 가드 — DB 왕복 절약).
+  if (recipientUserId === actorUserId) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 2. A3 (PO 결정 2026-05-22) — closed/pending 챌린지 옛 인증글에 달린 응원은 push 안 함.
+  const { data: challenge } = await admin
+    .from("challenges")
+    .select("status")
+    .eq("id", challengeId)
+    .maybeSingle();
+  if (!challenge || challenge.status !== "active") {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 3. recipient 의 kudos 옵트인 확인.
+  const { data: recipient } = await admin
+    .from("users")
+    .select("notification_prefs")
+    .eq("id", recipientUserId)
+    .maybeSingle();
+  const prefs = notificationPrefsSchema.safeParse(recipient?.notification_prefs);
+  if (!prefs.success || !prefs.data.kudos) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 4. H1 dedup 선예약 — kudos_push_log UNIQUE PK 로 atomic.
+  // ON CONFLICT 면 maybeSingle 가 null 리턴 → 이미 발송된 조합으로 판정.
+  const { data: reserved, error: reserveErr } = await admin
+    .from("kudos_push_log")
+    .insert({
+      recipient_user_id: recipientUserId,
+      action_log_id: actionLogId,
+      actor_user_id: actorUserId,
+    })
+    .select("recipient_user_id")
+    .maybeSingle();
+  if (reserveErr || !reserved) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 5. recipient 의 push_subscriptions 로드.
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("user_id, endpoint, p256dh, auth")
+    .eq("user_id", recipientUserId);
+  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
+    userId: s.user_id as string,
+    endpoint: s.endpoint as string,
+    p256dh: s.p256dh as string,
+    auth: s.auth as string,
+  }));
+
+  if (targets.length === 0) {
+    // 구독 없음 — dedup row 는 유지(다음에 구독해도 같은 actor 가 같은 글에는 재발송 안 함).
+    return { recipientCount: 0, quietHours };
+  }
+
+  const targetUrl = `/challenge/${challengeId}`;
+  const payload: PushPayload = {
+    title: "응원이 도착했어요",
+    body: `${actorDisplayName}님이 ${emoji}을 보냈어요`,
+    url: targetUrl,
+    type: "kudos_received",
+    category: "friend_action",
+    targetUrl,
+    challengeId,
+  };
+
+  const outcomes = await Promise.all(
+    targets.map(async (target): Promise<Outcome> => {
+      const outcome: Outcome = quietHours ? "suppressed" : await safeSend(target, payload);
+      void track(
+        {
+          name: "notification_sent",
+          props: {
+            type: "kudos_received",
+            challengeId,
+            suppressed: quietHours,
+            outcome,
+            actionLogId,
+            actorUserId,
+          },
+        },
+        { userId: target.userId },
+      );
+      return outcome;
+    }),
+  );
+
+  // 보상: 모든 디바이스가 failed (cleaned/sent/suppressed 가 하나도 없음) → dedup row 삭제.
+  // 한 디바이스라도 sent/cleaned/suppressed 면 보상하지 않음 (재발송 risk 회피).
+  const everyFailed = outcomes.length > 0 && outcomes.every((o) => o === "failed");
+  if (everyFailed) {
+    await admin.from("kudos_push_log").delete().match({
+      recipient_user_id: recipientUserId,
+      action_log_id: actionLogId,
+      actor_user_id: actorUserId,
+    });
+  }
+
+  return { recipientCount: targets.length, quietHours };
 }

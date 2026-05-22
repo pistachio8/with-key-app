@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
+// NOTE: 현재 호출자 없음. /feed 폐기(ADR-0002) 이후 헤더 dot 소스가
+// IDB unread (plan 2026-05-22-header-unread-dot-source) 로 이전됨.
+// 완전 제거는 follow-up — `last_feed_seen_at` column drop migration + ADR 동반.
+
 // DESIGN_BRIEF §1.5 — 피드 미읽음 Kudos 배지 last-seen 판정.
 export function isUnread(input: { createdAt: string; lastSeenAt: string | null }): boolean {
   if (input.lastSeenAt === null) return true;

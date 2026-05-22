@@ -10,6 +10,7 @@ export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
 export const notificationPrefsSchema = z.object({
   start: z.boolean(),
   deadline: z.boolean(),
+  kudos: z.boolean(),
 });
 export type NotificationPrefs = z.infer<typeof notificationPrefsSchema>;
 

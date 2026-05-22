@@ -82,10 +82,13 @@ export type AnalyticsEvent =
   | {
       name: "notification_sent";
       props: {
-        type: "start" | "deadline";
+        type: "start" | "deadline" | "kudos_received";
         challengeId: string;
         suppressed: boolean;
         outcome: "sent" | "cleaned" | "failed" | "suppressed";
+        // kudos_received 만 채움 (ADR-0017). start/deadline 발송에는 의미 없음.
+        actionLogId?: string;
+        actorUserId?: string;
       };
     }
   | {
