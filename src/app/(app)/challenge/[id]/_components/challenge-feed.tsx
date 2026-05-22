@@ -13,6 +13,8 @@ type Props = {
   viewerId: string;
   // 솔로(1)면 자식 FeedCard 가 Kudos footer 미렌더.
   participantCount: number;
+  // 종료(closed) 또는 만기 도달(active + past end_at) 시 kudos 토글·편집 차단.
+  isEnded: boolean;
 };
 
 type OptimisticAction = {
@@ -42,7 +44,7 @@ function applyToggle(items: ReadonlyArray<FeedItemView>, action: OptimisticActio
   });
 }
 
-export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
+export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Props) {
   const [settledItems, setSettledItems] = useState<FeedItemView[]>(() => [...items]);
   const [optimisticItems, applyOptimistic] = useOptimistic(settledItems, applyToggle);
   const [, startTransition] = useTransition();
@@ -50,6 +52,8 @@ export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
   const handleKudos = useCallback(
     (logId: string, authorId: string, emoji: KudosEmoji) => {
       if (authorId === viewerId) return;
+      // 종료된 챌린지는 클라이언트에서도 조기 차단 (UI disabled 우회 방어).
+      if (isEnded) return;
 
       startTransition(async () => {
         const action = { logId, emoji };
@@ -68,7 +72,7 @@ export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
         }
       });
     },
-    [applyOptimistic, viewerId],
+    [applyOptimistic, viewerId, isEnded],
   );
 
   if (optimisticItems.length === 0) {
@@ -91,9 +95,10 @@ export function ChallengeFeed({ items, viewerId, participantCount }: Props) {
             kudosByEmoji={item.kudosByEmoji}
             viewerKudos={item.viewerKudos}
             onKudos={(emoji) => handleKudos(item.id, item.authorId, emoji)}
-            disabled={item.authorId === viewerId}
+            disabled={item.authorId === viewerId || isEnded}
             participantCount={participantCount}
             isSelfAuthor={item.authorId === viewerId}
+            isEnded={isEnded}
           />
         </li>
       ))}
