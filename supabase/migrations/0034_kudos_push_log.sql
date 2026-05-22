@@ -20,3 +20,7 @@ alter table public.kudos_push_log enable row level security;
 
 -- cleanup cron (90d TTL) 의 range scan 용 — sent_at desc.
 create index idx_kudos_push_log_sent_at on public.kudos_push_log (sent_at desc);
+
+-- shared remote project 에서 새 테이블 추가 후 PostgREST schema cache 즉시 reload —
+-- CI 의 integration job 가 apply-migrations 직후 spec 실행하므로 cache lag 회피.
+notify pgrst, 'reload schema';
