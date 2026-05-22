@@ -18,8 +18,8 @@ import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-mes
 import { FrequencyStepper } from "./frequency-stepper";
 import { EndDatePicker } from "./end-date-picker";
 import { PenaltyPicker } from "./penalty-picker";
-import { PledgePreviewCard } from "./pledge-preview-card";
-import { PledgeSigningCanvas } from "./pledge-signing-canvas";
+import { PledgePreviewCard } from "@/components/pledge/pledge-preview-card";
+import { PledgeSigningCanvas } from "@/components/pledge/pledge-signing-canvas";
 import { CreationCompleteSheet } from "./creation-complete-sheet";
 import { createChallenge } from "../_actions";
 
