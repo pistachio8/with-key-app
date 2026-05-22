@@ -55,7 +55,9 @@ export const fetchChallengeFeed = cache(
           "ai_summary",
           "selected_keywords",
           "created_at",
-          "users!inner(display_name)",
+          // ADR-0017 kudos_push_log 가 action_logs ↔ users 사이 M2M 관계를 추가해
+          // PostgREST 가 embed 모호함(PGRST201)을 보고한다. 원래 의도한 작성자 FK 를 명시.
+          "users!action_logs_user_id_fkey!inner(display_name)",
           "kudos(user_id, emoji)",
         ].join(","),
       )
