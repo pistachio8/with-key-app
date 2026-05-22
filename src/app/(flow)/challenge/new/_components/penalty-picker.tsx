@@ -73,7 +73,7 @@ export function PenaltyPicker({ value, onChange }: Props) {
                 "min-h-12 rounded-xl border px-3 py-3 text-sm font-semibold tabular-nums transition-colors",
                 "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                 checked
-                  ? "bg-primary text-primary-foreground border-primary"
+                  ? "bg-secondary text-secondary-foreground border-secondary"
                   : "bg-muted text-muted-foreground hover:bg-muted/80",
               )}
             >
