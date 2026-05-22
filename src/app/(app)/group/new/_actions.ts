@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { z } from "zod";
 import { groupInputSchema } from "@/lib/validators/group";
 import { encryptAccountNumber } from "@/lib/crypto/account-cipher";
@@ -84,6 +85,10 @@ export const createGroup = withUser<CreateGroupInput, { id: string; name: string
       },
       { userId: user.id },
     );
+
+    // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 캐시 무효화 —
+    // 헤더 sheet 와 challenge 폼 select 에 새 그룹이 즉시 노출되도록.
+    revalidatePath("/", "layout");
 
     return success({ id: data, name });
   },

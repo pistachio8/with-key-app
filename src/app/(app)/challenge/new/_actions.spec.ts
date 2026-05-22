@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const rpc = vi.fn();
 const getUser = vi.fn();
@@ -187,6 +188,7 @@ describe("createChallenge", () => {
           name: "러닝 크루",
           createdAt: "2026-05-20T00:00:00.000Z",
           latestChallengeCreatedAt: "2026-05-20T09:00:00.000Z",
+          openChallengeId: null,
         },
       ],
     });
@@ -217,12 +219,14 @@ describe("createChallenge", () => {
           name: "러닝 크루",
           createdAt: "2026-05-20T00:00:00.000Z",
           latestChallengeCreatedAt: null,
+          openChallengeId: null,
         },
         {
           id: "44444444-4444-4444-8444-444444444444",
           name: "헬스 메이트",
           createdAt: "2026-05-21T00:00:00.000Z",
           latestChallengeCreatedAt: null,
+          openChallengeId: null,
         },
       ],
     });

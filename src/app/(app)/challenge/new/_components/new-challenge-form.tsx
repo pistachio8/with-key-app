@@ -28,6 +28,8 @@ type Step = 1 | 2 | 3;
 export type ChallengeFormGroupOption = {
   id: string;
   name: string | null;
+  // PRD AC-1 — 그룹당 open 챌린지는 1개. 값이 있으면 그 그룹은 select 에서 disabled.
+  openChallengeId: string | null;
 };
 
 interface NewChallengeFormProps {
@@ -64,8 +66,16 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
 
   const singleGroup = ownerGroups.length === 1 ? ownerGroups[0] : null;
   const needsGroupSelection = ownerGroups.length >= 2;
+  // open 챌린지 있는 그룹은 라벨에 "(진행 중)" 보강 — trigger label 에 mirror 되지만
+  // disabled 라 선택 불가이므로 trigger 에는 실제로 표시되지 않는다.
   const groupItems = useMemo<Record<string, string>>(
-    () => Object.fromEntries(ownerGroups.map((g) => [g.id, groupName(g.name)])),
+    () =>
+      Object.fromEntries(
+        ownerGroups.map((g) => [
+          g.id,
+          g.openChallengeId ? `${groupName(g.name)} (진행 중)` : groupName(g.name),
+        ]),
+      ),
     [ownerGroups],
   );
 
@@ -183,8 +193,14 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
                 </SelectTrigger>
                 <SelectContent>
                   {ownerGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {groupName(group.name)}
+                    <SelectItem
+                      key={group.id}
+                      value={group.id}
+                      disabled={group.openChallengeId !== null}
+                    >
+                      {group.openChallengeId
+                        ? `${groupName(group.name)} (진행 중)`
+                        : groupName(group.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

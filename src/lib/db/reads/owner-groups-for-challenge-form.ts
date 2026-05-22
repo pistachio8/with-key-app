@@ -10,8 +10,11 @@ type OwnerGroupRow = {
   created_at: string;
 };
 
-type GroupChallengeCreatedRow = {
+// status 는 spec C8/PRD AC-1 의 open 정의(pending|accepted|active) 와 1:1.
+type GroupChallengeRow = {
+  id: string;
   group_id: string;
+  status: string;
   created_at: string;
 };
 
@@ -20,7 +23,12 @@ export type OwnerGroupForChallengeForm = {
   name: string | null;
   createdAt: string;
   latestChallengeCreatedAt: string | null;
+  // PRD AC-1 — 그룹당 open(pending|accepted|active) 챌린지는 1개. 값이 있으면
+  // /challenge/new page 가드가 그 챌린지로 redirect 하거나 select item 을 disabled 로 표시.
+  openChallengeId: string | null;
 };
+
+const OPEN_STATUSES = new Set(["pending", "accepted", "active"]);
 
 type OwnerGroupsReadResult =
   | { ok: true; groups: OwnerGroupForChallengeForm[] }
@@ -35,14 +43,25 @@ function compareIsoDesc(left: string | null, right: string | null): number {
 
 export function buildOwnerGroupsForChallengeForm(
   groupRows: ReadonlyArray<OwnerGroupRow>,
-  challengeRows: ReadonlyArray<GroupChallengeCreatedRow>,
+  challengeRows: ReadonlyArray<GroupChallengeRow>,
 ): OwnerGroupForChallengeForm[] {
   const latestChallengeByGroup = new Map<string, string>();
+  const openChallengeByGroup = new Map<string, { id: string; createdAt: string }>();
 
   for (const challenge of challengeRows) {
-    const current = latestChallengeByGroup.get(challenge.group_id);
-    if (!current || challenge.created_at.localeCompare(current) > 0) {
+    const currentLatest = latestChallengeByGroup.get(challenge.group_id);
+    if (!currentLatest || challenge.created_at.localeCompare(currentLatest) > 0) {
       latestChallengeByGroup.set(challenge.group_id, challenge.created_at);
+    }
+
+    if (OPEN_STATUSES.has(challenge.status)) {
+      const currentOpen = openChallengeByGroup.get(challenge.group_id);
+      if (!currentOpen || challenge.created_at.localeCompare(currentOpen.createdAt) > 0) {
+        openChallengeByGroup.set(challenge.group_id, {
+          id: challenge.id,
+          createdAt: challenge.created_at,
+        });
+      }
     }
   }
 
@@ -52,6 +71,7 @@ export function buildOwnerGroupsForChallengeForm(
       name: group.name,
       createdAt: group.created_at,
       latestChallengeCreatedAt: latestChallengeByGroup.get(group.id) ?? null,
+      openChallengeId: openChallengeByGroup.get(group.id)?.id ?? null,
     }))
     .sort((a, b) => {
       const recentChallenge = compareIsoDesc(
@@ -83,7 +103,7 @@ export async function readOwnerGroupsForChallengeForm(
   const groupIds = typedGroups.map((group) => group.id);
   const { data: challengeRows, error: challengeError } = await supabase
     .from("challenges")
-    .select("group_id, created_at")
+    .select("id, group_id, status, created_at")
     .in("group_id", groupIds)
     .order("created_at", { ascending: false });
 
@@ -93,10 +113,7 @@ export async function readOwnerGroupsForChallengeForm(
 
   return {
     ok: true,
-    groups: buildOwnerGroupsForChallengeForm(
-      typedGroups,
-      challengeRows as GroupChallengeCreatedRow[],
-    ),
+    groups: buildOwnerGroupsForChallengeForm(typedGroups, challengeRows as GroupChallengeRow[]),
   };
 }
 

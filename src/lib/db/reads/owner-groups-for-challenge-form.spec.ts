@@ -15,8 +15,18 @@ describe("buildOwnerGroupsForChallengeForm", () => {
       },
     ];
     const challenges = [
-      { group_id: "group-1", created_at: "2026-05-20T09:00:00.000Z" },
-      { group_id: "group-1", created_at: "2026-05-21T09:00:00.000Z" },
+      {
+        id: "ch-1",
+        group_id: "group-1",
+        status: "closed",
+        created_at: "2026-05-20T09:00:00.000Z",
+      },
+      {
+        id: "ch-2",
+        group_id: "group-1",
+        status: "closed",
+        created_at: "2026-05-21T09:00:00.000Z",
+      },
     ];
 
     expect(buildOwnerGroupsForChallengeForm(groups, challenges)).toEqual([
@@ -25,6 +35,7 @@ describe("buildOwnerGroupsForChallengeForm", () => {
         name: "러닝 크루",
         createdAt: "2026-05-20T00:00:00.000Z",
         latestChallengeCreatedAt: "2026-05-21T09:00:00.000Z",
+        openChallengeId: null,
       },
     ]);
   });
@@ -48,8 +59,18 @@ describe("buildOwnerGroupsForChallengeForm", () => {
       },
     ];
     const challenges = [
-      { group_id: "group-oldest", created_at: "2026-05-19T09:00:00.000Z" },
-      { group_id: "group-recent", created_at: "2026-05-21T09:00:00.000Z" },
+      {
+        id: "ch-oldest",
+        group_id: "group-oldest",
+        status: "closed",
+        created_at: "2026-05-19T09:00:00.000Z",
+      },
+      {
+        id: "ch-recent",
+        group_id: "group-recent",
+        status: "closed",
+        created_at: "2026-05-21T09:00:00.000Z",
+      },
     ];
 
     expect(buildOwnerGroupsForChallengeForm(groups, challenges).map((group) => group.id)).toEqual([
@@ -57,5 +78,62 @@ describe("buildOwnerGroupsForChallengeForm", () => {
       "group-oldest",
       "group-no-challenge",
     ]);
+  });
+
+  // PRD AC-1 — 그룹당 open(pending|accepted|active) 챌린지는 1개.
+  // open 이 있으면 그 id 가, closed 만 있으면 null 이 매핑되어야 한다.
+  it("maps openChallengeId from the most recent open challenge per group", () => {
+    const groups = [
+      { id: "group-a", name: "A", created_at: "2026-05-18T00:00:00.000Z" },
+      { id: "group-b", name: "B", created_at: "2026-05-18T00:00:00.000Z" },
+    ];
+    const challenges = [
+      // group-a: closed 와 active 공존 → active 가 open
+      {
+        id: "ch-a-closed",
+        group_id: "group-a",
+        status: "closed",
+        created_at: "2026-05-18T09:00:00.000Z",
+      },
+      {
+        id: "ch-a-active",
+        group_id: "group-a",
+        status: "active",
+        created_at: "2026-05-21T09:00:00.000Z",
+      },
+      // group-b: closed 만 → null
+      {
+        id: "ch-b-closed",
+        group_id: "group-b",
+        status: "closed",
+        created_at: "2026-05-19T09:00:00.000Z",
+      },
+    ];
+
+    const byId = Object.fromEntries(
+      buildOwnerGroupsForChallengeForm(groups, challenges).map((g) => [g.id, g.openChallengeId]),
+    );
+    expect(byId).toEqual({ "group-a": "ch-a-active", "group-b": null });
+  });
+
+  it("picks the latest open when multiple pending/accepted/active exist", () => {
+    const groups = [{ id: "group-a", name: "A", created_at: "2026-05-18T00:00:00.000Z" }];
+    const challenges = [
+      {
+        id: "ch-pending",
+        group_id: "group-a",
+        status: "pending",
+        created_at: "2026-05-20T09:00:00.000Z",
+      },
+      {
+        id: "ch-accepted-newer",
+        group_id: "group-a",
+        status: "accepted",
+        created_at: "2026-05-21T09:00:00.000Z",
+      },
+    ];
+
+    const [a] = buildOwnerGroupsForChallengeForm(groups, challenges);
+    expect(a?.openChallengeId).toBe("ch-accepted-newer");
   });
 });
