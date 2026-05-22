@@ -79,6 +79,27 @@ describe("fetchChallengeFeed", () => {
       .select("id, group_id, status, start_at, end_at")
       .eq("id", challenge.id);
     console.log("[DEBUG] challenge state:", JSON.stringify(challengeCheck));
+    // STEP A: other 가 group_members 에 있는가
+    const otherMember = await admin
+      .from("group_members")
+      .select("group_id, user_id")
+      .eq("user_id", other.id);
+    console.log("[DEBUG] other group_members rows:", JSON.stringify(otherMember));
+    // STEP B: owner 의 anon client 로 users (other) read 가능한가
+    const usersRead = await ownerClient.from("users").select("id, display_name").eq("id", other.id);
+    console.log("[DEBUG] owner reads other user via RLS:", JSON.stringify(usersRead));
+    // STEP C: fetchChallengeFeed 의 query 와 같은 형태 직접 호출
+    const innerJoin = await ownerClient
+      .from("action_logs")
+      .select("id, user_id, users!inner(display_name)")
+      .eq("challenge_id", challenge.id);
+    console.log("[DEBUG] anon inner join query:", JSON.stringify(innerJoin));
+    // STEP D: kudos join 포함
+    const fullJoin = await ownerClient
+      .from("action_logs")
+      .select("id, user_id, users!inner(display_name), kudos(user_id, emoji)")
+      .eq("challenge_id", challenge.id);
+    console.log("[DEBUG] anon full join (users!inner + kudos):", JSON.stringify(fullJoin));
     const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
     console.log("[DEBUG] fetchChallengeFeed result length:", rows.length, "logId:", logId);
     expect(rows).toHaveLength(1);
