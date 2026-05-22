@@ -8,11 +8,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface CreationCompleteSheetProps {
-  challengeId: string;
   inviteUrl: string;
 }
 
-export function CreationCompleteSheet({ challengeId, inviteUrl }: CreationCompleteSheetProps) {
+export function CreationCompleteSheet({ inviteUrl }: CreationCompleteSheetProps) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -73,11 +72,9 @@ export function CreationCompleteSheet({ challengeId, inviteUrl }: CreationComple
       >
         카카오톡으로 공유
       </button>
-      <Link
-        href={`/challenge/${challengeId}`}
-        className="t-sub mt-2 underline-offset-4 hover:underline"
-      >
-        챌린지 보기
+      {/* mockup §3-D — 공유 후 홈으로 유도 (챌린지 상세는 home 의 챌린지 카드로 진입). */}
+      <Link href="/home" className="t-sub mt-2 underline-offset-4 hover:underline">
+        홈으로
       </Link>
     </div>
   );

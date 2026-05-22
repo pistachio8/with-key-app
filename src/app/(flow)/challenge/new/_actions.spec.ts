@@ -3,6 +3,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
+// Next.js 의 redirect 는 `digest = "NEXT_REDIRECT;..."` 를 가진 error 를 throw.
+// vi.mock factory 는 import 보다 먼저 hoist 되어 외부 변수 참조가 ReferenceError 가
+// 되므로 vi.hoisted 로 mock 정의도 함께 hoist.
+const { redirectMock } = vi.hoisted(() => ({
+  redirectMock: vi.fn((url: string, type?: string) => {
+    const err = new Error("NEXT_REDIRECT") as Error & { digest: string };
+    err.digest = `NEXT_REDIRECT;${type ?? "push"};${url};303`;
+    throw err;
+  }),
+}));
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  RedirectType: { replace: "replace", push: "push" },
+}));
+
 const rpc = vi.fn();
 const getUser = vi.fn();
 const inviteInsert = vi.fn();
@@ -25,16 +40,6 @@ vi.mock("@/lib/supabase/server", () => ({
         return { insert: (row: unknown) => inviteInsert(row) };
       }
       throw new Error(`unexpected from(${table})`);
-    },
-  }),
-}));
-
-vi.mock("next/headers", () => ({
-  headers: async () => ({
-    get: (key: string) => {
-      if (key === "host") return "with-key.test";
-      if (key === "x-forwarded-proto") return "https";
-      return null;
     },
   }),
 }));
@@ -73,12 +78,26 @@ function authedUser() {
   });
 }
 
+// 성공 시 server action 은 redirect throw 로 종료한다.
+// 호출 인자 검증을 한곳에 모아 가독성 확보 — replace 모드 + done segment + token query.
+function expectDoneRedirect() {
+  expect(redirectMock).toHaveBeenCalledTimes(1);
+  const call = redirectMock.mock.calls[0];
+  expect(call).toBeDefined();
+  const [target, type] = call!;
+  expect(target).toMatch(
+    new RegExp(`^/challenge/new/done/${CHALLENGE_ID}\\?token=[A-Za-z0-9_\\-%]+$`),
+  );
+  expect(type).toBe("replace");
+}
+
 beforeEach(() => {
   rpc.mockReset();
   getUser.mockReset();
   inviteInsert.mockReset();
   usersSelect.mockReset();
   readOwnerGroupsForChallengeForm.mockReset();
+  redirectMock.mockClear();
   trackCalls.length = 0;
 });
 
@@ -89,6 +108,7 @@ describe("createChallenge", () => {
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("unauthorized");
     expect(rpc).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("invalid_input — empty title", async () => {
@@ -97,6 +117,7 @@ describe("createChallenge", () => {
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("invalid_input");
     expect(rpc).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("invalid_input — durationDays < 7 (ADR-0004)", async () => {
@@ -106,7 +127,7 @@ describe("createChallenge", () => {
     if (!res.ok) expect(res.error).toBe("invalid_input");
   });
 
-  it("groupId 제공 + signature 없음 → create_challenge + invites insert", async () => {
+  it("groupId 제공 + signature 없음 → create_challenge + invites insert + done segment redirect", async () => {
     authedUser();
     rpc.mockResolvedValueOnce({
       data: [{ id: CHALLENGE_ID, participant_count: 1 }],
@@ -114,12 +135,9 @@ describe("createChallenge", () => {
     });
     inviteInsert.mockResolvedValueOnce({ error: null });
 
-    const res = await createChallenge(validInput);
-    expect(res.ok).toBe(true);
-    if (res.ok) {
-      expect(res.data.id).toBe(CHALLENGE_ID);
-      expect(res.data.inviteUrl).toMatch(/^https:\/\/with-key\.test\/invite\//);
-    }
+    await expect(createChallenge(validInput)).rejects.toThrow(/NEXT_REDIRECT/);
+
+    expectDoneRedirect();
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("create_challenge", expect.any(Object));
     expect(inviteInsert).toHaveBeenCalledTimes(1);
@@ -130,7 +148,7 @@ describe("createChallenge", () => {
     expect(inviteSent).toBeTruthy();
   });
 
-  it("ownerSignatureDataUrl 있음 → sign_and_maybe_activate 호출", async () => {
+  it("ownerSignatureDataUrl 있음 → sign_and_maybe_activate 호출 + done segment redirect", async () => {
     authedUser();
     rpc.mockResolvedValueOnce({
       data: [{ id: CHALLENGE_ID, participant_count: 1 }],
@@ -139,11 +157,14 @@ describe("createChallenge", () => {
     rpc.mockResolvedValueOnce({ data: [{ status: "pending" }], error: null });
     inviteInsert.mockResolvedValueOnce({ error: null });
 
-    const res = await createChallenge({
-      ...validInput,
-      ownerSignatureDataUrl: "data:image/png;base64,AAA",
-    });
-    expect(res.ok).toBe(true);
+    await expect(
+      createChallenge({
+        ...validInput,
+        ownerSignatureDataUrl: "data:image/png;base64,AAA",
+      }),
+    ).rejects.toThrow(/NEXT_REDIRECT/);
+
+    expectDoneRedirect();
     expect(rpc).toHaveBeenNthCalledWith(2, "sign_and_maybe_activate", {
       p_challenge_id: CHALLENGE_ID,
     });
@@ -151,7 +172,7 @@ describe("createChallenge", () => {
     expect(signed).toBeTruthy();
   });
 
-  it("groupId 미제공 + owner 그룹 0개 → create_group_with_owner RPC 호출", async () => {
+  it("groupId 미제공 + owner 그룹 0개 → create_group_with_owner RPC 호출 + done segment redirect", async () => {
     authedUser();
     readOwnerGroupsForChallengeForm.mockResolvedValueOnce({ ok: true, groups: [] });
     usersSelect.mockResolvedValueOnce({ data: { display_name: "민지" }, error: null });
@@ -162,8 +183,11 @@ describe("createChallenge", () => {
     });
     inviteInsert.mockResolvedValueOnce({ error: null });
 
-    const res = await createChallenge({ ...validInput, groupId: undefined });
-    expect(res.ok).toBe(true);
+    await expect(createChallenge({ ...validInput, groupId: undefined })).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    );
+
+    expectDoneRedirect();
     expect(rpc).toHaveBeenNthCalledWith(
       1,
       "create_group_with_owner",
@@ -178,7 +202,7 @@ describe("createChallenge", () => {
     expect(groupCreated?.event.props.hasAccount).toBe(false);
   });
 
-  it("groupId 미제공 + owner 그룹 1개 → 기존 그룹에 자동 attach", async () => {
+  it("groupId 미제공 + owner 그룹 1개 → 기존 그룹에 자동 attach + done segment redirect", async () => {
     authedUser();
     readOwnerGroupsForChallengeForm.mockResolvedValueOnce({
       ok: true,
@@ -198,8 +222,11 @@ describe("createChallenge", () => {
     });
     inviteInsert.mockResolvedValueOnce({ error: null });
 
-    const res = await createChallenge({ ...validInput, groupId: undefined });
-    expect(res.ok).toBe(true);
+    await expect(createChallenge({ ...validInput, groupId: undefined })).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    );
+
+    expectDoneRedirect();
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith(
       "create_challenge",
@@ -239,6 +266,7 @@ describe("createChallenge", () => {
     }
     expect(rpc).not.toHaveBeenCalled();
     expect(inviteInsert).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("owner 그룹 read 실패 → upstream_error", async () => {
@@ -249,6 +277,7 @@ describe("createChallenge", () => {
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("upstream_error");
     expect(rpc).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("create_challenge 42501 → forbidden", async () => {
@@ -260,6 +289,7 @@ describe("createChallenge", () => {
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("forbidden");
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("create_challenge P0002 → not_found", async () => {
@@ -271,5 +301,6 @@ describe("createChallenge", () => {
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("not_found");
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });
