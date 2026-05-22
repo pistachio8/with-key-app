@@ -15,6 +15,12 @@ export default async function MyChallengesPage() {
   const counts = deriveCounts(my);
   const totalAny = my.owner.length + my.member.length;
 
+  // 모킹업 §12-A — "운영 중"/"참여 중" 은 active/pending/accepted 만,
+  // closed 는 별도 "종료된 챌린지" 섹션으로 (owner+member 합쳐서).
+  const ownerActive = my.owner.filter((c) => c.status !== "closed");
+  const memberActive = my.member.filter((c) => c.status !== "closed");
+  const closed = [...my.owner, ...my.member].filter((c) => c.status === "closed");
+
   if (totalAny === 0) {
     return (
       <div className="flex flex-col gap-4 p-4">
@@ -40,8 +46,9 @@ export default async function MyChallengesPage() {
     <div className="flex flex-col gap-4 p-4">
       <h1 className="t-h1">챌린지 관리</h1>
       <ChallengeLimitChart current={counts.owner} max={OWNER_LIMIT} />
-      <ManageCardList title="운영 중" role="owner" items={my.owner} />
-      <ManageCardList title="참여 중" role="member" items={my.member} />
+      <ManageCardList title="운영 중" role="owner" items={ownerActive} />
+      <ManageCardList title="참여 중" role="member" items={memberActive} />
+      <ManageCardList title="종료된 챌린지" role="member" items={closed} />
     </div>
   );
 }
