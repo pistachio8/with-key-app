@@ -129,10 +129,17 @@ export const createChallenge = withUser<CreateChallengeInput, CreateChallengeRes
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
     const inviteUrl = buildInviteUrl(`${proto}://${host}`, token);
 
-    // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 캐시 무효화 —
-    // auto-group 생성 분기 포함. 새 그룹 또는 새 챌린지가 헤더 sheet · home · 폼에
-    // 즉시 반영되도록.
-    revalidatePath("/", "layout");
+    // 새 그룹·챌린지가 헤더 sheet · home · /me · 그룹 상세 등에 반영되도록 invalidate.
+    // (flow)/challenge/new 는 의도적으로 제외 — revalidate 시 page.tsx 의
+    // "모든 owner 그룹에 open 챌린지 → redirect" 가드가 재실행되어
+    // step 3 (CreationCompleteSheet) 가 방금 만든 챌린지로 튕긴다.
+    revalidatePath("/home");
+    revalidatePath("/me", "layout");
+    revalidatePath("/feed");
+    revalidatePath("/action");
+    revalidatePath("/pledge");
+    revalidatePath(`/group/${groupId}`);
+    revalidatePath(`/challenge/${challengeId}`, "layout");
 
     return success({ id: challengeId, inviteUrl });
   },

@@ -147,7 +147,9 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
           <ChevronLeft className="size-5" aria-hidden="true" />
         </button>
         <span className="t-body font-semibold">새 챌린지</span>
-        <span className="t-sub tabular-nums">{step === 3 ? "완료" : `${step}/2`}</span>
+        {/* step 3 (생성 완료 시트) 에서는 버튼처럼 보이는 "완료" 텍스트 숨김.
+            구조 유지를 위해 빈 span 으로 자리만 차지. */}
+        <span className="t-sub tabular-nums">{step === 3 ? "" : `${step}/2`}</span>
       </header>
 
       {step === 1 && (
