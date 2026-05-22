@@ -1,20 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import { Stamp } from "@/components/ui/stamp";
 
 describe("Stamp", () => {
-  it("registers IntersectionObserver on mount", () => {
-    const observe = vi.fn();
-    global.IntersectionObserver = class {
-      observe = observe;
-      disconnect = vi.fn();
-      unobserve = vi.fn();
-      takeRecords = vi.fn(() => []);
-      root = null;
-      rootMargin = "";
-      thresholds = [];
-    };
-    render(<Stamp label="인증 완료" />);
-    expect(observe).toHaveBeenCalledTimes(1);
+  it("applies animate-stamp-in on mount so the stamp animation always plays", () => {
+    const { container } = render(<Stamp label="인증 완료" />);
+    const el = container.querySelector("[role='img']");
+    expect(el).not.toBeNull();
+    expect(el?.className).toContain("animate-stamp-in");
   });
 });

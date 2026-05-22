@@ -1,6 +1,4 @@
-"use client";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
 
 interface StampProps {
   label: string;
@@ -14,40 +12,19 @@ const TONE = {
   danger: "border-destructive text-destructive",
 } as const;
 
+// mount 시 CSS 애니메이션 1회 실행. (이전: IntersectionObserver + threshold 0.4 —
+// SSR/hydration 직후 IO fire 지연 또는 banner 가 다른 카드 아래로 밀려 threshold
+// 미충족 시 도장이 영구 invisible 로 남아 좌측 빈 공간만 보이는 사례.)
+// `animate-stamp-in` 키프레임: 0% opacity 0 + scale 1.8 → 100% opacity 1 + scale 1
+// (animation-fill-mode: forwards — 최종 상태 유지).
 export function Stamp({ label, tone = "primary", className }: StampProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [played, setPlayed] = useState(false);
-
-  useEffect(() => {
-    if (played) return;
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setPlayed(true);
-            observer.disconnect();
-            return;
-          }
-        }
-      },
-      { threshold: 0.4 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [played]);
-
   return (
     <div
-      ref={ref}
       role="img"
       aria-label={label}
-      data-played={played}
       className={cn(
         "inline-flex size-20 items-center justify-center rounded-full border-[3px] font-bold tracking-wider",
-        "opacity-0 scale-150 rotate-[-12deg]",
-        "data-[played=true]:animate-stamp-in",
+        "animate-stamp-in",
         TONE[tone],
         className,
       )}
