@@ -24,6 +24,7 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
   gym: "🏋️ 헬스",
   yoga: "🧘 요가",
   other: "✨ 기타",
+  meal: "🥗 식단",
 };
 
 // iOS Safari gives file.type === "" for HEIC picks — extension fallback lets
@@ -287,8 +288,8 @@ export function ActionForm({ challengeId }: Props) {
         <DiaryBotInfo />
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="t-caption">운동 종류</legend>
-          <div role="radiogroup" aria-label="운동 종류" className="flex flex-wrap gap-2">
+          <legend className="t-caption">활동 종류</legend>
+          <div role="radiogroup" aria-label="활동 종류" className="flex flex-wrap gap-2">
             {ACTIVITY_TYPES.map((type) => {
               const checked = activityType === type;
               return (

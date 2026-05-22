@@ -18,6 +18,7 @@ const ACTIVITY_LABEL_KO: Record<DiaryPromptInput["activityType"], string> = {
   gym: "헬스",
   yoga: "요가",
   other: "운동",
+  meal: "식단",
 };
 
 export function templateFallback(input: DiaryPromptInput, _displayName = "회원"): string {
