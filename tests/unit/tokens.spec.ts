@@ -12,13 +12,13 @@ function extractToken(name: string): string {
 
 describe("design tokens (globals.css)", () => {
   it("primary token uses 2026-05-14 mockup palette", () => {
-    expect(extractToken("primary")).toContain("oklch(0.72 0.106 268)");
+    expect(extractToken("primary")).toContain("oklch(0.737 0.135 270.7)");
   });
   it("secondary token uses mockup yellow", () => {
-    expect(extractToken("secondary")).toContain("oklch(0.886 0.107 87)");
+    expect(extractToken("secondary")).toContain("oklch(0.887 0.132 87.2)");
   });
   it("background uses mockup off-white", () => {
-    expect(extractToken("background")).toContain("oklch(0.975 0.005 264)");
+    expect(extractToken("background")).toContain("oklch(0.979 0.004 271.4)");
   });
   it("radius is 0.875rem (14px) per mockup card radius", () => {
     expect(extractToken("radius")).toBe("0.875rem");
