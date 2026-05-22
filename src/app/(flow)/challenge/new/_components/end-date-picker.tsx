@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
@@ -30,13 +30,29 @@ export function EndDatePicker({ value, onChange, className }: EndDatePickerProps
   const endDate = addDays(today, value);
   const [open, setOpen] = useState(false);
   const isPreset = (PRESETS as readonly number[]).includes(value);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // 외부 영역 클릭으로만 close — preset/날짜 선택은 popup 유지.
+  // popoverRef(캘린더 Card)·triggerRef(아이콘) 외부 mousedown 시에만 닫는다.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (popoverRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
 
   function handleSelectDate(date: Date | undefined) {
     if (!date) return;
     const days = differenceInCalendarDays(date, today);
     if (days < MIN_DAYS || days > MAX_DAYS) return;
     onChange(days);
-    setOpen(false);
   }
 
   return (
@@ -54,15 +70,12 @@ export function EndDatePicker({ value, onChange, className }: EndDatePickerProps
               role="radio"
               aria-checked={checked}
               tabIndex={checked ? 0 : -1}
-              onClick={() => {
-                onChange(d);
-                setOpen(false);
-              }}
+              onClick={() => onChange(d)}
               className={cn(
                 "min-h-11 flex-1 rounded-full border text-[13px] font-semibold transition-colors",
                 "focus-visible:ring-ring active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                 checked
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-secondary bg-secondary text-secondary-foreground"
                   : "border-border/60 bg-card text-foreground/85 hover:bg-muted",
               )}
             >
@@ -71,6 +84,7 @@ export function EndDatePicker({ value, onChange, className }: EndDatePickerProps
           );
         })}
         <button
+          ref={triggerRef}
           type="button"
           aria-label="종료일 직접 선택"
           aria-expanded={open}
@@ -80,7 +94,7 @@ export function EndDatePicker({ value, onChange, className }: EndDatePickerProps
             "inline-flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors",
             "focus-visible:ring-ring active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
             !isPreset || open
-              ? "border-primary bg-brand-primary-soft text-primary"
+              ? "border-secondary bg-secondary text-secondary-foreground"
               : "border-border/60 bg-card text-foreground/85 hover:bg-muted",
           )}
         >
@@ -88,16 +102,30 @@ export function EndDatePicker({ value, onChange, className }: EndDatePickerProps
         </button>
       </div>
       {open && (
-        <Card padding="md" className="mt-1 flex justify-center">
-          <DayPicker
-            mode="single"
-            selected={isPreset ? undefined : endDate}
-            onSelect={handleSelectDate}
-            disabled={[{ before: minDate }, { after: maxDate }]}
-            locale={ko}
-            showOutsideDays={false}
-          />
-        </Card>
+        <div ref={popoverRef} className="mt-1 flex justify-center">
+          <Card padding="md">
+            <DayPicker
+              className="dp-with-key"
+              mode="single"
+              selected={endDate}
+              onSelect={handleSelectDate}
+              disabled={[{ before: minDate }, { after: maxDate }]}
+              locale={ko}
+              navLayout="around"
+              showOutsideDays={false}
+              modifiers={{
+                rangeStart: today,
+                rangeMiddle: { after: today, before: endDate },
+                rangeEnd: endDate,
+              }}
+              modifiersClassNames={{
+                rangeStart: "day-range-start",
+                rangeMiddle: "day-range-middle",
+                rangeEnd: "day-range-end",
+              }}
+            />
+          </Card>
+        </div>
       )}
       <p className="text-muted-foreground text-[10px]">
         종료일:{" "}
