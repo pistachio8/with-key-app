@@ -35,7 +35,12 @@ export type AnalyticsEvent =
   | { name: "action_started"; props: { challengeId: string } }
   | {
       name: "keywords_shown";
-      props: { activityType: ActivityType; shownKeywords: string[]; source: "initial" | "reroll" };
+      props: {
+        activityType: ActivityType;
+        shownKeywords: string[];
+        source: "initial" | "reroll";
+        poolVersion: string;
+      };
     }
   | { name: "keywords_reroll"; props: { activityType: ActivityType; rerollCount: number } }
   | {
@@ -59,6 +64,7 @@ export type AnalyticsEvent =
         rerollCount: number;
         photoSize: number;
         photoAttached: boolean;
+        poolVersion: string;
       };
     }
   | {

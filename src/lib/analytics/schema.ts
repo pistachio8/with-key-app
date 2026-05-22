@@ -54,6 +54,8 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       activityType,
       shownKeywords: z.array(z.string()).min(1),
       source: z.enum(["initial", "reroll"]),
+      // spec 2026-05-22 — 키워드 풀 v1.1 release 분기점 (ADR-0015).
+      poolVersion: z.string(),
     }),
   }),
   z.object({
@@ -81,6 +83,8 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       rerollCount: z.number().int().min(0).max(5),
       photoSize: z.number().int().min(0),
       photoAttached: z.boolean(),
+      // spec 2026-05-22 — 키워드 풀 v1.1 release 분기점 (ADR-0015).
+      poolVersion: z.string(),
     }),
   }),
   z.object({

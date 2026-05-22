@@ -46,7 +46,12 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
   },
   keywords_shown: {
     name: "keywords_shown",
-    props: { activityType: "gym", shownKeywords: ["펌핑"], source: "initial" },
+    props: {
+      activityType: "gym",
+      shownKeywords: ["펌핑"],
+      source: "initial",
+      poolVersion: "v1.1-meal-2026-05-22",
+    },
   },
   keywords_reroll: {
     name: "keywords_reroll",
@@ -68,6 +73,7 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       rerollCount: 0,
       photoSize: 0,
       photoAttached: false,
+      poolVersion: "v1.1-meal-2026-05-22",
     },
   },
   ai_generated: {
