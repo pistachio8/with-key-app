@@ -29,6 +29,24 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
 
     const supabase = await createClient();
 
+    // 종료/만기 도달 챌린지의 kudos 토글 차단 — 클라이언트 disabled 우회 방어.
+    // action_log → challenge 조인으로 status / end_at 검사. RLS 가 비멤버 접근 자동 차단.
+    const { data: logForGuard } = await supabase
+      .from("action_logs")
+      .select("challenges!inner(status, end_at)")
+      .eq("id", parsed.data.actionLogId)
+      .maybeSingle();
+    if (!logForGuard) return failure("not_found");
+    const ch = Array.isArray(logForGuard.challenges)
+      ? logForGuard.challenges[0]
+      : logForGuard.challenges;
+    if (!ch) return failure("not_found");
+    const endAt = ch.end_at as string | null;
+    const isEnded =
+      ch.status === "closed" ||
+      (ch.status === "active" && endAt != null && new Date(endAt) < new Date());
+    if (isEnded) return failure("forbidden");
+
     const { data: existing } = await supabase
       .from("kudos")
       .select("id")

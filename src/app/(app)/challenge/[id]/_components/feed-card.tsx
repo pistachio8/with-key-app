@@ -24,6 +24,8 @@ interface FeedCardProps {
   isSelfAuthor?: boolean;
   createdAtLabel?: string;
   dayNumber?: number | null;
+  // 종료(closed) 또는 만기 도달(active+past end_at) — 본인 글 "편집" 링크 hide.
+  isEnded?: boolean;
 }
 
 // 모킹업 §8-A `.feed-card` — header(아바타·이름·시간·DAY) + 16:9 photo + 태그 Chip + body + KudosBar.
@@ -40,6 +42,7 @@ export function FeedCard({
   isSelfAuthor = false,
   createdAtLabel,
   dayNumber = null,
+  isEnded = false,
 }: FeedCardProps) {
   const showKudos = participantCount >= 2;
   const [imageFailed, setImageFailed] = useState(false);
@@ -71,7 +74,7 @@ export function FeedCard({
             {isSelfAuthor && " (나)"}
           </span>
           {createdAtLabel && <span>· {createdAtLabel}</span>}
-          {isSelfAuthor ? (
+          {isSelfAuthor && !isEnded ? (
             <button
               type="button"
               onClick={handleEditClick}

@@ -57,6 +57,10 @@ export default async function ChallengeFeedPage({
   const me = detail.members.find((m) => m.id === user.id);
   const isParticipant = me != null;
   const mySigned = me?.signed ?? false;
+  // layout.tsx 와 동일 SoT — 종료(closed) 또는 만기 도달(active+past end_at) → kudos 잠금.
+  const isEndedByDate =
+    detail.status === "active" && detail.endAt != null && new Date(detail.endAt) < new Date();
+  const isEnded = detail.status === "closed" || isEndedByDate;
 
   const feed = await fetchChallengeFeed(id, user.id);
   const todayAuthorIds = new Set(
@@ -81,6 +85,7 @@ export default async function ChallengeFeedPage({
         status={detail.status}
         isParticipant={isParticipant}
         mySigned={mySigned}
+        isEnded={isEnded}
       />
       <ActionFab href={actionHref} />
     </>

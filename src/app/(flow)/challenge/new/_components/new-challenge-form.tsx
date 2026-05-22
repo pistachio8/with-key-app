@@ -92,6 +92,7 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
   }
 
   function back() {
+    // step 3 은 header 에서 spacer 로 치환되어 호출 경로가 없음 (duplicate 생성 차단).
     if (step === 1) router.back();
     else setStep((step - 1) as Step);
   }
@@ -137,20 +138,23 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
 
   return (
     <div className="flex min-h-svh flex-col gap-4 p-4">
-      <header className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={back}
-          aria-label="뒤로"
-          className="hover:bg-muted focus-visible:ring-ring -ml-2 inline-flex size-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2"
-        >
-          <ChevronLeft className="size-5" aria-hidden="true" />
-        </button>
-        <span className="t-body font-semibold">새 챌린지</span>
-        {/* step 3 (생성 완료 시트) 에서는 버튼처럼 보이는 "완료" 텍스트 숨김.
-            구조 유지를 위해 빈 span 으로 자리만 차지. */}
-        <span className="t-sub tabular-nums">{step === 3 ? "" : `${step}/2`}</span>
-      </header>
+      {/* step 3 (생성 완료 시트) 는 모킹업 §3-D 의 center-stack 만 노출 — 헤더(뒤로가기·타이틀·step
+          indicator) 전체 제거. 뒤로 돌아가면 step 2 서명 화면에서 재제출 → duplicate 챌린지
+          생성 위험이라 의도된 제거. */}
+      {step !== 3 && (
+        <header className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={back}
+            aria-label="뒤로"
+            className="hover:bg-muted focus-visible:ring-ring -ml-2 inline-flex size-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2"
+          >
+            <ChevronLeft className="size-5" aria-hidden="true" />
+          </button>
+          <span className="t-body font-semibold">새 챌린지</span>
+          <span className="t-sub tabular-nums">{`${step}/2`}</span>
+        </header>
+      )}
 
       {step === 1 && (
         <>
