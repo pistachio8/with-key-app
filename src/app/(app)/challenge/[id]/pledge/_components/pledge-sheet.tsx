@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
-import { PledgePreviewCard } from "@/app/(app)/challenge/new/_components/pledge-preview-card";
-import { PledgeSigningCanvas } from "@/app/(app)/challenge/new/_components/pledge-signing-canvas";
+import { PledgePreviewCard } from "@/components/pledge/pledge-preview-card";
+import { PledgeSigningCanvas } from "@/components/pledge/pledge-signing-canvas";
 import type { PledgeView } from "@/lib/db/reads/pledge";
 import { signPledge } from "../_actions";
 

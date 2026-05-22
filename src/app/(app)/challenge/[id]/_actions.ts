@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { kudosInputSchema, type KudosInput } from "@/lib/validators/kudos";
 import { decryptAccountNumber } from "@/lib/crypto/account-cipher";
@@ -241,6 +242,9 @@ export const endChallenge = withUser<ChallengeIdInput, { id: string }>(
       .update({ status: "closed" })
       .eq("id", parsed.data.challengeId);
     if (error) return failure(mapSupabaseError(error));
+    // status 'active' → 'closed' 가 /home · /me/challenges · /challenge/[id] 등 광범위에 영향.
+    // PR #77 createChallenge 패턴과 동일하게 (app) layout 전체 무효화.
+    revalidatePath("/", "layout");
     return success({ id: parsed.data.challengeId });
   },
 );
@@ -281,6 +285,9 @@ export const startChallengeWithSignedParticipants = withUser<
     // dispatch 내부에서 per-recipient outcome 을 기록한다. 시작 성공을 되돌리지 않음.
   });
 
+  // status 'pending' → 'active' 가 /home RunningChallengeList · /challenge/[id] 의
+  // StartChallengeCard 표시 여부 등 광범위에 영향. PR #77 패턴.
+  revalidatePath("/", "layout");
   return success({ id: parsed.data.challengeId, participantCount });
 });
 
@@ -295,6 +302,8 @@ export const deleteChallenge = withUser<ChallengeIdInput, { id: string }>(
     const admin = adminClient();
     const { error } = await admin.from("challenges").delete().eq("id", parsed.data.challengeId);
     if (error) return failure(mapSupabaseError(error));
+    // CASCADE 로 자식 row 가 함께 사라지므로 home · 관리 · 그룹 화면 모두 stale 가능성.
+    revalidatePath("/", "layout");
     return success({ id: parsed.data.challengeId });
   },
 );
@@ -322,6 +331,8 @@ export const leaveChallenge = withUser<ChallengeIdInput, { id: string }>(
       .eq("challenge_id", parsed.data.challengeId)
       .eq("user_id", user.id);
     if (error) return failure(mapSupabaseError(error));
+    // 본인 참여 제거가 /home · /me/challenges 의 "참여 중" 리스트에 즉시 반영되도록.
+    revalidatePath("/", "layout");
     return success({ id: parsed.data.challengeId });
   },
 );

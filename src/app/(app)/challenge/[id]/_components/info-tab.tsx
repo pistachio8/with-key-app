@@ -1,6 +1,6 @@
 // 모킹업 §9-B 정보 탭 — 서약서 미리보기 + info-row + 초대 링크 트리거.
 
-import { PledgePreviewCard } from "@/app/(app)/challenge/new/_components/pledge-preview-card";
+import { PledgePreviewCard } from "@/components/pledge/pledge-preview-card";
 import { Card } from "@/components/ui/card";
 import { goalCountLabel } from "@/lib/challenge/frequency";
 import { penaltyLabel, formatKRW } from "@/lib/challenge/penalty";
