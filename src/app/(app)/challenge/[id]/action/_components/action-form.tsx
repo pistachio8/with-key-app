@@ -41,10 +41,12 @@ const userMessage = makeUserMessage({
 const DRAFT_TTL_MS = 60 * 60 * 1000;
 const draftKey = (challengeId: string) => `withkey:action-draft:${challengeId}`;
 
+type ShuffleByActivity = Partial<Record<ActivityType, ShuffleState>>;
+
 type DraftState = {
   activityType: ActivityType;
   selected: string[];
-  shuffle: ShuffleState;
+  shuffleByActivity: ShuffleByActivity;
   memo: string;
   memoOpen: boolean;
 };
@@ -59,10 +61,15 @@ function loadDraft(challengeId: string): DraftState | null {
       window.localStorage.removeItem(draftKey(challengeId));
       return null;
     }
+    // 활동별 shuffle 캐시 도입 전(단일 shuffle 필드) draft 는 무시 — POC 단방향.
+    if (!parsed.shuffleByActivity || !parsed.shuffleByActivity[parsed.activityType]) {
+      window.localStorage.removeItem(draftKey(challengeId));
+      return null;
+    }
     return {
       activityType: parsed.activityType,
       selected: parsed.selected,
-      shuffle: parsed.shuffle,
+      shuffleByActivity: parsed.shuffleByActivity,
       memo: parsed.memo,
       memoOpen: parsed.memoOpen,
     };
@@ -113,7 +120,11 @@ export function ActionForm({ challengeId }: Props) {
   const [pending, startTransition] = useTransition();
   const [preparing, setPreparing] = useState(false);
   const [activityType, setActivityType] = useState<ActivityType>("gym");
-  const [shuffle, setShuffle] = useState<ShuffleState>(() => initialShuffle("gym"));
+  // 활동별 shuffle 캐시 — 같은 활동으로 돌아왔을 때 키워드 셋과 rerollCount 가
+  // 보존되어야 RerollButton 의 cap(5회)이 활동 토글로 우회되지 않는다.
+  const [shuffleByActivity, setShuffleByActivity] = useState<ShuffleByActivity>(() => ({
+    gym: initialShuffle("gym"),
+  }));
   const [selected, setSelected] = useState<string[]>([]);
   const [memoOpen, setMemoOpen] = useState(false);
   const [memo, setMemo] = useState("");
@@ -128,7 +139,7 @@ export function ActionForm({ challengeId }: Props) {
     if (!draft) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once localStorage hydration
     setActivityType(draft.activityType);
-    setShuffle(draft.shuffle);
+    setShuffleByActivity(draft.shuffleByActivity);
     setSelected(draft.selected);
     setMemo(draft.memo);
     setMemoOpen(draft.memoOpen);
@@ -141,10 +152,24 @@ export function ActionForm({ challengeId }: Props) {
     };
   }, [preview]);
 
+  // 현재 활동의 shuffle — 캐시에 항상 채워둠을 switchActivity / 초기 state /
+  // draft 복원에서 보장하므로 fallback 은 안전 net 으로만 둔다.
+  const shuffle = shuffleByActivity[activityType] ?? initialShuffle(activityType);
+
   function switchActivity(next: ActivityType) {
     setActivityType(next);
-    setShuffle(initialShuffle(next));
+    setShuffleByActivity((prev) => {
+      if (prev[next]) return prev;
+      return { ...prev, [next]: initialShuffle(next) };
+    });
     setSelected([]);
+  }
+
+  function rerollCurrent() {
+    setShuffleByActivity((prev) => {
+      const current = prev[activityType] ?? initialShuffle(activityType);
+      return { ...prev, [activityType]: reroll(current) };
+    });
   }
 
   function clearPhoto() {
@@ -205,8 +230,14 @@ export function ActionForm({ challengeId }: Props) {
             ? Object.values(res.issues).flat().filter(Boolean)[0]
             : undefined;
           toast.error(firstField ?? userMessage(res.error));
-          // F10 — 실패 시 draft 보존 (사진 제외).
-          saveDraft(challengeId, { activityType, selected, shuffle, memo, memoOpen });
+          // F10 — 실패 시 draft 보존 (사진 제외). 활동별 shuffle 캐시 전체 저장.
+          saveDraft(challengeId, {
+            activityType,
+            selected,
+            shuffleByActivity,
+            memo,
+            memoOpen,
+          });
           if (res.error === "unauthorized") router.push("/login");
           return;
         }
@@ -321,10 +352,7 @@ export function ActionForm({ challengeId }: Props) {
               오늘의 일기 키워드{" "}
               <span className="text-muted-foreground tabular-nums">({selected.length}/3)</span>
             </h2>
-            <RerollButton
-              rerollCount={shuffle.rerollCount}
-              onClick={() => setShuffle(reroll(shuffle))}
-            />
+            <RerollButton rerollCount={shuffle.rerollCount} onClick={rerollCurrent} />
           </div>
           <KeywordChipGroup shown={shuffle.shown} selected={selected} onChange={setSelected} />
         </section>
