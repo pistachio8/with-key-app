@@ -57,7 +57,30 @@ async function fetchChallengeFeedAsUser(
 describe("fetchChallengeFeed", () => {
   it("returns feed items with author, summary, keywords, zero kudos initially", async () => {
     const { owner, other, challenge, logId } = await seedActive();
+    // DEBUG: 격리 진단 (CI 진단 후 제거).
+    const adminAll = await admin
+      .from("action_logs")
+      .select("id, user_id, challenge_id, created_at")
+      .eq("challenge_id", challenge.id);
+    console.log("[DEBUG] admin select after seed:", JSON.stringify(adminAll));
+    const ownerClient = await asUser(owner);
+    const viewerAll = await ownerClient
+      .from("action_logs")
+      .select("id, user_id, challenge_id")
+      .eq("challenge_id", challenge.id);
+    console.log("[DEBUG] owner (anon) select via RLS:", JSON.stringify(viewerAll));
+    const memberCheck = await admin
+      .from("group_members")
+      .select("group_id, user_id")
+      .eq("user_id", owner.id);
+    console.log("[DEBUG] owner group_members rows:", JSON.stringify(memberCheck));
+    const challengeCheck = await admin
+      .from("challenges")
+      .select("id, group_id, status, start_at, end_at")
+      .eq("id", challenge.id);
+    console.log("[DEBUG] challenge state:", JSON.stringify(challengeCheck));
     const rows = await fetchChallengeFeedAsUser(owner, challenge.id);
+    console.log("[DEBUG] fetchChallengeFeed result length:", rows.length, "logId:", logId);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       id: logId,
