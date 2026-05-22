@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
-import { fetchMyDisplayName } from "@/lib/db/reads/me";
+import { fetchMyDisplayName, hasEverCreatedChallenge } from "@/lib/db/reads/me";
 import { HomeGreeting } from "./_components/home-greeting";
 import {
   InvitedChallengeBanner,
@@ -70,6 +70,12 @@ export default async function HomePage() {
   // challenge !== null ↔ 현재 활성/대기 챌린지가 그 그룹에 있다.
   const hasAnyChallenge = groups.some((g) => g.challenge !== null);
 
+  // 빈 상태 카피 분기 — spec C1 단락 평가로 진행 중 챌린지가 있는 사용자에겐 호출 안 함.
+  const hasEverCreated = hasAnyChallenge ? false : await hasEverCreatedChallenge(user.id);
+  const emptyDescription = hasEverCreated
+    ? "친구들과 함께 챌린지를 만들어보세요"
+    : "친구들과 함께 첫 챌린지를 만들어보세요";
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <PwaGate />
@@ -85,7 +91,7 @@ export default async function HomePage() {
         <EmptyState
           icon={Sparkles}
           title="아직 진행 중인 챌린지가 없어요"
-          description="친구들과 함께 첫 챌린지를 만들어보세요"
+          description={emptyDescription}
           action={
             <Link
               href="/challenge/new"
