@@ -67,3 +67,5 @@ supabase/.branches/
 
 # Personal journal (Ian's dev log — not for team)
 docs/JOURNAL.md
+
+.superpowers/

@@ -19,8 +19,12 @@ export function AccountInlinePrompt({
   accountHolder,
 }: AccountInlinePromptProps) {
   return (
-    <Card tone="muted" padding="lg" className="flex items-center gap-3">
-      <Wallet className="text-muted-foreground size-5" aria-hidden="true" />
+    <Card
+      tone="muted"
+      padding="lg"
+      className="flex items-center gap-3 border-[var(--invite-line,#E5D8C2)] bg-white text-[var(--invite-muted,#5E4838)]"
+    >
+      <Wallet className="size-5 text-[var(--invite-accent,#B07A4D)]" aria-hidden="true" />
       <div className="flex-1">
         <div className="t-body font-semibold">정산용 계좌가 아직 없어요</div>
         <div className="t-sub">

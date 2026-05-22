@@ -13,6 +13,7 @@ export type RecapMemberView = {
 
 export type RecapGroupView = {
   id: string;
+  name: string;
   ownerId: string;
   bankCode: string | null;
   accountHolder: string | null;
@@ -120,7 +121,7 @@ export async function fetchRecap(
   let cq = supabase
     .from("challenges")
     .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
+      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
     )
     .in("status", ["active", "closed"])
     .lte("end_at", nowIso);
@@ -143,6 +144,7 @@ export async function fetchRecap(
   const group: RecapGroupView | null = groupRow
     ? {
         id: groupRow.id as string,
+        name: (groupRow.name as string) ?? "",
         ownerId: groupRow.owner_id as string,
         bankCode: (groupRow.bank_code as string | null) ?? null,
         accountHolder: (groupRow.account_holder as string | null) ?? null,
