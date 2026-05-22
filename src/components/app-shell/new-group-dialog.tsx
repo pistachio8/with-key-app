@@ -44,7 +44,9 @@ export function NewGroupDialog({ open, onOpenChange, defaultNamePreview }: NewGr
         toast.success("새 그룹을 만들었어요");
         setName("");
         onOpenChange(false);
-        router.push(`/group/${res.data.id}?welcome=${encodeURIComponent(res.data.name)}`);
+        // ?welcome= 은 invite 자동가입 callback 전용 (ADR-0008). 직접 만든 그룹은
+        // toast 로 충분 — "OO에 합류했어요" 배너는 사용자가 그룹을 *만든* 맥락과 맞지 않다.
+        router.push(`/group/${res.data.id}`);
         router.refresh();
       } catch (err) {
         console.error("[NewGroupDialog] createGroup threw", err);

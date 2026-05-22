@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { challengeInputSchema } from "@/lib/validators/challenge";
@@ -127,6 +128,11 @@ export const createChallenge = withUser<CreateChallengeInput, CreateChallengeRes
     const proto = h.get("x-forwarded-proto") ?? "https";
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
     const inviteUrl = buildInviteUrl(`${proto}://${host}`, token);
+
+    // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 캐시 무효화 —
+    // auto-group 생성 분기 포함. 새 그룹 또는 새 챌린지가 헤더 sheet · home · 폼에
+    // 즉시 반영되도록.
+    revalidatePath("/", "layout");
 
     return success({ id: challengeId, inviteUrl });
   },
