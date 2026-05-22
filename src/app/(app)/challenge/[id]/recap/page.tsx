@@ -6,6 +6,7 @@ import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { track } from "@/lib/analytics/track";
 import { formatKRW } from "@/lib/challenge/penalty";
+import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
 import { InvitationHeader } from "./_components/invitation-header";
 import { PhotoGallery } from "./_components/photo-gallery";
@@ -33,7 +34,8 @@ export default async function RecapPage({ params }: { params: Params }) {
   if (!recap) {
     return (
       <div className="flex flex-col gap-6 p-4">
-        <h1 className="t-h2">주간 정산</h1>
+        {/* 챌린지 기간(7~90일) 가변 — "주간" 하드코딩은 30일 챌린지에 어색. 중립 표현. */}
+        <h1 className="t-h2">정산</h1>
         <p className="t-sub break-keep">
           아직 결과가 없어요. 챌린지가 끝나면 결과를 여기서 돌아봐요.
         </p>
@@ -58,6 +60,11 @@ export default async function RecapPage({ params }: { params: Params }) {
     recap.group?.accountHolder &&
     recap.group?.accountNumberLast4
   );
+  // 조기 종료 = status='closed' AND end_at 가 아직 미래.
+  // status='closed' 는 endChallenge action 만 작성 (auto-close 없음) → 운영자가 명시적으로 종료 누름.
+  // end_at 미래면 만기 도달 전 종료 = 조기. 만기 도달 후 종료면 그냥 정상 종료로 본다.
+  const isEarlyEnded =
+    recap.status === "closed" && recap.endAt != null && new Date(recap.endAt) > new Date();
   // 모킹업 §11 — "최종 벌금" = 미달성자 수 × penalty_amount.
   const totalPenalty = recap.members.reduce(
     (sum, m) => sum + (m.achieved ? 0 : recap.penaltyAmount),
@@ -76,6 +83,14 @@ export default async function RecapPage({ params }: { params: Params }) {
           bankCode={recap.group.bankCode}
           accountHolder={recap.group.accountHolder}
         />
+      )}
+
+      {isEarlyEnded && (
+        <Card tone="muted" padding="sm" className="border-transparent">
+          <div className="t-sub break-keep">
+            운영자가 기간 만료 전 종료한 챌린지에요. 지금까지의 인증만 정산해요.
+          </div>
+        </Card>
       )}
 
       <MyPenaltyCard

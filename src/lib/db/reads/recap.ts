@@ -118,13 +118,15 @@ export async function fetchRecap(
   const now = options.now ?? new Date();
   const nowIso = now.toISOString();
 
+  // status='closed' 면 운영자가 명시적으로 종료 누름 → end_at 미래(조기 종료) 여도 정산 진입.
+  // status='active' + end_at 지남 (만기 도달했지만 운영자 미종료) 도 정산 대상.
+  // status='pending'/'accepted' 또는 active+end_at 미래(진행 중) 는 제외.
   let cq = supabase
     .from("challenges")
     .select(
       "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
     )
-    .in("status", ["active", "closed"])
-    .lte("end_at", nowIso);
+    .or(`status.eq.closed,and(status.eq.active,end_at.lte.${nowIso})`);
   if (options.challengeId) cq = cq.eq("id", options.challengeId);
   const { data: challenges, error } = await cq.order("end_at", { ascending: false }).limit(1);
 
