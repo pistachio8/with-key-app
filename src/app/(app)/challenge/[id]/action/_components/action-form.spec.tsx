@@ -109,6 +109,28 @@ describe("ActionForm", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("preserves the shuffled keyword set when toggling activity and returning", async () => {
+    // 활동 토글이 RerollButton(5회 cap) 우회 경로가 되지 않도록 활동별 shuffle 을
+    // 캐시한다. 처음 본 gym 의 키워드 셋이 running 왕복 후에도 동일해야 한다.
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    await screen.findByAltText("사진 미리보기");
+
+    const initialKeywords = within(screen.getByRole("group", { name: "키워드 선택" }))
+      .getAllByRole("button")
+      .map((el) => el.textContent);
+
+    fireEvent.click(screen.getByRole("radio", { name: "🏃 러닝" }));
+    fireEvent.click(screen.getByRole("radio", { name: "🏋️ 헬스" }));
+
+    const afterReturn = within(screen.getByRole("group", { name: "키워드 선택" }))
+      .getAllByRole("button")
+      .map((el) => el.textContent);
+
+    expect(afterReturn).toEqual(initialKeywords);
+  });
+
   it("saves draft on submit failure (F10)", async () => {
     submitActionLog.mockResolvedValueOnce({ ok: false, error: "forbidden" });
     render(<ActionForm challengeId={challengeId} />);
