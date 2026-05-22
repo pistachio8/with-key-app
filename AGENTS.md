@@ -60,7 +60,8 @@
 
 ### §키워드 풀 (`src/lib/keywords/pool.ts`)
 
-- **POC 기간 변경 금지**. 변경 시 PO 승인 + [`docs/VALIDATION.md`](docs/VALIDATION.md) 재논의 필요. **왜**: PRD §4.6 — 분석 편향 방지(데이터 일관성 보존)
+- **버전 정책**: v1.0 freeze (POC 시작) · v1.1 release 2026-05-22 (meal 추가, [ADR-0015](docs/adr/0015-meal-activity-type.md)) · **이후 추가 변경 금지**. 변경 시 PO 승인 + [`docs/VALIDATION.md`](docs/VALIDATION.md) 재논의 필요. **왜**: PRD §4.6 — 분석 편향 방지(데이터 일관성 보존)
+- `KEYWORD_POOL_VERSION` 상수를 `keywords_shown` · `action_logged` 이벤트에 명시 inject — 분석 분기점 marker. **왜**: 릴리스 timestamp 가 deploy 지연·cache·환경차로 부정확하므로 명시 marker 가 robust
 - 변경 시 [`docs/adr/`](docs/adr/)에 ADR 추가 + 본 가드레일 갱신
 
 ### §AI 일기 (`src/lib/ai/`)
