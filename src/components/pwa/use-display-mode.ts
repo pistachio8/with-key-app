@@ -39,19 +39,20 @@ function writeEverInstalled(): void {
 }
 
 export function useDisplayMode(): DisplayModeState {
-  const [mode, setMode] = useState<DisplayMode | null>(() => {
-    if (typeof window === "undefined") return null;
-    const isStandalone = evaluateStandalone();
-    if (isStandalone) writeEverInstalled();
-    return isStandalone ? "standalone" : "browser";
-  });
-
-  const [everInstalled, setEverInstalled] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return evaluateStandalone() || readEverInstalled();
-  });
+  // SSR 과 hydration 1차 렌더는 항상 null/false 로 통일 — `typeof window` 분기를
+  // lazy initializer 에 두면 React 19 hydration 에서 sibling 위치 mismatch 발생.
+  // 실제 평가는 mount 후 useEffect 에서 한 프레임 지연으로 수행.
+  const [mode, setMode] = useState<DisplayMode | null>(null);
+  const [everInstalled, setEverInstalled] = useState<boolean>(false);
 
   useEffect(() => {
+    const isStandalone = evaluateStandalone();
+    if (isStandalone) writeEverInstalled();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once SSR-safe display-mode hydration
+    setMode(isStandalone ? "standalone" : "browser");
+
+    setEverInstalled(isStandalone || readEverInstalled());
+
     const mql = window.matchMedia?.("(display-mode: standalone)");
     if (!mql) return;
     const handler = (e: MediaQueryListEvent) => {
