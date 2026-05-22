@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
 import { generateDiary } from "@/lib/ai/diary";
+import { KEYWORD_POOL_VERSION } from "@/lib/keywords/pool";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
@@ -182,6 +183,7 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
           rerollCount: parsed.input.rerollCount,
           photoSize,
           photoAttached,
+          poolVersion: KEYWORD_POOL_VERSION,
         },
       },
       { userId: user.id },
