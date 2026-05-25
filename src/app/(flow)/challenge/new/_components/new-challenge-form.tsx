@@ -20,10 +20,9 @@ import { EndDatePicker } from "./end-date-picker";
 import { PenaltyPicker } from "./penalty-picker";
 import { PledgePreviewCard } from "@/components/pledge/pledge-preview-card";
 import { PledgeSigningCanvas } from "@/components/pledge/pledge-signing-canvas";
-import { CreationCompleteSheet } from "./creation-complete-sheet";
 import { createChallenge } from "../_actions";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 export type ChallengeFormGroupOption = {
   id: string;
@@ -47,7 +46,7 @@ function groupName(name: string | null): string {
   return name ?? "이름 없는 그룹";
 }
 
-// 모킹업 §3 — 2-step wizard + 완료 시트.
+// 모킹업 §3 — 2-step wizard. 생성 완료 시트는 별도 segment `done/[id]` 에서 렌더.
 export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFormProps) {
   const router = useRouter();
   const titleId = useId();
@@ -60,8 +59,6 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
   const [durationDays, setDurationDays] = useState(7);
   const [penaltyAmount, setPenaltyAmount] = useState(3000);
   const [signature, setSignature] = useState<string | null>(null);
-  const [createdId, setCreatedId] = useState<string | null>(null);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const singleGroup = ownerGroups.length === 1 ? ownerGroups[0] : null;
@@ -92,7 +89,6 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
   }
 
   function back() {
-    // step 3 은 header 에서 spacer 로 치환되어 호출 경로가 없음 (duplicate 생성 차단).
     if (step === 1) router.back();
     else setStep((step - 1) as Step);
   }
@@ -109,6 +105,8 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
     }
     startTransition(async () => {
       try {
+        // 성공 시 server action 이 redirect(replace) 로 done segment 로 navigate —
+        // 본 함수의 후속 코드는 도달하지 않는다. 실패만 ActionResult 로 돌아온다.
         const res = await createChallenge({
           groupId: selectedGroupId || undefined,
           title,
@@ -124,12 +122,19 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
             : undefined;
           toast.error(firstField ?? userMessage(res.error));
           if (res.error === "unauthorized") router.push("/login");
-          return;
         }
-        setCreatedId(res.data.id);
-        setInviteUrl(res.data.inviteUrl);
-        setStep(3);
       } catch (err) {
+        // Next.js redirect throw 는 digest 가 "NEXT_REDIRECT" — framework 가
+        // 처리하도록 그대로 re-throw. 그 외 예기치 못한 throw 만 toast.
+        if (
+          err &&
+          typeof err === "object" &&
+          "digest" in err &&
+          typeof (err as { digest?: unknown }).digest === "string" &&
+          (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+        ) {
+          throw err;
+        }
         console.error("[createChallenge] unexpected throw:", err);
         toast.error(FALLBACK_ERROR_MESSAGE);
       }
@@ -138,23 +143,18 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
 
   return (
     <div className="flex min-h-svh flex-col gap-4 p-4">
-      {/* step 3 (생성 완료 시트) 는 모킹업 §3-D 의 center-stack 만 노출 — 헤더(뒤로가기·타이틀·step
-          indicator) 전체 제거. 뒤로 돌아가면 step 2 서명 화면에서 재제출 → duplicate 챌린지
-          생성 위험이라 의도된 제거. */}
-      {step !== 3 && (
-        <header className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={back}
-            aria-label="뒤로"
-            className="hover:bg-muted focus-visible:ring-ring -ml-2 inline-flex size-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2"
-          >
-            <ChevronLeft className="size-5" aria-hidden="true" />
-          </button>
-          <span className="t-body font-semibold">새 챌린지</span>
-          <span className="t-sub tabular-nums">{`${step}/2`}</span>
-        </header>
-      )}
+      <header className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={back}
+          aria-label="뒤로"
+          className="hover:bg-muted focus-visible:ring-ring -ml-2 inline-flex size-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2"
+        >
+          <ChevronLeft className="size-5" aria-hidden="true" />
+        </button>
+        <span className="t-body font-semibold">새 챌린지</span>
+        <span className="t-sub tabular-nums">{`${step}/2`}</span>
+      </header>
 
       {step === 1 && (
         <>
@@ -252,10 +252,6 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
             </Button>
           </div>
         </>
-      )}
-
-      {step === 3 && createdId && inviteUrl && (
-        <CreationCompleteSheet challengeId={createdId} inviteUrl={inviteUrl} />
       )}
     </div>
   );

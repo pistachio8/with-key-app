@@ -1,18 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
 import { challengeInputSchema } from "@/lib/validators/challenge";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
-import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
+import { failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { readOwnerGroupsForChallengeForm } from "@/lib/db/reads/owner-groups-for-challenge-form";
 import { defaultGroupBaseName } from "@/lib/groups/default-name";
 import { generateInviteToken } from "@/lib/invite/token";
-import { buildInviteUrl } from "@/lib/invite/share-url";
 
 // ADR-0012: groupId 없으면 owner 그룹 수로 persistent crew 매칭.
 // plan §PR5: createChallenge 가 그룹/챌린지/운영자 자가 서명/invite 토큰 까지 처리.
@@ -23,10 +22,11 @@ const createChallengeInputSchema = challengeInputSchema.extend({
 });
 
 export type CreateChallengeInput = z.infer<typeof createChallengeInputSchema>;
-export type CreateChallengeResult = { id: string; inviteUrl: string };
 
-export const createChallenge = withUser<CreateChallengeInput, CreateChallengeResult>(
-  async (user, input): Promise<ActionResult<CreateChallengeResult>> => {
+// 성공 시 redirect throw 로 함수가 종료되므로 success payload 없음.
+// 실패 분기만 ActionResult<never> 로 client 에 반환.
+export const createChallenge = withUser<CreateChallengeInput, never>(
+  async (user, input): Promise<ActionResult<never>> => {
     const parsed = createChallengeInputSchema.safeParse(input);
     if (!parsed.success) return validationFailure(parsed.error);
     const { groupId: maybeGroupId, ownerSignatureDataUrl, ...challengeFields } = parsed.data;
@@ -124,15 +124,15 @@ export const createChallenge = withUser<CreateChallengeInput, CreateChallengeRes
     if (inviteErr) return failure(mapSupabaseError(inviteErr));
     void track({ name: "invite_sent", props: { groupId } }, { userId: user.id });
 
-    const h = await headers();
-    const proto = h.get("x-forwarded-proto") ?? "https";
-    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-    const inviteUrl = buildInviteUrl(`${proto}://${host}`, token);
-
     // 새 그룹·챌린지가 헤더 sheet · home · /me · 그룹 상세 등에 반영되도록 invalidate.
-    // (flow)/challenge/new 는 의도적으로 제외 — revalidate 시 page.tsx 의
-    // "모든 owner 그룹에 open 챌린지 → redirect" 가드가 재실행되어
-    // step 3 (CreationCompleteSheet) 가 방금 만든 챌린지로 튕긴다.
+    // 주의: server action 의 revalidate 는 client Router Cache 전체를 즉시 clear
+    // 한다 (Next 16 cacheLife 문서). 그래서 step 3 시트를 /challenge/new 안에
+    // 두면 caller RSC 재실행 → page.tsx 가드("모든 owner 그룹 open → latest 로
+    // redirect") 가 방금 만든 챌린지로 튕긴다. 그 회귀를 막기 위해 시트를
+    // 별도 segment `/challenge/new/done/[id]` 로 분리하고, 본 action 은 그
+    // segment 로 `replace` redirect 한다 — server action redirect 의 default 가
+    // `push` 라 form (`/challenge/new`) 가 history 에 남으면 뒤로가기 시 가드가
+    // 다시 발동하므로 `RedirectType.replace` 를 명시.
     revalidatePath("/home");
     revalidatePath("/me", "layout");
     revalidatePath("/feed");
@@ -141,6 +141,9 @@ export const createChallenge = withUser<CreateChallengeInput, CreateChallengeRes
     revalidatePath(`/group/${groupId}`);
     revalidatePath(`/challenge/${challengeId}`, "layout");
 
-    return success({ id: challengeId, inviteUrl });
+    redirect(
+      `/challenge/new/done/${challengeId}?token=${encodeURIComponent(token)}`,
+      RedirectType.replace,
+    );
   },
 );
