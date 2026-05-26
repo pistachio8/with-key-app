@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { kudosInputSchema, type KudosInput } from "@/lib/validators/kudos";
@@ -31,14 +31,13 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
 
     // 종료/만기 도달 챌린지의 kudos 토글 차단 — 클라이언트 disabled 우회 방어.
     // action_log → challenge 조인으로 status / end_at 검사. RLS 가 비멤버 접근 자동 차단.
-    // challenge_id 는 하단 revalidatePath 에서 정확한 path 무효화에 재사용.
+    // Phase 3 (plan v4): challenge_id 의 path-level revalidatePath 사용 안 함 — tag 기반 invalidation.
     const { data: logForGuard } = await supabase
       .from("action_logs")
-      .select("challenge_id, challenges!inner(status, end_at)")
+      .select("challenges!inner(status, end_at)")
       .eq("id", parsed.data.actionLogId)
       .maybeSingle();
     if (!logForGuard) return failure("not_found");
-    const targetChallengeId = logForGuard.challenge_id as string;
     const ch = Array.isArray(logForGuard.challenges)
       ? logForGuard.challenges[0]
       : logForGuard.challenges;
@@ -60,11 +59,13 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
     if (existing) {
       const { error } = await supabase.from("kudos").delete().eq("id", existing.id);
       if (error) return failure(mapSupabaseError(error));
-      // Hotfix: feed/dashboard 에서 kudos counts·viewer 상태가 stale 되는 회귀 차단.
-      // /challenge/[id] 하위 segment(feed default · /dashboard · /info) 가 동일 layout
-      // 에 colocate 되어 있어 'layout' 옵션 한 번이면 모든 탭의 RSC payload 가 무효화된다.
-      // 후속 청사진(Phase 3) 에서 updateTag 기반 세밀 무효화로 교체 예정.
-      revalidatePath(`/challenge/${targetChallengeId}`, "layout");
+      // Phase 3 (SNS cache plan v4) — 정확한 tag 무효화로 flicker 차단:
+      // - updateTag('user-${uid}-kudos-${alid}') — 본인 viewer state 즉시 invalidate (read-your-writes)
+      // - updateTag('kudos-counts-${alid}') — 본인 counts 즉시 invalidate
+      // - revalidateTag('kudos-counts-${alid}', 'max') — 타인의 다음 fetch SWR fresh
+      updateTag(`user-${user.id}-kudos-${parsed.data.actionLogId}`);
+      updateTag(`kudos-counts-${parsed.data.actionLogId}`);
+      revalidateTag(`kudos-counts-${parsed.data.actionLogId}`, "max");
       return success({ toggled: "removed" });
     }
 
@@ -74,8 +75,10 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
       emoji: parsed.data.emoji,
     });
     if (error) return failure(mapSupabaseError(error));
-    // Hotfix: 위 DELETE 분기와 동일 — feed/dashboard stale 회귀 차단.
-    revalidatePath(`/challenge/${targetChallengeId}`, "layout");
+    // Phase 3 — 위 DELETE 분기와 동일 패턴 (read-your-writes + 타인 SWR).
+    updateTag(`user-${user.id}-kudos-${parsed.data.actionLogId}`);
+    updateTag(`kudos-counts-${parsed.data.actionLogId}`);
+    revalidateTag(`kudos-counts-${parsed.data.actionLogId}`, "max");
 
     void track(
       {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useOptimistic, useState, useTransition } from "react";
+import { useCallback, useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import { FeedCard } from "./feed-card";
 import { toggleKudos } from "../_actions";
@@ -44,9 +44,12 @@ function applyToggle(items: ReadonlyArray<FeedItemView>, action: OptimisticActio
   });
 }
 
+// Phase 3 (SNS cache plan v4) — settledItems React local state 제거.
+// useOptimistic 의 base 를 items props 직접 사용해 transition 종료 시 server-rendered
+// fresh 값으로 자동 sync. toggleKudos 의 updateTag 가 즉시 본인 cache invalidation 을
+// 보장하므로 server-rendered props 가 fresh — 1→0→1 flicker 차단.
 export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Props) {
-  const [settledItems, setSettledItems] = useState<FeedItemView[]>(() => [...items]);
-  const [optimisticItems, applyOptimistic] = useOptimistic(settledItems, applyToggle);
+  const [optimisticItems, applyOptimistic] = useOptimistic(items, applyToggle);
   const [, startTransition] = useTransition();
 
   const handleKudos = useCallback(
@@ -65,7 +68,7 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
             toast.error(messageFor(result.error));
             return;
           }
-          setSettledItems((currentItems) => applyToggle(currentItems, action));
+          // 별도 settledItems 동기화 불필요 — server response 가 updateTag 로 fresh.
         } catch (error) {
           console.error("[ChallengeFeed] toggleKudos failed", error);
           toast.error(FALLBACK_ERROR_MESSAGE);
