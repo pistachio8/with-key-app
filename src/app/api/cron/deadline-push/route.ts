@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { dispatchDeadlineNotification } from "@/lib/push/dispatch";
 
-export const runtime = "nodejs";
-
 // Vercel hobby plan 은 cron 을 하루 1 회까지만 허용해 `vercel.json` 의 스케줄이
 // `0 0 * * *` (UTC 자정 = KST 09 시) 로 잡혀 있다. "마감 24 시간 전" 의도를
 // ±12 시간 허용 창으로 넓혀 24 시간 주기에서도 누락이 생기지 않게 한다.

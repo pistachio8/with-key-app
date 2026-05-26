@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
 
-export const runtime = "nodejs";
-
 // ADR-0017 — kudos_push_log 90일 TTL cleanup. 매주 일요일 04:00 UTC (= KST 13:00).
 // row 누적 부담은 미미하지만 운영 데이터 부재 상태 default. 추후 보고 후 조정.
 // 가드는 deadline-push 와 동일한 CRON_SECRET Bearer 인증.
