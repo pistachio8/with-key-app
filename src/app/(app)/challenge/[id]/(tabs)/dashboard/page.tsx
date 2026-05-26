@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { ActionFab } from "../../_components/action-fab";
 import { DashboardTab } from "../../_components/dashboard-tab";
+import DashboardLoading from "./loading";
 
 type Params = Promise<{ id: string }>;
 
@@ -12,7 +14,16 @@ function computeDaysLeft(endAtIso: string | null): number | null {
   return Math.max(0, Math.ceil((new Date(endAtIso).getTime() - Date.now()) / 86_400_000));
 }
 
-export default async function ChallengeDashboardPage({ params }: { params: Params }) {
+// Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 DashboardSection 자식에서.
+export default function ChallengeDashboardPage({ params }: { params: Params }) {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardSection params={params} />
+    </Suspense>
+  );
+}
+
+async function DashboardSection({ params }: { params: Params }) {
   const { id } = await params;
   const { user } = await getAuthedUser();
   if (!user) redirect("/login");

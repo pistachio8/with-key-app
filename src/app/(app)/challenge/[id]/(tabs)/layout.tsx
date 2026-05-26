@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
@@ -17,15 +18,36 @@ function computeDaysLeft(endAtIso: string | null): number | null {
   return Math.max(0, Math.ceil((new Date(endAtIso).getTime() - Date.now()) / 86_400_000));
 }
 
-// Next.js 16: layout 은 searchParams 를 받지 않는다. ?tab=·?just_joined redirect 는
-// root page.tsx 에서 처리. query 의존 banner 는 client wrapper (query-aware-banners) 사용.
-export default async function ChallengeDetailLayout({
+// Next.js 16 cacheComponents: 셸은 sync — children 만 통과해 static prerender 가능.
+// dynamic params/auth/fetch 는 LayoutHeader async 자식으로 격리되어 Suspense 안에서 평가.
+export default function ChallengeDetailLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Params;
 }) {
+  return (
+    <div className="flex flex-col gap-4 p-4 pb-24">
+      <Suspense fallback={<LayoutHeaderFallback />}>
+        <LayoutHeader params={params} />
+      </Suspense>
+      {children}
+    </div>
+  );
+}
+
+function LayoutHeaderFallback() {
+  return (
+    <div
+      className="bg-muted/40 h-40 w-full animate-pulse rounded-2xl"
+      aria-busy="true"
+      aria-label="챌린지 정보 로딩 중"
+    />
+  );
+}
+
+async function LayoutHeader({ params }: { params: Params }) {
   const { id } = await params;
 
   const { user } = await getAuthedUser();
@@ -49,7 +71,7 @@ export default async function ChallengeDetailLayout({
   const daysLeft = computeDaysLeft(detail.endAt);
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-24">
+    <>
       {isOwner && (
         <div className="flex justify-end">
           <ChallengeOwnerMenu challengeId={id} isOwner={isOwner} status={detail.status} />
@@ -86,7 +108,6 @@ export default async function ChallengeDetailLayout({
         />
       )}
       <TabNav challengeId={id} />
-      {children}
-    </div>
+    </>
   );
 }

@@ -1,14 +1,25 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { InviteTrigger } from "@/app/(app)/group/[id]/_components/invite-trigger";
 import { AccountInfoTrigger } from "../../_components/account-info-trigger";
 import { InfoTab } from "../../_components/info-tab";
 import { StartChallengeCard } from "../../_components/start-challenge-card";
+import InfoLoading from "./loading";
 
 type Params = Promise<{ id: string }>;
 
-export default async function ChallengeInfoPage({ params }: { params: Params }) {
+// Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 InfoSection 자식에서.
+export default function ChallengeInfoPage({ params }: { params: Params }) {
+  return (
+    <Suspense fallback={<InfoLoading />}>
+      <InfoSection params={params} />
+    </Suspense>
+  );
+}
+
+async function InfoSection({ params }: { params: Params }) {
   const { id } = await params;
   const { user } = await getAuthedUser();
   if (!user) redirect("/login");

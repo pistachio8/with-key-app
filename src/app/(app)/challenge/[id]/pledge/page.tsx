@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPendingPledge } from "@/lib/db/reads/pledge";
 import { PledgeSheet } from "./_components/pledge-sheet";
@@ -9,7 +10,31 @@ type SearchParams = Promise<{ welcome?: string }>;
 // 모킹업 §6-B — 멤버 서명. ADR-0002: challenge sub-route 로 이동.
 // ADR-0008 — invite 자동가입 후 callback 이 ?welcome={groupName} 부착해 redirect.
 // 1회성 query 라 새로고침/이동 시 자연 소실 — dismiss 컨트롤 불필요.
-export default async function PledgePage({
+// Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 PledgeSection 자식에서.
+export default function PledgePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  return (
+    <Suspense fallback={<PledgeFallback />}>
+      <PledgeSection params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+function PledgeFallback() {
+  return (
+    <div className="mx-4 mt-4 flex flex-col gap-3" aria-busy="true" aria-label="서약서 로딩 중">
+      <div className="bg-muted h-24 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-48 w-full animate-pulse rounded-2xl" />
+    </div>
+  );
+}
+
+async function PledgeSection({
   params,
   searchParams,
 }: {
