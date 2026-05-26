@@ -17,6 +17,13 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // Phase 1b-3 — Next.js 16 Cache Components 활성화. plan v4 §Phase 1b-3.
+  // Phase 1b-2a/1b-2b 에서 모든 (app)·(auth)·(flow) page/layout 의 dynamic
+  // API 호출을 Suspense 안의 *Section 자식으로 격리 완료. 본 활성화로
+  // (a) <Activity hidden> navigation state 보존, (b) Partial Prerender (정적
+  // 셸 + dynamic streaming), (c) 'use cache' · 'use cache: private' 디렉티브
+  // 사용 가능 — 단 신규 캐시 도입은 Phase 3·4 에서.
+  cacheComponents: true,
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
