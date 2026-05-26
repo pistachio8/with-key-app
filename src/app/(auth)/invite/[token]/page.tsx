@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
+import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -47,7 +48,33 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 // spec 2026-05-17-invite-og-preview C1 — 진입 redirect 제거: 익명 사용자도 미리보기를
 // 보고 AcceptForm 에서만 로그인 게이트. Server Component redirect() 가 HTML(메타 포함)을
 // 송출하지 않으므로 카톡 OG 크롤러를 위해서도 필수.
-export default async function InvitePage({ params }: { params: Params }) {
+// Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 InviteSection 자식에서.
+export default function InvitePage({ params }: { params: Params }) {
+  return (
+    <Suspense fallback={<InviteFallback />}>
+      <InviteSection params={params} />
+    </Suspense>
+  );
+}
+
+function InviteFallback() {
+  return (
+    <main
+      className="bg-card mx-auto flex min-h-svh w-full max-w-screen-sm flex-col px-6 py-6"
+      aria-busy="true"
+      aria-label="초대 정보 로딩 중"
+    >
+      <div className="bg-muted h-6 w-32 animate-pulse rounded" />
+      <div className="mt-6 space-y-2">
+        <div className="bg-muted h-3 w-24 animate-pulse rounded" />
+        <div className="bg-muted h-10 w-3/4 animate-pulse rounded" />
+      </div>
+      <div className="bg-muted mt-6 h-48 w-full animate-pulse rounded-2xl" />
+    </main>
+  );
+}
+
+async function InviteSection({ params }: { params: Params }) {
   const { token } = await params;
 
   const supabase = await createClient();

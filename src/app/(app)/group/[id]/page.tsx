@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { requireUser } from "@/lib/auth/require-user";
 import { fetchGroupDetail } from "@/lib/db/reads/group-detail";
 import { GroupHeader } from "./_components/group-header";
@@ -12,7 +13,33 @@ type SearchParams = Promise<{ welcome?: string }>;
 // 모킹업 §12 - 그룹 상세. 멤버·계좌·챌린지 목록. 운영자만 계좌 추가/변경.
 // ADR-0008 — invite 자동가입 후 pending challenge 가 없으면 callback 이 ?welcome={groupName}
 // 부착해 본 페이지로 redirect. 1회성 query (새로고침/이동 시 자연 소실).
-export default async function GroupDetailPage({
+// Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 GroupDetailSection 자식에서.
+export default function GroupDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  return (
+    <Suspense fallback={<GroupDetailFallback />}>
+      <GroupDetailSection params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+function GroupDetailFallback() {
+  return (
+    <div className="flex flex-col gap-4 p-4" aria-busy="true" aria-label="그룹 정보 로딩 중">
+      <div className="bg-muted h-16 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-24 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-32 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-40 w-full animate-pulse rounded-2xl" />
+    </div>
+  );
+}
+
+async function GroupDetailSection({
   params,
   searchParams,
 }: {

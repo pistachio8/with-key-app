@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { ActionFab } from "../_components/action-fab";
 import { FeedTab } from "../_components/feed-tab";
+import FeedLoading from "./loading";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -22,9 +24,23 @@ function isSameLocalDay(iso: string, now = new Date()): boolean {
   );
 }
 
-// Next.js 16: layout 은 searchParams 를 받지 못하므로 ?tab=·?just_joined 호환
-// redirect 와 root feed segment 의 query 처리는 본 page 에서 담당한다.
-export default async function ChallengeFeedPage({
+// Next.js 16 cacheComponents: 셸은 sync — props 만 자식으로 전달.
+// searchParams 기반 ?tab=·?just_joined redirect 와 fetch 모두 FeedSection 자식에서 평가.
+export default function ChallengeFeedPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  return (
+    <Suspense fallback={<FeedLoading />}>
+      <FeedSection params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function FeedSection({
   params,
   searchParams,
 }: {

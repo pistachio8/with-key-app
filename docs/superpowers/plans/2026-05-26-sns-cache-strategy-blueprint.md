@@ -3,7 +3,7 @@ plan: 2026-05-26-sns-cache-strategy-blueprint
 title: SNS Cache Strategy Blueprint — Cache Components 도입 청사진
 author: pistachio8
 date: 2026-05-26
-status: revised-v3
+status: revised-v4
 ---
 
 ## 변경 이력
@@ -11,6 +11,7 @@ status: revised-v3
 - **v1 (2026-05-26, PR #92)** — 5-Layer 분류 정책 · Anchor 결정 · Phase 0~5 sequence 초안
 - **v2 (2026-05-26, PR #93)** — phase별 검증 단위 보강: Phase 1 을 1a(safe) + 1b(global change) 로 분리, 모든 phase 에 (선행 의존 · 병렬 가능 · 검증 게이트 · 머지 후 상태 · 롤백) 4-section 메타데이터 추가, 의존 그래프 명시, Phase 3 E2E 시나리오 디테일 작성
 - **v3 (2026-05-26, 본 PR)** — Phase 1a 머지(PR #94) 후 Phase 1b 시도에서 발견한 사실을 반영. (1) `cacheComponents: true` 활성화 시 route handler 의 `export const runtime = "nodejs"` 키가 incompatible — Next.js 16 default 가 nodejs 이므로 단순 제거가 안전. (2) (app)·(auth)·(flow) 그룹의 대부분 page (≈18~20개) 가 본문에서 dynamic API 를 직접 `await` 하는 패턴 → `cacheComponents: true` 단독 활성화만으로는 prerender 가 실패. 각 page 를 정적 셸 + `<Suspense>` 경계로 분리해야 함. **그 결과 Phase 1b 분량 추정을 반나절 → 1~2일로 보정**하고, 기존 Phase 4 §1 산출물(`(tabs)/page.tsx` 정적 셸 + `<Suspense>` 경계 도입) 을 Phase 1b 로 이동. Phase 4 는 캐시 도입 단계만 담당하도록 좁힘. 추가로 build 검증 게이트에 `NEXT_BUILD_WORKERS=1` 옵션을 권장 (worker 가 첫 prerender 에러에서 멈춰 전체 영향 페이지가 한 번에 보이지 않음)
+- **v4 (2026-05-26, 본 PR)** — Phase 1b-1 머지(PR #97) 후 1b-2 High 그룹 7개(layout 포함) 셸 분리를 진행하고 `cacheComponents: true` 임시 활성화로 검증한 결과, **22개 path 가 동시 prerender fail**. 직접 원인은 `src/app/(app)/layout.tsx` 가 `createClient` → `cookies()` 를 Suspense 밖에서 호출 — `(app)/*` 전체에 영향. 또한 v3 의 "Low 그룹은 셸 분리 없이 통과할 수도" 가정은 실측 결과 거의 거짓. **§1b-2 를 1b-2a (High 그룹 7개 — 본 PR 진행) + 1b-2b (그룹 layout 들 + Med/Low page 들) 로 분할**하고, Phase 1b 분량 추정을 1~2일 → **2~3일**로 보정. 1b-2a 머지 시 cacheComponents OFF 유지(diff 영향 미포함). 1b-3 활성화는 1b-2b 완료 후
 
 ## 목표
 
@@ -224,14 +225,16 @@ const nextConfig: NextConfig = {
 **머지 후 상태:** 글로벌 동작 변경 (Activity navigation + prerender 분리 + `'use cache'`/`'use cache: private'` 활성화 가능). 캐시 자체는 아직 도입 X
 **롤백:** `next.config.ts` 한 줄 revert + 재배포. ~수 분 내 복구. page 셸 분리/runtime 키 제거는 revert 없어도 안전 (cacheComponents 비활성에서도 정상 동작)
 
-**Sub-PR 분할 권장:** 위험 표면을 줄이려면 다음 순서로 sub-PR 분할 (모두 develop 머지):
+**Sub-PR 분할 권장 (v4 갱신):** 위험 표면을 줄이려면 다음 순서로 sub-PR 분할 (모두 develop 머지):
 
-1. `chore: route handler runtime=nodejs 제거 (Phase 1b-1)` — 동작 무변경
-2. `refactor: (app) page Suspense 셸 분리 batch 1` — High 그룹부터
-3. `refactor: (app)·(auth)·(flow) page Suspense 셸 분리 batch 2` — Med/Low 그룹
+1. `chore(api): route handler runtime=nodejs 명시 제거 (Phase 1b-1)` — 머지 완료(PR #97)
+2. `refactor: High 그룹 page + (tabs)/layout.tsx 셸 분리 (Phase 1b-2a)` — 7개 파일. cacheComponents OFF 유지 — diff 영향 미포함
+3. `refactor: (app)/layout.tsx + Med/Low page 셸 분리 (Phase 1b-2b)` — `(app)/layout.tsx` 가 `createClient`→`cookies()` 를 Suspense 밖에서 호출해 `(app)/*` 22개 path 의 prerender fail 원인이라 가장 큰 효과. 함께 (auth)·(flow) layout 과 Med/Low 그룹 page 도 분리
 4. `feat(config): cacheComponents 활성화 (Phase 1b-3)` — 1·2·3 머지 후
 
-본 sub-PR 분할이 부담스러우면 단일 PR 도 허용 (Preview smoke 가 충분히 광범위하면).
+v3 가 "Low 그룹은 셸 분리 없이 통과할 수도" 라고 추정했으나 v4 실측에서 거의 거짓 — Med/Low 모두 분리 필요.
+
+본 sub-PR 분할이 부담스러우면 1b-2a + 1b-2b 합치는 옵션도 가능 (Preview smoke 가 충분히 광범위하면).
 
 ### Phase 2 — Visibility Version (반나절, Phase 3 와 병렬 가능)
 
