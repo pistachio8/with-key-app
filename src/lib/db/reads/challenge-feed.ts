@@ -1,9 +1,10 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { getPhotoSignedUrls } from "@/lib/storage/action-photos";
 import { getKudosCountsForLog } from "@/lib/db/reads/kudos-counts";
 import { getViewerKudosForLog } from "@/lib/db/reads/kudos-viewer";
+import { getActionLogHydrate } from "@/lib/db/reads/action-log-hydrate";
+import { getActionLogPhotoSignedUrl } from "@/lib/db/reads/photo-signed-url";
+import { listVisibleActionLogIds } from "@/lib/db/reads/list-visible-action-log-ids";
 import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
 
 export type FeedItemView = {
@@ -18,18 +19,11 @@ export type FeedItemView = {
   createdAt: string;
 };
 
+// Phase 4 분해 후 deprecated: 'use cache: private' 자식 함수들은 자체적으로 supabase
+// client 를 생성한다. caller 호환 위해 시그니처는 유지하지만 무시된다.
+// (호출처: integration test 의 asUser-client 시뮬레이션 등.)
 type Options = {
   client?: SupabaseClient;
-};
-
-type FeedRow = {
-  id: string;
-  user_id: string;
-  photo_path: string | null;
-  ai_summary: string;
-  selected_keywords: string[] | null;
-  created_at: string;
-  users: { display_name: string | null } | Array<{ display_name: string | null }> | null;
 };
 
 function emptyKudosByEmoji(): Record<KudosEmoji, number> {
@@ -37,71 +31,52 @@ function emptyKudosByEmoji(): Record<KudosEmoji, number> {
 }
 
 // PRD §7 · BE_SCHEMA §5.7 — 챌린지 피드.
-// Phase 3 (SNS cache plan v4): kudos embed 제거. kudos counts/viewer 는 별도 read
-// 함수 (kudos-counts · kudos-viewer) 가 actionLogId 단위 cacheTag 로 분리 관리.
-// fetchChallengeFeed 자체는 RSC parallel fetch entry — kudos cache 미스/히트 와 별개로
-// metadata 는 항상 fresh 한다.
-// RLS가 action_logs/users 접근을 필터링하므로 비멤버는 빈 배열을 받는다.
+// Phase 4 (SNS cache plan v4): list-visible-action-log-ids + action-log-hydrate +
+// photo-signed-url + kudos-counts + kudos-viewer 다섯 함수의 합성.
+//
+// - Layer 1 (Visibility Decision): listVisibleActionLogIds — viewer-keyed, visibility_version tag
+// - Layer 2 (Content Hydration): getActionLogHydrate — actionlog-keyed
+// - Layer 2 (Photo Signed URL): getActionLogPhotoSignedUrl — path-keyed, 10분 stale
+// - Layer 3 (Viewer State): getKudosCountsForLog · getViewerKudosForLog — Phase 3
+//
+// 외부 shape (FeedItemView) 는 그대로 유지 — 호출처 (ChallengeFeed · feed-tab) 무영향.
+// RLS 가 모든 자식 함수에 적용되어 비멤버는 빈 결과를 받는다.
 export const fetchChallengeFeed = cache(
-  async (challengeId: string, viewerId: string, options: Options = {}): Promise<FeedItemView[]> => {
-    const supabase = options.client ?? (await createClient());
+  async (
+    challengeId: string,
+    viewerId: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options: Options = {},
+  ): Promise<FeedItemView[]> => {
+    const ids = await listVisibleActionLogIds(challengeId, viewerId);
+    if (ids.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from("action_logs")
-      .select(
-        [
-          "id",
-          "user_id",
-          "photo_path",
-          "ai_summary",
-          "selected_keywords",
-          "created_at",
-          // ADR-0017 kudos_push_log 가 action_logs ↔ users 사이 M2M 관계를 추가해
-          // PostgREST 가 embed 모호함(PGRST201)을 보고한다. 원래 의도한 작성자 FK 를 명시.
-          "users!action_logs_user_id_fkey!inner(display_name)",
-        ].join(","),
-      )
-      .eq("challenge_id", challengeId)
-      .order("created_at", { ascending: false });
+    // 각 id 별로 hydrate + photo + counts + viewer kudos 병렬 fetch.
+    const items = await Promise.all(
+      ids.map(async (id) => {
+        const hydrate = await getActionLogHydrate(id, viewerId);
+        if (!hydrate) return null;
 
-    if (error || !data) return [];
-
-    const rows = data as unknown as FeedRow[];
-    // Single Storage batch request instead of N parallel createSignedUrl calls.
-    const signedUrls = await getPhotoSignedUrls(
-      rows.map((row) => row.photo_path),
-      supabase,
-    );
-
-    // Kudos counts (viewer-agnostic, 'use cache' + tag kudos-counts-${alid}) 와
-    // viewer kudos (viewer-keyed, 'use cache: private' + tag user-${uid}-kudos-${alid})
-    // 를 각 row 별로 병렬 fetch. cache hit 시 즉시 반환.
-    const kudosByLog = await Promise.all(
-      rows.map(async (row) => {
-        const [counts, viewerKudos] = await Promise.all([
-          getKudosCountsForLog(row.id),
-          getViewerKudosForLog(row.id, viewerId),
+        const [photoSignedUrl, counts, viewerKudos] = await Promise.all([
+          getActionLogPhotoSignedUrl(hydrate.photoPath, viewerId),
+          getKudosCountsForLog(id),
+          getViewerKudosForLog(id, viewerId),
         ]);
-        return { id: row.id, counts, viewerKudos };
+
+        return {
+          id: hydrate.id,
+          authorId: hydrate.authorId,
+          authorName: hydrate.authorName,
+          photoSignedUrl,
+          summary: hydrate.summary,
+          keywords: hydrate.keywords,
+          kudosByEmoji: counts ?? emptyKudosByEmoji(),
+          viewerKudos,
+          createdAt: hydrate.createdAt,
+        } satisfies FeedItemView;
       }),
     );
-    const kudosMap = new Map(kudosByLog.map((k) => [k.id, k]));
 
-    return rows.map((row, index) => {
-      const author = Array.isArray(row.users) ? row.users[0] : row.users;
-      const kudos = kudosMap.get(row.id);
-
-      return {
-        id: row.id,
-        authorId: row.user_id,
-        authorName: author?.display_name ?? "익명",
-        photoSignedUrl: signedUrls[index],
-        summary: row.ai_summary,
-        keywords: row.selected_keywords ?? [],
-        kudosByEmoji: kudos?.counts ?? emptyKudosByEmoji(),
-        viewerKudos: kudos?.viewerKudos ?? [],
-        createdAt: row.created_at,
-      };
-    });
+    return items.filter((item): item is FeedItemView => item !== null);
   },
 );
