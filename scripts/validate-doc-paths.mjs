@@ -16,30 +16,35 @@
 //   - 글롭/와일드카드: * 또는 < > { } 포함
 //   - 라인 번호 suffix(:42) · 쿼리/프래그먼트는 제거 후 검증
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { readFile, readdir } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 
 const ROOT = resolve(process.cwd());
-const CONTEXT_NAMES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md']);
-const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'build', '.git', '.turbo']);
+const CONTEXT_NAMES = new Set(["CLAUDE.md", "AGENTS.md", "README.md"]);
+const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "build", ".git", ".turbo"]);
 
 const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)\)/g;
 const ATIMPORT_RE = /^@([A-Za-z0-9_\-./]+\.[A-Za-z]+)\s*$/gm;
-const KNOWN_EXT = '(?:md|mdx|ts|tsx|js|jsx|mjs|cjs|json|yaml|yml|sql|sh|env|toml|css)';
-const BACKTICK_PATH_RE = new RegExp('`([A-Za-z0-9_./\\-]+\\.' + KNOWN_EXT + ')`', 'g');
+const KNOWN_EXT = "(?:md|mdx|ts|tsx|js|jsx|mjs|cjs|json|yaml|yml|sql|sh|env|toml|css)";
+const BACKTICK_PATH_RE = new RegExp("`([A-Za-z0-9_./\\-]+\\." + KNOWN_EXT + ")`", "g");
 
 function isExternal(p) {
-  return /^[a-z][a-z0-9+.\-]*:\/\//i.test(p) || p.startsWith('mailto:') || p.startsWith('#');
+  return /^[a-z][a-z0-9+.\-]*:\/\//i.test(p) || p.startsWith("mailto:") || p.startsWith("#");
 }
 
 function isTemplate(p) {
-  return p.includes('*') || p.includes('<') || p.includes('>') || p.includes('{') || p.includes('}');
+  return (
+    p.includes("*") || p.includes("<") || p.includes(">") || p.includes("{") || p.includes("}")
+  );
 }
 
 function stripFragment(p) {
-  return p.replace(/[?#].*$/, '').replace(/:\d+(:\d+)?$/, '').trim();
+  return p
+    .replace(/[?#].*$/, "")
+    .replace(/:\d+(:\d+)?$/, "")
+    .trim();
 }
 
 const ignoreCache = new Map();
@@ -47,7 +52,7 @@ function isGitIgnored(absPath) {
   if (ignoreCache.has(absPath)) return ignoreCache.get(absPath);
   let result = false;
   try {
-    execFileSync('git', ['check-ignore', '-q', '--', absPath], { cwd: ROOT, stdio: 'pipe' });
+    execFileSync("git", ["check-ignore", "-q", "--", absPath], { cwd: ROOT, stdio: "pipe" });
     result = true; // exit 0 = ignored
   } catch {
     result = false; // exit non-zero = not ignored
@@ -59,9 +64,9 @@ function isGitIgnored(absPath) {
 function refResolves(fromFile, ref, kind) {
   // 가능한 resolve 후보 수집 (절대/상대/file-relative/repo-root 컨벤션 모두 시도)
   const candidates = [];
-  if (ref.startsWith('/')) {
+  if (ref.startsWith("/")) {
     candidates.push(join(ROOT, ref.slice(1)));
-  } else if (ref.startsWith('./') || ref.startsWith('../') || kind === 'mdlink') {
+  } else if (ref.startsWith("./") || ref.startsWith("../") || kind === "mdlink") {
     candidates.push(resolve(dirname(fromFile), ref));
   } else {
     // backtick / @import: repo root 우선 + 파일 상대 fallback
@@ -77,7 +82,11 @@ function refResolves(fromFile, ref, kind) {
 
 async function collectContextFiles(dir, out) {
   let entries;
-  try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue;
     const p = join(dir, e.name);
@@ -90,7 +99,7 @@ async function collectContextFiles(dir, out) {
 }
 
 function relRoot(p) {
-  return p.startsWith(ROOT + '/') ? p.slice(ROOT.length + 1) : p;
+  return p.startsWith(ROOT + "/") ? p.slice(ROOT.length + 1) : p;
 }
 
 async function main() {
@@ -102,7 +111,7 @@ async function main() {
   let totalRefs = 0;
 
   for (const file of files) {
-    const text = await readFile(file, 'utf8');
+    const text = await readFile(file, "utf8");
     const candidates = []; // { ref, kind }
     const seen = new Set();
     function add(ref, kind) {
@@ -113,13 +122,13 @@ async function main() {
     }
 
     for (const m of text.matchAll(MD_LINK_RE)) {
-      if (!isExternal(m[1])) add(m[1], 'mdlink');
+      if (!isExternal(m[1])) add(m[1], "mdlink");
     }
     for (const m of text.matchAll(ATIMPORT_RE)) {
-      add(m[1], 'atimport');
+      add(m[1], "atimport");
     }
     for (const m of text.matchAll(BACKTICK_PATH_RE)) {
-      if (m[1].includes('/')) add(m[1], 'backtick');
+      if (m[1].includes("/")) add(m[1], "backtick");
     }
 
     for (const { ref: raw, kind } of candidates) {
@@ -136,7 +145,7 @@ async function main() {
 
   console.log(`scanned ${files.length} markdown files · ${totalRefs} references`);
   if (broken.length === 0) {
-    console.log('OK: no broken references');
+    console.log("OK: no broken references");
     return;
   }
 
@@ -145,4 +154,7 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
