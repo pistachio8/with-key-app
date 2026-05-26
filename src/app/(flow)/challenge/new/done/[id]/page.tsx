@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { buildInviteUrl } from "@/lib/invite/share-url";
@@ -9,6 +10,7 @@ import { CreationCompleteSheet } from "../../_components/creation-complete-sheet
 // /challenge/new 의 page.tsx 가드("모든 owner 그룹이 open 챌린지 → latest 로 redirect")
 // 와 충돌 없게 별도 segment 로 분리 — server action 자동 client cache clear 가
 // caller RSC 재실행을 일으켜도 본 segment 에는 가드가 없으므로 안전.
+// Next.js 16 cacheComponents: 셸은 sync — dynamic 은 ChallengeCreatedSection 자식에서.
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ token?: string | string[] }>;
 
@@ -17,7 +19,30 @@ function firstSearchParam(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
-export default async function ChallengeCreatedPage({
+export default function ChallengeCreatedPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  return (
+    <Suspense fallback={<ChallengeCreatedFallback />}>
+      <ChallengeCreatedSection params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+function ChallengeCreatedFallback() {
+  return (
+    <div className="flex min-h-svh flex-col p-4" aria-busy="true" aria-label="초대 시트 로딩 중">
+      <div className="bg-muted h-48 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted mt-3 h-12 w-full animate-pulse rounded-2xl" />
+    </div>
+  );
+}
+
+async function ChallengeCreatedSection({
   params,
   searchParams,
 }: {
