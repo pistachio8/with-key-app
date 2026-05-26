@@ -94,6 +94,7 @@ function clearDraft(challengeId: string) {
 
 type Props = {
   challengeId: string;
+  verifiedToday?: boolean;
 };
 
 function isAllowedFile(file: File): boolean {
@@ -113,7 +114,7 @@ interface ResultState {
   totalDays?: number;
 }
 
-export function ActionForm({ challengeId }: Props) {
+export function ActionForm({ challengeId, verifiedToday = false }: Props) {
   const router = useRouter();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -294,6 +295,19 @@ export function ActionForm({ challengeId }: Props) {
   return (
     <>
       <div className="flex flex-col gap-5">
+        {verifiedToday && (
+          <Card
+            tone="muted"
+            padding="sm"
+            className="border-transparent"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="t-caption text-muted-foreground">
+              오늘 이미 인증했어요. 추가로 올리는 피드는 기록되지만 인증 횟수는 늘지 않아요.
+            </p>
+          </Card>
+        )}
         {preview && (
           <div className="flex flex-col gap-2">
             <div className="bg-muted relative aspect-[16/9] w-full overflow-hidden rounded-[12px] border">

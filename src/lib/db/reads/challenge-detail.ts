@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { countDoneDaysByUser } from "@/lib/challenge/done-days";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChallengeMemberView = {
@@ -54,14 +55,12 @@ export const fetchChallengeDetail = cache(
       .select("user_id, signed_at, users!inner(display_name)")
       .eq("challenge_id", challengeId);
 
-    const counts = new Map<string, number>();
     const { data: logs } = await supabase
       .from("action_logs")
-      .select("user_id")
+      .select("user_id, created_at")
       .eq("challenge_id", challengeId);
-    for (const l of logs ?? []) {
-      counts.set(l.user_id, (counts.get(l.user_id) ?? 0) + 1);
-    }
+    // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
+    const counts = countDoneDaysByUser(logs ?? []);
 
     const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
       const u = Array.isArray(p.users) ? p.users[0] : p.users;

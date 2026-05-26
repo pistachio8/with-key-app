@@ -1,6 +1,7 @@
 // src/lib/db/reads/recap.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { countDoneDaysByUser } from "@/lib/challenge/done-days";
 import { computePerHeadPenalty, pickMvpIds } from "@/lib/challenge/settlement";
 
 export type RecapMemberView = {
@@ -161,13 +162,11 @@ export async function fetchRecap(
 
   const { data: logs } = await supabase
     .from("action_logs")
-    .select("user_id")
+    .select("user_id, created_at")
     .eq("challenge_id", challenge.id);
 
-  const doneByUser = new Map<string, number>();
-  for (const l of logs ?? []) {
-    doneByUser.set(l.user_id, (doneByUser.get(l.user_id) ?? 0) + 1);
-  }
+  // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
+  const doneByUser = countDoneDaysByUser(logs ?? []);
 
   const participants: ParticipantRow[] = (parts ?? []).map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;

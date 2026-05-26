@@ -1,3 +1,4 @@
+import { countDoneDaysByUser } from "@/lib/challenge/done-days";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "./current-challenges";
 
@@ -109,11 +110,13 @@ export async function fetchActiveChallenge(
   if (error || !challenges?.[0]) return null;
   const c = challenges[0];
 
-  const { count: doneCount } = await supabase
+  // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
+  const { data: myLogs } = await supabase
     .from("action_logs")
-    .select("id", { count: "exact", head: true })
+    .select("user_id, created_at")
     .eq("challenge_id", c.id)
     .eq("user_id", userId);
+  const doneCount = countDoneDaysByUser(myLogs ?? []).get(userId) ?? 0;
 
   const { count: memberCount } = await supabase
     .from("challenge_participants")
@@ -134,7 +137,7 @@ export async function fetchActiveChallenge(
     status: c.status as ChallengeStatus,
     startAt: c.start_at,
     endAt: c.end_at,
-    doneCount: doneCount ?? 0,
+    doneCount,
     daysLeft,
     potTotal: (memberCount ?? 0) * c.penalty_amount,
     participantCount: memberCount ?? 0,
