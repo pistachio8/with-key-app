@@ -1,3 +1,4 @@
+import { toKstDayKey } from "@/lib/challenge/done-days";
 import { createClient } from "@/lib/supabase/server";
 import type { ChallengeStatus } from "./active-challenge";
 
@@ -103,14 +104,10 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
     }));
   }
 
-  const doneByChallenge = new Map<string, number>();
-  const verifiedTodayByChallenge = new Set<string>();
-  // KST(UTC+9) 자정 기준 오늘 구간 — 서버 TZ 무관하게 결정.
-  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const kstMidnightUtc = new Date(
-    Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) -
-      9 * 60 * 60 * 1000,
-  );
+  // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
+  // dayKeysByChallenge 가 doneCount(=size) 와 verifiedToday(=has(todayKey)) 양쪽의 SoT.
+  const dayKeysByChallenge = new Map<string, Set<string>>();
+  const todayKstKey = toKstDayKey(new Date());
   const { data: myLogs } = await supabase
     .from("action_logs")
     .select("challenge_id, created_at")
@@ -118,10 +115,12 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
     .in("challenge_id", challengeIds);
   for (const row of myLogs ?? []) {
     const r = row as { challenge_id: string; created_at: string };
-    doneByChallenge.set(r.challenge_id, (doneByChallenge.get(r.challenge_id) ?? 0) + 1);
-    if (new Date(r.created_at).getTime() >= kstMidnightUtc.getTime()) {
-      verifiedTodayByChallenge.add(r.challenge_id);
+    let s = dayKeysByChallenge.get(r.challenge_id);
+    if (!s) {
+      s = new Set<string>();
+      dayKeysByChallenge.set(r.challenge_id, s);
     }
+    s.add(toKstDayKey(r.created_at));
   }
 
   const memberCountByChallenge = new Map<string, number>();
@@ -168,12 +167,12 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
         status: c.status,
         startAt: c.start_at,
         endAt: c.end_at,
-        doneCount: doneByChallenge.get(c.id) ?? 0,
+        doneCount: dayKeysByChallenge.get(c.id)?.size ?? 0,
         daysLeft,
         potTotal: memberCount * c.penalty_amount,
         participantCount: memberCount,
         userIsParticipant: myParticipantChallengeIds.has(c.id),
-        verifiedToday: verifiedTodayByChallenge.has(c.id),
+        verifiedToday: dayKeysByChallenge.get(c.id)?.has(todayKstKey) ?? false,
       },
     };
   });

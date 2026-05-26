@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { toKstDayKey } from "@/lib/challenge/done-days";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
 import { markActionStarted } from "../_actions";
@@ -30,13 +31,26 @@ export default async function ChallengeActionPage({ params }: { params: Params }
   // Fire-and-forget — 응답을 기다리지 않으면 페이지 첫 페인트가 지연되지 않음.
   void markActionStarted({ challengeId: id });
 
+  // 같은 날 N개 피드는 등록 가능하지만 인증은 1회만 카운트 — 기대치 정렬용 배너 신호.
+  const { data: latestLog } = await supabase
+    .from("action_logs")
+    .select("created_at")
+    .eq("challenge_id", id)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const verifiedToday = latestLog
+    ? toKstDayKey(latestLog.created_at) === toKstDayKey(new Date())
+    : false;
+
   return (
     <div className="flex min-h-[100dvh] flex-col gap-4 p-4">
       <header className="flex flex-col gap-1">
         <p className="t-caption text-muted-foreground">{detail.title}</p>
         <h1 className="t-h2">AI 운동일기</h1>
       </header>
-      <ActionForm challengeId={id} />
+      <ActionForm challengeId={id} verifiedToday={verifiedToday} />
     </div>
   );
 }
