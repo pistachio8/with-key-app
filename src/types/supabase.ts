@@ -1,11 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -172,6 +167,7 @@ export type Database = {
           status: string;
           title: string;
           type: string;
+          visibility_version: number;
         };
         Insert: {
           created_at?: string;
@@ -185,6 +181,7 @@ export type Database = {
           status?: string;
           title: string;
           type?: string;
+          visibility_version?: number;
         };
         Update: {
           created_at?: string;
@@ -198,6 +195,7 @@ export type Database = {
           status?: string;
           title?: string;
           type?: string;
+          visibility_version?: number;
         };
         Relationships: [
           {
@@ -405,8 +403,6 @@ export type Database = {
           },
         ];
       };
-      // NOTE: migration 0034 (ADR-0017) 신설. supabase CLI 미설치 환경에서 수동 patch.
-      // CI/dogfood 단계의 `pnpm db:types` 재생성 결과로 덮어쓰임 — 동일 shape 유지 보장.
       kudos_push_log: {
         Row: {
           action_log_id: string;
