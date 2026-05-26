@@ -70,6 +70,14 @@
 - 응답 검증: 선택 키워드 커버리지 < 1 이면 `templateFallback()` 폴백. **왜**: 사용자가 빈 응답을 보지 않게
 - 프롬프트/응답 **본문을 로그에 남기지 않는다**. 메타만: `latencyMs` · `fallback` · `keywordCoverage` · `promptVersion`. **왜**: 일기 내용은 사용자 사생활
 
+### §Cache Components (`src/lib/cache/`)
+
+- viewer-specific cached read 는 `src/lib/cache/private.ts` 의 `viewerCached` wrapper 를 사용하고 user-keyed tag 를 명시한다. **왜**: `'use cache: private'` · `cacheTag` · `cacheLife` 사용 규칙과 invalidation tag 컨벤션을 한 곳에서 강제
+- `cacheComponents: true` 는 단독 PR(Phase 1b)에서만 켜고 Vercel Preview route smoke 후 머지한다. **왜**: App Router prerendering · React `<Activity>` navigation state 보존이 앱 전체에 영향을 준다
+- service-role / `adminClient` 결과는 user-facing cache 에 저장하지 않는다(공개 데이터 cron/worker 예외는 별도 ADR 필요). **왜**: RLS 를 우회한 결과를 캐시하면 viewer boundary 오염 위험이 커진다
+- `next` · `eslint-config-next` 는 현재 minor line(`16.2.x`) 으로 pin 한다. **왜**: patch 는 수용하되 private cache API 가 바뀔 수 있는 minor 자동 상승은 막는다
+- Next.js minor bump 전 `node_modules/next/dist/docs/` 의 `use-cache-private` · `cacheTag` · `cacheLife` · `cacheComponents` 문서와 changelog 를 확인한다. **왜**: private cache 는 v16 에서도 experimental 이라 API/동작 변경 가능성이 있다
+
 ### §AnalyticsEvent (`src/lib/analytics/track.ts`)
 
 - `AnalyticsEvent` 유니온은 **PRD §9.1 이벤트 표와 1:1**. 임의 이벤트 추가 금지 — PO 승인 필요. **왜**: 분석 파이프라인의 SoT는 PRD, 코드는 그 미러
