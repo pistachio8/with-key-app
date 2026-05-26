@@ -7,8 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 
-export const runtime = "nodejs";
-
 let fontCache: ArrayBuffer | null = null;
 async function loadFont(): Promise<ArrayBuffer | null> {
   if (fontCache) return fontCache;
