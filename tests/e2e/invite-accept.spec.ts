@@ -73,7 +73,13 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
       await expect(joinerPage).toHaveURL(/\/challenge\/[0-9a-f-]{36}\/pledge$/, {
         timeout: 10_000,
       });
-      await expect(joinerPage.getByText("e2e-invite")).toBeVisible({ timeout: 10_000 });
+      // 모킹업 §3-C — pledge 페이지의 PledgePreviewCard 는 챌린지 제목을 <h3.t-h3>에 렌더.
+      // cacheComponents Activity 가 직전 /invite/[token] 의 ShareCard 를 hidden DOM 으로
+      // 보존해 getByText 가 2개 매치 (strict mode violation). heading role + level=3 으로
+      // 좁혀 pledge 페이지의 현재 가시 요소만 매칭.
+      await expect(joinerPage.getByRole("heading", { name: "e2e-invite", level: 3 })).toBeVisible({
+        timeout: 10_000,
+      });
 
       // Direct DB check: joiner is group_members row AND participant of pending challenge.
       const { count: memberCount } = await admin

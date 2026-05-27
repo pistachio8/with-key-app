@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { asUser, admin } from "../setup";
+import { withIntegrationClient } from "../test-context";
 import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 
@@ -50,8 +51,12 @@ async function fetchChallengeFeedAsUser(
   viewer: { id: string; email: string; password: string },
   challengeId: string,
 ) {
+  // Phase 4 분해 후: `fetchChallengeFeed` 의 자식 read 들이 자체 `createClient()` 호출.
+  // `withIntegrationClient` 가 AsyncLocalStorage 로 signed-in client 를 binding 하고,
+  // `tests/integration/setup.ts` 의 vi.mock 이 그 client 를 production createClient 자리에
+  // 끼워 넣어 `cookies()` 우회. `_options.client` 는 Phase 4 에서 deprecated — 미전달.
   const client = await asUser(viewer);
-  return fetchChallengeFeed(challengeId, viewer.id, { client });
+  return withIntegrationClient(client, () => fetchChallengeFeed(challengeId, viewer.id));
 }
 
 describe("fetchChallengeFeed", () => {

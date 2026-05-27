@@ -32,7 +32,7 @@ fetchChallengeFeed(challengeId, viewerId)
 | 1. Visibility   | `listVisibleActionLogIds`    | `'use cache: private'` | `user-${viewerId}-feed-${challengeId}-v${visibilityVersion}`             | `minutes`                                 |
 | 2. Hydration    | `getActionLogHydrate`        | `'use cache: private'` | `user-${viewerId}-actionlog-${actionLogId}` + `actionlog-${actionLogId}` | `hours`                                   |
 | 2. Photo URL    | `getActionLogPhotoSignedUrl` | `'use cache: private'` | `user-${viewerId}-photo-${path}` + `photo-${path}`                       | `{stale:540, revalidate:480, expire:600}` |
-| 3. Counts       | `getKudosCountsForLog`       | `'use cache'`          | `kudos-counts-${actionLogId}`                                            | `{stale:60, revalidate:300, expire:3600}` |
+| 3. Counts       | `getKudosCountsForLog`       | `'use cache: private'` | `kudos-counts-${actionLogId}` (viewer-agnostic tag)                      | `{stale:60, revalidate:300, expire:3600}` |
 | 3. Viewer kudos | `getViewerKudosForLog`       | `'use cache: private'` | `user-${viewerId}-kudos-${actionLogId}`                                  | `minutes`                                 |
 
 ## 무효화 규칙
@@ -52,7 +52,7 @@ fetchChallengeFeed(challengeId, viewerId)
 
 ## RLS 통과 전략
 
-모든 자식 함수가 `'use cache: private'` 으로 cookies-bound — viewer 의 RLS 가 정상 작동. `'use cache'` (public) 가 적용된 `getKudosCountsForLog` 만 예외 (kudos 테이블 RLS 가 anon select 허용 한정 — anon 으로도 모든 emoji count 조회 가능, 그러나 emoji 만 select 라 데이터 노출 없음).
+모든 자식 함수가 `'use cache: private'` 으로 cookies-bound — viewer 의 RLS 가 정상 작동. `getKudosCountsForLog` 도 kudos RLS(`kudos_select_member`)가 `is_group_member` 를 요구하므로 anon client 로는 빈 결과. private cache + viewer-agnostic tag (`kudos-counts-${alid}`) 조합으로 RLS 보존하면서 `revalidateTag('max')` 시 모든 viewer cache 일괄 SWR 가능.
 
 ## 미해결 / 후속
 

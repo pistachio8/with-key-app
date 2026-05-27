@@ -12,10 +12,12 @@ SNS cache plan v4 §Phase 3 — kudos 의 viewer-specific state 와 viewer-agnos
 
 ## 태그 컨벤션
 
-| Layer        | 함수                                          | 디렉티브                                        | 태그                                    | 라이프                                    |
-| ------------ | --------------------------------------------- | ----------------------------------------------- | --------------------------------------- | ----------------------------------------- |
-| Viewer state | `getViewerKudosForLog(actionLogId, viewerId)` | `'use cache: private'` (`viewerCached` wrapper) | `user-${viewerId}-kudos-${actionLogId}` | `minutes`                                 |
-| Counts       | `getKudosCountsForLog(actionLogId)`           | `'use cache'`                                   | `kudos-counts-${actionLogId}`           | `{stale:60, revalidate:300, expire:3600}` |
+| Layer        | 함수                                          | 디렉티브                          | 태그                                    | 라이프                                    |
+| ------------ | --------------------------------------------- | --------------------------------- | --------------------------------------- | ----------------------------------------- |
+| Viewer state | `getViewerKudosForLog(actionLogId, viewerId)` | `'use cache: private'` (ADR-0021) | `user-${viewerId}-kudos-${actionLogId}` | `minutes`                                 |
+| Counts       | `getKudosCountsForLog(actionLogId)`           | `'use cache: private'` (ADR-0021) | `kudos-counts-${actionLogId}`           | `{stale:60, revalidate:300, expire:3600}` |
+
+> Counts 도 `'use cache: private'` 인 이유: kudos RLS(`kudos_select_member`)가 `is_group_member` 를 요구해 cookies-bound client 필수. `'use cache'` (public) 는 cookies() 호출을 cacheComponents 가드가 금지. tag 는 viewer-agnostic 으로 두어 `revalidateTag('max')` 시 모든 viewer 의 해당 actionLog cache 일괄 SWR.
 
 ## 무효화 규칙 (`toggleKudos`)
 
