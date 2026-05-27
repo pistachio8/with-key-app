@@ -43,6 +43,9 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_APP_CODENAME: with-key
+      # 0038 의 reenable_on_auth_user_created RPC 가 쓰는 project ref guard.
+      # cleanup 의 가드와 같은 변수명을 재사용해 일관성 유지.
+      SUPABASE_CLEANUP_ALLOWED_REF: ohvcaytmzzwxkbxsmyny
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -51,6 +54,11 @@ jobs:
           version: latest
       - name: Apply pending migrations (no-op if up to date)
         run: bash scripts/ci/apply-migrations.sh
+      - name: Re-enable on_auth_user_created trigger (외부 disable 회귀 봉합)
+        # ADR-0018 §회귀 history 4회째 (1시간 이내 재발) 단기 봉합.
+        # 0038 의 service_role security definer RPC 를 호출해 매 잡 시작 시 트리거 보장.
+        # 근본 해결책은 ADR-0005 §후속 영향 (local Supabase 이전).
+        run: pnpm test:integration:reenable-trigger
       - name: Run integration tests
         run: pnpm test:integration
 
