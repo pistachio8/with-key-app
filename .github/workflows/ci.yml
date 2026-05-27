@@ -181,13 +181,14 @@ jobs:
           retention-days: 7
 
   build:
-    name: Production build (main only)
+    name: Production build (develop · main)
     needs: quick
-    # push: main 시점에서 production 빌드 회귀를 Vercel 외부에서 한 번 더 검증.
-    # 1주일 관찰 후 Vercel 빌드 신뢰 여부에 따라 유지/제거 판단 (plan §결과 측정).
+    # push: develop · main 시점에서 production 빌드 회귀를 Vercel 외부에서 한 번 더 검증.
+    # develop = Vercel preview/dogfood 도메인 소스 — 머지 직후 빌드 실패가 곧 dogfood 깨짐.
+    # main = production 배포 직전 마지막 게이트.
     if: |
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
