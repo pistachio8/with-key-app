@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/reads/notification-prefs";
 import { fetchMyChallenges, deriveCounts } from "@/lib/db/reads/my-challenges";
 import { fetchMyDisplayName } from "@/lib/db/reads/me";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedUser } from "@/lib/supabase/auth";
 import { ProfileCard } from "./_components/profile-card";
 import { NotificationCard } from "./_components/notification-card";
 import { MyChallengesCard } from "./_components/my-challenges-card";
@@ -25,9 +25,10 @@ function formatJoinedMonth(iso: string): string {
 
 export default async function MePage() {
   const user = await requireUser();
-  const supabase = await createClient();
-  const { data: authUser } = await supabase.auth.getUser();
-  const createdAt = authUser.user?.created_at ?? new Date().toISOString();
+  // requireUser 가 cache 된 getAuthedUser 위에 구현되어 같은 request 안에서 1회만 호출됨.
+  // 여기서 created_at 만 추가로 필요해 동일 cached fetch 재사용.
+  const { user: authUser } = await getAuthedUser();
+  const createdAt = authUser?.created_at ?? new Date().toISOString();
 
   const [prefs, endpoint, my, displayNameRaw] = await Promise.all([
     fetchNotificationPrefs(user.id),

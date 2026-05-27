@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
 import { fetchMyDisplayName, hasEverCreatedChallenge } from "@/lib/db/reads/me";
@@ -38,11 +38,8 @@ function HomeFallback() {
 }
 
 async function HomeSection() {
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const [groups, displayName] = await Promise.all([
     fetchCurrentChallenges(user.id),

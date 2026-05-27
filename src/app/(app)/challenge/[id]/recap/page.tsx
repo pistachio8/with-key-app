@@ -1,6 +1,6 @@
 // src/app/(app)/challenge/[id]/recap/page.tsx
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
@@ -20,11 +20,8 @@ type Params = Promise<{ id: string }>;
 // 모킹업 §11 정산 · PRD §10 — ADR-0002: challenge sub-route.
 export default async function RecapPage({ params }: { params: Params }) {
   const { id: challengeId } = await params;
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const [recap, photos] = await Promise.all([
     fetchRecap(user.id, { challengeId }),

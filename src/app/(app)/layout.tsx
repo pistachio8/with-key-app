@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/app-shell/app-header";
+import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchMyGroups } from "@/lib/db/reads/my-groups";
 import { fetchOwnerGroupsForChallengeForm } from "@/lib/db/reads/owner-groups-for-challenge-form";
@@ -34,12 +34,8 @@ function AppShellFallback() {
 }
 
 async function AppShellSection({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
 
   // F15 — 그룹 수에 따라 헤더 chevron sheet/직진입/라벨 분기.
   // 알림 dot 은 NotificationBell 이 클라이언트에서 IDB unreadCount 구독 (plan 2026-05-22-header-unread-dot-source).

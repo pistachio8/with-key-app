@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { fetchPendingPledge } from "@/lib/db/reads/pledge";
 import { PledgeSheet } from "./_components/pledge-sheet";
 
@@ -45,12 +45,7 @@ async function PledgeSection({
   const sp = await searchParams;
   const welcome = typeof sp.welcome === "string" && sp.welcome.length > 0 ? sp.welcome : null;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
+  const user = await requireUser();
   const pledge = await fetchPendingPledge(user.id, challengeId);
   if (!pledge || pledge.mySigned) {
     redirect(`/challenge/${challengeId}`);
