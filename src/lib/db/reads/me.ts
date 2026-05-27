@@ -1,9 +1,16 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-export async function fetchMyDisplayName(userId: string): Promise<string | null> {
+// Phase 5-1: display_name 은 mutation 빈도 ↓ + 라이프 ↑ — 명시 invalidation 생략.
+// inline directive 강제 (ADR-0021) — closure 캡처 회피.
+async function fetchMyDisplayNameInner(userId: string): Promise<string | null> {
+  "use cache: private";
+  cacheTag(`user-${userId}-display-name`);
+  cacheLife("hours");
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("users")
@@ -12,6 +19,10 @@ export async function fetchMyDisplayName(userId: string): Promise<string | null>
     .maybeSingle();
   if (error || !data) return null;
   return data.display_name;
+}
+
+export async function fetchMyDisplayName(userId: string): Promise<string | null> {
+  return fetchMyDisplayNameInner(userId);
 }
 
 /**
@@ -48,7 +59,16 @@ export async function readHasEverCreatedChallenge(
   return (anyChallenge?.length ?? 0) > 0;
 }
 
-export async function hasEverCreatedChallenge(userId: string): Promise<boolean> {
+// Phase 5-1: empty-state CTA 카피용. mutation 빈도 매우 낮음 — 라이프 days.
+async function hasEverCreatedChallengeInner(userId: string): Promise<boolean> {
+  "use cache: private";
+  cacheTag(`user-${userId}-has-created`);
+  cacheLife("days");
+
   const supabase = await createClient();
   return readHasEverCreatedChallenge(supabase, userId);
+}
+
+export async function hasEverCreatedChallenge(userId: string): Promise<boolean> {
+  return hasEverCreatedChallengeInner(userId);
 }

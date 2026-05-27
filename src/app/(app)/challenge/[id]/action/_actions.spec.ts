@@ -41,9 +41,10 @@ vi.mock("@/lib/analytics/track", () => ({
   track: (...args: unknown[]) => mocks.track(...args),
 }));
 
-// revalidatePath 는 Next.js runtime store 에 의존 — unit test 에서는 no-op mock.
+// revalidatePath / updateTag 는 Next.js runtime store 에 의존 — unit test 에서는 no-op mock.
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 import { submitActionLog } from "./_actions";
@@ -221,6 +222,12 @@ describe("submitActionLog", () => {
       }),
       { userId: mocks.user.id },
     );
+  });
+
+  it("updateTag('user-${uid}-home-feed') after successful action_log INSERT (Phase 5-1)", async () => {
+    const { updateTag } = await import("next/cache");
+    await submitActionLog(makeFormData());
+    expect(updateTag).toHaveBeenCalledWith(`user-${mocks.user.id}-home-feed`);
   });
 
   it("deletes the uploaded object if the RPC update fails", async () => {
