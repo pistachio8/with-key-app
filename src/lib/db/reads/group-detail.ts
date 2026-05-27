@@ -1,3 +1,4 @@
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type GroupMemberView = {
@@ -28,8 +29,18 @@ export type GroupDetailView = {
 
 // RLS(`groups_select_member` / `gm_select_member` / `challenges_select_member`) 가
 // 비멤버 차단. account_number_encrypted 평문은 본 read 에 포함되지 않음 (D-016).
-// viewerId 는 인자로 받아두고 향후 추가 필터(예: 비활성 멤버 가시성)를 추가할 때 사용.
-export async function fetchGroupDetail(groupId: string): Promise<GroupDetailView | null> {
+//
+// Phase 5-3: viewer-keyed primary tag + group-keyed secondary tag. owner 본인 mutation 은
+// `updateTag('user-${uid}-group-${gid}')` 로 즉시 fresh, 타 멤버는 `revalidateTag('group-${gid}','max')`
+// 로 SWR. ADR-0021 inline directive 패턴.
+async function fetchGroupDetailInner(
+  groupId: string,
+  viewerId: string,
+): Promise<GroupDetailView | null> {
+  "use cache: private";
+  cacheTag(`user-${viewerId}-group-${groupId}`, `group-${groupId}`);
+  cacheLife("minutes");
+
   const supabase = await createClient();
   const { data: g, error } = await supabase
     .from("groups")
@@ -78,4 +89,13 @@ export async function fetchGroupDetail(groupId: string): Promise<GroupDetailView
     members,
     challenges,
   };
+}
+
+export async function fetchGroupDetail(groupId: string): Promise<GroupDetailView | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  return fetchGroupDetailInner(groupId, user.id);
 }

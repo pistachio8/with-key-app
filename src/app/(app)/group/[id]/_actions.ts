@@ -1,7 +1,7 @@
 // src/app/(app)/group/[id]/_actions.ts
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { withUser } from "@/lib/auth/with-user";
@@ -57,6 +57,10 @@ export const updateGroupAccount = withUser<UpdateGroupAccountInput, { id: string
     if (error) return failure(mapSupabaseError(error));
     if (!data) return failure("forbidden");
 
+    // Phase 5-3: owner 즉시 fresh + 멤버 SWR.
+    updateTag(`user-${user.id}-group-${groupId}`);
+    revalidateTag(`group-${groupId}`, "max");
+
     return success({ id: data.id as string });
   },
 );
@@ -82,6 +86,10 @@ export const renameGroup = withUser<RenameGroupInput, { id: string; name: string
     // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 가 그룹 이름을
     // 캐싱 → 헤더 sheet 와 challenge 폼 select 라벨이 stale 해지지 않도록 무효화.
     revalidatePath("/", "layout");
+
+    // Phase 5-3: owner 즉시 fresh + 멤버 SWR.
+    updateTag(`user-${user.id}-group-${groupId}`);
+    revalidateTag(`group-${groupId}`, "max");
 
     return success({ id: data.id as string, name: data.name as string });
   },
@@ -137,6 +145,9 @@ export const deleteGroup = withUser<string, { id: string }>(
     // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 가 그룹 목록을
     // 캐싱 → 헤더 sheet 에서 삭제된 그룹이 잔존하지 않도록 무효화.
     revalidatePath("/", "layout");
+
+    // Phase 5-3: 그룹 해체 — 모든 멤버 cache invalidate.
+    revalidateTag(`group-${groupId}`, "max");
 
     return success({ id: groupId });
   },
