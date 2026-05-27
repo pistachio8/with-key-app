@@ -87,6 +87,15 @@ async function safeSend(
       await cleanupInvalidSubscription(target.endpoint);
       return "cleaned";
     }
+    // 진단용: Apple Push gateway (web.push.apple.com) 가 401/413/등 non-410 코드로 reject 할 때
+    // safeSend 가 silently swallow 하던 흐름을 가시화. iOS PWA push 미수신 RCA 기간에만 유지하고,
+    // 원인 식별 후 별도 PR 로 제거 예정. endpoint 는 origin prefix 만(80자) — 토큰부 노출 최소화.
+    console.error("[push] webpush rejected", {
+      endpointPrefix: target.endpoint.slice(0, 80),
+      statusCode,
+      body: (error as { body?: string })?.body,
+      headers: (error as { headers?: Record<string, string> })?.headers,
+    });
     return "failed";
   }
 }
