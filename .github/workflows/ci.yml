@@ -87,8 +87,10 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_APP_CODENAME: with-key
-      # cleanup 가 잘못된 (production) 프로젝트에 붙어 truncate_test_data 호출하는 사고 방지.
-      # apply-migrations.sh 의 SUPABASE_PROJECT_REF 와 같은 값이지만 변수명을 분리해 의도를 명시한다.
+      # 두 RPC 가 공유하는 project ref guard:
+      #   1) truncate_test_data — cleanup step 이 잘못된 (production) 프로젝트 cleanup 사고 방지
+      #   2) reenable_on_auth_user_created (0038) — reenable-trigger step 의 강제 재생성 안전 가드
+      # apply-migrations.sh 의 SUPABASE_PROJECT_REF 와 같은 값이지만 의도(가드 책임) 가 다르므로 분리.
       SUPABASE_CLEANUP_ALLOWED_REF: ohvcaytmzzwxkbxsmyny
     steps:
       - uses: actions/checkout@v4
@@ -99,6 +101,11 @@ jobs:
       - name: Apply pending migrations (no-op if up to date)
         timeout-minutes: 2
         run: bash scripts/ci/apply-migrations.sh
+      - name: Re-enable on_auth_user_created trigger (외부 disable 회귀 봉합)
+        # ADR-0018 §회귀 history 4회째 (1시간 이내 재발) 단기 봉합.
+        # 0038 의 service_role security definer RPC 를 호출해 매 잡 시작 시 트리거 보장.
+        # 근본 해결책은 ADR-0005 §후속 영향 (local Supabase 이전).
+        run: pnpm test:integration:reenable-trigger
       - name: Run integration tests
         # job timeout 15m 보다 짧게 잡아 cleanup 이 항상 실행되도록 마진 확보.
         timeout-minutes: 12

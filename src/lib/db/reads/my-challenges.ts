@@ -1,4 +1,5 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ChallengeStatus } from "./active-challenge";
 
@@ -18,7 +19,15 @@ export type MyChallenges = {
 
 // 모킹업 §12 — /me/challenges 의 운영/참여 분리.
 // 사용자가 participant 인 모든 챌린지를 한 번에 fetch 후 owner 여부로 분리.
-export async function fetchMyChallenges(userId: string): Promise<MyChallenges> {
+//
+// Phase 5-2: viewer-keyed private cache. acceptInvite · leaveChallenge 가
+// `updateTag('user-${uid}-my-challenges')` 로 본인 read-your-writes 보장.
+// ADR-0021 inline directive 패턴 (closure 캡처 회피).
+async function fetchMyChallengesInner(userId: string): Promise<MyChallenges> {
+  "use cache: private";
+  cacheTag(`user-${userId}-my-challenges`);
+  cacheLife("minutes");
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("challenge_participants")
@@ -58,6 +67,10 @@ export async function fetchMyChallenges(userId: string): Promise<MyChallenges> {
   owner.sort(byStatus);
   member.sort(byStatus);
   return { owner, member };
+}
+
+export async function fetchMyChallenges(userId: string): Promise<MyChallenges> {
+  return fetchMyChallengesInner(userId);
 }
 
 export type MyChallengeCounts = {

@@ -2,7 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 
 const insert = vi.fn();
 const singleSelect = vi.fn();
@@ -191,6 +195,17 @@ describe("renameGroup", () => {
     const res = await renameGroup({ groupId: GROUP_ID, name: "러닝 크루" });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("forbidden");
+  });
+
+  it("Phase 5-3: invalidates owner viewer tag + group-${gid} (SWR for members)", async () => {
+    const { updateTag, revalidateTag } = await import("next/cache");
+    groupUpdateMaybeSingle.mockResolvedValueOnce({
+      data: { id: GROUP_ID, name: "러닝 크루" },
+      error: null,
+    });
+    await renameGroup({ groupId: GROUP_ID, name: "러닝 크루" });
+    expect(updateTag).toHaveBeenCalledWith(`user-${OWNER_ID}-group-${GROUP_ID}`);
+    expect(revalidateTag).toHaveBeenCalledWith(`group-${GROUP_ID}`, "max");
   });
 });
 
