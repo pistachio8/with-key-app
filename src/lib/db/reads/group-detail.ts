@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
+import { getAuthedUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type GroupMemberView = {
@@ -91,11 +92,11 @@ async function fetchGroupDetailInner(
   };
 }
 
+// Phase 5 hotfix: 직접 `supabase.auth.getUser()` 대신 React `cache()` 로 dedupe 되는
+// `getAuthedUser()` 사용 — 같은 request scope 의 다른 호출들과 auth.getUser 호출 통합.
+// Supabase Auth 의 `over_request_rate_limit` (429) 압력 감소.
 export async function fetchGroupDetail(groupId: string): Promise<GroupDetailView | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getAuthedUser();
   if (!user) return null;
   return fetchGroupDetailInner(groupId, user.id);
 }

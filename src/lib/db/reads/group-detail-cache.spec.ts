@@ -7,16 +7,15 @@ vi.mock("next/cache", () => ({
   cacheLife: vi.fn(),
 }));
 
+// hotfix: outer 가 getAuthedUser() 를 사용 — 직접 mock 으로 React cache() 우회.
+vi.mock("@/lib/supabase/auth", () => ({
+  getAuthedUser: vi.fn().mockResolvedValue({ user: { id: "viewer-1" } }),
+}));
+
 const groupsMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: "viewer-1" } },
-        error: null,
-      }),
-    },
     from: vi.fn().mockImplementation((table: string) => {
       if (table === "groups") {
         return {
