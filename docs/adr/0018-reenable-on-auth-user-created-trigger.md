@@ -62,5 +62,17 @@
 
 ### 후속 영향
 
-- ADR-0005 의 §후속 영향 항목 ("integration job 의 local Supabase 이전") 의 우선순위 ↑ — 동일 패턴 2회 회귀 발생. 별도 PR/ADR 로 진행 검토.
+- ADR-0005 의 §후속 영향 항목 ("integration job 의 local Supabase 이전") 의 우선순위 ↑ — 동일 패턴 3회 회귀 발생 (아래 §회귀 history). 별도 PR/ADR 로 진행 검토.
 - 새 트리거를 auth flow 에 추가할 때, 본 회귀 가능성을 인지하고 migration 으로 enable 상태를 명시 보장.
+
+## 회귀 history (forward-only 추록)
+
+같은 증상(`on_auth_user_created` 트리거가 외부 작업으로 disabled · `auth.admin.createUser` 가 "Database error granting user" 반환 · `public.users` 미동기화 · integration 도미노 fail) 의 발생 이력. 같은 본문(DROP IF EXISTS + CREATE)으로 멱등 복구해 왔으며, 새 발생마다 신규 migration 으로 박제한다.
+
+| # | 날짜 | 적용 migration | 진단 PR / 증상 | 비고 |
+|---|------|----------------|---------------|------|
+| 1 | 2026-05-15 | ADR-0005 의 권한 GRANT (별도 패턴 — trigger disable 이 아닌 `supabase_auth_admin` EXECUTE 권한 누락) | — | 같은 도미노 증상의 시초. trigger 자체는 enabled 였음 |
+| 2 | 2026-05-22 | `0035_reenable_on_auth_user_created.sql` | PR #85 · #86 의 Integration job FAIL | 본 ADR(0018) 작성. trigger `tgenabled` 가 외부에서 disable 됨 |
+| 3 | 2026-05-27 | `0037_reenable_on_auth_user_created.sql` | PR #111 (`chore/ci-optimization-impl`) 의 39건 fail · root cause 진단 후 별도 fix PR | 0035 와 본문 동일 — 5일 만에 같은 패턴 재발. **3회째 발생으로 ADR-0005 §후속 영향(local Supabase 이전) 우선순위 정식 ↑** |
+
+회귀가 또 발생하면 본 표에 행을 추가하고 새 migration 번호 박제. 발생 빈도가 더 짧아지면(예: 1주 이내) local Supabase 이전 ADR 을 강제로 가속한다.
