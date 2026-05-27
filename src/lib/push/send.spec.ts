@@ -55,12 +55,13 @@ describe("sendPush", () => {
     expect(options.TTL).toBeGreaterThan(0);
   });
 
-  it("passes payload.type as topic (≤ 32 chars) for push service coalescing", async () => {
+  it("does NOT pass topic — Apple Push gateway rejects our payload.type values with BadWebPushTopic", async () => {
+    // PR #118 에서 추가했던 `topic: payload.type` 옵션은 Apple 의 미공개 추가 규칙 (underscore
+    // 또는 영문 단어형 reject 추정) 에 걸려 400 BadWebPushTopic. 옵션 자체를 빼서 회피.
     await sendPush(subscription, payload);
 
     const options = sendNotification.mock.calls[0][2];
-    expect(options.topic).toBe("start");
-    expect(options.topic.length).toBeLessThanOrEqual(32);
+    expect(options.topic).toBeUndefined();
   });
 
   it("serializes payload to JSON body and forwards subscription keys", async () => {
@@ -74,12 +75,11 @@ describe("sendPush", () => {
     expect(JSON.parse(body)).toMatchObject({ title: "테스트", body: "본문" });
   });
 
-  it("omits topic safely when payload.type is undefined (still sets urgency/TTL)", async () => {
+  it("still sets urgency/TTL when payload.type is undefined", async () => {
     const payloadNoType: PushPayload = { title: "T", body: "B" };
     await sendPush(subscription, payloadNoType);
 
     const options = sendNotification.mock.calls[0][2];
-    expect(options.topic).toBeUndefined();
     expect(options.urgency).toBe("high");
     expect(options.TTL).toBeGreaterThan(0);
   });
