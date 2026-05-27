@@ -48,8 +48,8 @@ const CHALLENGE_ID = "22222222-2222-4222-8222-222222222222";
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: {
-      getUser: async () => ({
-        data: { user: { id: USER_ID, email: "u@test.local" } },
+      getClaims: async () => ({
+        data: { claims: { sub: USER_ID, email: "u@test.local" } },
         error: null,
       }),
     },

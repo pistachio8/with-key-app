@@ -80,8 +80,8 @@ const fromMock = vi.fn((table: string) => {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: {
-      getUser: async () => ({
-        data: { user: { id: "11111111-1111-4111-8111-111111111111" } },
+      getClaims: async () => ({
+        data: { claims: { sub: "11111111-1111-4111-8111-111111111111" } },
         error: null,
       }),
     },

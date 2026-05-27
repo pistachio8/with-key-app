@@ -14,7 +14,7 @@ describe("withUser", () => {
 
   it("returns unauthorized when no session", async () => {
     vi.mocked(createClient).mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+      auth: { getClaims: vi.fn().mockResolvedValue({ data: null, error: null }) },
     } as never);
 
     const action = withUser(async (_user, input: { x: number }) => ({
@@ -29,7 +29,12 @@ describe("withUser", () => {
   it("passes authed user to the wrapped handler", async () => {
     const user = { id: "u-1", email: "a@b.c" };
     vi.mocked(createClient).mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) },
+      auth: {
+        getClaims: vi.fn().mockResolvedValue({
+          data: { claims: { sub: user.id, email: user.email } },
+          error: null,
+        }),
+      },
     } as never);
 
     const handler = vi.fn(async (u: { id: string }, input: { x: number }) => ({
