@@ -1,3 +1,4 @@
+import { cacheLife, cacheTag } from "next/cache";
 import { toKstDayKey } from "@/lib/challenge/done-days";
 import { createClient } from "@/lib/supabase/server";
 import type { ChallengeStatus } from "./active-challenge";
@@ -63,8 +64,16 @@ type ChallengeRow = {
  * 내가 속한 모든 그룹 × 각 그룹의 "가장 최근 pending/accepted/active 챌린지" 1개.
  * 챌린지가 없는 그룹은 `challenge: null` (홈 스트립에서 "새 서약서" CTA 로 사용).
  * RLS(`groups` / `challenges` / `group_members`) 가 비멤버 필터링 담당.
+ *
+ * Phase 5-1: viewer-keyed private cache. mutation 경로(submitActionLog · join/leave 등)가
+ * `updateTag('user-${uid}-home-feed')` 로 read-your-writes 보장.
+ * ADR-0021 — closure 캡처 회피를 위해 inner 분리 + inline directive.
  */
-export async function fetchCurrentChallenges(userId: string): Promise<GroupChallengeView[]> {
+async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallengeView[]> {
+  "use cache: private";
+  cacheTag(`user-${userId}-home-feed`);
+  cacheLife("minutes");
+
   const supabase = await createClient();
 
   const { data: groups, error: groupsErr } = await supabase
@@ -176,4 +185,8 @@ export async function fetchCurrentChallenges(userId: string): Promise<GroupChall
       },
     };
   });
+}
+
+export async function fetchCurrentChallenges(userId: string): Promise<GroupChallengeView[]> {
+  return fetchCurrentChallengesInner(userId);
 }

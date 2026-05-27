@@ -1,5 +1,11 @@
 // src/lib/db/reads/me.spec.ts
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/cache", () => ({
+  cacheTag: vi.fn(),
+  cacheLife: vi.fn(),
+}));
+
 import { readHasEverCreatedChallenge } from "./me";
 
 type GroupsResp = { data: { id: string }[] | null; error: unknown };
@@ -93,5 +99,61 @@ describe("readHasEverCreatedChallenge", () => {
       "user-1",
     );
     expect(result).toBe(false);
+  });
+});
+
+// Phase 5-1 cache directives — fetchMyDisplayName / hasEverCreatedChallenge.
+describe("fetchMyDisplayName (Phase 5-1 cache)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", () => ({
+      createClient: vi.fn().mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        }),
+      }),
+    }));
+  });
+
+  it("uses user-keyed cacheTag + hours life", async () => {
+    const { cacheTag, cacheLife } = await import("next/cache");
+    const { fetchMyDisplayName } = await import("./me");
+    await fetchMyDisplayName("user-abc");
+    expect(cacheTag).toHaveBeenCalledWith("user-user-abc-display-name");
+    expect(cacheLife).toHaveBeenCalledWith("hours");
+  });
+});
+
+describe("hasEverCreatedChallenge (Phase 5-1 cache)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", () => ({
+      createClient: vi.fn().mockResolvedValue({
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === "groups") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            };
+          }
+          throw new Error(`unexpected table ${table}`);
+        }),
+      }),
+    }));
+  });
+
+  it("uses user-keyed cacheTag + days life", async () => {
+    const { cacheTag, cacheLife } = await import("next/cache");
+    const { hasEverCreatedChallenge } = await import("./me");
+    await hasEverCreatedChallenge("user-abc");
+    expect(cacheTag).toHaveBeenCalledWith("user-user-abc-has-created");
+    expect(cacheLife).toHaveBeenCalledWith("days");
   });
 });

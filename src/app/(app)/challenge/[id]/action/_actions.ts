@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
 import { generateDiary } from "@/lib/ai/diary";
@@ -208,6 +208,8 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
     // 새 action_log 가 반영되려면 revalidatePath 가 필수.
     revalidatePath(`/challenge/${parsed.input.challengeId}`);
     revalidatePath(`/challenge/${parsed.input.challengeId}/dashboard`);
+    // Phase 5-1: 본인 verifiedToday 즉시 fresh — /home 의 stats/list cache 무효화.
+    updateTag(`user-${user.id}-home-feed`);
 
     return success({
       id: data.id,
