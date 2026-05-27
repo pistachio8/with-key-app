@@ -223,22 +223,10 @@ export async function dispatchKudosReceivedNotification(args: {
     return { recipientCount: 0, quietHours };
   }
 
-  // 4. H1 dedup 선예약 — kudos_push_log UNIQUE PK 로 atomic.
-  // ON CONFLICT 면 maybeSingle 가 null 리턴 → 이미 발송된 조합으로 판정.
-  const { data: reserved, error: reserveErr } = await admin
-    .from("kudos_push_log")
-    .insert({
-      recipient_user_id: recipientUserId,
-      action_log_id: actionLogId,
-      actor_user_id: actorUserId,
-    })
-    .select("recipient_user_id")
-    .maybeSingle();
-  if (reserveErr || !reserved) {
-    return { recipientCount: 0, quietHours };
-  }
-
-  // 5. recipient 의 push_subscriptions 로드.
+  // 4. recipient 의 push_subscriptions 로드. 구독 미존재면 dedup 선예약 자체를 안 한다.
+  // 미구독 시점 응원이 dedup 만 남기고 silent return 하면, 추후 구독한 사용자가 같은 actor 의
+  // 같은 글 응원을 영원히 못 받는 회귀가 된다 (RCA 2026-05-27 — POC dogfood 중 실측).
+  // 보존 정책의 손해(드물게 같은 글에 재발송) 보다 발송 누락 손해가 더 큼.
   const { data: subs } = await admin
     .from("push_subscriptions")
     .select("user_id, endpoint, p256dh, auth")
@@ -251,7 +239,22 @@ export async function dispatchKudosReceivedNotification(args: {
   }));
 
   if (targets.length === 0) {
-    // 구독 없음 — dedup row 는 유지(다음에 구독해도 같은 actor 가 같은 글에는 재발송 안 함).
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 5. H1 dedup 선예약 — kudos_push_log UNIQUE PK 로 atomic.
+  // ON CONFLICT 면 maybeSingle 가 null 리턴 → 이미 발송된 조합으로 판정.
+  // 구독 존재 확정 후 INSERT 하므로 stale dedup 회귀 없음. UNIQUE PK 가 race serialize.
+  const { data: reserved, error: reserveErr } = await admin
+    .from("kudos_push_log")
+    .insert({
+      recipient_user_id: recipientUserId,
+      action_log_id: actionLogId,
+      actor_user_id: actorUserId,
+    })
+    .select("recipient_user_id")
+    .maybeSingle();
+  if (reserveErr || !reserved) {
     return { recipientCount: 0, quietHours };
   }
 
