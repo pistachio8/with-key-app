@@ -19,7 +19,7 @@ jobs:
     outputs:
       has_code: ${{ steps.gate.outputs.has_code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # check-spec-required가 git diff base...HEAD를 필요로 함.
           # docs-only 판별 step 도 같은 fetch-depth 를 재사용한다.
@@ -93,9 +93,9 @@ jobs:
       # apply-migrations.sh 의 SUPABASE_PROJECT_REF 와 같은 값이지만 의도(가드 책임) 가 다르므로 분리.
       SUPABASE_CLEANUP_ALLOWED_REF: ohvcaytmzzwxkbxsmyny
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-pnpm
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
           version: latest
       - name: Apply pending migrations (no-op if up to date)
@@ -150,7 +150,7 @@ jobs:
       VAPID_PRIVATE_KEY: dummy
       VAPID_SUBJECT: mailto:ci@with-key.local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-pnpm
       - name: Cache Playwright browsers
         id: pw-cache
@@ -205,6 +205,6 @@ jobs:
       VAPID_PRIVATE_KEY: dummy
       VAPID_SUBJECT: mailto:ci@with-key.local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm build
