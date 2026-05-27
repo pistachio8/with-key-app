@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
@@ -16,8 +17,27 @@ import { StatsGrid } from "./_components/stats-grid";
 import { RunningChallengeList } from "./_components/running-challenge-list";
 import { PwaGate } from "./_components/pwa-gate";
 
+// Phase 5-1: cached read 를 Suspense 안에서 호출하기 위해 page 셸 분리.
 // 모킹업 §2 — 빈/진행 두 상태. AppHeader 는 (app)/layout.tsx 가 렌더.
-export default async function HomePage() {
+export default function HomePage() {
+  return (
+    <Suspense fallback={<HomeFallback />}>
+      <HomeSection />
+    </Suspense>
+  );
+}
+
+function HomeFallback() {
+  return (
+    <div className="flex flex-col gap-4 p-4" aria-busy="true" aria-label="홈 로딩 중">
+      <div className="bg-muted h-12 w-1/2 animate-pulse rounded-2xl" />
+      <div className="bg-muted h-24 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-40 w-full animate-pulse rounded-2xl" />
+    </div>
+  );
+}
+
+async function HomeSection() {
   const supabase = await createClient();
   const {
     data: { user },
