@@ -405,6 +405,9 @@ export const leaveChallenge = withUser<ChallengeIdInput, { id: string }>(
       .eq("user_id", user.id);
     if (error) return failure(mapSupabaseError(error));
     // 본인 참여 제거가 /home · /me/challenges 의 "참여 중" 리스트에 즉시 반영되도록.
+    // Phase 5-2: 본인 my-challenges + home-feed tag 즉시 invalidate.
+    updateTag(`user-${user.id}-my-challenges`);
+    updateTag(`user-${user.id}-home-feed`);
     revalidatePath("/", "layout");
     return success({ id: parsed.data.challengeId });
   },

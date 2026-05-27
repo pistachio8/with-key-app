@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Plus, Trophy } from "lucide-react";
 import { requireUser } from "@/lib/auth/require-user";
@@ -8,8 +9,27 @@ import { ChallengeLimitChart } from "./_components/challenge-limit-chart";
 
 const OWNER_LIMIT = 5;
 
+// Phase 5-2: cached read 를 Suspense 안에서 호출하기 위해 page 셸 분리.
 // 모킹업 §12 - 챌린지 관리. 운영/참여 분리 + 운영 슬롯 차트 + 빈 상태.
-export default async function MyChallengesPage() {
+export default function MyChallengesPage() {
+  return (
+    <Suspense fallback={<MyChallengesFallback />}>
+      <MyChallengesSection />
+    </Suspense>
+  );
+}
+
+function MyChallengesFallback() {
+  return (
+    <div className="flex flex-col gap-4 p-4" aria-busy="true" aria-label="챌린지 관리 로딩 중">
+      <div className="bg-muted h-8 w-1/3 animate-pulse rounded-2xl" />
+      <div className="bg-muted h-32 w-full animate-pulse rounded-2xl" />
+      <div className="bg-muted h-40 w-full animate-pulse rounded-2xl" />
+    </div>
+  );
+}
+
+async function MyChallengesSection() {
   const user = await requireUser();
   const my = await fetchMyChallenges(user.id);
   const counts = deriveCounts(my);
