@@ -46,7 +46,14 @@ export const fetchChallengeDetail = cache(
       )
       .eq("id", challengeId)
       .maybeSingle();
-    if (error || !c) return null;
+    // error 와 "row 없음" 을 같은 null 로 fold 하면 페이지가 notFound() → 404 로
+    // 처리해 실제 원인(429 카스케이드 · 권한/스키마 drift · 네트워크)이 stack
+    // 없이 사라진다. error 는 throw 로 surface 시키고, 진짜 "row 없음" 만 null.
+    if (error) {
+      console.error("[fetchChallengeDetail] supabase error", { challengeId, error });
+      throw new Error(`fetchChallengeDetail(${challengeId}) failed: ${error.message}`);
+    }
+    if (!c) return null;
 
     const groupRow = Array.isArray(c.groups) ? c.groups[0] : c.groups;
 
