@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { withUser } from "@/lib/auth/with-user";
@@ -44,6 +45,10 @@ export const acceptInvite = withUser<string, AcceptInviteResult>(
 
     if (error) return failure(mapAcceptInviteError(error));
     if (!data || typeof data !== "string") return failure("upstream_error");
+
+    // Phase 5-2: 본인 my-challenges + home-feed read-your-writes.
+    updateTag(`user-${user.id}-my-challenges`);
+    updateTag(`user-${user.id}-home-feed`);
 
     void track(
       { name: "invite_opened", props: { groupId: data, fromOrganicUser: false } },

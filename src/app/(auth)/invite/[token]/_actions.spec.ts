@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/cache", () => ({ updateTag: vi.fn() }));
 
 const rpc = vi.fn();
 const getUser = vi.fn();
@@ -161,6 +162,25 @@ describe("acceptInvite", () => {
     const res = await acceptInvite("tok");
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data.notifPromptRequired).toBe(true);
+  });
+
+  it("Phase 5-2: updateTag for my-challenges + home-feed after success", async () => {
+    const { updateTag } = await import("next/cache");
+    const groupId = "22222222-2222-4222-8222-222222222222";
+    const userId = "u1";
+    getUser.mockResolvedValueOnce({
+      data: { user: { id: userId, email: "u@test.local" } },
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: groupId, error: null });
+    maybeSingle.mockResolvedValueOnce({
+      data: { id: "33333333-3333-4333-8333-333333333333", status: "pending" },
+      error: null,
+    });
+
+    await acceptInvite("tok");
+    expect(updateTag).toHaveBeenCalledWith(`user-${userId}-my-challenges`);
+    expect(updateTag).toHaveBeenCalledWith(`user-${userId}-home-feed`);
   });
 
   it("sets notifPromptRequired=false when prefs.start is true", async () => {
