@@ -3,15 +3,18 @@ import { requireUser } from "@/lib/auth/require-user";
 import { toKstDayKey } from "@/lib/challenge/done-days";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
-import { markActionStarted } from "../_actions";
 import { ActionForm } from "./_components/action-form";
+import { MarkActionStartedOnMount } from "./_components/mark-action-started-on-mount";
 
 type Params = Promise<{ id: string }>;
 
 // 모킹업 §10 — AI 운동일기 + 결과 모달. ADR-0002에 따라 /action → /challenge/[id]/action sub-route.
 // RLS al_insert_active_period 가 active/기간/멤버십 강제. 페이지는 challengeId 검증 + 권한 확인.
-// PRD §6.2 — 진입 시 그룹원에게 시작 알림(markActionStarted) 자동 발화. 내부 idempotency 가
-// "1일 1회"를 보장하므로 새로고침에도 중복 알림이 가지 않음.
+// PRD §6.2 — 진입 시 그룹원에게 시작 알림(markActionStarted) 자동 발화. server 측
+// idempotency 가 "1일 1회"를 보장한다. 발화는 MarkActionStartedOnMount(클라이언트
+// mount 시 1회) 로 위임 — 과거 page 본문에서 fire-and-forget 으로 호출하던 시절
+// RSC prefetch · HMR · RSC payload 재요청마다 withUser→auth.getUser 가 다중
+// 호출되며 GoTrue `over_request_rate_limit` (429) 의 메인 기여자가 되어 분리.
 export default async function ChallengeActionPage({ params }: { params: Params }) {
   const { id } = await params;
 
@@ -25,9 +28,6 @@ export default async function ChallengeActionPage({ params }: { params: Params }
   if (!isParticipant || detail.status !== "active") {
     redirect(`/challenge/${id}`);
   }
-
-  // Fire-and-forget — 응답을 기다리지 않으면 페이지 첫 페인트가 지연되지 않음.
-  void markActionStarted({ challengeId: id });
 
   // 같은 날 N개 피드는 등록 가능하지만 인증은 1회만 카운트 — 기대치 정렬용 배너 신호.
   const { data: latestLog } = await supabase
@@ -44,6 +44,7 @@ export default async function ChallengeActionPage({ params }: { params: Params }
 
   return (
     <div className="flex min-h-[100dvh] flex-col gap-4 p-4">
+      <MarkActionStartedOnMount challengeId={id} />
       <header className="flex flex-col gap-1">
         <p className="t-caption text-muted-foreground">{detail.title}</p>
         <h1 className="t-h2">AI 운동일기</h1>
