@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/require-user";
 import { toKstDayKey } from "@/lib/challenge/done-days";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
@@ -14,11 +15,8 @@ type Params = Promise<{ id: string }>;
 export default async function ChallengeActionPage({ params }: { params: Params }) {
   const { id } = await params;
 
+  const user = await requireUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const detail = await fetchChallengeDetail(id);
   if (!detail) notFound();
