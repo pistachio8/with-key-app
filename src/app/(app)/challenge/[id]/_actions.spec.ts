@@ -11,9 +11,9 @@ const from = vi.fn((): { select: typeof select } => ({ select }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: {
-      getUser: async () => ({
+      getClaims: async () => ({
         data: {
-          user: { id: "11111111-1111-1111-1111-111111111111", email: "u@test.local" },
+          claims: { sub: "11111111-1111-1111-1111-111111111111", email: "u@test.local" },
         },
         error: null,
       }),

@@ -2,13 +2,13 @@
 // 카드 4종 + 약관 + 로그아웃.
 
 import { requireUser } from "@/lib/auth/require-user";
+import { createClient } from "@/lib/supabase/server";
 import {
   fetchActiveSubscriptionEndpoint,
   fetchNotificationPrefs,
 } from "@/lib/db/reads/notification-prefs";
 import { fetchMyChallenges, deriveCounts } from "@/lib/db/reads/my-challenges";
 import { fetchMyDisplayName } from "@/lib/db/reads/me";
-import { getAuthedUser } from "@/lib/supabase/auth";
 import { ProfileCard } from "./_components/profile-card";
 import { NotificationCard } from "./_components/notification-card";
 import { MyChallengesCard } from "./_components/my-challenges-card";
@@ -25,10 +25,11 @@ function formatJoinedMonth(iso: string): string {
 
 export default async function MePage() {
   const user = await requireUser();
-  // requireUser 가 cache 된 getAuthedUser 위에 구현되어 같은 request 안에서 1회만 호출됨.
-  // 여기서 created_at 만 추가로 필요해 동일 cached fetch 재사용.
-  const { user: authUser } = await getAuthedUser();
-  const createdAt = authUser?.created_at ?? new Date().toISOString();
+  // ADR-0023 적용 제외: `created_at` 은 JWT claims 에 없어 `getAuthedUser` (claims 기반)
+  // 로 못 얻는다. /me 는 단일 render scope · 진입 빈도가 낮아 직접 호출 1회 허용.
+  const supabase = await createClient();
+  const { data: rawUser } = await supabase.auth.getUser();
+  const createdAt = rawUser.user?.created_at ?? new Date().toISOString();
 
   const [prefs, endpoint, my, displayNameRaw] = await Promise.all([
     fetchNotificationPrefs(user.id),

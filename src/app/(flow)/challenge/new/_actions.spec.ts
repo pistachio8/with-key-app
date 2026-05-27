@@ -19,14 +19,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 const rpc = vi.fn();
-const getUser = vi.fn();
+const getClaims = vi.fn();
 const inviteInsert = vi.fn();
 const usersSelect = vi.fn();
 const readOwnerGroupsForChallengeForm = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: () => getUser() },
+    auth: { getClaims: () => getClaims() },
     rpc: (name: string, args: unknown) => rpc(name, args),
     from: (table: string) => {
       if (table === "users") {
@@ -72,8 +72,8 @@ const validInput = {
 };
 
 function authedUser() {
-  getUser.mockResolvedValueOnce({
-    data: { user: { id: USER_ID, email: "u@test.local" } },
+  getClaims.mockResolvedValueOnce({
+    data: { claims: { sub: USER_ID, email: "u@test.local" } },
     error: null,
   });
 }
@@ -93,7 +93,7 @@ function expectDoneRedirect() {
 
 beforeEach(() => {
   rpc.mockReset();
-  getUser.mockReset();
+  getClaims.mockReset();
   inviteInsert.mockReset();
   usersSelect.mockReset();
   readOwnerGroupsForChallengeForm.mockReset();
@@ -103,7 +103,7 @@ beforeEach(() => {
 
 describe("createChallenge", () => {
   it("unauthorized — no session", async () => {
-    getUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    getClaims.mockResolvedValueOnce({ data: null, error: null });
     const res = await createChallenge(validInput);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("unauthorized");
