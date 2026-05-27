@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedUser } from "@/lib/supabase/auth";
 import { fetchInvitePreview } from "@/lib/db/reads/invite";
 import { detectInAppBrowser } from "@/lib/auth/in-app-browser";
 import { ShareCard } from "@/components/ui/share-card";
@@ -77,10 +77,8 @@ function InviteFallback() {
 async function InviteSection({ params }: { params: Params }) {
   const { token } = await params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // ADR-0022: invite 는 anon 허용 RSC — requireUser() 가 아닌 getAuthedUser() 사용.
+  const { user } = await getAuthedUser();
 
   // ADR-0008 — SSR 단계 인앱뷰 kind 결정. AcceptForm 의 isAuthed=false 분기 가드 wrap 용.
   const h = await headers();
