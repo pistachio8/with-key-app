@@ -16,6 +16,7 @@ const state = vi.hoisted(() => {
   return {
     scenario: {} as Scenario,
     deletes: [] as Array<{ table: string; match: unknown }>,
+    inserts: [] as Array<{ table: string; payload: unknown }>,
   };
 });
 
@@ -40,17 +41,20 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       if (table === "kudos_push_log") {
         return {
-          insert: () => ({
-            select: () => ({
-              maybeSingle: () =>
-                Promise.resolve(
-                  state.scenario.reserveResult ?? {
-                    data: { recipient_user_id: "r" },
-                    error: null,
-                  },
-                ),
-            }),
-          }),
+          insert: (payload: unknown) => {
+            state.inserts.push({ table: "kudos_push_log", payload });
+            return {
+              select: () => ({
+                maybeSingle: () =>
+                  Promise.resolve(
+                    state.scenario.reserveResult ?? {
+                      data: { recipient_user_id: "r" },
+                      error: null,
+                    },
+                  ),
+              }),
+            };
+          },
           delete: () => ({
             match: (m: unknown) => {
               state.deletes.push({ table: "kudos_push_log", match: m });
@@ -112,6 +116,7 @@ beforeEach(() => {
   delete state.scenario.reserveResult;
   delete state.scenario.subs;
   state.deletes.length = 0;
+  state.inserts.length = 0;
   trackCalls.length = 0;
   sendPush.mockReset();
   sendPush.mockResolvedValue(undefined);
@@ -152,10 +157,30 @@ describe("dispatchKudosReceivedNotification", () => {
     state.scenario.recipientPrefs = {
       notification_prefs: { start: true, deadline: true, kudos: true },
     };
+    // dedup 분기 도달 전 subscription 존재 게이트를 통과해야 하므로 1건 제공.
+    state.scenario.subs = [
+      { user_id: ARGS.recipientUserId, endpoint: "ep", p256dh: "p", auth: "a" },
+    ];
     state.scenario.reserveResult = { data: null, error: { code: "23505" } };
     const res = await dispatchKudosReceivedNotification(ARGS);
     expect(res.recipientCount).toBe(0);
     expect(sendPush).not.toHaveBeenCalled();
+  });
+
+  it("recipient 가 구독 미등록 시 dedup INSERT 도 하지 않는다 (stale dedup 회귀 차단)", async () => {
+    state.scenario.challenge = { status: "active" };
+    state.scenario.recipientPrefs = {
+      notification_prefs: { start: true, deadline: true, kudos: true },
+    };
+    state.scenario.subs = [];
+
+    const res = await dispatchKudosReceivedNotification(ARGS);
+
+    expect(res.recipientCount).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
+    // 핵심 assert — INSERT 가 일어났으면 추후 구독한 사용자의 같은 actor·글 응원이 영원히 막힘.
+    const dedupInserts = state.inserts.filter((i) => i.table === "kudos_push_log");
+    expect(dedupInserts).toHaveLength(0);
   });
 
   it("happy path — 디바이스 1개에 push 발송 + notification_sent 적재", async () => {
