@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computePerHeadPenalty } from "./settlement";
+import { computeAccruedPot } from "./settlement";
 import { pickMvpIds } from "./settlement";
 
 describe("computePerHeadPenalty", () => {
@@ -16,6 +17,57 @@ describe("computePerHeadPenalty", () => {
   it("penaltyAmount 음수/NaN 방어 — 0 반환", () => {
     expect(computePerHeadPenalty({ doneCount: 0, goalCount: 3, penaltyAmount: -500 })).toBe(0);
     expect(computePerHeadPenalty({ doneCount: 0, goalCount: 3, penaltyAmount: NaN })).toBe(0);
+  });
+});
+
+describe("computeAccruedPot", () => {
+  it("미시작(pending/accepted)은 doneCount 무관 0원", () => {
+    const members = [{ doneCount: 0 }, { doneCount: 0 }];
+    expect(
+      computeAccruedPot({ status: "pending", goalCount: 3, penaltyAmount: 3000, members }),
+    ).toBe(0);
+    expect(
+      computeAccruedPot({ status: "accepted", goalCount: 3, penaltyAmount: 3000, members }),
+    ).toBe(0);
+  });
+
+  it("active — 미달자만 합산, 달성자는 제외", () => {
+    expect(
+      computeAccruedPot({
+        status: "active",
+        goalCount: 3,
+        penaltyAmount: 3000,
+        members: [{ doneCount: 3 }, { doneCount: 1 }, { doneCount: 5 }],
+      }),
+    ).toBe(3000);
+  });
+
+  it("active — 전원 달성 시 0원 (버그 재현: 이전엔 인원수 × 벌금)", () => {
+    expect(
+      computeAccruedPot({
+        status: "active",
+        goalCount: 3,
+        penaltyAmount: 3000,
+        members: [{ doneCount: 3 }, { doneCount: 4 }],
+      }),
+    ).toBe(0);
+  });
+
+  it("closed — 전원 미달 시 인원수 × 벌금과 동일 (최대값)", () => {
+    expect(
+      computeAccruedPot({
+        status: "closed",
+        goalCount: 3,
+        penaltyAmount: 3000,
+        members: [{ doneCount: 0 }, { doneCount: 2 }],
+      }),
+    ).toBe(6000);
+  });
+
+  it("참여자 없으면 0원", () => {
+    expect(
+      computeAccruedPot({ status: "active", goalCount: 3, penaltyAmount: 3000, members: [] }),
+    ).toBe(0);
   });
 });
 

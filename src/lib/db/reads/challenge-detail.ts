@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { countDoneDaysByUser } from "@/lib/challenge/done-days";
+import { computeAccruedPot } from "@/lib/challenge/settlement";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChallengeMemberView = {
@@ -79,17 +80,25 @@ export const fetchChallengeDetail = cache(
       };
     });
 
+    const status = c.status as ChallengeDetailView["status"];
+
     return {
       id: c.id,
       title: c.title,
       goalCount: c.goal_count,
       durationDays: c.duration_days,
       penaltyAmount: c.penalty_amount,
-      status: c.status as ChallengeDetailView["status"],
+      status,
       startAt: c.start_at,
       endAt: c.end_at,
       members,
-      potTotal: members.length * c.penalty_amount,
+      // 미달자 기준 실제 정산액 합계. 미시작(pending/accepted)은 0.
+      potTotal: computeAccruedPot({
+        status,
+        goalCount: c.goal_count,
+        penaltyAmount: c.penalty_amount,
+        members,
+      }),
       participantCount: members.length,
       group: {
         id: groupRow?.id ?? c.group_id,
