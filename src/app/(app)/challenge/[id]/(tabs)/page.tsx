@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
-import { ActionFab } from "../_components/action-fab";
 import { FeedTab } from "../_components/feed-tab";
 import FeedLoading from "./loading";
 
@@ -87,9 +86,6 @@ async function FeedSection({
     .filter((m) => !todayAuthorIds.has(m.id))
     .map((m) => (m.id === user.id ? "나" : m.displayName));
 
-  const actionHref =
-    isParticipant && detail.status === "active" ? `/challenge/${id}/action` : undefined;
-
   return (
     <>
       <FeedTab
@@ -103,7 +99,6 @@ async function FeedSection({
         mySigned={mySigned}
         isEnded={isEnded}
       />
-      <ActionFab href={actionHref} />
     </>
   );
 }
