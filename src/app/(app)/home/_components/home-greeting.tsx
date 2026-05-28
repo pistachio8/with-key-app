@@ -19,7 +19,7 @@ export function HomeGreeting({ displayName, now }: Props) {
   const month = parts.find((p) => p.type === "month")?.value ?? "";
   const day = parts.find((p) => p.type === "day")?.value ?? "";
   const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
-  const dateLabel = `${month} ${day} · ${weekday}`;
+  const dateLabel = `${month} ${day}일 · ${weekday}`;
   return (
     <section className="flex flex-col gap-0.5">
       <p className="t-sub">{dateLabel}</p>

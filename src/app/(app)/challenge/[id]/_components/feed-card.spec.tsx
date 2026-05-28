@@ -76,6 +76,11 @@ describe("FeedCard", () => {
     expect(screen.getByText("DAY 15")).toBeTruthy();
   });
 
+  it("renders createdAtLabel (인증 시각) in the author row", () => {
+    render(<FeedCard {...baseProps} createdAtLabel="3시간 전" onKudos={() => {}} />);
+    expect(screen.getByText("3시간 전")).toBeTruthy();
+  });
+
   it("marks viewer-pressed kudos via aria-pressed", () => {
     render(<FeedCard {...baseProps} viewerKudos={["🔥"]} onKudos={() => {}} />);
     expect(

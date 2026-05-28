@@ -5,6 +5,7 @@
 import { ChallengeFeed } from "./challenge-feed";
 import { NextStepCta } from "./next-step-cta";
 import { TodayBanner } from "./today-banner";
+import { formatFeedTimestamp } from "@/lib/challenge/feed-time";
 import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
 
 interface FeedTabProps {
@@ -37,6 +38,13 @@ export function FeedTab({
   // 시작 전(pending/accepted) 에는 인증 로그가 존재할 수 없으므로 피드 섹션 자체를 숨김.
   // "첫 번째 인증을 올려보세요" 폴백이 시작 전엔 거짓 안내가 된다. NextStepCta 가 안내 역할.
   const showFeedSection = status === "active" || status === "closed";
+  // 상대 시간 label 은 시점 의존이라 cache(read)에 넣지 않고 RSC render 의 now 로 계산한다.
+  // server 에서 한 번 계산해 string 으로 내려보내므로 client hydration 불일치가 없다.
+  const now = new Date();
+  const feedItems = feed.map((item) => ({
+    ...item,
+    createdAtLabel: formatFeedTimestamp(item.createdAt, now),
+  }));
   return (
     <div className="flex flex-col gap-3">
       {status === "active" && (
@@ -62,7 +70,7 @@ export function FeedTab({
             최근 인증
           </h2>
           <ChallengeFeed
-            items={feed}
+            items={feedItems}
             viewerId={viewerId}
             participantCount={participantCount}
             isEnded={isEnded}
