@@ -14,6 +14,29 @@ export function computePerHeadPenalty(input: SettlementInput): number {
   return penaltyAmount;
 }
 
+export type AccruedPotInput = {
+  status: "pending" | "accepted" | "active" | "closed";
+  goalCount: number;
+  penaltyAmount: number;
+  members: ReadonlyArray<{ doneCount: number }>;
+};
+
+// "모인 예정 벌금" 합계 — 미시작(pending/accepted) 챌린지는 실패가 성립하지 않아 0,
+// active/closed 만 per-head 합산. 인원수 × 벌금(최대값)이 아니라 실제 미달자 기준.
+export function computeAccruedPot(input: AccruedPotInput): number {
+  if (input.status !== "active" && input.status !== "closed") return 0;
+  return input.members.reduce(
+    (sum, m) =>
+      sum +
+      computePerHeadPenalty({
+        doneCount: m.doneCount,
+        goalCount: input.goalCount,
+        penaltyAmount: input.penaltyAmount,
+      }),
+    0,
+  );
+}
+
 export type MvpInput = {
   goalCount: number;
   members: ReadonlyArray<{ id: string; doneCount: number }>;
