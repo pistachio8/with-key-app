@@ -20,6 +20,21 @@ vi.mock("@/lib/supabase/server", async (importOriginal) => {
   };
 });
 
+// ADR-0024: hydrate 단계 read (action-log-hydrate · photo-signed-url · kudos-counts ·
+// kudos-viewer) 가 createClient() → adminClient() 로 전환됐다. 위 server mock 은 이들을
+// 더 이상 가로채지 못하므로, adminClient() 가 integration 의 service-role client 를 반환하게
+// 한다. production 과 동일한 구조 — Layer 2/3 는 RLS 우회(admin), 접근 제어는 Layer 1
+// (createClient → bound viewer client)이 담당. 반환 client 는 아래 `admin` 과 동일 설정의
+// service-role 이라 track/dispatch/diary 등 기존 adminClient 사용처 동작도 불변. service-role
+// client 는 아래에서 생성되므로 holder 로 lazy 주입한다 (vi.mock 은 hoist 되어 먼저 평가됨).
+const adminHolder = vi.hoisted(() => ({ client: null as SupabaseClient | null }));
+vi.mock("@/lib/supabase/admin", () => ({
+  adminClient: () => {
+    if (!adminHolder.client) throw new Error("integration admin mock not initialized");
+    return adminHolder.client;
+  },
+}));
+
 // `cacheTag` / `cacheLife` 는 next.config 의 `cacheComponents: true` 가 활성된 환경에서만
 // 호출 가능. vitest 는 next.config 를 읽지 않아 runtime 가드가 throw 한다.
 // integration test 는 RLS · 쿼리 동작을 검증하는 것이 목적이고 캐시 자체는 단위 spec
@@ -51,6 +66,9 @@ if (!SUPABASE_URL || !ANON_KEY || !SERVICE_ROLE) {
 export const admin: SupabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+// ADR-0024: adminClient() mock (위)이 반환할 service-role client 주입.
+adminHolder.client = admin;
 
 /**
  * Returns an anon-keyed Supabase client already signed in as the given test user.

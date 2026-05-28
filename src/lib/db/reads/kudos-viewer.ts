@@ -1,23 +1,24 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/supabase/admin";
 import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
 
-// Phase 3 (SNS cache plan v4) — viewer-specific kudos state.
+// Phase 3 (SNS cache plan v4) — viewer-specific kudos state. ADR-0024.
 // tag: user-${viewerId}-kudos-${actionLogId}. toggleKudos 가 본인 mutate 시
 // updateTag 로 즉시 invalidate — read-your-writes 보장.
 //
-// 'use cache: private' 함수 본문은 outer-scope 함수/객체를 클로저로 캡처할 수
-// 없다 (Next.js 16 직렬화 규칙 — Functions are unsupported). 그래서 wrapper 를
-// 거치지 않고 각 read 마다 directive 를 직접 선언한다.
+// admin + public 'use cache' 이지만 viewer-specific 값이다. viewerId 는 세 곳 모두에
+// 남는다: (a) cached function argument — cache partition 의 주 장치(viewerId 가 cache key 에
+// 포함돼야 viewer 별로 entry 가 갈린다), (b) cacheTag — invalidation, (c) .eq('user_id', viewerId)
+// SQL filter — admin 이 RLS 를 우회하므로 leak 의 유일한 방어선. 셋 중 하나라도 빠지면 회귀. (ADR-0024)
 export async function getViewerKudosForLog(
   actionLogId: string,
   viewerId: string,
 ): Promise<ReadonlyArray<KudosEmoji>> {
-  "use cache: private";
+  "use cache";
   cacheTag(`user-${viewerId}-kudos-${actionLogId}`);
   cacheLife("minutes");
 
-  const supabase = await createClient();
+  const supabase = adminClient();
   const { data } = await supabase
     .from("kudos")
     .select("emoji")
