@@ -6,22 +6,23 @@ with-key 팀이 공유하는 제품·아키텍처·운영 문서입니다.
 
 ## 빠른 진입
 
-| 묻고 싶은 것 | 읽을 문서 |
-|--------------|-----------|
-| 무엇을 만드나? 인수 기준은? | [`PRD.md`](./PRD.md) — 유저 스토리 · AC · 이벤트 표(§9.1) |
-| 코딩 품질·검증 기준은? | [`QUALITY_GATE.md`](./QUALITY_GATE.md) — 모든 AI 에이전트와 사람이 공유하는 성공 기준 |
+| 묻고 싶은 것                                 | 읽을 문서                                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 무엇을 만드나? 인수 기준은?                  | [`PRD.md`](./PRD.md) — 유저 스토리 · AC · 이벤트 표(§9.1)                                       |
+| 코딩 품질·검증 기준은?                       | [`QUALITY_GATE.md`](./QUALITY_GATE.md) — 모든 AI 에이전트와 사람이 공유하는 성공 기준           |
 | AI 에이전트가 달라도 코드 품질을 유지하려면? | [`AI_AGENT_CODE_QUALITY.md`](./AI_AGENT_CODE_QUALITY.md) — 공통 품질 기준과 도구별 adapter 원칙 |
-| DB 스키마·RLS·상태 전이 | [`BE_SCHEMA.md`](./BE_SCHEMA.md) + [`BE_SCHEMA_RLS.md`](./BE_SCHEMA_RLS.md) |
-| 아키텍처 원칙·폴더 구조 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
-| 되돌리기 비용 큰 결정 로그 | [`DECISIONS.md`](./DECISIONS.md) (ADR-lite) |
-| Day 1 세팅·로컬 실행·배포 | [`ONBOARDING.md`](./ONBOARDING.md) |
-| Vercel 배포 환경 | [`DEPLOY.md`](./DEPLOY.md) |
-| Week 2 GO/NO-GO 지표 | [`VALIDATION.md`](./VALIDATION.md) |
-| 제품의 "왜"·페르소나·가설 | [`IDEATION.md`](./IDEATION.md) |
-| D0 킥오프 스택 확정본 | [`KICKOFF.md`](./KICKOFF.md) (수정 금지) |
-| 화면 흐름·디자인 | [`DESIGN_FLOW.md`](./DESIGN_FLOW.md) |
-| 작업 일지·과거 컨텍스트 | [`JOURNAL.md`](./JOURNAL.md) |
-| 팀 공유 결정 노트 | [`TEAM_SHARE_DECISIONS.md`](./TEAM_SHARE_DECISIONS.md) |
+| DB 스키마·RLS·상태 전이                      | [`BE_SCHEMA.md`](./BE_SCHEMA.md) + [`BE_SCHEMA_RLS.md`](./BE_SCHEMA_RLS.md)                     |
+| 아키텍처 원칙·폴더 구조                      | [`ARCHITECTURE.md`](./ARCHITECTURE.md)                                                          |
+| 되돌리기 비용 큰 결정 로그                   | [`DECISIONS.md`](./DECISIONS.md) (ADR-lite)                                                     |
+| Day 1 세팅·로컬 실행·배포                    | [`ONBOARDING.md`](./ONBOARDING.md)                                                              |
+| Vercel 배포 환경                             | [`DEPLOY.md`](./DEPLOY.md)                                                                      |
+| Week 2 GO/NO-GO 지표                         | [`VALIDATION.md`](./VALIDATION.md)                                                              |
+| 제품의 "왜"·페르소나·가설                    | [`IDEATION.md`](./IDEATION.md)                                                                  |
+| D0 킥오프 스택 확정본                        | [`KICKOFF.md`](./KICKOFF.md) (수정 금지)                                                        |
+| 화면 흐름·디자인                             | [`DESIGN_FLOW.md`](./DESIGN_FLOW.md)                                                            |
+| 작업 일지·과거 컨텍스트                      | [`JOURNAL.md`](./JOURNAL.md)                                                                    |
+| 팀 공유 결정 노트                            | [`TEAM_SHARE_DECISIONS.md`](./TEAM_SHARE_DECISIONS.md)                                          |
+| 사용자 업데이트 공지(릴리스 노트)            | [`release-notes/`](./release-notes/) — `/release-note` 커맨드로 PR 범위에서 생성                |
 
 ## 폴더 외부 참조
 
