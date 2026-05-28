@@ -73,17 +73,20 @@ export function FeedCard({
             {authorName}
             {isSelfAuthor && " (나)"}
           </span>
-          {createdAtLabel && <span>· {createdAtLabel}</span>}
+          {createdAtLabel && <span className="ml-auto whitespace-nowrap">{createdAtLabel}</span>}
           {isSelfAuthor && !isEnded ? (
             <button
               type="button"
               onClick={handleEditClick}
-              className="focus-visible:ring-ring ml-auto rounded text-[10px] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+              className={cn(
+                "focus-visible:ring-ring rounded text-[10px] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+                !createdAtLabel && "ml-auto",
+              )}
             >
               편집
             </button>
           ) : dayNumber != null ? (
-            <Chip tone="primary" className="ml-auto text-[10px]">
+            <Chip tone="primary" className={cn("text-[10px]", !createdAtLabel && "ml-auto")}>
               DAY {dayNumber}
             </Chip>
           ) : null}

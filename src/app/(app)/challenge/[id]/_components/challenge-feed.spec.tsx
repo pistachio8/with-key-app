@@ -33,6 +33,7 @@ const baseItem = {
   kudosByEmoji: { "🔥": 2, "💪": 0, "👏": 0 } as const,
   viewerKudos: [] as const,
   createdAt: "2026-04-30T00:00:00Z",
+  createdAtLabel: "4월 30일",
 };
 
 describe("ChallengeFeed", () => {
