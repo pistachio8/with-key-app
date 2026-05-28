@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, Home, Users, X } from "lucide-react";
+import { Camera, Home, Users, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   resolveVerifyTarget,
@@ -148,7 +148,7 @@ export function FabMenu({ activeChallenges, groups, newGroupNamePreview }: FabMe
             "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           )}
         >
-          <Camera
+          <Zap
             aria-hidden="true"
             className="absolute inset-0 m-auto size-6 transition-[opacity,transform] duration-[var(--motion-base)]"
             style={{
