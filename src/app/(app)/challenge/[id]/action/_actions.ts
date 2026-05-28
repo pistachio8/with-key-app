@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
-import { generateDiary } from "@/lib/ai/diary";
+import { generateDiary, type DiaryResult } from "@/lib/ai/diary";
 import { inferMealSlot } from "@/lib/ai/meal-time";
 import { KEYWORD_POOL_VERSION } from "@/lib/keywords/pool";
 import { track } from "@/lib/analytics/track";
@@ -102,25 +102,44 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
     const dayIndex = Math.floor((now - startMs) / 86_400_000) + 1;
     const currentDay = Math.max(1, Math.min(totalDays, dayIndex));
 
-    // D-017: display_name 은 템플릿 fallback 시 1인칭 톤에서 쓰임. RLS users_select_self 가 허용.
-    const { data: profile } = await supabase
-      .from("users")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle();
+    // 직접 입력 일기(spec 2026-05-28-action-manual-diary): memo 가 채워졌으면 AI 를
+    // 건너뛰고 입력 글을 그대로 일기로 저장하며, 키워드는 무시한다(selected_keywords=[]).
+    const isDirect = Boolean(parsed.input.memo);
+    const finalKeywords = isDirect ? [] : parsed.input.selectedKeywords;
 
-    // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
-    const mealSlot = parsed.input.activityType === "meal" ? inferMealSlot(now) : undefined;
+    let aiSummary: string;
+    let templateFallback: boolean;
+    let promptVersion: string;
+    let aiResult: DiaryResult | null = null;
 
-    const diary = await generateDiary(
-      {
-        activityType: parsed.input.activityType,
-        keywords: parsed.input.selectedKeywords,
-        memo: parsed.input.memo,
-        mealSlot,
-      },
-      { displayName: profile?.display_name ?? undefined },
-    );
+    if (parsed.input.memo) {
+      aiSummary = parsed.input.memo;
+      templateFallback = false;
+      promptVersion = "manual";
+    } else {
+      // D-017: display_name 은 템플릿 fallback 시 1인칭 톤에서 쓰임. RLS users_select_self 가 허용.
+      // AI 모드에서만 필요하므로 직접 모드에서는 조회·생성 모두 건너뛴다.
+      const { data: profile } = await supabase
+        .from("users")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
+      const mealSlot = parsed.input.activityType === "meal" ? inferMealSlot(now) : undefined;
+
+      aiResult = await generateDiary(
+        {
+          activityType: parsed.input.activityType,
+          keywords: parsed.input.selectedKeywords,
+          mealSlot,
+        },
+        { displayName: profile?.display_name ?? undefined },
+      );
+      aiSummary = aiResult.summary;
+      templateFallback = aiResult.fallback;
+      promptVersion = aiResult.promptVersion;
+    }
 
     const { data, error } = await supabase
       .from("action_logs")
@@ -129,13 +148,14 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
         user_id: user.id,
         activity_type: parsed.input.activityType,
         photo_path: null,
-        selected_keywords: parsed.input.selectedKeywords,
+        selected_keywords: finalKeywords,
         shown_keywords: parsed.input.shownKeywords,
         reroll_count: parsed.input.rerollCount,
-        memo: parsed.input.memo ?? null,
-        ai_summary: diary.summary,
-        template_fallback: diary.fallback,
-        prompt_version: diary.promptVersion,
+        // 직접 입력은 ai_summary 로 승격되고 AI 모드는 memo 가 없으므로 항상 null.
+        memo: null,
+        ai_summary: aiSummary,
+        template_fallback: templateFallback,
+        prompt_version: promptVersion,
       })
       .select("id")
       .single();
@@ -182,9 +202,9 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
         props: {
           challengeId: parsed.input.challengeId,
           activityType: parsed.input.activityType,
-          selectedKeywords: parsed.input.selectedKeywords,
-          keywordCount: parsed.input.selectedKeywords.length,
-          hasMemo: Boolean(parsed.input.memo),
+          selectedKeywords: finalKeywords,
+          keywordCount: finalKeywords.length,
+          hasMemo: isDirect,
           rerollCount: parsed.input.rerollCount,
           photoSize,
           photoAttached,
@@ -194,19 +214,23 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       { userId: user.id },
     );
 
-    void track(
-      {
-        name: "ai_generated",
-        props: {
-          actionLogId: data.id,
-          latencyMs: diary.latencyMs,
-          fallback: diary.fallback,
-          keywordCoverage: diary.keywordCoverage,
-          promptVersion: diary.promptVersion,
+    // 직접 입력 모드는 AI 가 돌지 않으므로 ai_generated 를 발사하지 않는다 — latency/coverage/
+    // fallback 메트릭 오염 방지(분석에서 직접/AI 구분은 prompt_version='manual' 로).
+    if (aiResult) {
+      void track(
+        {
+          name: "ai_generated",
+          props: {
+            actionLogId: data.id,
+            latencyMs: aiResult.latencyMs,
+            fallback: aiResult.fallback,
+            keywordCoverage: aiResult.keywordCoverage,
+            promptVersion: aiResult.promptVersion,
+          },
         },
-      },
-      { userId: user.id },
-    );
+        { userId: user.id },
+      );
+    }
 
     // nested layout 구조에서는 layout 의 fetch 결과 + page 의 feed/dashboard fetch 가
     // Next.js Router cache 로 보관됨. 인증 완료 후 client navigation 으로 돌아왔을 때
@@ -218,7 +242,7 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
 
     return success({
       id: data.id,
-      summary: diary.summary,
+      summary: aiSummary,
       photoAttached,
       isFirstAction,
       currentDay,

@@ -213,6 +213,10 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
     libraryInputRef.current?.click();
   }
 
+  // 직접 입력 모드(spec 2026-05-28-action-manual-diary): 메모에 글이 있으면 AI 를 건너뛰고
+  // 입력 글을 그대로 일기로 저장하며, 키워드 선택 없이 제출할 수 있다.
+  const isDirect = memoOpen && memo.trim().length > 0;
+
   function submit() {
     startTransition(async () => {
       try {
@@ -222,7 +226,7 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         formData.append("selectedKeywords", JSON.stringify(selected));
         formData.append("shownKeywords", JSON.stringify(shuffle.shown));
         formData.append("rerollCount", String(shuffle.rerollCount));
-        if (memoOpen && memo) formData.append("memo", memo);
+        if (isDirect) formData.append("memo", memo);
         if (file) formData.append("photo", file);
 
         const res = await submitActionLog(formData);
@@ -361,14 +365,28 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         </fieldset>
 
         <section className="flex flex-col gap-2" aria-labelledby="keyword-heading">
-          <div className="flex items-center justify-between">
+          <div className={cn("flex items-center justify-between", isDirect && "opacity-50")}>
             <h2 id="keyword-heading" className="t-caption">
               오늘의 일기 키워드{" "}
               <span className="text-muted-foreground tabular-nums">({selected.length}/3)</span>
             </h2>
-            <RerollButton rerollCount={shuffle.rerollCount} onClick={rerollCurrent} />
+            <RerollButton
+              rerollCount={shuffle.rerollCount}
+              onClick={rerollCurrent}
+              disabled={isDirect}
+            />
           </div>
-          <KeywordChipGroup shown={shuffle.shown} selected={selected} onChange={setSelected} />
+          <KeywordChipGroup
+            shown={shuffle.shown}
+            selected={selected}
+            onChange={setSelected}
+            disabled={isDirect}
+          />
+          {isDirect && (
+            <p className="text-muted-foreground text-[12px]" role="status">
+              직접 작성 모드 — AI·키워드를 건너뛰고 입력한 글이 그대로 저장돼요.
+            </p>
+          )}
         </section>
 
         <section className="flex flex-col gap-2">
@@ -379,16 +397,16 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
             aria-expanded={memoOpen}
             aria-controls="action-memo"
           >
-            {memoOpen ? "✏️ 메모 접기" : "✏️ 직접 쓰고 싶어요"}
+            {memoOpen ? "✏️ 직접 작성 접기" : "✏️ 직접 쓰고 싶어요"}
           </button>
           {memoOpen && (
             <Textarea
               id="action-memo"
               value={memo}
-              onChange={(event) => setMemo(event.target.value.slice(0, 100))}
-              placeholder="자유롭게 남겨도 돼요 (0~100자)"
+              onChange={(event) => setMemo(event.target.value.slice(0, 150))}
+              placeholder="직접 쓴 일기가 그대로 저장돼요 (1~150자)"
               className="min-h-20"
-              maxLength={100}
+              maxLength={150}
             />
           )}
         </section>
@@ -396,10 +414,16 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         <Button
           size="lg"
           className="h-12"
-          disabled={selected.length === 0 || busy}
+          disabled={busy || (selected.length === 0 && !isDirect)}
           onClick={submit}
         >
-          {pending ? "일기 쓰는 중..." : preparing ? "사진 준비 중..." : "등록하기"}
+          {pending
+            ? isDirect
+              ? "등록 중..."
+              : "일기 쓰는 중..."
+            : preparing
+              ? "사진 준비 중..."
+              : "등록하기"}
         </Button>
       </div>
 
@@ -435,7 +459,7 @@ function DiaryBotInfo() {
         <p className="t-sub text-[12px] leading-relaxed">
           AI가 사진과 키워드를 보고 짧은 일기를 만들어요.
           <br />
-          마음에 안 들면 키워드를 다시 뽑거나 메모로 직접 남길 수 있어요.
+          마음에 안 들면 키워드를 다시 뽑거나, 직접 써서 그대로 남길 수 있어요.
         </p>
       </div>
     </Card>

@@ -1,5 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/supabase/admin";
 
 export type ActionLogHydrate = {
   id: string;
@@ -11,20 +11,20 @@ export type ActionLogHydrate = {
   createdAt: string;
 };
 
-// Phase 4 (SNS cache plan v4) — Layer 2 (Content Hydration).
+// Phase 4 (SNS cache plan v4) — Layer 2 (Content Hydration). ADR-0024.
 // actionlog-keyed hydration: 본문 텍스트 · photo_path · AI summary · 키워드 · 작성자.
-// 본문은 viewer-agnostic 이지만 RLS 가 멤버만 통과 — 'use cache: private' 으로
-// viewer-keyed cache (cookies 의존). 편집/삭제 시 모든 viewer 의 cache 를
-// 무효화하기 위해 actionlog-${id} tag 도 함께 부여.
-async function fetchHydrate(
-  actionLogId: string,
-  viewerId: string,
-): Promise<ActionLogHydrate | null> {
-  "use cache: private";
-  cacheTag(`user-${viewerId}-actionlog-${actionLogId}`, `actionlog-${actionLogId}`);
+//
+// admin + public 'use cache': 본문은 viewer-agnostic 이라 cached inner 는 actionLogId 만
+// 받아 모든 viewer 가 같은 cache entry 를 공유한다 (viewerId 가 cache key 에 들어가면
+// cross-viewer 공유가 깨진다 — ADR-0024). cookies 의존 제거로 token endpoint 폭발(429) 차단.
+// 접근 제어는 Layer 1(listVisibleActionLogIds)이 비멤버 ID 를 거른 뒤 challenge-feed.ts
+// 에서만 호출되는 contract 로 보장. 편집/삭제 mutation 추가 시 actionlog-${id} tag invalidate.
+async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | null> {
+  "use cache";
+  cacheTag(`actionlog-${actionLogId}`);
   cacheLife("hours");
 
-  const supabase = await createClient();
+  const supabase = adminClient();
   const { data, error } = await supabase
     .from("action_logs")
     .select(
@@ -66,9 +66,11 @@ async function fetchHydrate(
   };
 }
 
+// _viewerId 는 호출처 호환을 위해 유지하되 cached inner 로 전달하지 않는다 (ADR-0024).
 export async function getActionLogHydrate(
   actionLogId: string,
-  viewerId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _viewerId: string,
 ): Promise<ActionLogHydrate | null> {
-  return fetchHydrate(actionLogId, viewerId);
+  return fetchHydrate(actionLogId);
 }

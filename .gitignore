@@ -68,4 +68,7 @@ supabase/.branches/
 # Personal journal (Ian's dev log — not for team)
 docs/JOURNAL.md
 
+# QA triage snapshot (local — Slack #qa dogfood, not for team)
+docs/QA_TRIAGE.md
+
 .superpowers/

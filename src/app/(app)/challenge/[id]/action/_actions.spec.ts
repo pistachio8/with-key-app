@@ -63,6 +63,14 @@ function makeFormData(file?: File): FormData {
   return formData;
 }
 
+// 직접 입력 일기 (spec 2026-05-28-action-manual-diary): memo 가 채워진 제출.
+// 키워드를 함께 보내도 직접 모드에서는 무시되어야 한다.
+function makeDirectFormData(memo: string): FormData {
+  const formData = makeFormData();
+  formData.set("memo", memo);
+  return formData;
+}
+
 function stubDb(opts: { priorActionCount?: number } = {}) {
   const priorActionCount = opts.priorActionCount ?? 0;
   const maybeSingleParticipant = vi.fn().mockResolvedValue({
@@ -243,5 +251,44 @@ describe("submitActionLog", () => {
       data: { id: actionLogId, photoAttached: false },
     });
     expect(mocks.deletePhoto).toHaveBeenCalledWith(mocks.user.id, path, mocks.supabase);
+  });
+
+  // 직접 입력 일기 (spec 2026-05-28-action-manual-diary)
+  describe("direct manual diary", () => {
+    const memo = "오늘 헬스 다녀왔어요. 직접 쓴 일기예요.";
+
+    it("skips generateDiary and stores the memo as ai_summary", async () => {
+      const result = await submitActionLog(makeDirectFormData(memo));
+
+      expect(mocks.generateDiary).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ ok: true, data: { id: actionLogId, summary: memo } });
+
+      const actionLogs = mocks.supabase.from("action_logs");
+      expect(actionLogs.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ai_summary: memo,
+          template_fallback: false,
+          prompt_version: "manual",
+          selected_keywords: [],
+          memo: null,
+        }),
+      );
+    });
+
+    it("does not track ai_generated and reports keywordCount=0", async () => {
+      await submitActionLog(makeDirectFormData(memo));
+
+      expect(mocks.track).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: "ai_generated" }),
+        expect.anything(),
+      );
+      expect(mocks.track).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "action_logged",
+          props: expect.objectContaining({ keywordCount: 0, hasMemo: true, selectedKeywords: [] }),
+        }),
+        { userId: mocks.user.id },
+      );
+    });
   });
 });

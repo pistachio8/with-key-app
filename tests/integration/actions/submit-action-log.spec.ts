@@ -40,6 +40,32 @@ describe("action_logs insert (RLS)", () => {
     expect(data?.template_fallback).toBe(false);
   });
 
+  // 직접 입력 일기 (spec 2026-05-28-action-manual-diary): 키워드 0개(빈 배열) insert 가
+  // 기존 CHECK(array_length between 1 and 3)를 통과함을 실측 — 빈 배열의 array_length 는
+  // NULL 이고 CHECK 는 NULL 을 만족으로 처리하므로 마이그레이션 없이 허용된다.
+  it("participant can insert a manual diary with empty selected_keywords", async () => {
+    const { owner, challengeId } = await makeActiveChallenge();
+    const client = await asUser(owner);
+    const { data, error } = await client
+      .from("action_logs")
+      .insert({
+        challenge_id: challengeId,
+        user_id: owner.id,
+        activity_type: "gym",
+        photo_path: null,
+        selected_keywords: [],
+        shown_keywords: ["펌핑", "하체"],
+        ai_summary: "직접 쓴 일기예요. AI 안 거쳤어요.",
+        template_fallback: false,
+        prompt_version: "manual",
+      })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(data?.selected_keywords).toEqual([]);
+    expect(data?.prompt_version).toBe("manual");
+  });
+
   it("group member who is not a participant cannot insert", async () => {
     const { groupId, challengeId } = await makeActiveChallenge();
     const outsider = await createUser();

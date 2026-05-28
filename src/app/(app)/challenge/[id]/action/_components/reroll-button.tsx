@@ -7,9 +7,9 @@ import { RotateCcw } from "lucide-react";
 import { REROLL_LIMIT } from "@/lib/keywords/shuffle";
 import { cn } from "@/lib/utils";
 
-type Props = { rerollCount: number; onClick: () => void };
+type Props = { rerollCount: number; onClick: () => void; disabled?: boolean };
 
-export function RerollButton({ rerollCount, onClick }: Props) {
+export function RerollButton({ rerollCount, onClick, disabled = false }: Props) {
   const remaining = Math.max(0, REROLL_LIMIT - rerollCount);
   const atMax = remaining <= 0;
   return (
@@ -17,7 +17,7 @@ export function RerollButton({ rerollCount, onClick }: Props) {
       <button
         type="button"
         onClick={onClick}
-        disabled={atMax}
+        disabled={atMax || disabled}
         aria-label={
           atMax
             ? "다시 생성 (남은 횟수 없음)"
