@@ -8,7 +8,7 @@ describe("StatsGrid", () => {
     expect(screen.getByText("진행 중")).toBeTruthy();
     expect(screen.getByText("오늘 완료")).toBeTruthy();
     expect(screen.getByText("미인증")).toBeTruthy();
-    expect(screen.getByText("총 벌금")).toBeTruthy();
+    expect(screen.getByText("예정 벌금")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
     expect(screen.getByText("1")).toBeTruthy();
