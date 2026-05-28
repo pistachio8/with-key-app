@@ -29,4 +29,42 @@ describe("actionLogInputSchema", () => {
     });
     expect(parsed.success).toBe(false);
   });
+
+  // 직접 입력 일기 (spec 2026-05-28-action-manual-diary)
+  it("accepts 0 keywords when a memo (direct diary) is provided", () => {
+    const parsed = actionLogInputSchema.safeParse({
+      ...base,
+      selectedKeywords: [],
+      memo: "오늘 헬스 다녀왔어요. 직접 쓴 일기예요.",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects 0 keywords when there is no memo (AI mode)", () => {
+    const parsed = actionLogInputSchema.safeParse({
+      ...base,
+      selectedKeywords: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("treats a whitespace-only memo as no memo (still requires a keyword)", () => {
+    const parsed = actionLogInputSchema.safeParse({
+      ...base,
+      selectedKeywords: [],
+      memo: "   ",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts a 150-char memo and rejects 151", () => {
+    expect(
+      actionLogInputSchema.safeParse({ ...base, selectedKeywords: [], memo: "가".repeat(150) })
+        .success,
+    ).toBe(true);
+    expect(
+      actionLogInputSchema.safeParse({ ...base, selectedKeywords: [], memo: "가".repeat(151) })
+        .success,
+    ).toBe(false);
+  });
 });

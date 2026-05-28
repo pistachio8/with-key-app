@@ -131,6 +131,37 @@ describe("ActionForm", () => {
     expect(afterReturn).toEqual(initialKeywords);
   });
 
+  // 직접 입력 일기 (spec 2026-05-28-action-manual-diary)
+  it("submits a direct diary (memo) with no keyword selected", async () => {
+    render(<ActionForm challengeId={challengeId} />);
+    const file = new File([new Uint8Array(10)], "photo.jpg", { type: "image/jpeg" });
+    selectPhoto(file);
+    await screen.findByAltText("사진 미리보기");
+
+    // 키워드 미선택 상태에서는 제출 비활성.
+    expect((screen.getByRole("button", { name: "등록하기" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /직접 쓰고 싶어요/ }));
+    const memo = "오늘 헬스 다녀왔어요. 직접 쓴 일기예요.";
+    fireEvent.change(screen.getByPlaceholderText(/직접 쓴 일기/), { target: { value: memo } });
+
+    // 직접 모드: 키워드 칩 비활성.
+    const group = screen.getByRole("group", { name: "키워드 선택" });
+    expect((within(group).getAllByRole("button")[0] as HTMLButtonElement).disabled).toBe(true);
+
+    // 키워드 0개여도 제출 가능.
+    const submitBtn = screen.getByRole("button", { name: "등록하기" }) as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(false);
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => expect(submitActionLog).toHaveBeenCalledTimes(1));
+    const formData = submitActionLog.mock.calls[0][0] as FormData;
+    expect(formData.get("memo")).toBe(memo);
+    expect(formData.get("selectedKeywords")).toBe("[]");
+  });
+
   it("saves draft on submit failure (F10)", async () => {
     submitActionLog.mockResolvedValueOnce({ ok: false, error: "forbidden" });
     render(<ActionForm challengeId={challengeId} />);
