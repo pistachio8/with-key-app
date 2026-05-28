@@ -19,8 +19,9 @@ export type FeedItemView = {
   createdAt: string;
 };
 
-// Phase 4 분해 후 deprecated: 'use cache: private' 자식 함수들은 자체적으로 supabase
-// client 를 생성한다. caller 호환 위해 시그니처는 유지하지만 무시된다.
+// Phase 4 분해 후 deprecated: 자식 read 함수들은 자체적으로 supabase client 를 생성한다.
+// Layer 1 은 user client(RLS), hydrate 단계(Layer 2/3)는 adminClient (ADR-0024).
+// caller 호환 위해 시그니처는 유지하지만 무시된다.
 // (호출처: integration test 의 asUser-client 시뮬레이션 등.)
 type Options = {
   client?: SupabaseClient;
@@ -34,13 +35,14 @@ function emptyKudosByEmoji(): Record<KudosEmoji, number> {
 // Phase 4 (SNS cache plan v4): list-visible-action-log-ids + action-log-hydrate +
 // photo-signed-url + kudos-counts + kudos-viewer 다섯 함수의 합성.
 //
-// - Layer 1 (Visibility Decision): listVisibleActionLogIds — viewer-keyed, visibility_version tag
-// - Layer 2 (Content Hydration): getActionLogHydrate — actionlog-keyed
-// - Layer 2 (Photo Signed URL): getActionLogPhotoSignedUrl — path-keyed, 10분 stale
-// - Layer 3 (Viewer State): getKudosCountsForLog · getViewerKudosForLog — Phase 3
+// - Layer 1 (Visibility Decision): listVisibleActionLogIds — viewer-keyed, RLS user client (gate)
+// - Layer 2 (Content Hydration): getActionLogHydrate — actionlog-keyed, adminClient + public cache
+// - Layer 2 (Photo Signed URL): getActionLogPhotoSignedUrl — path-keyed, adminClient, 10분 stale
+// - Layer 3 (Viewer State): getKudosCountsForLog (viewer-agnostic) · getViewerKudosForLog (viewer-specific)
 //
 // 외부 shape (FeedItemView) 는 그대로 유지 — 호출처 (ChallengeFeed · feed-tab) 무영향.
-// RLS 가 모든 자식 함수에 적용되어 비멤버는 빈 결과를 받는다.
+// 접근 제어: Layer 1 (RLS) 이 비멤버에게 빈 ID 리스트를 반환 → hydrate 단계는 그 ID 안에서만
+// adminClient 로 호출된다 (ADR-0024). 즉 이 함수가 admin hydrate read 의 유일한 production callsite.
 export const fetchChallengeFeed = cache(
   async (
     challengeId: string,
