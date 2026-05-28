@@ -1,5 +1,6 @@
 // 모킹업 §3-C 라인 639~646 — primary bg 서약서 카드.
 
+import { Stamp } from "@/components/ui/stamp";
 import { goalCountLabel } from "@/lib/challenge/frequency";
 import { penaltyLabel } from "@/lib/challenge/penalty";
 
@@ -25,12 +26,8 @@ export function PledgePreviewCard({
 }: PledgePreviewCardProps) {
   const dateRangeText = formatDateRange(durationDays);
   return (
-    <div className="bg-primary text-primary-foreground rounded-[14px] p-5">
-      <div className="mb-2 inline-flex items-baseline gap-1 font-bold">
-        <span className="text-[18px]">from</span>
-        <span className="inline-block h-px w-3 self-center bg-current opacity-60" />
-        <span className="text-[18px]">with</span>
-      </div>
+    <div className="bg-primary text-primary-foreground relative rounded-[14px] p-5">
+      <Stamp variant="wordmark" tone="onPrimary" className="absolute right-3 top-3 size-14" />
       <div className="text-[11px] font-bold tracking-[0.05em] opacity-90">PLEDGE · 운영자 작성</div>
       <h3 className="t-h3 mt-1">{title}</h3>
       <p className="mt-2 whitespace-pre-line break-keep text-[11px] leading-relaxed opacity-95">
