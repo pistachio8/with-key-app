@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 import { maskAccountNumber } from "@/lib/bank/format";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
+import type { ErrorCode } from "@/lib/actions/response";
 import { revealAccountNumber } from "../_actions";
 
 type Props = {
@@ -51,26 +52,61 @@ export function AccountInfoSheet({
   const bankLabel = bankDisplay(bankCode);
   const masked = accountNumberLast4 ? maskAccountNumber(accountNumberLast4) : null;
 
-  async function copy() {
+  function copy() {
     setCopying(true);
-    try {
-      const res = await revealAccountNumber({ groupId });
-      if (!res.ok) {
-        toast.error(userMessage(res.error));
-        return;
-      }
+
+    // reveal 결과를 promise 바깥에 기록 — clipboard write 의 reject 사유 전파에 의존하지 않고
+    // 3갈래(액션 실패 / 액션 throw / clipboard 실패) 토스트를 정확히 구분하기 위함.
+    let revealError: ErrorCode | null = null;
+    let revealThrew = false;
+
+    const text = revealAccountNumber({ groupId }).then(
+      (res) => {
+        if (!res.ok) {
+          revealError = res.error;
+          throw new Error("reveal-failed");
+        }
+        return res.data.accountNumber;
+      },
+      (err) => {
+        revealThrew = true;
+        console.error("[AccountInfoSheet] revealAccountNumber threw", err);
+        throw err;
+      },
+    );
+
+    const finish = (write: Promise<unknown>) =>
+      write
+        .then(() => toast.success("계좌번호가 복사되었어요"))
+        .catch((err) => {
+          if (revealError) {
+            toast.error(userMessage(revealError));
+          } else if (revealThrew) {
+            toast.error(FALLBACK_ERROR_MESSAGE);
+          } else {
+            console.error("[AccountInfoSheet] clipboard write failed", err);
+            toast.error("복사에 실패했어요. 다시 시도해 주세요.");
+          }
+        })
+        .finally(() => setCopying(false));
+
+    // iOS Safari/PWA: transient user activation 을 유지하려면 write() 를 제스처 핸들러 안에서
+    // 동기 호출해야 한다 — ClipboardItem 에 넘긴 Promise 가 나중에 resolve 돼도 활성화가 유지된다.
+    // 기존처럼 await revealAccountNumber() 뒤에 writeText 하면 네트워크 await 가 활성화를 소비해
+    // iOS 가 NotAllowedError 로 거부한다.
+    if (typeof ClipboardItem !== "undefined" && typeof navigator.clipboard?.write === "function") {
       try {
-        await navigator.clipboard.writeText(res.data.accountNumber);
-        toast.success("계좌번호가 복사되었어요");
+        const blob = text.then((n) => new Blob([n], { type: "text/plain" }));
+        blob.catch(() => {}); // 구형 Chrome 생성자 throw 시 orphan unhandled rejection 방지
+        finish(navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]));
+        return;
       } catch {
-        toast.error("복사에 실패했어요. 다시 시도해 주세요.");
+        // 구형 Chrome(76–115): ClipboardItem 은 있으나 Promise 값을 거부(생성자 throw) → 구 경로로.
       }
-    } catch (err) {
-      console.error("[AccountInfoSheet] revealAccountNumber threw", err);
-      toast.error(FALLBACK_ERROR_MESSAGE);
-    } finally {
-      setCopying(false);
     }
+
+    // 구 경로 (Firefox<127 · 비-secure context · 데스크톱 비엄격): reveal 후 writeText.
+    finish(text.then((n) => navigator.clipboard.writeText(n)));
   }
 
   return (
