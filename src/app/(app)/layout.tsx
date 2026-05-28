@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { AppHeader } from "@/components/app-shell/app-header";
+import { FabMenu } from "@/components/app-shell/fab-menu";
 import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchMyGroups } from "@/lib/db/reads/my-groups";
+import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
 import { fetchOwnerGroupsForChallengeForm } from "@/lib/db/reads/owner-groups-for-challenge-form";
 import { nextDefaultGroupName } from "@/lib/groups/default-name";
 
@@ -37,13 +39,22 @@ async function AppShellSection({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const supabase = await createClient();
 
-  // F15 — 그룹 수에 따라 헤더 chevron sheet/직진입/라벨 분기.
+  // groups 는 FabMenu 그룹 버튼(그룹 전환 sheet / 0개 시 /group/new)에 주입.
   // 알림 dot 은 NotificationBell 이 클라이언트에서 IDB unreadCount 구독 (plan 2026-05-22-header-unread-dot-source).
-  const [groups, ownerGroups, profile] = await Promise.all([
+  const [groups, ownerGroups, profile, current] = await Promise.all([
     fetchMyGroups(),
     fetchOwnerGroupsForChallengeForm(user.id),
     supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
+    fetchCurrentChallenges(user.id),
   ]);
+
+  const activeChallenges = current
+    .filter((g) => g.challenge?.status === "active" && g.challenge.userIsParticipant)
+    .map((g) => ({
+      id: g.challenge!.id,
+      title: g.challenge!.title,
+      groupName: g.groupName,
+    }));
   const newGroupNamePreview = nextDefaultGroupName(
     profile.data?.display_name ?? "내",
     ownerGroups.map((group) => group.name),
@@ -51,10 +62,15 @@ async function AppShellSection({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <AppHeader groups={groups} newGroupNamePreview={newGroupNamePreview} />
-      <main id="main" className="flex-1">
+      <AppHeader />
+      <main id="main" className="flex-1 pb-24">
         {children}
       </main>
+      <FabMenu
+        activeChallenges={activeChallenges}
+        groups={groups}
+        newGroupNamePreview={newGroupNamePreview}
+      />
     </>
   );
 }
