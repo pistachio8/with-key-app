@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
 import { generateDiary } from "@/lib/ai/diary";
+import { inferMealSlot } from "@/lib/ai/meal-time";
 import { KEYWORD_POOL_VERSION } from "@/lib/keywords/pool";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
@@ -108,11 +109,15 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       .eq("id", user.id)
       .maybeSingle();
 
+    // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
+    const mealSlot = parsed.input.activityType === "meal" ? inferMealSlot(now) : undefined;
+
     const diary = await generateDiary(
       {
         activityType: parsed.input.activityType,
         keywords: parsed.input.selectedKeywords,
         memo: parsed.input.memo,
+        mealSlot,
       },
       { displayName: profile?.display_name ?? undefined },
     );

@@ -127,3 +127,39 @@ describe("generateDiary", () => {
     );
   });
 });
+
+describe("generateDiary — meal 끼니 context (PROMPT_VERSION v4)", () => {
+  function userPromptOf(): string {
+    return createMock.mock.calls[0][0].messages[1].content as string;
+  }
+
+  it("injects the inferred slot as soft context for meal", async () => {
+    createMock.mockResolvedValue(okCompletion("점심으로 샐러드 챙겨 먹었어요. 든든했어요."));
+    const r = await generateDiary({ activityType: "meal", keywords: ["샐러드"], mealSlot: "점심" });
+    expect(r.fallback).toBe(false);
+    expect(r.keywordCoverage).toBe(1);
+    expect(userPromptOf()).toContain("식사 시간대: 점심");
+  });
+
+  it("omits the slot line for non-meal activity", async () => {
+    createMock.mockResolvedValue(okCompletion("오늘 헬스에서 펌핑이 제대로 왔어요."));
+    await generateDiary({ activityType: "gym", keywords: ["펌핑"] });
+    expect(userPromptOf()).not.toContain("식사 시간대");
+  });
+
+  it("does not count the slot word toward keyword coverage", async () => {
+    // AI 가 끼니(점심)는 넣되 필수 키워드(샐러드)를 빠뜨리면 coverage<1 → fallback 유지.
+    createMock.mockResolvedValue(okCompletion("점심으로 가볍게 먹었어요."));
+    const r = await generateDiary({ activityType: "meal", keywords: ["샐러드"], mealSlot: "점심" });
+    expect(r.fallback).toBe(true);
+    expect(r.summary).toContain("샐러드");
+  });
+
+  it("template fallback for meal uses 식사 tone with the slot (no 운동 framing)", () => {
+    const out = templateFallback({ activityType: "meal", keywords: ["샐러드"], mealSlot: "야식" });
+    expect(out).toContain("야식");
+    expect(out).toContain("샐러드");
+    expect(out).toContain("먹었어요");
+    expect(out).not.toContain("몸에 힘이 붙은");
+  });
+});

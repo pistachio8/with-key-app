@@ -22,9 +22,15 @@ const ACTIVITY_LABEL_KO: Record<DiaryPromptInput["activityType"], string> = {
 };
 
 export function templateFallback(input: DiaryPromptInput, _displayName = "회원"): string {
-  const label = ACTIVITY_LABEL_KO[input.activityType];
-  const kw = input.keywords.join(" · ");
   void _displayName; // retained for signature back-compat; diary is first-person now.
+  const kw = input.keywords.join(" · ");
+  // meal 은 운동 프레이밍("몸에 힘이 붙은") 대신 식사 톤. mealSlot 있으면 끼니를 자연스레 반영.
+  if (input.activityType === "meal") {
+    const slot = input.mealSlot ? `${input.mealSlot}으로 ` : "";
+    const tail = kw ? `${kw} 챙겨 먹었어요.` : "잘 챙겨 먹었어요.";
+    return `오늘 ${slot}${tail} 🥗`;
+  }
+  const label = ACTIVITY_LABEL_KO[input.activityType];
   return `오늘 ${label} 했어요. ${kw} 느낌으로 몸에 힘이 붙은 하루였어요. 🔥`;
 }
 
