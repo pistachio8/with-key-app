@@ -28,6 +28,7 @@
     "db:types": "supabase gen types typescript --linked > src/types/supabase.ts",
     "login:link": "node scripts/dev-login-link.mjs",
     "seed:action-log": "node scripts/dev-seed-action-log.mjs",
+    "release:notify": "node scripts/post-release-note.mjs",
     "validate:docs": "node scripts/validate-doc-paths.mjs",
     "check:spec-required": "node scripts/check-spec-required.mjs",
     "new": "node scripts/new-doc.mjs",
