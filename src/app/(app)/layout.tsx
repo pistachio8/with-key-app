@@ -39,7 +39,7 @@ async function AppShellSection({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const supabase = await createClient();
 
-  // F15 — 그룹 수에 따라 헤더 chevron sheet/직진입/라벨 분기.
+  // groups 는 FabMenu 그룹 버튼(그룹 전환 sheet / 0개 시 /group/new)에 주입.
   // 알림 dot 은 NotificationBell 이 클라이언트에서 IDB unreadCount 구독 (plan 2026-05-22-header-unread-dot-source).
   const [groups, ownerGroups, profile, current] = await Promise.all([
     fetchMyGroups(),
