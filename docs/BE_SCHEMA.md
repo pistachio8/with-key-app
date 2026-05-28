@@ -275,26 +275,27 @@ stateDiagram-v2
 
 ### 5.7 `action_logs` ⭐ (AI 일기 흡수)
 
-| 컬럼                | 타입        | Null | Default             | 제약/비고                                                                |
-| ------------------- | ----------- | ---- | ------------------- | ------------------------------------------------------------------------ |
-| `id`                | uuid        | NO   | `gen_random_uuid()` | PK                                                                       |
-| `challenge_id`      | uuid        | NO   | —                   | FK → `challenges.id`                                                     |
-| `user_id`           | uuid        | NO   | —                   | FK → `users.id`                                                          |
-| `activity_type`     | text        | NO   | —                   | `CHECK IN ('running','gym','yoga','other')`                              |
-| `photo_url`         | text        | NO   | —                   | Storage pre-signed key                                                   |
-| `selected_keywords` | text[]      | NO   | —                   | `array_length BETWEEN 1 AND 3` · **풀 검증은 앱(zod) 레이어**(PRD AC-10) |
-| `shown_keywords`    | text[]      | NO   | —                   | 재현·분석용 스냅샷(노출된 칩 전체)                                       |
-| `reroll_count`      | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 5` (PRD AC-9)                                       |
-| `memo`              | text        | YES  | null                | `char_length <= 100` (escape hatch)                                      |
-| `ai_summary`        | text        | NO   | —                   | `char_length <= 150` · 3~5줄(앱 검증) — AI 또는 템플릿 폴백 결과         |
-| `template_fallback` | bool        | NO   | `false`             | AI 실패 시 true (PRD §5.3 AC-8)                                          |
-| `regenerate_count`  | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 2` (PRD AC-5)                                       |
-| `prompt_version`    | text        | NO   | —                   | `lib/ai/prompts.ts`의 `PROMPT_VERSION` — 이벤트와 조인 분석용            |
-| `created_at`        | timestamptz | NO   | `now()`             | 서버 타임 (AC-5)                                                         |
-| `edited_at`         | timestamptz | YES  | null                | 5분 이내 편집 시에만 세팅(AC-7)                                          |
+| 컬럼                | 타입        | Null | Default             | 제약/비고                                                                                                                          |
+| ------------------- | ----------- | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | uuid        | NO   | `gen_random_uuid()` | PK                                                                                                                                 |
+| `challenge_id`      | uuid        | NO   | —                   | FK → `challenges.id`                                                                                                               |
+| `user_id`           | uuid        | NO   | —                   | FK → `users.id`                                                                                                                    |
+| `activity_type`     | text        | NO   | —                   | `CHECK IN ('running','gym','yoga','other')`                                                                                        |
+| `photo_url`         | text        | NO   | —                   | Storage pre-signed key                                                                                                             |
+| `selected_keywords` | text[]      | NO   | —                   | `array_length BETWEEN 1 AND 3`(빈 배열은 `array_length`=NULL→CHECK 통과, 직접 입력 일기) · **풀 검증은 앱(zod) 레이어**(PRD AC-10) |
+| `shown_keywords`    | text[]      | NO   | —                   | 재현·분석용 스냅샷(노출된 칩 전체)                                                                                                 |
+| `reroll_count`      | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 5` (PRD AC-9)                                                                                                 |
+| `memo`              | text        | YES  | null                | `char_length <= 100` (escape hatch)                                                                                                |
+| `ai_summary`        | text        | NO   | —                   | `char_length <= 150` · 3~5줄(앱 검증) — AI 또는 템플릿 폴백 결과                                                                   |
+| `template_fallback` | bool        | NO   | `false`             | AI 실패 시 true (PRD §5.3 AC-8)                                                                                                    |
+| `regenerate_count`  | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 2` (PRD AC-5)                                                                                                 |
+| `prompt_version`    | text        | NO   | —                   | `lib/ai/prompts.ts`의 `PROMPT_VERSION` — 이벤트와 조인 분석용 · 직접 입력은 `'manual'`                                             |
+| `created_at`        | timestamptz | NO   | `now()`             | 서버 타임 (AC-5)                                                                                                                   |
+| `edited_at`         | timestamptz | YES  | null                | 5분 이내 편집 시에만 세팅(AC-7)                                                                                                    |
 
 - **`counted` 컬럼 제거**: POC 전체 로그 ~30건 규모에서 트리거+타임존 하드코딩 비용이 집계 쿼리보다 크다. "1일 1회 카운트"(AC-4)는 조회 시 `COUNT(DISTINCT date_trunc('day', created_at AT TIME ZONE 'Asia/Seoul'))` 집계로 처리. 집계 헬퍼는 `lib/challenge/progress.ts`에 1개로 통일. → v1에서 트래픽 증가 시 재검토(§13).
 - **AI 일기 결과 흡수**: `feed_items` 별도 테이블 폐지. JOIN 없이 단일 SELECT로 피드 렌더링.
+- **직접 입력 일기**([spec 2026-05-28-action-manual-diary](superpowers/specs/2026-05-28-action-manual-diary.md)): `memo` 가 채워진 제출은 AI 를 건너뛰고 입력 글을 `ai_summary` 에 그대로 저장한다(`prompt_version='manual'` · `template_fallback=false` · `selected_keywords=[]` · `memo` 컬럼 null). 빈 `selected_keywords` 는 `array_length`=NULL 로 기존 CHECK 를 통과하므로 마이그레이션이 필요 없다.
 
 ### 5.8 `kudos`
 
