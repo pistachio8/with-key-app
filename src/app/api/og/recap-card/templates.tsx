@@ -10,11 +10,11 @@ export type CardData = {
   allAchieved: boolean;
 };
 
-const CREAM = "#FAF6EF";
-const INK = "#2A221C";
-const TERRA = "#C2683D";
+export const CREAM = "#FAF6EF";
+export const INK = "#2A221C";
+export const TERRA = "#C2683D";
 const SUB = "#5E4838";
-const SUBTEXT = "#8E8579";
+export const SUBTEXT = "#8E8579";
 const DASHLINE = "#C9C0B0";
 
 function wordmark(): ReactElement {

@@ -18,16 +18,30 @@ describe("ShareCardAction", () => {
     );
   });
 
-  it("기본(사진형) 공유 시 template=photo URL fetch + navigator.share files", async () => {
+  it("기본(영상) 공유 시 recap-clip URL fetch + navigator.share files", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(global.navigator, "share", { value: share, configurable: true });
     Object.defineProperty(global.navigator, "canShare", { value: () => true, configurable: true });
     render(<ShareCardAction challengeId="c1" shareMessage="msg" />);
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() =>
-      expect(global.fetch).toHaveBeenCalledWith("/api/og/recap-card?challengeId=c1&template=photo"),
+      expect(global.fetch).toHaveBeenCalledWith("/api/share/recap-clip?challengeId=c1"),
     );
     await waitFor(() => expect(share).toHaveBeenCalled());
+  });
+
+  it("사진형 토글 후 공유 시 template=photo URL fetch", async () => {
+    Object.defineProperty(global.navigator, "canShare", { value: () => false, configurable: true });
+    if (!URL.createObjectURL) URL.createObjectURL = () => "blob:fake";
+    if (!URL.revokeObjectURL) URL.revokeObjectURL = () => undefined;
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    fireEvent.click(screen.getByRole("tab", { name: "사진형" }));
+    fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith("/api/og/recap-card?challengeId=c1&template=photo"),
+    );
   });
 
   it("티켓형 토글 후 공유 시 template=ticket URL fetch", async () => {
@@ -53,6 +67,7 @@ describe("ShareCardAction", () => {
     const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
     const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    fireEvent.click(screen.getByRole("tab", { name: "사진형" }));
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() => expect(create).toHaveBeenCalled());
     await waitFor(() => expect(revoke).toHaveBeenCalledWith("blob:fake"));

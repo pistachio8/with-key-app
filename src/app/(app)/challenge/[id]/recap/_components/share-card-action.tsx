@@ -3,15 +3,20 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-type Template = "photo" | "ticket";
+type Template = "clip" | "photo" | "ticket";
 type Props = { challengeId: string; shareMessage: string };
 
 async function shareCard(challengeId: string, template: Template, text: string): Promise<void> {
-  const qs = new URLSearchParams({ challengeId, template });
-  const res = await fetch(`/api/og/recap-card?${qs.toString()}`);
+  const isClip = template === "clip";
+  const endpoint = isClip
+    ? `/api/share/recap-clip?challengeId=${encodeURIComponent(challengeId)}`
+    : `/api/og/recap-card?${new URLSearchParams({ challengeId, template }).toString()}`;
+  const res = await fetch(endpoint);
   if (!res.ok) throw new Error(`status ${res.status}`);
   const blob = await res.blob();
-  const file = new File([blob], `recap-${challengeId}-${template}.png`, { type: "image/png" });
+  const file = new File([blob], `recap-${challengeId}-${template}.${isClip ? "mp4" : "png"}`, {
+    type: isClip ? "video/mp4" : "image/png",
+  });
 
   if (
     typeof navigator !== "undefined" &&
@@ -34,7 +39,7 @@ async function shareCard(challengeId: string, template: Template, text: string):
 }
 
 export function ShareCardAction({ challengeId, shareMessage }: Props) {
-  const [template, setTemplate] = useState<Template>("photo");
+  const [template, setTemplate] = useState<Template>("clip");
   const [pending, setPending] = useState(false);
 
   async function onShare(): Promise<void> {
@@ -44,7 +49,11 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
       await shareCard(challengeId, template, shareMessage);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      toast.error("공유 카드 생성에 실패했어요. 다시 시도해 주세요.");
+      toast.error(
+        template === "clip"
+          ? "공유 영상 생성에 실패했어요. 다시 시도해 주세요."
+          : "공유 카드 생성에 실패했어요. 다시 시도해 주세요.",
+      );
     } finally {
       setPending(false);
     }
@@ -57,7 +66,7 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
         role="tablist"
         aria-label="공유 카드 종류"
       >
-        {(["photo", "ticket"] as const).map((t) => (
+        {(["clip", "photo", "ticket"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -68,7 +77,7 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
               template === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
             }`}
           >
-            {t === "photo" ? "사진형" : "티켓형"}
+            {t === "clip" ? "영상" : t === "photo" ? "사진형" : "티켓형"}
           </button>
         ))}
       </div>
@@ -78,7 +87,7 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
         disabled={pending}
         className="bg-primary text-primary-foreground rounded-full py-3 text-[13px] font-semibold transition-transform active:scale-95 disabled:opacity-60"
       >
-        {pending ? "카드 만드는 중..." : "공유하기"}
+        {pending ? (template === "clip" ? "영상 만드는 중..." : "카드 만드는 중...") : "공유하기"}
       </button>
     </div>
   );
