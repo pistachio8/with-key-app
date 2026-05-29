@@ -12,17 +12,24 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
+import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
 
 type SubmitResult = {
   id: string;
   summary: string;
   photoAttached: boolean;
-  // 첫 인증 성공 모달(§10-C) 분기에 사용. 본 insert 이전 user의 해당 challenge action_logs 수가 0이면 true.
+  // 첫 인증 성공 모달(§10-C) 분기.
   isFirstAction: boolean;
-  // 슬라이드 day 카운터(§10-B) — challenge 시작일 기준 오늘 day (1-indexed).
+  // 슬라이드 day 카운터(§10-B) — KST 캘린더 기준 오늘 일차 (1-indexed, clamp 1..totalDays).
   currentDay: number;
   // 총 챌린지 일수 (DaySlider 1..N).
   totalDays: number;
+  // 인증한 challenge 일차 인덱스(1..totalDays, 정렬) — streak 채도용.
+  verifiedDays: number[];
+  // 이번 제출이 누적 인증일수를 goalCount 에 처음 도달시켰는지(컨페티 트리거).
+  goalReached: boolean;
+  // 목표 횟수(주 N회 빈도값, POC 정산은 전체 distinct 일수와 비교).
+  goalCount: number;
 };
 
 function readJsonArray(value: FormDataEntryValue | null): unknown {
@@ -68,7 +75,7 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
     // Ownership/active 이중 방어: RLS 가 최종 차단하지만 UX 메시지 분기 위해 선제 체크.
     const { data: membership, error: mErr } = await supabase
       .from("challenge_participants")
-      .select("user_id, challenges!inner(status, start_at, end_at, duration_days)")
+      .select("user_id, challenges!inner(status, start_at, end_at, duration_days, goal_count)")
       .eq("challenge_id", parsed.input.challengeId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -88,19 +95,37 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       return failure("forbidden");
     }
 
-    // 첫 인증 모달(§10-C) 분기 — 본 insert 이전 user 의 해당 챌린지 action_logs 카운트.
-    const { count: priorCount } = await supabase
+    // 본인 인증 로그(생성시각) 전체 조회 — distinct KST 일자로 streak/달성 산출.
+    // insert 이전 상태이므로 오늘 인증은 todayKey 로 별도 합산한다.
+    const { data: priorLogs } = await supabase
       .from("action_logs")
-      .select("id", { count: "exact", head: true })
+      .select("created_at")
       .eq("challenge_id", parsed.input.challengeId)
       .eq("user_id", user.id);
-    const isFirstAction = (priorCount ?? 0) === 0;
 
-    // DaySlider(§10-B) — start_at 기준 오늘 day (1-indexed, clamp 1..durationDays).
-    const startMs = new Date(ch.start_at).getTime();
     const totalDays = Number(ch.duration_days);
-    const dayIndex = Math.floor((now - startMs) / 86_400_000) + 1;
-    const currentDay = Math.max(1, Math.min(totalDays, dayIndex));
+    const goalCount = Number(ch.goal_count);
+    const startKstDayKey = toKstDayKey(ch.start_at);
+    const todayKey = toKstDayKey(new Date(now));
+
+    const priorDayKeys = new Set((priorLogs ?? []).map((l) => toKstDayKey(l.created_at)));
+    // 첫 인증(§10-C): 본 insert 이전 로그가 0건.
+    const isFirstAction = (priorLogs?.length ?? 0) === 0;
+    const todayWasNewDay = !priorDayKeys.has(todayKey);
+
+    const allDayKeys = new Set(priorDayKeys);
+    allDayKeys.add(todayKey);
+    const verifiedDays = Array.from(allDayKeys)
+      .map((key) => dayIndexOf(key, startKstDayKey))
+      .filter((index) => index >= 1 && index <= totalDays)
+      .sort((a, b) => a - b);
+
+    // 달성 크로싱 — 정확히 goalCount 에 처음 도달하는 제출에서만 true.
+    const doneCountAfter = verifiedDays.length;
+    const doneCountBefore = doneCountAfter - (todayWasNewDay ? 1 : 0);
+    const goalReached = doneCountBefore < goalCount && doneCountAfter >= goalCount;
+
+    const currentDay = Math.max(1, Math.min(totalDays, dayIndexOf(todayKey, startKstDayKey)));
 
     // 직접 입력 일기(spec 2026-05-28-action-manual-diary): memo 가 채워졌으면 AI 를
     // 건너뛰고 입력 글을 그대로 일기로 저장하며, 키워드는 무시한다(selected_keywords=[]).
@@ -247,6 +272,9 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       isFirstAction,
       currentDay,
       totalDays,
+      verifiedDays,
+      goalReached,
+      goalCount,
     });
   },
 );

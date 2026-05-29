@@ -26,3 +26,16 @@ export function countDoneDaysByUser(
   for (const [u, days] of daysByUser) out.set(u, days.size);
   return out;
 }
+
+// challenge 일차 인덱싱 — KST 캘린더 일자(YYYY-MM-DD) 기준, 시작일이 1일차.
+// 인증일 칸 매핑과 currentDay 를 done-days 와 동일한 KST 캘린더 기준으로 맞추기 위함
+// (raw ms 버킷은 자정 경계에서 어긋날 수 있음). 한국은 DST 없음 → UTC 자정 차이로 안전.
+export function kstDayDiff(fromKey: string, toKey: string): number {
+  const from = Date.parse(`${fromKey}T00:00:00Z`);
+  const to = Date.parse(`${toKey}T00:00:00Z`);
+  return Math.round((to - from) / 86_400_000);
+}
+
+export function dayIndexOf(kstDayKey: string, startKstDayKey: string): number {
+  return kstDayDiff(startKstDayKey, kstDayKey) + 1;
+}

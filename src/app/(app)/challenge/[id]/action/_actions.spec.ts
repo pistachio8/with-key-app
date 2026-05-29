@@ -71,16 +71,28 @@ function makeDirectFormData(memo: string): FormData {
   return formData;
 }
 
-function stubDb(opts: { priorActionCount?: number } = {}) {
-  const priorActionCount = opts.priorActionCount ?? 0;
+function stubDb(
+  opts: {
+    startAt?: string;
+    durationDays?: number;
+    goalCount?: number;
+    priorLogs?: string[]; // 본 insert 이전 로그의 created_at ISO 목록
+  } = {},
+) {
+  const startAt = opts.startAt ?? new Date(Date.now() - 60_000).toISOString();
+  const durationDays = opts.durationDays ?? 30;
+  const goalCount = opts.goalCount ?? 7;
+  const priorRows = (opts.priorLogs ?? []).map((created_at) => ({ created_at }));
+
   const maybeSingleParticipant = vi.fn().mockResolvedValue({
     data: {
       user_id: mocks.user.id,
       challenges: {
         status: "active",
-        start_at: new Date(Date.now() - 60_000).toISOString(),
-        end_at: new Date(Date.now() + 86_400_000 * 30).toISOString(),
-        duration_days: 30,
+        start_at: startAt,
+        end_at: new Date(Date.now() + 86_400_000 * durationDays).toISOString(),
+        duration_days: durationDays,
+        goal_count: goalCount,
       },
     },
     error: null,
@@ -97,12 +109,12 @@ function stubDb(opts: { priorActionCount?: number } = {}) {
       eq: vi.fn().mockReturnValue({ maybeSingle: mocks.userProfile }),
     }),
   };
-  // action_logs 는 (a) prior count select + (b) insert.single 두 경로.
-  const countResult = Promise.resolve({ count: priorActionCount, data: null, error: null });
+  // action_logs: (a) created_at 목록 select(.eq.eq await) + (b) insert.select.single.
+  const priorSelect = Promise.resolve({ data: priorRows, error: null });
   const actionLogs = {
     select: vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue(countResult),
+        eq: vi.fn().mockReturnValue(priorSelect),
       }),
     }),
     insert: vi.fn().mockReturnValue({
@@ -289,6 +301,53 @@ describe("submitActionLog", () => {
         }),
         { userId: mocks.user.id },
       );
+    });
+  });
+
+  describe("verifiedDays & goalReached", () => {
+    it("오늘 첫 인증은 verifiedDays=[1], goalReached=false (goal 7)", async () => {
+      const result = await submitActionLog(makeFormData());
+      expect(result).toMatchObject({
+        ok: true,
+        data: { verifiedDays: [1], goalCount: 7, goalReached: false },
+      });
+    });
+
+    it("goalCount=1 이면 첫 인증에서 goalReached=true", async () => {
+      stubDb({ goalCount: 1 });
+      const result = await submitActionLog(makeFormData());
+      expect(result).toMatchObject({ ok: true, data: { goalReached: true } });
+    });
+
+    it("이전 2일 + 오늘(신규일) 으로 goalCount=3 에 도달하면 goalReached=true", async () => {
+      // 시작 9일 전, 이전 인증 2개의 distinct 일자 + 오늘 → 누적 3일 = goal.
+      const start = new Date(Date.now() - 86_400_000 * 9);
+      stubDb({
+        startAt: start.toISOString(),
+        durationDays: 30,
+        goalCount: 3,
+        priorLogs: [
+          new Date(Date.now() - 86_400_000 * 5).toISOString(),
+          new Date(Date.now() - 86_400_000 * 2).toISOString(),
+        ],
+      });
+      const result = await submitActionLog(makeFormData());
+      expect(result).toMatchObject({ ok: true, data: { goalReached: true, currentDay: 10 } });
+    });
+
+    it("이미 달성된(goal=2, 이전 distinct 2일) 뒤 재인증은 goalReached=false", async () => {
+      const start = new Date(Date.now() - 86_400_000 * 9);
+      stubDb({
+        startAt: start.toISOString(),
+        durationDays: 30,
+        goalCount: 2,
+        priorLogs: [
+          new Date(Date.now() - 86_400_000 * 5).toISOString(),
+          new Date(Date.now() - 86_400_000 * 2).toISOString(),
+        ],
+      });
+      const result = await submitActionLog(makeFormData());
+      expect(result).toMatchObject({ ok: true, data: { goalReached: false } });
     });
   });
 });

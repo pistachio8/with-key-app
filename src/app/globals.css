@@ -95,6 +95,16 @@
     0.66 0.13 268
   ); /* AA 보정용 — mockup #6F8DF5(C≈0.158)에서 chroma 낮춰 onPrimary 대비 확보 */
 
+  /* streak 채도 단계 — 인증 완료 DaySlider (spec 2026-05-29-action-streak-slider-confetti).
+     --primary(L0.737) 계열 hue 270.7 보간. tier 1(연)→7(진). 7일+ 평탄화. */
+  --streak-1: oklch(0.93 0.045 270.7);
+  --streak-2: oklch(0.885 0.067 270.7);
+  --streak-3: oklch(0.84 0.088 270.7);
+  --streak-4: oklch(0.79 0.108 270.7);
+  --streak-5: oklch(0.74 0.125 270.7);
+  --streak-6: oklch(0.685 0.138 270.7);
+  --streak-7: oklch(0.62 0.15 270.7);
+
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.268 0.016 264.3);
   --sidebar-primary: oklch(0.737 0.135 270.7);
