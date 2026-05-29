@@ -19,6 +19,9 @@
 /build
 next-env.d.ts
 
+# ffmpeg-static 바이너리 — 빌드 시 symlink 밖으로 복사 (scripts/copy-ffmpeg.mjs)
+/bin/ffmpeg
+
 # Testing
 /coverage
 
