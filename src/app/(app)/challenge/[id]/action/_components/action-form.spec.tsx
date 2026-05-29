@@ -29,6 +29,7 @@ vi.mock("@/lib/image/prepare-upload", () => ({
 vi.mock("canvas-confetti", () => ({ default: vi.fn() }));
 
 import { ActionForm } from "./action-form";
+import { initialShuffle } from "@/lib/keywords/shuffle";
 
 function getHiddenInputs() {
   return Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
@@ -206,5 +207,72 @@ describe("ActionForm", () => {
     const draft = JSON.parse(draftRaw ?? "{}") as { selected: string[]; savedAt: number };
     expect(draft.selected.length).toBeGreaterThan(0);
     expect(typeof draft.savedAt).toBe("number");
+  });
+
+  it("clears in-progress photo/keywords when challengeId changes (C6 cross-challenge isolation)", async () => {
+    const { rerender } = render(<ActionForm challengeId="c-A" />);
+    selectPhoto(new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    selectFirstKeyword();
+
+    // 다른 챌린지(해당 챌린지 draft 없음)로 전환 — A 의 사진/키워드가 남으면 안 된다.
+    rerender(<ActionForm challengeId="c-B" />);
+
+    expect(screen.queryByAltText("사진 미리보기")).toBeNull();
+    expect(screen.getByRole("button", { name: /사진 찍기/ })).toBeTruthy();
+  });
+
+  it("on challengeId change, resets then applies the target challenge's draft (H3 order)", async () => {
+    // c-B 에 §4.4 draft 시드 (loadDraft 는 savedAt TTL + shuffleByActivity[activityType] 검증).
+    window.localStorage.setItem(
+      "withkey:action-draft:c-B",
+      JSON.stringify({
+        activityType: "gym",
+        selected: [],
+        shuffleByActivity: { gym: initialShuffle("gym") },
+        memo: "B 챌린지 임시 메모",
+        memoOpen: true,
+        savedAt: Date.now(),
+      }),
+    );
+
+    const { rerender } = render(<ActionForm challengeId="c-A" />);
+    selectPhoto(new File([new Uint8Array(10)], "a.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+
+    rerender(<ActionForm challengeId="c-B" />);
+
+    // A 의 사진은 사라진다(reset).
+    expect(screen.queryByAltText("사진 미리보기")).toBeNull();
+
+    // B 의 draft 는 살아있다(apply). 사진을 새로 넣어 키워드/메모 UI 를 드러낸 뒤 확인.
+    selectPhoto(new File([new Uint8Array(10)], "b.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    expect((screen.getByPlaceholderText(/직접 쓴 일기/) as HTMLTextAreaElement).value).toBe(
+      "B 챌린지 임시 메모",
+    );
+  });
+
+  it("restores a draft on first mount unchanged (H3 regression guard)", async () => {
+    window.localStorage.setItem(
+      `withkey:action-draft:${challengeId}`,
+      JSON.stringify({
+        activityType: "gym",
+        selected: [],
+        shuffleByActivity: { gym: initialShuffle("gym") },
+        memo: "최초 mount 복원 메모",
+        memoOpen: true,
+        savedAt: Date.now(),
+      }),
+    );
+
+    render(<ActionForm challengeId={challengeId} />);
+    // 최초 mount 복원: 토스트 발화 + 사진 추가 시 메모 노출.
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith("이전 작성을 불러왔어요"));
+    selectPhoto(new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    expect((screen.getByPlaceholderText(/직접 쓴 일기/) as HTMLTextAreaElement).value).toBe(
+      "최초 mount 복원 메모",
+    );
   });
 });

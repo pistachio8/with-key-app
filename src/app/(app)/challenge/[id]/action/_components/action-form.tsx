@@ -135,18 +135,38 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<ResultState>({ open: false, variant: "completed" });
 
-  // F10 — 마운트 시 1회 draft 복원. localStorage 는 SSR 에서 접근 불가하므로
-  // initial state 가 아닌 mount 후 hydration 단계에서 적용. 외부 영속 store 동기화 케이스.
+  // F10 + reset-on-reentry (spec 2026-05-29-action-form-reset-on-leave):
+  // 최초 mount 는 기존과 동일(draft 있으면 복원). challengeId 가 바뀌면(재진입/교차
+  // 챌린지) 입력 state 를 최초 상태로 리셋한 뒤 대상 챌린지 draft 가 있으면 그 위에
+  // 복원한다(reset-then-apply). 사진은 직렬화 불가라 draft 에 없으므로 항상 비워진다.
+  // setPreview(null) 은 아래 [preview] cleanup 을 태워 이전 blob 을 revoke 한다.
+  const hydratedForRef = useRef<string | null>(null);
   useEffect(() => {
+    const isReentry = hydratedForRef.current !== null && hydratedForRef.current !== challengeId;
+    hydratedForRef.current = challengeId;
     const draft = loadDraft(challengeId);
-    if (!draft) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once localStorage hydration
-    setActivityType(draft.activityType);
-    setShuffleByActivity(draft.shuffleByActivity);
-    setSelected(draft.selected);
-    setMemo(draft.memo);
-    setMemoOpen(draft.memoOpen);
-    toast("이전 작성을 불러왔어요");
+    /* eslint-disable react-hooks/set-state-in-effect -- mount/re-entry localStorage hydration (reset-then-apply) */
+    if (isReentry) {
+      setFile(null);
+      setPreview(null);
+      setResult({ open: false, variant: "completed" });
+      if (!draft) {
+        setActivityType("gym");
+        setShuffleByActivity({ gym: initialShuffle("gym") });
+        setSelected([]);
+        setMemo("");
+        setMemoOpen(false);
+      }
+    }
+    if (draft) {
+      setActivityType(draft.activityType);
+      setShuffleByActivity(draft.shuffleByActivity);
+      setSelected(draft.selected);
+      setMemo(draft.memo);
+      setMemoOpen(draft.memoOpen);
+      toast("이전 작성을 불러왔어요");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [challengeId]);
 
   useEffect(() => {
