@@ -9,8 +9,10 @@ import {
 } from "@/lib/push/send";
 import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
 import type { KudosEmoji } from "@/lib/validators/kudos";
+import type { ActivityType } from "@/lib/keywords/pool";
 
 type NotificationKind = "start" | "deadline";
+type NotificationSentType = "start" | "deadline" | "friend_action";
 type Outcome = "sent" | "cleaned" | "failed" | "suppressed";
 
 type DispatchTarget = PushSubscriptionRow & { userId: string };
@@ -104,11 +106,15 @@ async function dispatch(
   challengeId: string,
   kind: NotificationKind,
   payload: PushPayload,
-  options: { excludeUserId?: string } = {},
+  options: { excludeUserId?: string; trackType?: NotificationSentType } = {},
 ): Promise<DispatchSummary> {
   const targets = await loadTargets(challengeId, kind, options);
   const quietHours = isQuietHoursKST();
   if (targets.length === 0) return { recipientCount: 0, quietHours };
+
+  // notification_sent.type 은 분석용 — 게이팅 prefs 키(kind)와 분리한다.
+  // 완료 푸시는 kind="start"(옵트인 키 재사용)지만 분석 type 은 "friend_action".
+  const trackType: NotificationSentType = options.trackType ?? kind;
 
   // 병렬 송신: N=3~4 명 그룹에서도 직렬로는 합산 지연이 누적된다. 실패는 per-recipient 격리.
   await Promise.allSettled(
@@ -118,7 +124,7 @@ async function dispatch(
         {
           name: "notification_sent",
           props: {
-            type: kind,
+            type: trackType,
             challengeId,
             suppressed: quietHours,
             outcome,
@@ -145,26 +151,49 @@ export async function dispatchStartNotification(challengeId: string): Promise<Di
   });
 }
 
-// PRD §6.2 사용자가 "운동 시작" 탭 → 그룹원(본인 제외)에게 푸시.
-// 메시지 본문은 PRD 예시 "JJ님이 운동을 시작했어요!" 형식.
-export async function dispatchActionStartNotification(
+// PRD §6.4 — 그룹원이 사진 인증을 제출 완료하면 그룹원(본인 제외)에게 push.
+// submitActionLog 성공 후 after() 로 fire. 매 제출마다 발송하되 그 날 첫 인증(isFirstOfDay)과
+// 재제출 문구를 분기한다. 옵트인 게이팅은 기존 "start" prefs 키 재사용, 분석 type 은 friend_action.
+const COMPLETED_TITLE_FIRST: Record<ActivityType, string> = {
+  running: "🏃 러닝 인증!",
+  gym: "🏋️ 헬스 인증!",
+  yoga: "🧘 요가 인증!",
+  other: "✨ 인증 도착!",
+  meal: "🥗 식단 인증!",
+};
+const COMPLETED_TITLE_REPEAT: Record<ActivityType, string> = {
+  running: "🏃 러닝 또!",
+  gym: "🏋️ 헬스 또!",
+  yoga: "🧘 요가 또!",
+  other: "✨ 또 인증!",
+  meal: "🥗 식단 또!",
+};
+
+export async function dispatchActionCompletedNotification(
   challengeId: string,
   actor: { userId: string; displayName: string },
+  options: { activityType: ActivityType; isFirstOfDay: boolean },
 ): Promise<DispatchSummary> {
   const targetUrl = `/challenge/${challengeId}`;
+  const title = options.isFirstOfDay
+    ? COMPLETED_TITLE_FIRST[options.activityType]
+    : COMPLETED_TITLE_REPEAT[options.activityType];
+  const body = options.isFirstOfDay
+    ? `${actor.displayName}님이 오늘 인증을 완료했어요 💪`
+    : `${actor.displayName}님이 한 번 더 인증했어요`;
   return dispatch(
     challengeId,
     "start",
     {
-      title: "운동 시작",
-      body: `${actor.displayName}님이 운동을 시작했어요!`,
+      title,
+      body,
       url: targetUrl,
       type: "friend_action",
       category: "friend_action",
       targetUrl,
       challengeId,
     },
-    { excludeUserId: actor.userId },
+    { excludeUserId: actor.userId, trackType: "friend_action" },
   );
 }
 

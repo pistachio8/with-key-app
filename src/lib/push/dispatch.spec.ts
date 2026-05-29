@@ -70,7 +70,7 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
-import { dispatchActionStartNotification, dispatchStartNotification } from "./dispatch";
+import { dispatchActionCompletedNotification, dispatchStartNotification } from "./dispatch";
 
 // -----------------------------------------------------------------------------
 // Fixtures
@@ -223,12 +223,11 @@ describe("dispatchStartNotification", () => {
   });
 });
 
-describe("dispatchActionStartNotification", () => {
-  it("excludes the actor and sends to remaining opted-in members with name in body", async () => {
+describe("dispatchActionCompletedNotification", () => {
+  it("첫 인증(isFirstOfDay=true): 활동별 title + 완료 body, actor 제외", async () => {
     queueHappyPath({
       participants: [{ user_id: "actor" }, { user_id: "user-b" }, { user_id: "user-c" }],
       users: [
-        // actor is filtered out before users lookup so prefs row not required
         { id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } },
         { id: "user-c", notification_prefs: { start: true, deadline: true, kudos: false } },
       ],
@@ -238,30 +237,72 @@ describe("dispatchActionStartNotification", () => {
       ],
     });
 
-    await dispatchActionStartNotification(CHALLENGE_ID, {
-      userId: "actor",
-      displayName: "민지",
-    });
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "gym", isFirstOfDay: true },
+    );
 
     expect(sendPush).toHaveBeenCalledTimes(2);
     for (const [, payload] of sendPush.mock.calls) {
-      expect((payload as { body: string }).body).toBe("민지님이 운동을 시작했어요!");
+      expect((payload as { title: string }).title).toBe("🏋️ 헬스 인증!");
+      expect((payload as { body: string }).body).toBe("민지님이 오늘 인증을 완료했어요 💪");
+      expect((payload as { type: string }).type).toBe("friend_action");
+      expect((payload as { category: string }).category).toBe("friend_action");
     }
     const recipientIds = trackCalls.map((c) => (c.options as { userId?: string }).userId);
     expect(recipientIds).toEqual(expect.arrayContaining(["user-b", "user-c"]));
     expect(recipientIds).not.toContain("actor");
+    // notification_sent.type 은 friend_action (게이팅 키 start 와 분리)
+    for (const c of trackCalls) {
+      expect((c.event as { props: { type: string } }).props.type).toBe("friend_action");
+    }
   });
 
-  it("returns silently when the actor is the only participant", async () => {
-    tablePlans.push({
-      table: "challenge_participants",
-      rows: [{ user_id: "solo" }],
+  it("재제출(isFirstOfDay=false): 활동별 '또' title + 재제출 body", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }],
+      users: [{ id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" }],
     });
 
-    await dispatchActionStartNotification(CHALLENGE_ID, {
-      userId: "solo",
-      displayName: "혼자",
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "meal", isFirstOfDay: false },
+    );
+
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    const [, payload] = sendPush.mock.calls[0]!;
+    expect((payload as { title: string }).title).toBe("🥗 식단 또!");
+    expect((payload as { body: string }).body).toBe("민지님이 한 번 더 인증했어요");
+  });
+
+  it("기타(other) 활동은 활동명 없는 title", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }],
+      users: [{ id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" }],
     });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "other", isFirstOfDay: true },
+    );
+
+    const [, payload] = sendPush.mock.calls[0]!;
+    expect((payload as { title: string }).title).toBe("✨ 인증 도착!");
+  });
+
+  it("actor가 유일 참가자면 발송하지 않는다", async () => {
+    tablePlans.push({ table: "challenge_participants", rows: [{ user_id: "solo" }] });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "solo", displayName: "혼자" },
+      { activityType: "gym", isFirstOfDay: true },
+    );
 
     expect(sendPush).not.toHaveBeenCalled();
     expect(trackCalls).toHaveLength(0);
