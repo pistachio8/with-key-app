@@ -26,6 +26,8 @@ vi.mock("@/lib/image/prepare-upload", () => ({
   prepareForUpload: (...args: unknown[]) => prepareForUpload(...args),
 }));
 
+vi.mock("canvas-confetti", () => ({ default: vi.fn() }));
+
 import { ActionForm } from "./action-form";
 
 function getHiddenInputs() {
@@ -160,6 +162,33 @@ describe("ActionForm", () => {
     const formData = submitActionLog.mock.calls[0][0] as FormData;
     expect(formData.get("memo")).toBe(memo);
     expect(formData.get("selectedKeywords")).toBe("[]");
+  });
+
+  it("goalReached 응답이면 '챌린지 성공!' 모달을 띄운다", async () => {
+    submitActionLog.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "log-1",
+        summary: "ok",
+        photoAttached: false,
+        isFirstAction: false,
+        currentDay: 3,
+        totalDays: 14,
+        verifiedDays: [1, 2, 3],
+        goalReached: true,
+        goalCount: 3,
+      },
+    });
+    prepareForUpload.mockImplementation(async (f: File) => f);
+
+    render(<ActionForm challengeId="c-1" />);
+    selectPhoto(new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    // 기존 성공 테스트와 동일하게 키워드 1개 선택 후 등록 클릭(같은 헬퍼/흐름 사용).
+    selectFirstKeyword();
+    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+
+    await waitFor(() => expect(screen.getByText("챌린지 성공!")).toBeTruthy());
   });
 
   it("saves draft on submit failure (F10)", async () => {

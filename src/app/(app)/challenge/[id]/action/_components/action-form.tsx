@@ -112,6 +112,8 @@ interface ResultState {
   variant: ActionResultVariant;
   currentDay?: number;
   totalDays?: number;
+  verifiedDays?: number[];
+  goalCount?: number;
 }
 
 export function ActionForm({ challengeId, verifiedToday = false }: Props) {
@@ -254,9 +256,16 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         clearDraft(challengeId);
         setResult({
           open: true,
-          variant: res.data.isFirstAction ? "first-success" : "completed",
+          // 우선순위: goal-reached > first-success > completed
+          variant: res.data.goalReached
+            ? "goal-reached"
+            : res.data.isFirstAction
+              ? "first-success"
+              : "completed",
           currentDay: res.data.currentDay,
           totalDays: res.data.totalDays,
+          verifiedDays: res.data.verifiedDays,
+          goalCount: res.data.goalCount,
         });
       } catch (err) {
         console.error("[submitActionLog] unexpected throw:", err);
@@ -441,6 +450,8 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         challengeId={challengeId}
         currentDay={result.currentDay}
         totalDays={result.totalDays}
+        verifiedDays={result.verifiedDays}
+        goalCount={result.goalCount}
       />
     </>
   );
