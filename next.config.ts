@@ -24,9 +24,12 @@ const nextConfig: NextConfig = {
   // 셸 + dynamic streaming), (c) 'use cache' · 'use cache: private' 디렉티브
   // 사용 가능 — 단 신규 캐시 도입은 Phase 3·4 에서.
   cacheComponents: true,
-  serverExternalPackages: ["ffmpeg-static"],
+  // ffmpeg 바이너리를 함수 번들에 포함. node_modules/ffmpeg-static 은 pnpm symlink 라
+  // 직접 트레이싱하면 Vercel 이 "invalid deployment package (symlinked directories)" 로
+  // 거부한다. 그래서 scripts/copy-ffmpeg.mjs 가 빌드 시 symlink 밖 실경로(bin/ffmpeg)로
+  // 복사하고, 그 실파일만 트레이싱한다.
   outputFileTracingIncludes: {
-    "/api/share/**": ["./node_modules/ffmpeg-static/**"],
+    "/api/share/**": ["./bin/ffmpeg"],
   },
   experimental: {
     serverActions: {
