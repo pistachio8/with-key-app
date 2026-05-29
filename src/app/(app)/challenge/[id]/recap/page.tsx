@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { track } from "@/lib/analytics/track";
-import { formatKRW } from "@/lib/challenge/penalty";
 import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
 import { InvitationHeader } from "./_components/invitation-header";
@@ -69,7 +68,7 @@ export default async function RecapPage({ params }: { params: Params }) {
   );
   const isSolo = recap.members.length === 1;
   const groupName = recap.group?.name ?? "우리 그룹";
-  const shareMessage = `${recap.title} 종료! 최종 벌금 ${formatKRW(totalPenalty)} · with-key`;
+  const shareMessage = `${groupName} · ${recap.title}의 기록 · with-key`;
 
   return (
     <div className="flex flex-col gap-4 p-4">
