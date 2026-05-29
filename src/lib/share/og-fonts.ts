@@ -27,18 +27,26 @@ type Font = {
   style: "normal";
 };
 
+// satori(next/og)는 woff2 를 파싱하지 못한다("Unsupported OpenType signature wOF2").
+// 그래서 Pretendard 는 정적 OTF(Regular 400 · Bold 700)로 로드한다. Anton 은 ttf 라 그대로.
 export async function loadCardFonts(): Promise<Font[]> {
-  const [pretendard, anton] = await Promise.all([
-    loadFont("PretendardVariable.woff2"),
+  const [pretendardRegular, pretendardBold, anton] = await Promise.all([
+    loadFont("Pretendard-Regular.otf"),
+    loadFont("Pretendard-Bold.otf"),
     loadFont("Anton-Regular.ttf"),
   ]);
 
   return [
-    pretendard
-      ? { name: "Pretendard", data: pretendard, weight: 400 as const, style: "normal" as const }
+    pretendardRegular
+      ? {
+          name: "Pretendard",
+          data: pretendardRegular,
+          weight: 400 as const,
+          style: "normal" as const,
+        }
       : null,
-    pretendard
-      ? { name: "Pretendard", data: pretendard, weight: 700 as const, style: "normal" as const }
+    pretendardBold
+      ? { name: "Pretendard", data: pretendardBold, weight: 700 as const, style: "normal" as const }
       : null,
     anton ? { name: "Anton", data: anton, weight: 400 as const, style: "normal" as const } : null,
   ].filter((font): font is Font => font !== null);
