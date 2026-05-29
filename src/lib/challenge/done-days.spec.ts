@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countDoneDaysByUser, toKstDayKey } from "./done-days";
+import { countDoneDaysByUser, toKstDayKey, kstDayDiff, dayIndexOf } from "./done-days";
 
 describe("toKstDayKey", () => {
   it("KST 자정 직전 (UTC 14:59:59) 은 그 날짜", () => {
@@ -65,5 +65,26 @@ describe("countDoneDaysByUser", () => {
   it("로그에 없는 user_id 조회 → undefined", () => {
     const counts = countDoneDaysByUser([{ user_id: "u-a", created_at: "2026-05-26T00:00:00Z" }]);
     expect(counts.get("u-z")).toBeUndefined();
+  });
+});
+
+describe("kstDayDiff / dayIndexOf", () => {
+  it("같은 날 차이는 0, 일차는 1", () => {
+    expect(kstDayDiff("2026-05-29", "2026-05-29")).toBe(0);
+    expect(dayIndexOf("2026-05-29", "2026-05-29")).toBe(1);
+  });
+
+  it("다음 날은 일차 2", () => {
+    expect(dayIndexOf("2026-05-30", "2026-05-29")).toBe(2);
+  });
+
+  it("월 경계를 넘어도 캘린더 일수로 계산", () => {
+    expect(kstDayDiff("2026-05-31", "2026-06-01")).toBe(1);
+    expect(dayIndexOf("2026-06-01", "2026-05-29")).toBe(4);
+  });
+
+  it("시작일보다 이전이면 음수 일수 / 0 이하 일차", () => {
+    expect(kstDayDiff("2026-05-29", "2026-05-27")).toBe(-2);
+    expect(dayIndexOf("2026-05-27", "2026-05-29")).toBe(-1);
   });
 });
