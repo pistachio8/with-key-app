@@ -358,9 +358,10 @@ export function SettlementReceipt({
     >
       {/* 헤더 */}
       <div className="flex flex-col items-center text-center">
+        {/* 장식용 로고 — from·with 접근성 이름은 하단 Stamp 가 담당 (role=img name 중복 방지) */}
         <Image
           src="/logo-from-with-warm.svg"
-          alt="from·with"
+          alt=""
           width={123}
           height={24}
           className="h-6 w-auto"
