@@ -45,7 +45,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     const deadlineSwitch = await screen.findByRole("switch", {
       name: "마감 임박 알림",
     });
@@ -61,7 +61,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     fireEvent.click(startSwitch);
     await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
     await waitFor(() =>
@@ -88,7 +88,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     fireEvent.click(startSwitch); // start=false, deadline=false → no kinds on
     await waitFor(() => expect(unsubscribeFromPush).toHaveBeenCalled());
     await waitFor(() => expect(clearMyPushSubscriptions).toHaveBeenCalled());
@@ -109,7 +109,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     fireEvent.click(startSwitch); // start true → false
     await waitFor(() =>
       expect(updateNotificationPrefs).toHaveBeenCalledWith({
@@ -135,7 +135,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     fireEvent.click(startSwitch); // start false → true
     await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
     await waitFor(() =>
@@ -163,7 +163,7 @@ describe("PushSettings", () => {
         vapidPublicKey="BFN..."
       />,
     );
-    const startSwitch = await screen.findByRole("switch", { name: "시작 알림" });
+    const startSwitch = await screen.findByRole("switch", { name: "그룹 활동 알림" });
     fireEvent.click(startSwitch);
     await waitFor(() => expect(syncBrowserSubscription).toHaveBeenCalled());
     expect(updateNotificationPrefs).not.toHaveBeenCalled();
@@ -180,6 +180,6 @@ describe("PushSettings", () => {
       />,
     );
     expect(await screen.findByText(/이 브라우저는 푸시 알림을 지원하지 않/)).toBeTruthy();
-    expect(screen.queryByRole("switch", { name: "시작 알림" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "그룹 활동 알림" })).toBeNull();
   });
 });
