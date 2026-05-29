@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { after } from "next/server";
 import type { ZodError } from "zod";
 import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
 import { generateDiary, type DiaryResult } from "@/lib/ai/diary";
@@ -13,6 +14,7 @@ import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
 import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
+import { dispatchActionCompletedNotification } from "@/lib/push/dispatch";
 
 type SubmitResult = {
   id: string;
@@ -132,6 +134,15 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
     const isDirect = Boolean(parsed.input.memo);
     const finalKeywords = isDirect ? [] : parsed.input.selectedKeywords;
 
+    // display_name 은 (a) AI 템플릿 fallback 1인칭 톤, (b) 완료 푸시 작성자명 둘 다에 쓰인다.
+    // 직접 입력 모드에서도 푸시용으로 필요하므로 분기 밖에서 1회 조회. RLS users_select_self 허용.
+    const { data: profile } = await supabase
+      .from("users")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    const pushDisplayName = profile?.display_name?.trim() || "친구";
+
     let aiSummary: string;
     let templateFallback: boolean;
     let promptVersion: string;
@@ -142,14 +153,6 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
       templateFallback = false;
       promptVersion = "manual";
     } else {
-      // D-017: display_name 은 템플릿 fallback 시 1인칭 톤에서 쓰임. RLS users_select_self 가 허용.
-      // AI 모드에서만 필요하므로 직접 모드에서는 조회·생성 모두 건너뛴다.
-      const { data: profile } = await supabase
-        .from("users")
-        .select("display_name")
-        .eq("id", user.id)
-        .maybeSingle();
-
       // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
       const mealSlot = parsed.input.activityType === "meal" ? inferMealSlot(now) : undefined;
 
@@ -256,6 +259,18 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
         { userId: user.id },
       );
     }
+
+    // PRD §6.4 — 그룹원에게 인증 완료 push (본인 제외). after() 로 응답 latency 와 분리.
+    // 매 제출마다 발송하되 그 날 첫 인증(todayWasNewDay)/재제출 문구를 분기한다.
+    after(() =>
+      dispatchActionCompletedNotification(
+        parsed.input.challengeId,
+        { userId: user.id, displayName: pushDisplayName },
+        { activityType: parsed.input.activityType, isFirstOfDay: todayWasNewDay },
+      ).catch((e) => {
+        console.error("[submitActionLog] completion dispatch failed", e);
+      }),
+    );
 
     // nested layout 구조에서는 layout 의 fetch 결과 + page 의 feed/dashboard fetch 가
     // Next.js Router cache 로 보관됨. 인증 완료 후 client navigation 으로 돌아왔을 때

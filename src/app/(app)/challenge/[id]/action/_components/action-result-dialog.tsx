@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DaySlider } from "./day-slider";
 import { ConfettiBurst } from "./confetti-burst";
+import type { ActivityType } from "@/lib/keywords/pool";
+import { completedTitle, firstSuccessTitle } from "./action-result-copy";
 
 export type ActionResultVariant = "completed" | "first-success" | "goal-reached" | "failed";
 
@@ -19,6 +21,8 @@ interface ActionResultDialogProps {
   onOpenChange: (open: boolean) => void;
   variant: ActionResultVariant;
   challengeId: string;
+  // completed / first-success 활동별 문구용
+  activityType?: ActivityType;
   // completed / goal-reached variant 전용
   currentDay?: number;
   totalDays?: number;
@@ -35,6 +39,7 @@ export function ActionResultDialog({
   onOpenChange,
   variant,
   challengeId,
+  activityType = "other",
   currentDay,
   totalDays,
   verifiedDays,
@@ -61,12 +66,13 @@ export function ActionResultDialog({
       <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-sm">
         {variant === "completed" && (
           <CompletedBody
+            activityType={activityType}
             currentDay={currentDay ?? 1}
             totalDays={totalDays ?? 1}
             verifiedDays={verifiedDays ?? []}
           />
         )}
-        {variant === "first-success" && <FirstSuccessBody />}
+        {variant === "first-success" && <FirstSuccessBody activityType={activityType} />}
         {variant === "goal-reached" && (
           <GoalReachedBody
             currentDay={currentDay ?? 1}
@@ -104,10 +110,12 @@ export function ActionResultDialog({
 }
 
 function CompletedBody({
+  activityType,
   currentDay,
   totalDays,
   verifiedDays,
 }: {
+  activityType: ActivityType;
   currentDay: number;
   totalDays: number;
   verifiedDays: number[];
@@ -117,7 +125,7 @@ function CompletedBody({
       <div className="bg-brand-primary-soft text-primary flex size-[70px] items-center justify-center rounded-full">
         <Check className="size-9" aria-hidden="true" />
       </div>
-      <DialogTitle className="t-h2">오늘 운동 인증 완료!</DialogTitle>
+      <DialogTitle className="t-h2">{completedTitle(activityType)}</DialogTitle>
       <DialogDescription className="t-sub leading-relaxed">
         매일 한 걸음씩 쌓이고 있어요 💪
       </DialogDescription>
@@ -128,13 +136,13 @@ function CompletedBody({
   );
 }
 
-function FirstSuccessBody() {
+function FirstSuccessBody({ activityType }: { activityType: ActivityType }) {
   return (
     <div className="flex flex-col items-center gap-3 text-center">
       <div className="bg-brand-secondary-soft flex size-[80px] items-center justify-center rounded-full text-[34px]">
         🎉
       </div>
-      <DialogTitle className="t-h2">첫 운동 인증 성공!</DialogTitle>
+      <DialogTitle className="t-h2">{firstSuccessTitle(activityType)}</DialogTitle>
       <DialogDescription className="t-sub leading-relaxed">
         이제부터 매일 인증을 이어가보세요 💪
       </DialogDescription>

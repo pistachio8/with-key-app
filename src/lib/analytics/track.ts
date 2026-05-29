@@ -82,18 +82,18 @@ export type AnalyticsEvent =
   | {
       name: "notification_sent";
       props: {
-        type: "start" | "deadline" | "kudos_received";
+        type: "start" | "deadline" | "friend_action" | "kudos_received";
         challengeId: string;
         suppressed: boolean;
         outcome: "sent" | "cleaned" | "failed" | "suppressed";
-        // kudos_received 만 채움 (ADR-0017). start/deadline 발송에는 의미 없음.
+        // kudos_received 만 채움 (ADR-0017). start/deadline/friend_action 발송에는 의미 없음.
         actionLogId?: string;
         actorUserId?: string;
       };
     }
   | {
       name: "notification_opened";
-      props: { type: "start" | "deadline"; challengeId: string };
+      props: { type: "start" | "deadline" | "friend_action"; challengeId: string };
     }
   | { name: "penalty_displayed"; props: { amount: number } };
 

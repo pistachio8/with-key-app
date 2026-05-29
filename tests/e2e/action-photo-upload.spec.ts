@@ -16,7 +16,7 @@ test("user uploads a photo and sees it in the challenge feed", async ({
   // /action 은 redirect → /challenge/<id>/action 으로 도착.
   await page.goto("/action");
   await expect(page).toHaveURL(/\/challenge\/.+\/action$/);
-  await expect(page.getByRole("heading", { name: "AI 운동일기" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 일기" })).toBeVisible();
 
   // dual entry empty state — hidden inputs 2개. 첫 번째(camera) 또는 두 번째(library) 어디든 setInputFiles 로 직접 주입 가능.
   await page.locator('input[type="file"]').first().setInputFiles(PIXEL);
@@ -44,7 +44,7 @@ test("HEIC uploads are transcoded client-side and render on Chrome", async ({
 
   await page.goto("/action");
   await expect(page).toHaveURL(/\/challenge\/.+\/action$/);
-  await expect(page.getByRole("heading", { name: "AI 운동일기" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 일기" })).toBeVisible();
 
   await page.locator('input[type="file"]').first().setInputFiles(HEIC);
 

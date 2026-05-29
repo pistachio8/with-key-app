@@ -133,8 +133,8 @@ export function PushSettings({ initialPrefs, initialSubscribedEndpoint, vapidPub
         푸시 알림
       </h2>
       <Toggle
-        label="시작 알림"
-        description="모두 서명하면 챌린지 시작을 알려드려요"
+        label="그룹 활동 알림"
+        description="챌린지 시작과 친구 인증을 알려드려요"
         checked={prefs.start}
         onChange={(v) => handlePrefChange("start", v)}
       />

@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   track: vi.fn().mockResolvedValue(undefined),
   generateDiary: vi.fn(),
   userProfile: vi.fn(),
+  dispatchActionCompletedNotification: vi.fn().mockResolvedValue({
+    recipientCount: 1,
+    quietHours: false,
+  }),
 }));
 
 vi.mock("@/lib/auth/with-user", () => ({
@@ -45,6 +49,18 @@ vi.mock("@/lib/analytics/track", () => ({
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
+}));
+
+// after(cb) 는 request 컨텍스트 의존 — 테스트에서는 콜백을 즉시 실행.
+vi.mock("next/server", () => ({
+  after: (cb: () => unknown) => {
+    void cb();
+  },
+}));
+
+vi.mock("@/lib/push/dispatch", () => ({
+  dispatchActionCompletedNotification: (...args: unknown[]) =>
+    mocks.dispatchActionCompletedNotification(...args),
 }));
 
 import { submitActionLog } from "./_actions";
@@ -145,6 +161,10 @@ describe("submitActionLog", () => {
       promptVersion: "v3",
     });
     mocks.userProfile.mockResolvedValue({ data: { display_name: "지우" }, error: null });
+    mocks.dispatchActionCompletedNotification.mockResolvedValue({
+      recipientCount: 1,
+      quietHours: false,
+    });
     stubDb();
   });
 
@@ -348,6 +368,46 @@ describe("submitActionLog", () => {
       });
       const result = await submitActionLog(makeFormData());
       expect(result).toMatchObject({ ok: true, data: { goalReached: false } });
+    });
+  });
+
+  describe("완료 푸시 (friend_action)", () => {
+    it("제출 성공 후 dispatchActionCompletedNotification을 actor·activityType·isFirstOfDay로 호출", async () => {
+      await submitActionLog(makeFormData());
+      expect(mocks.dispatchActionCompletedNotification).toHaveBeenCalledWith(
+        challengeId,
+        { userId: mocks.user.id, displayName: "지우" },
+        { activityType: "gym", isFirstOfDay: true },
+      );
+    });
+
+    it("같은 날 재제출(priorLogs에 오늘 포함)이면 isFirstOfDay=false", async () => {
+      stubDb({ priorLogs: [new Date().toISOString()] });
+      await submitActionLog(makeFormData());
+      expect(mocks.dispatchActionCompletedNotification).toHaveBeenCalledWith(
+        challengeId,
+        expect.anything(),
+        expect.objectContaining({ isFirstOfDay: false }),
+      );
+    });
+
+    it("display_name이 없으면 '친구'로 폴백", async () => {
+      mocks.userProfile.mockResolvedValue({ data: null, error: null });
+      await submitActionLog(makeFormData());
+      expect(mocks.dispatchActionCompletedNotification).toHaveBeenCalledWith(
+        challengeId,
+        { userId: mocks.user.id, displayName: "친구" },
+        expect.anything(),
+      );
+    });
+
+    it("직접 입력 모드(memo)에서도 완료 푸시를 보낸다", async () => {
+      await submitActionLog(makeDirectFormData("오늘 직접 쓴 일기"));
+      expect(mocks.dispatchActionCompletedNotification).toHaveBeenCalledWith(
+        challengeId,
+        { userId: mocks.user.id, displayName: "지우" },
+        { activityType: "gym", isFirstOfDay: true },
+      );
     });
   });
 });

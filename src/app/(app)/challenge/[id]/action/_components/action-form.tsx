@@ -110,6 +110,7 @@ function isAllowedFile(file: File): boolean {
 interface ResultState {
   open: boolean;
   variant: ActionResultVariant;
+  activityType?: ActivityType;
   currentDay?: number;
   totalDays?: number;
   verifiedDays?: number[];
@@ -282,6 +283,7 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
             : res.data.isFirstAction
               ? "first-success"
               : "completed",
+          activityType,
           currentDay: res.data.currentDay,
           totalDays: res.data.totalDays,
           verifiedDays: res.data.verifiedDays,
@@ -302,7 +304,7 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
       <>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12 text-center">
           <div className="flex flex-col items-center gap-1">
-            <h2 className="t-h3">오늘의 운동을 인증하세요</h2>
+            <h2 className="t-h3">오늘의 활동을 인증하세요</h2>
             <p className="t-sub">사진 한 장으로 시작할 수 있어요</p>
           </div>
           <Fab onClick={openCamera} label="사진 찍기" icon={Camera} />
@@ -468,6 +470,7 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         onOpenChange={(open) => setResult((prev) => ({ ...prev, open }))}
         variant={result.variant}
         challengeId={challengeId}
+        activityType={result.activityType}
         currentDay={result.currentDay}
         totalDays={result.totalDays}
         verifiedDays={result.verifiedDays}
