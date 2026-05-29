@@ -154,3 +154,29 @@ describe("notification_sent kudos_received variant (ADR-0017)", () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe("notification_sent friend_action variant", () => {
+  it("type=friend_action fixture가 zod schema를 통과한다", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "friend_action",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: false,
+        outcome: "sent",
+      },
+    };
+    expect(analyticsEventSchema.parse(fixture)).toEqual(fixture);
+  });
+
+  it("notification_opened type=friend_action fixture가 통과한다", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_opened",
+      props: {
+        type: "friend_action",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+      },
+    };
+    expect(analyticsEventSchema.parse(fixture)).toEqual(fixture);
+  });
+});
