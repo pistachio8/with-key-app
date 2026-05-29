@@ -9,11 +9,8 @@ import { formatSharePeriod } from "@/lib/share/period";
 import { track } from "@/lib/analytics/track";
 import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
-import { InvitationHeader } from "./_components/invitation-header";
 import { PhotoGallery } from "./_components/photo-gallery";
-import { MemberRoster } from "./_components/member-roster";
-import { SettlementAccount } from "./_components/settlement-account";
-import { MyPenaltyCard } from "./_components/my-penalty-card";
+import { SettlementReceipt } from "./_components/settlement-receipt";
 import { ShareCardAction } from "./_components/share-card-action";
 
 type Params = Promise<{ id: string }>;
@@ -63,11 +60,6 @@ export default async function RecapPage({ params }: { params: Params }) {
   // end_at 미래면 만기 도달 전 종료 = 조기. 만기 도달 후 종료면 그냥 정상 종료로 본다.
   const isEarlyEnded =
     recap.status === "closed" && recap.endAt != null && new Date(recap.endAt) > new Date();
-  // 모킹업 §11 — "최종 벌금" = 미달성자 수 × penalty_amount.
-  const totalPenalty = recap.members.reduce(
-    (sum, m) => sum + (m.achieved ? 0 : recap.penaltyAmount),
-    0,
-  );
   const isSolo = recap.members.length === 1;
   const groupName = recap.group?.name ?? "우리 그룹";
 
@@ -103,38 +95,28 @@ export default async function RecapPage({ params }: { params: Params }) {
         </Card>
       )}
 
-      <MyPenaltyCard
-        doneCount={recap.viewerDoneCount}
+      <SettlementReceipt
+        groupName={isSolo ? null : groupName}
+        title={recap.title}
+        durationDays={recap.durationDays}
+        startAt={recap.startAt}
+        endAt={recap.endAt}
         goalCount={recap.goalCount}
+        viewerDoneCount={recap.viewerDoneCount}
         viewerAchieved={recap.viewerAchieved}
         viewerPerHeadPenalty={recap.viewerPerHeadPenalty}
-        totalPenalty={totalPenalty}
+        isSolo={isSolo}
+        members={recap.members.map((m) => ({
+          id: m.id,
+          displayName: m.displayName,
+          isMvp: m.isMvp,
+        }))}
+        bankCode={recap.group?.bankCode ?? null}
+        accountHolder={recap.group?.accountHolder ?? null}
+        accountNumberLast4={recap.group?.accountNumberLast4 ?? null}
       />
 
-      {!isSolo && recap.startAt && recap.endAt && (
-        <>
-          <InvitationHeader
-            groupName={groupName}
-            title={recap.title}
-            startAt={recap.startAt}
-            endAt={recap.endAt}
-            durationDays={recap.durationDays}
-          />
-          <PhotoGallery photos={photos} />
-          <MemberRoster
-            members={recap.members.map((m) => ({
-              id: m.id,
-              displayName: m.displayName,
-              isMvp: m.isMvp,
-            }))}
-          />
-          <SettlementAccount
-            bankCode={recap.group?.bankCode ?? null}
-            holder={recap.group?.accountHolder ?? null}
-            last4={recap.group?.accountNumberLast4 ?? null}
-          />
-        </>
-      )}
+      <PhotoGallery photos={photos} />
 
       <ShareCardAction challengeId={challengeId} shareMessage={shareMessage} />
     </div>

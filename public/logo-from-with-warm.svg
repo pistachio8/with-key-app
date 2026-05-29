@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 328 64" role="img" aria-labelledby="logo-warm-title">
+  <title id="logo-warm-title">from with</title>
+  <text
+    x="7"
+    y="50"
+    fill="#5e4838"
+    font-family="Arial Rounded MT Bold, Avenir Next Rounded, Nunito, Quicksand, sans-serif"
+    font-size="54"
+    font-weight="800"
+    letter-spacing="-0.5"
+    textLength="142"
+    lengthAdjust="spacingAndGlyphs"
+  >from</text>
+  <circle cx="162" cy="37" r="5.2" fill="#c2683d" />
+  <text
+    x="183"
+    y="50"
+    fill="#2a221c"
+    font-family="Arial Rounded MT Bold, Avenir Next Rounded, Nunito, Quicksand, sans-serif"
+    font-size="54"
+    font-weight="800"
+    letter-spacing="-0.5"
+    textLength="132"
+    lengthAdjust="spacingAndGlyphs"
+  >with</text>
+</svg>
