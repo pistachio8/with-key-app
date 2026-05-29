@@ -11,12 +11,7 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import {
-  dispatchActionStartNotification,
-  dispatchKudosReceivedNotification,
-  dispatchStartNotification,
-} from "@/lib/push/dispatch";
-import { isQuietHoursKST } from "@/lib/push/send";
+import { dispatchKudosReceivedNotification, dispatchStartNotification } from "@/lib/push/dispatch";
 
 type KudosResult = { toggled: "added" | "removed" };
 
@@ -125,16 +120,12 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
   },
 );
 
-// PRD §6.2/6.3 — 사용자가 "운동 시작" 탭 → 그룹원에게 푸시. AC-2 1일 1회 (events 기반 idempotency).
+// PRD §9.1 — 사용자가 인증 화면(/challenge/[id]/action)에 진입하면 action_started 분석 이벤트 발사.
+// 푸시는 더 이상 여기서 보내지 않는다(제출 완료 시 dispatchActionCompletedNotification 로 이동).
+// events 테이블 idempotency 로 1일 1회만 기록한다(분석 dedupe).
 const startActionInputSchema = z.object({ challengeId: z.string().uuid() });
 type StartActionInput = z.infer<typeof startActionInputSchema>;
-// 클라이언트가 정직한 토스트를 띄울 수 있도록 발송 결과를 그대로 전달한다.
-// `skipped` 는 1일 1회 idempotency, `quietHours` 는 KST 02-07 발송 보류, `recipientCount` 는 실제 발송 후보 수.
-type StartActionResult = {
-  skipped: boolean;
-  quietHours: boolean;
-  recipientCount: number;
-};
+type StartActionResult = { skipped: boolean };
 
 export const markActionStarted = withUser<StartActionInput, StartActionResult>(
   async (user, input): Promise<ActionResult<StartActionResult>> => {
@@ -176,38 +167,15 @@ export const markActionStarted = withUser<StartActionInput, StartActionResult>(
       .gte("created_at", startOfKstTodayIso())
       .limit(1);
     if (existing && existing.length > 0) {
-      return success({ skipped: true, quietHours: false, recipientCount: 0 });
+      return success({ skipped: true });
     }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle();
-    const displayName = profile?.display_name?.trim() || "친구";
 
     void track(
       { name: "action_started", props: { challengeId: parsed.data.challengeId } },
       { userId: user.id },
     );
 
-    // 토스트가 거짓말하지 않도록 dispatch 를 await 해 실제 발송 요약을 얻는다.
-    // 송신은 dispatch 내부에서 Promise.allSettled 로 병렬화되어 그룹 N=3~4 에서 지연 누적 없음.
-    let summary = { recipientCount: 0, quietHours: isQuietHoursKST() };
-    try {
-      summary = await dispatchActionStartNotification(parsed.data.challengeId, {
-        userId: user.id,
-        displayName,
-      });
-    } catch (error) {
-      console.error("[markActionStarted] dispatch failed", error);
-    }
-
-    return success({
-      skipped: false,
-      quietHours: summary.quietHours,
-      recipientCount: summary.recipientCount,
-    });
+    return success({ skipped: false });
   },
 );
 
