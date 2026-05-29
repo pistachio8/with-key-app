@@ -3,23 +3,27 @@
 // 모킹업 §10-B/C/D — 인증 결과 모달 4 variant (실제 PR6 trigger: completed/first-success 2종).
 // §10-D 실패 모달은 #35 인증 실패 감지 결정 후 PR에서 trigger 연결.
 
+import { useState } from "react";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DaySlider } from "./day-slider";
+import { ConfettiBurst } from "./confetti-burst";
 
-export type ActionResultVariant = "completed" | "first-success" | "failed";
+export type ActionResultVariant = "completed" | "first-success" | "goal-reached" | "failed";
 
 interface ActionResultDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   variant: ActionResultVariant;
   challengeId: string;
-  // completed variant 전용
+  // completed / goal-reached variant 전용
   currentDay?: number;
   totalDays?: number;
+  verifiedDays?: number[];
+  goalCount?: number;
   // failed variant 전용 — #35 결정 후 채움
   penaltyAdded?: number;
   penaltyTotal?: number;
@@ -33,6 +37,8 @@ export function ActionResultDialog({
   challengeId,
   currentDay,
   totalDays,
+  verifiedDays,
+  goalCount,
   penaltyAdded,
   penaltyTotal,
   failedDateLabel,
@@ -54,9 +60,21 @@ export function ActionResultDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-sm">
         {variant === "completed" && (
-          <CompletedBody currentDay={currentDay ?? 1} totalDays={totalDays ?? 1} />
+          <CompletedBody
+            currentDay={currentDay ?? 1}
+            totalDays={totalDays ?? 1}
+            verifiedDays={verifiedDays ?? []}
+          />
         )}
         {variant === "first-success" && <FirstSuccessBody />}
+        {variant === "goal-reached" && (
+          <GoalReachedBody
+            currentDay={currentDay ?? 1}
+            totalDays={totalDays ?? 1}
+            verifiedDays={verifiedDays ?? []}
+            goalCount={goalCount ?? 1}
+          />
+        )}
         {variant === "failed" && (
           <FailedBody
             penaltyAdded={penaltyAdded ?? 0}
@@ -85,7 +103,15 @@ export function ActionResultDialog({
   );
 }
 
-function CompletedBody({ currentDay, totalDays }: { currentDay: number; totalDays: number }) {
+function CompletedBody({
+  currentDay,
+  totalDays,
+  verifiedDays,
+}: {
+  currentDay: number;
+  totalDays: number;
+  verifiedDays: number[];
+}) {
   return (
     <div className="flex flex-col items-center gap-3 text-center">
       <div className="bg-brand-primary-soft text-primary flex size-[70px] items-center justify-center rounded-full">
@@ -96,7 +122,7 @@ function CompletedBody({ currentDay, totalDays }: { currentDay: number; totalDay
         매일 한 걸음씩 쌓이고 있어요 💪
       </DialogDescription>
       <div className="mt-3 w-full">
-        <DaySlider totalDays={totalDays} currentDay={currentDay} />
+        <DaySlider totalDays={totalDays} currentDay={currentDay} verifiedDays={verifiedDays} />
       </div>
     </div>
   );
@@ -112,6 +138,40 @@ function FirstSuccessBody() {
       <DialogDescription className="t-sub leading-relaxed">
         이제부터 매일 인증을 이어가보세요 💪
       </DialogDescription>
+    </div>
+  );
+}
+
+function GoalReachedBody({
+  currentDay,
+  totalDays,
+  verifiedDays,
+  goalCount,
+}: {
+  currentDay: number;
+  totalDays: number;
+  verifiedDays: number[];
+  goalCount: number;
+}) {
+  const [fire, setFire] = useState(false);
+  return (
+    <div className="flex flex-col items-center gap-3 text-center">
+      <div className="bg-brand-secondary-soft flex size-[80px] items-center justify-center rounded-full text-[34px]">
+        🎉
+      </div>
+      <DialogTitle className="t-h2">챌린지 성공!</DialogTitle>
+      <DialogDescription className="t-sub leading-relaxed">
+        목표 {goalCount}회를 모두 채웠어요 💪
+      </DialogDescription>
+      <div className="mt-3 w-full">
+        <DaySlider
+          totalDays={totalDays}
+          currentDay={currentDay}
+          verifiedDays={verifiedDays}
+          onArrive={() => setFire(true)}
+        />
+      </div>
+      <ConfettiBurst fire={fire} />
     </div>
   );
 }
