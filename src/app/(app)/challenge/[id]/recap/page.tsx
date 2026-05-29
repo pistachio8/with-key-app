@@ -1,9 +1,11 @@
 // src/app/(app)/challenge/[id]/recap/page.tsx
+import { headers } from "next/headers";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
+import { formatSharePeriod } from "@/lib/share/period";
 import { track } from "@/lib/analytics/track";
 import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
@@ -68,7 +70,19 @@ export default async function RecapPage({ params }: { params: Params }) {
   );
   const isSolo = recap.members.length === 1;
   const groupName = recap.group?.name ?? "우리 그룹";
-  const shareMessage = `${groupName} · ${recap.title}의 기록 · with-key`;
+
+  // 공유 메시지: 브랜드는 "from. with"(layout.tsx · invite siteName 컨벤션).
+  // 카카오톡에서 메시지와 URL 사이 빈 줄을 보존하려면 navigator.share 의 url 필드를
+  // 비우고 text 한 덩이로 보낸다(invite-trigger.tsx 패턴). 링크는 서비스 홈.
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const homeUrl = `${proto}://${host}/`;
+  const sharePeriod = formatSharePeriod(recap.startAt, recap.endAt);
+  const shareHeadline = sharePeriod
+    ? `${groupName} · ${sharePeriod}의 기록`
+    : `${groupName}의 기록`;
+  const shareMessage = `${shareHeadline}\n\nfrom. with\n${homeUrl}`;
 
   return (
     <div className="flex flex-col gap-4 p-4">
