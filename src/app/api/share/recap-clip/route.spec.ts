@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -6,16 +6,12 @@ vi.mock("@/lib/db/reads/recap", () => ({ fetchRecap: vi.fn() }));
 vi.mock("@/lib/db/reads/challenge-photos", () => ({
   fetchChallengePhotos: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("@/lib/share/hero-image", () => ({
-  duotoneDataUrl: vi.fn().mockResolvedValue(null),
-}));
+vi.mock("@/lib/share/og-fonts", () => ({ loadCardFonts: vi.fn().mockResolvedValue([]) }));
+vi.mock("./encode", () => ({ encodeClip: vi.fn().mockResolvedValue(Buffer.from("mp4")) }));
 vi.mock("next/og", () => ({
   ImageResponse: class extends Response {
     constructor() {
-      super(new Blob(["png"], { type: "image/png" }), {
-        status: 200,
-        headers: { "content-type": "image/png" },
-      });
+      super(new Blob([new Uint8Array([1, 2, 3])]));
     }
   },
 }));
@@ -30,8 +26,8 @@ function authed() {
   });
 }
 
-function buildReq(qs: string): Request {
-  return new Request(`http://t/api/og/recap-card?${qs}`);
+function req(qs = "challengeId=c1"): Request {
+  return new Request(`http://localhost/api/share/recap-clip?${qs}`);
 }
 
 const RECAP = {
@@ -56,10 +52,14 @@ const RECAP = {
   },
 };
 
-describe("GET /api/og/recap-card", () => {
-  it("missing challengeId → 400", async () => {
+describe("GET /api/share/recap-clip", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("challengeId 없으면 400", async () => {
     authed();
-    const res = await GET(buildReq(""));
+    const res = await GET(req(""));
     expect(res.status).toBe(400);
   });
 
@@ -67,30 +67,22 @@ describe("GET /api/og/recap-card", () => {
     (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
     });
-    const res = await GET(buildReq("challengeId=c1"));
+    const res = await GET(req());
     expect(res.status).toBe(401);
   });
 
-  it("recap 없음 → 404", async () => {
+  it("recap null 이면 404", async () => {
     authed();
     (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    const res = await GET(buildReq("challengeId=c1"));
+    const res = await GET(req());
     expect(res.status).toBe(404);
   });
 
-  it("active+만기 recap(status=active) → 200", async () => {
-    authed();
-    (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue({ ...RECAP, status: "active" });
-    const res = await GET(buildReq("challengeId=c1"));
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toMatch(/image\/png/);
-  });
-
-  it("template=ticket → 200 image/png", async () => {
+  it("recap 있으면 200 video/mp4", async () => {
     authed();
     (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(RECAP);
-    const res = await GET(buildReq("challengeId=c1&template=ticket"));
+    const res = await GET(req());
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toMatch(/image\/png/);
+    expect(res.headers.get("Content-Type")).toBe("video/mp4");
   });
 });

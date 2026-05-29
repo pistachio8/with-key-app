@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   // 셸 + dynamic streaming), (c) 'use cache' · 'use cache: private' 디렉티브
   // 사용 가능 — 단 신규 캐시 도입은 Phase 3·4 에서.
   cacheComponents: true,
+  serverExternalPackages: ["ffmpeg-static"],
+  outputFileTracingIncludes: {
+    "/api/share/**": ["./node_modules/ffmpeg-static/**"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
