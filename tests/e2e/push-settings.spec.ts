@@ -18,7 +18,7 @@ test("me page renders push section for authenticated user", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "알림 설정" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "푸시 알림" })).toBeVisible();
 
-  const startSwitch = page.getByRole("switch", { name: "시작 알림" });
+  const startSwitch = page.getByRole("switch", { name: "그룹 활동 알림" });
   const unsupportedBanner = page.getByText(/이 브라우저는 푸시 알림을 지원하지 않/);
   const detecting = page.getByText("지원 여부 확인 중…");
   await expect(startSwitch.or(unsupportedBanner).or(detecting)).toBeVisible({
