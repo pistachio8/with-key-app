@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { ActionVisitKeyProvider } from "@/components/app-shell/action-visit-key";
 import { AppHeader } from "@/components/app-shell/app-header";
 import { FabMenu } from "@/components/app-shell/fab-menu";
 import { requireUser } from "@/lib/auth/require-user";
@@ -64,7 +65,7 @@ async function AppShellSection({ children }: { children: React.ReactNode }) {
     <>
       <AppHeader />
       <main id="main" className="flex-1 pb-24">
-        {children}
+        <ActionVisitKeyProvider>{children}</ActionVisitKeyProvider>
       </main>
       <FabMenu
         activeChallenges={activeChallenges}

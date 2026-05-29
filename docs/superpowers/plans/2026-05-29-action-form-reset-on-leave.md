@@ -262,3 +262,12 @@ PR 베이스 `develop`. Vercel Preview URL 발급 대기.
 - **Spec 커버리지**: C1(멀티태스킹 비초기화)·C3(silent) 는 Phase 1 이 트리거를 effect/remount 로 한정해 자동 충족(브라우저 이벤트 미사용). C2/C4/C6/H3 = Task 2-3. C5 = setPreview(null)→cleanup revoke(기존 테스트 "removes the preview and revokes the blob URL" 가 메커니즘 보증). C7(in-flight) = 코드상 server action 미취소(reset 은 화면 state 만) — Phase 1 이 이를 깨지 않음. H1/H2 = effect-only 변경이라 remount·분석 재발화 없음. 동일-챌린지 재진입 = Task 5 Preview 검증 → Phase 2.
 - **Placeholder 스캔**: Phase 1 의 모든 step 은 실제 코드/명령 포함. Phase 2 는 "조건부 미착수" 로 명시(현 시점 코드 미정은 placeholder 가 아니라 의도된 게이트).
 - **타입/식별자 일관성**: `loadDraft`·`initialShuffle`·`setFile`/`setPreview`/`setResult`/`setActivityType`/`setShuffleByActivity`/`setSelected`/`setMemo`/`setMemoOpen` 모두 `action-form.tsx` 의 기존 심볼과 일치. draft 시드 shape 는 `DraftState`(line 46-52) + `savedAt` 와 일치, `shuffleByActivity[activityType]` 존재 검증(loadDraft line 65) 충족.
+
+---
+
+## 구현 결과 (2026-05-29, 로컬 production build 실측)
+
+- **Phase 1 (reset-then-apply)**: 구현·커밋(527dc31). 로컬 prod build + cookie-injection + Playwright 로 forward→forward 재현 결과 — **동일-챌린지 재진입(주 증상)에서는 사진/메모가 여전히 잔존**(effect 가 challengeId 불변 시 재실행 안 됨, 진단대로). **교차 챌린지(C6)는 깨끗**(challengeId 변경 시 effect 재실행 → reset). 즉 Phase 1 은 C6 만 해결.
+- **Phase 2 (key remount, 채택)**: `ActionVisitKeyProvider`((app) layout) + `ActionFormKeyed`(`key={visitKey}`) 구현. 동일 재현 절차로 **재진입 시 폼이 빈 상태로 초기화됨을 실측 확인** — 주 증상 해결. 콘솔 에러 0(초기 dev-login 404 제외), `markActionStarted`/429 재발화 없음(H1, 형제 비-remount). Phase 1 의 reset-then-apply 는 defense-in-depth 로 유지(remount 시 fresh mount → 무해, in-place rerender edge 커버).
+- **신규/수정 파일(Phase 2)**: 신규 `src/components/app-shell/action-visit-key.tsx`(+spec) · `action/_components/action-form-keyed.tsx`; 수정 `src/app/(app)/layout.tsx` · `action/page.tsx`.
+- **검증**: typecheck · lint 0E · test 640/640(신규 provider test 포함) · 로컬 prod build 실기 재현(주 증상 fixed + C6 clean). Vercel 자동 Preview 는 이 레포에서 feature 브랜치 미빌드(#139 동일)라 로컬 prod build 로 갈음.

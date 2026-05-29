@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { toKstDayKey } from "@/lib/challenge/done-days";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
-import { ActionForm } from "./_components/action-form";
+import { ActionFormKeyed } from "./_components/action-form-keyed";
 import { MarkActionStartedOnMount } from "./_components/mark-action-started-on-mount";
 
 type Params = Promise<{ id: string }>;
@@ -49,7 +49,7 @@ export default async function ChallengeActionPage({ params }: { params: Params }
         <p className="t-caption text-muted-foreground">{detail.title}</p>
         <h1 className="t-h2">AI 운동일기</h1>
       </header>
-      <ActionForm challengeId={id} verifiedToday={verifiedToday} />
+      <ActionFormKeyed challengeId={id} verifiedToday={verifiedToday} />
     </div>
   );
 }
