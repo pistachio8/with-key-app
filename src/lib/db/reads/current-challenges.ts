@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { toKstDayKey } from "@/lib/challenge/done-days";
+import { computeAccruedPot } from "@/lib/challenge/settlement";
 import { createClient } from "@/lib/supabase/server";
 import type { ChallengeStatus } from "./active-challenge";
 
@@ -114,25 +115,31 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
   }
 
   // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
-  // dayKeysByChallenge 가 doneCount(=size) 와 verifiedToday(=has(todayKey)) 양쪽의 SoT.
-  const dayKeysByChallenge = new Map<string, Set<string>>();
+  // potTotal(누적금)은 미달자 판정을 위해 "참가자별" distinct day 가 필요하므로 본인 로그만이
+  // 아니라 전체 참가자 로그를 조회한다(RLS al_select_member: 그룹 멤버면 SELECT 허용).
+  // 본인 doneCount/verifiedToday 는 같은 조회에서 user_id === userId 로 파생.
+  const dayKeysByChallengeUser = new Map<string, Map<string, Set<string>>>();
   const todayKstKey = toKstDayKey(new Date());
-  const { data: myLogs } = await supabase
+  const { data: allLogs } = await supabase
     .from("action_logs")
-    .select("challenge_id, created_at")
-    .eq("user_id", userId)
+    .select("challenge_id, user_id, created_at")
     .in("challenge_id", challengeIds);
-  for (const row of myLogs ?? []) {
-    const r = row as { challenge_id: string; created_at: string };
-    let s = dayKeysByChallenge.get(r.challenge_id);
+  for (const row of allLogs ?? []) {
+    const r = row as { challenge_id: string; user_id: string; created_at: string };
+    let byUser = dayKeysByChallengeUser.get(r.challenge_id);
+    if (!byUser) {
+      byUser = new Map<string, Set<string>>();
+      dayKeysByChallengeUser.set(r.challenge_id, byUser);
+    }
+    let s = byUser.get(r.user_id);
     if (!s) {
       s = new Set<string>();
-      dayKeysByChallenge.set(r.challenge_id, s);
+      byUser.set(r.user_id, s);
     }
     s.add(toKstDayKey(r.created_at));
   }
 
-  const memberCountByChallenge = new Map<string, number>();
+  const participantIdsByChallenge = new Map<string, string[]>();
   const myParticipantChallengeIds = new Set<string>();
   const { data: parts } = await supabase
     .from("challenge_participants")
@@ -141,7 +148,9 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
   for (const row of parts ?? []) {
     const r = row as { challenge_id: string; user_id: string };
     const id = r.challenge_id;
-    memberCountByChallenge.set(id, (memberCountByChallenge.get(id) ?? 0) + 1);
+    const list = participantIdsByChallenge.get(id);
+    if (list) list.push(r.user_id);
+    else participantIdsByChallenge.set(id, [r.user_id]);
     if (r.user_id === userId) myParticipantChallengeIds.add(id);
   }
 
@@ -160,7 +169,9 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
     const daysLeft = c.end_at
       ? Math.max(0, Math.ceil((new Date(c.end_at).getTime() - Date.now()) / 86_400_000))
       : c.duration_days;
-    const memberCount = memberCountByChallenge.get(c.id) ?? 0;
+    const participantIds = participantIdsByChallenge.get(c.id) ?? [];
+    const daysByUser = dayKeysByChallengeUser.get(c.id);
+    const myDayKeys = daysByUser?.get(userId);
     return {
       groupId: g.id,
       groupName: g.name,
@@ -176,12 +187,19 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
         status: c.status,
         startAt: c.start_at,
         endAt: c.end_at,
-        doneCount: dayKeysByChallenge.get(c.id)?.size ?? 0,
+        doneCount: myDayKeys?.size ?? 0,
         daysLeft,
-        potTotal: memberCount * c.penalty_amount,
-        participantCount: memberCount,
+        // 그 챌린지의 총 누적금 — 정보탭과 동일(computeAccruedPot). 미달자 기준 실제
+        // 정산액 합계이며 "인원수 × 벌금"(최대값)이 아니다. 미시작(pending/accepted)은 0.
+        potTotal: computeAccruedPot({
+          status: c.status,
+          goalCount: c.goal_count,
+          penaltyAmount: c.penalty_amount,
+          members: participantIds.map((uid) => ({ doneCount: daysByUser?.get(uid)?.size ?? 0 })),
+        }),
+        participantCount: participantIds.length,
         userIsParticipant: myParticipantChallengeIds.has(c.id),
-        verifiedToday: dayKeysByChallenge.get(c.id)?.has(todayKstKey) ?? false,
+        verifiedToday: myDayKeys?.has(todayKstKey) ?? false,
       },
     };
   });
