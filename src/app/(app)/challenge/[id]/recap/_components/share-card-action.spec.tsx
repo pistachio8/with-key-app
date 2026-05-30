@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ShareCardAction } from "./share-card-action";
 
 const toastError = vi.hoisted(() => vi.fn());
@@ -12,10 +12,29 @@ describe("ShareCardAction", () => {
     toastError.mockReset();
     Object.defineProperty(global.navigator, "share", { value: undefined, configurable: true });
     Object.defineProperty(global.navigator, "canShare", { value: undefined, configurable: true });
+    Object.defineProperty(URL, "createObjectURL", {
+      value: vi.fn(() => "blob:fake"),
+      configurable: true,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", { value: vi.fn(), configurable: true });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(new Blob(["png"], { type: "image/png" }), { status: 200 }),
     );
+  });
+
+  it("형식 3개 radio + 기본 선택 영상(clip)", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="msg" />);
+    const group = screen.getByRole("radiogroup", { name: "공유 형식" });
+    expect(within(group).getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByRole("radio", { name: "영상" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "사진" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("radio", { name: "티켓" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("공유 버튼은 단일 + 접근명 '공유하기'", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="msg" />);
+    expect(screen.getByRole("button", { name: "공유하기" })).toBeTruthy();
   });
 
   it("기본(영상) 공유 시 recap-clip URL fetch + navigator.share files", async () => {
@@ -30,28 +49,20 @@ describe("ShareCardAction", () => {
     await waitFor(() => expect(share).toHaveBeenCalled());
   });
 
-  it("사진형 토글 후 공유 시 template=photo URL fetch", async () => {
+  it("사진 선택 후 공유 시 template=photo URL fetch (다운로드 폴백)", async () => {
     Object.defineProperty(global.navigator, "canShare", { value: () => false, configurable: true });
-    if (!URL.createObjectURL) URL.createObjectURL = () => "blob:fake";
-    if (!URL.revokeObjectURL) URL.revokeObjectURL = () => undefined;
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     render(<ShareCardAction challengeId="c1" shareMessage="x" />);
-    fireEvent.click(screen.getByRole("tab", { name: "사진형" }));
+    fireEvent.click(screen.getByRole("radio", { name: "사진" }));
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() =>
       expect(global.fetch).toHaveBeenCalledWith("/api/og/recap-card?challengeId=c1&template=photo"),
     );
   });
 
-  it("티켓형 토글 후 공유 시 template=ticket URL fetch", async () => {
+  it("티켓 선택 후 공유 시 template=ticket URL fetch", async () => {
     Object.defineProperty(global.navigator, "canShare", { value: () => false, configurable: true });
-    if (!URL.createObjectURL) URL.createObjectURL = () => "blob:fake";
-    if (!URL.revokeObjectURL) URL.revokeObjectURL = () => undefined;
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     render(<ShareCardAction challengeId="c1" shareMessage="x" />);
-    fireEvent.click(screen.getByRole("tab", { name: "티켓형" }));
+    fireEvent.click(screen.getByRole("radio", { name: "티켓" }));
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() =>
       expect(global.fetch).toHaveBeenCalledWith(
@@ -62,12 +73,10 @@ describe("ShareCardAction", () => {
 
   it("Web Share files 미지원 시 a[download] 폴백 + URL.revokeObjectURL 호출", async () => {
     Object.defineProperty(global.navigator, "canShare", { value: () => false, configurable: true });
-    if (!URL.createObjectURL) URL.createObjectURL = () => "blob:fake";
-    if (!URL.revokeObjectURL) URL.revokeObjectURL = () => undefined;
     const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
     const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     render(<ShareCardAction challengeId="c1" shareMessage="x" />);
-    fireEvent.click(screen.getByRole("tab", { name: "사진형" }));
+    fireEvent.click(screen.getByRole("radio", { name: "사진" }));
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() => expect(create).toHaveBeenCalled());
     await waitFor(() => expect(revoke).toHaveBeenCalledWith("blob:fake"));
@@ -81,5 +90,38 @@ describe("ShareCardAction", () => {
     fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
     await waitFor(() => expect(share).toHaveBeenCalled());
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("미리보기: 기본은 사진 poster(template=photo) 이미지 + lazy", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    const img = screen.getByAltText("사진형 공유 카드 미리보기");
+    expect(img.getAttribute("src")).toContain("challengeId=c1");
+    expect(img.getAttribute("src")).toContain("template=photo");
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("미리보기: 로드 전 스켈레톤 노출", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    expect(screen.getByTestId("share-preview-skeleton")).toBeTruthy();
+  });
+
+  it("미리보기: 영상 선택 시 로드 후 MP4 배지", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    fireEvent.load(screen.getByAltText("사진형 공유 카드 미리보기"));
+    expect(screen.getByText("MP4")).toBeTruthy();
+  });
+
+  it("미리보기: 티켓 선택 시 template=ticket 이미지 · MP4 배지 없음", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    fireEvent.click(screen.getByRole("radio", { name: "티켓" }));
+    const img = screen.getByAltText("티켓형 공유 카드 미리보기");
+    expect(img.getAttribute("src")).toContain("template=ticket");
+    expect(screen.queryByText("MP4")).toBeNull();
+  });
+
+  it("미리보기: 로드 실패 시 fallback 문구 표시", () => {
+    render(<ShareCardAction challengeId="c1" shareMessage="x" />);
+    fireEvent.error(screen.getByAltText("사진형 공유 카드 미리보기"));
+    expect(screen.getByText("미리보기를 불러오지 못했어요")).toBeTruthy();
   });
 });
