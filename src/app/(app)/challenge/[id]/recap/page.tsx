@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { formatSharePeriod } from "@/lib/share/period";
+import { makeShareSeed } from "@/lib/share/seed";
 import { track } from "@/lib/analytics/track";
 import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
@@ -75,6 +76,9 @@ export default async function RecapPage({ params }: { params: Params }) {
     ? `${groupName} · ${sharePeriod}의 기록`
     : `${groupName}의 기록`;
   const shareMessage = `${shareHeadline}\n\nfrom. with\n${homeUrl}`;
+  // D-E: 요청당 1회 seed — 미리보기·공유 URL 에 함께 실어 "미리보기=공유물" 보장.
+  // 동적 페이지(requireUser/headers)라 방문마다 재추첨된다. impure 호출은 makeShareSeed 에 격리.
+  const shareSeed = makeShareSeed();
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -114,11 +118,12 @@ export default async function RecapPage({ params }: { params: Params }) {
         bankCode={recap.group?.bankCode ?? null}
         accountHolder={recap.group?.accountHolder ?? null}
         accountNumberLast4={recap.group?.accountNumberLast4 ?? null}
+        groupId={recap.group?.id ?? null}
       />
 
       <PhotoGallery photos={photos} />
 
-      <ShareCardAction challengeId={challengeId} shareMessage={shareMessage} />
+      <ShareCardAction challengeId={challengeId} shareMessage={shareMessage} seed={shareSeed} />
     </div>
   );
 }

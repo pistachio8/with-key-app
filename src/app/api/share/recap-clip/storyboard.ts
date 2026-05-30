@@ -13,7 +13,7 @@ export interface Storyboard {
   totalSeconds: number;
 }
 
-const MAX_MONTAGE = 6;
+export const MAX_MONTAGE = 6;
 const INTRO_SEC = 0.4;
 const ENDCARD_SEC = 0.8;
 const MONTAGE_SEC = 1.8;

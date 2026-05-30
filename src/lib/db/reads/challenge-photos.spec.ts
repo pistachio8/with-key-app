@@ -6,12 +6,14 @@ describe("buildChallengePhotosView", () => {
     const rows = [
       {
         id: "1",
+        user_id: "u-1",
         photo_path: "a.jpg",
         created_at: "2026-05-01T00:00:00Z",
         users: { display_name: "민지" },
       },
       {
         id: "2",
+        user_id: "u-1",
         photo_path: null,
         created_at: "2026-05-02T00:00:00Z",
         users: { display_name: "JJ" },
@@ -27,6 +29,7 @@ describe("buildChallengePhotosView", () => {
     const rows = [
       {
         id: "1",
+        user_id: "u-1",
         photo_path: "a.jpg",
         created_at: "2026-05-01T00:00:00Z",
         users: { display_name: null },
@@ -40,12 +43,14 @@ describe("buildChallengePhotosView", () => {
     const rows = [
       {
         id: "1",
+        user_id: "u-1",
         photo_path: "a.jpg",
         created_at: "2026-05-01T00:00:00Z",
         users: { display_name: "민지" },
       },
       {
         id: "2",
+        user_id: "u-1",
         photo_path: "b.jpg",
         created_at: "2026-05-02T00:00:00Z",
         users: { display_name: "JJ" },
@@ -56,10 +61,11 @@ describe("buildChallengePhotosView", () => {
     expect(view[0].id).toBe("1");
   });
 
-  it("RecapPhotoView 모양으로 매핑 — id · signedUrl · takenAt · ownerDisplayName", () => {
+  it("RecapPhotoView 모양으로 매핑 — id · signedUrl · takenAt · ownerDisplayName · ownerId", () => {
     const rows = [
       {
         id: "x",
+        user_id: "u-9",
         photo_path: "p.jpg",
         created_at: "2026-05-05T12:00:00Z",
         users: { display_name: "희수" },
@@ -71,6 +77,7 @@ describe("buildChallengePhotosView", () => {
       signedUrl: "https://signed/p.jpg",
       takenAt: "2026-05-05T12:00:00Z",
       ownerDisplayName: "희수",
+      ownerId: "u-9",
     });
   });
 });

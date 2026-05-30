@@ -6,12 +6,12 @@ import { toast } from "sonner";
 
 type Template = "clip" | "photo" | "ticket";
 type PreviewKind = "photo" | "ticket";
-type Props = { challengeId: string; shareMessage: string };
+type Props = { challengeId: string; shareMessage: string; seed: number };
 
 const FORMATS: ReadonlyArray<{ value: Template; label: string; Icon: typeof Clapperboard }> = [
-  { value: "clip", label: "영상", Icon: Clapperboard },
-  { value: "photo", label: "사진", Icon: ImageIcon },
   { value: "ticket", label: "티켓", Icon: Ticket },
+  { value: "photo", label: "사진", Icon: ImageIcon },
+  { value: "clip", label: "영상", Icon: Clapperboard },
 ];
 
 const PREVIEW_KIND: Record<Template, PreviewKind> = {
@@ -25,15 +25,28 @@ const PREVIEW_ALT: Record<PreviewKind, string> = {
   ticket: "티켓형 공유 카드 미리보기",
 };
 
-function ogCardSrc(challengeId: string, kind: PreviewKind): string {
-  return `/api/og/recap-card?${new URLSearchParams({ challengeId, template: kind }).toString()}`;
+function ogCardSrc(challengeId: string, kind: PreviewKind, seed: number): string {
+  return `/api/og/recap-card?${new URLSearchParams({
+    challengeId,
+    template: kind,
+    seed: String(seed),
+  }).toString()}`;
 }
 
-async function shareCard(challengeId: string, template: Template, text: string): Promise<void> {
+async function shareCard(
+  challengeId: string,
+  template: Template,
+  text: string,
+  seed: number,
+): Promise<void> {
   const isClip = template === "clip";
   const endpoint = isClip
-    ? `/api/share/recap-clip?challengeId=${encodeURIComponent(challengeId)}`
-    : `/api/og/recap-card?${new URLSearchParams({ challengeId, template }).toString()}`;
+    ? `/api/share/recap-clip?challengeId=${encodeURIComponent(challengeId)}&seed=${seed}`
+    : `/api/og/recap-card?${new URLSearchParams({
+        challengeId,
+        template,
+        seed: String(seed),
+      }).toString()}`;
   const res = await fetch(endpoint);
   if (!res.ok) throw new Error(`status ${res.status}`);
   const blob = await res.blob();
@@ -63,10 +76,12 @@ async function shareCard(challengeId: string, template: Template, text: string):
 
 function SharePreview({
   challengeId,
+  seed,
   seen,
   template,
 }: {
   challengeId: string;
+  seed: number;
   seen: ReadonlySet<PreviewKind>;
   template: Template;
 }) {
@@ -82,7 +97,11 @@ function SharePreview({
       style={{ aspectRatio: "4 / 5" }}
     >
       {status[kind] === "loading" && (
-        <div data-testid="share-preview-skeleton" className="absolute inset-0 animate-pulse" />
+        // 크림 톤 shimmer — 배경 없는 pulse 가 '공백'으로 읽히던 문제 보완(D-B).
+        <div
+          data-testid="share-preview-skeleton"
+          className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#FAF6EF] to-[#EFE7D8]"
+        />
       )}
       {status[kind] === "error" && (
         <div className="text-muted-foreground absolute inset-0 flex items-center justify-center px-3 text-center text-[11px]">
@@ -94,13 +113,15 @@ function SharePreview({
           // eslint-disable-next-line @next/next/no-img-element -- same-origin OG 라우트 미리보기는 인증 쿠키 전달이 필요하다.
           <img
             key={previewKind}
-            src={ogCardSrc(challengeId, previewKind)}
+            src={ogCardSrc(challengeId, previewKind, seed)}
             alt={PREVIEW_ALT[previewKind]}
             loading="lazy"
+            decoding="async"
             onLoad={() => setStatus((prev) => ({ ...prev, [previewKind]: "loaded" }))}
             onError={() => setStatus((prev) => ({ ...prev, [previewKind]: "error" }))}
-            className={`absolute inset-0 size-full object-cover ${
-              previewKind === kind && status[previewKind] === "loaded" ? "" : "hidden"
+            // D-B: display:none(hidden) 대신 opacity 로 숨긴다 — hidden+lazy 는 영영 로드 안 됨.
+            className={`absolute inset-0 size-full object-cover transition-opacity ${
+              previewKind === kind && status[previewKind] === "loaded" ? "opacity-100" : "opacity-0"
             }`}
           />
         ) : null,
@@ -123,10 +144,10 @@ function SharePreview({
   );
 }
 
-export function ShareCardAction({ challengeId, shareMessage }: Props) {
-  const [template, setTemplate] = useState<Template>("clip");
+export function ShareCardAction({ challengeId, shareMessage, seed }: Props) {
+  const [template, setTemplate] = useState<Template>("ticket");
   const [seenPreviewKinds, setSeenPreviewKinds] = useState<ReadonlySet<PreviewKind>>(
-    () => new Set([PREVIEW_KIND.clip]),
+    () => new Set([PREVIEW_KIND.ticket]),
   );
   const [pending, setPending] = useState(false);
 
@@ -134,7 +155,7 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
     if (pending) return;
     setPending(true);
     try {
-      await shareCard(challengeId, template, shareMessage);
+      await shareCard(challengeId, template, shareMessage, seed);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       toast.error(
@@ -155,7 +176,12 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
 
   return (
     <div className="mt-2 flex flex-col gap-3">
-      <SharePreview challengeId={challengeId} seen={seenPreviewKinds} template={template} />
+      <SharePreview
+        challengeId={challengeId}
+        seed={seed}
+        seen={seenPreviewKinds}
+        template={template}
+      />
 
       <div role="radiogroup" aria-label="공유 형식" className="mt-1 grid grid-cols-3 gap-2">
         {FORMATS.map(({ value, label, Icon }) => {

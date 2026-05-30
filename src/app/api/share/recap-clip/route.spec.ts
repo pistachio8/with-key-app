@@ -19,6 +19,7 @@ vi.mock("next/og", () => ({
 const { GET } = await import("./route");
 const { createClient } = await import("@/lib/supabase/server");
 const { fetchRecap } = await import("@/lib/db/reads/recap");
+const { fetchChallengePhotos } = await import("@/lib/db/reads/challenge-photos");
 
 function authed() {
   (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -82,6 +83,18 @@ describe("GET /api/share/recap-clip", () => {
     authed();
     (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(RECAP);
     const res = await GET(req());
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("video/mp4");
+  });
+
+  it("사진 있으면 몽타주 샘플로 200 video/mp4 (렌더 throw 없음)", async () => {
+    authed();
+    (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(RECAP);
+    (fetchChallengePhotos as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { id: "p1", signedUrl: "s1", takenAt: "t", ownerDisplayName: "나", ownerId: "u1" },
+      { id: "p2", signedUrl: "s2", takenAt: "t", ownerDisplayName: "남", ownerId: "u2" },
+    ]);
+    const res = await GET(req("challengeId=c1&seed=5"));
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("video/mp4");
   });

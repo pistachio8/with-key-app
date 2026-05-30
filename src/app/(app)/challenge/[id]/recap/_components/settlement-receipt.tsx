@@ -4,6 +4,7 @@ import { formatKRW } from "@/lib/challenge/penalty";
 import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 import { Stamp } from "@/components/ui/stamp";
 import { cn } from "@/lib/utils";
+import { AccountCopyButton } from "./account-copy-button";
 
 type Props = {
   groupName: string | null; // 솔로면 null → 그룹명 생략
@@ -20,6 +21,7 @@ type Props = {
   bankCode: string | null;
   accountHolder: string | null;
   accountNumberLast4: string | null;
+  groupId: string | null;
 };
 
 // InvitationHeader 와 동일한 UTC 기준 날짜 포맷 (예: "2026 · 05 · 01")
@@ -53,6 +55,7 @@ export function SettlementReceipt({
   bankCode,
   accountHolder,
   accountNumberLast4,
+  groupId,
 }: Props) {
   // 셋 다 채워졌을 때만 ACCOUNT — 삼중 truthy 체크로 각 값이 string 으로 narrowing (assertion 불필요)
   const account =
@@ -132,6 +135,7 @@ export function SettlementReceipt({
                 {bankLabel(account.code)} ***-****{account.last4} ·{" "}
                 <span className="font-semibold">{account.holder}</span>
               </p>
+              {groupId && <AccountCopyButton groupId={groupId} />}
             </>
           )}
         </>

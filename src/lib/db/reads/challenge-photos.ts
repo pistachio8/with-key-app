@@ -10,10 +10,12 @@ export type RecapPhotoView = {
   signedUrl: string;
   takenAt: string;
   ownerDisplayName: string;
+  ownerId: string;
 };
 
 type PhotoRow = {
   id: string;
+  user_id: string;
   photo_path: string | null;
   created_at: string;
   users: { display_name: string | null } | Array<{ display_name: string | null }>;
@@ -35,6 +37,7 @@ export function buildChallengePhotosView(
       signedUrl: url,
       takenAt: row.created_at,
       ownerDisplayName: author?.display_name ?? "익명",
+      ownerId: row.user_id,
     });
   });
   return out;
@@ -54,6 +57,7 @@ export const fetchChallengePhotos = cache(
         // PostgREST embed 모호함(PGRST201) 발생 — 작성자 FK 를 명시.
         [
           "id",
+          "user_id",
           "photo_path",
           "created_at",
           "users!action_logs_user_id_fkey!inner(display_name)",
