@@ -5,10 +5,11 @@ import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { loadCardFonts } from "@/lib/share/og-fonts";
 import { formatSharePeriod } from "@/lib/share/period";
+import { pickOne, sample } from "@/lib/share/seeded-pick";
 import { createClient } from "@/lib/supabase/server";
 import { encodeClip } from "./encode";
-import { renderIntroFrame, renderMontageFrame } from "./frames";
-import { buildStoryboard, type Beat } from "./storyboard";
+import { renderIntroFrame } from "./frames";
+import { buildStoryboard, MAX_MONTAGE, type Beat } from "./storyboard";
 
 export const maxDuration = 60;
 
@@ -30,21 +31,28 @@ export async function GET(req: Request): Promise<Response> {
   if (!recap) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   try {
+    const seed = Number(url.searchParams.get("seed")) || 0;
     const photos = await fetchChallengePhotos(challengeId, { client: supabase });
-    const heroUrl = photos.length > 0 ? photos[photos.length - 1].signedUrl : null;
+
+    // 엔드카드 = 미리본 사진 카드와 동일: 내 사진 중 seed 픽(없으면 전체).
+    const mine = photos.filter((p) => p.ownerId === user.id);
+    const endcardPhoto = pickOne(mine.length > 0 ? mine : photos, seed);
     const data: CardData = {
       groupName: recap.group?.name ?? "우리 그룹",
       period: formatSharePeriod(recap.startAt, recap.endAt),
       doneCount: recap.viewerDoneCount,
       crew: recap.members.length,
-      heroUrl,
+      heroUrl: endcardPhoto?.signedUrl ?? null,
       allAchieved: recap.members.length > 0 && recap.members.every((member) => member.achieved),
     };
 
-    const storyboard = buildStoryboard({ photoCount: photos.length, fps: FPS });
+    // 몽타주 = 전체 사진의 seed 샘플(최대 MAX_MONTAGE).
+    const montage = sample(photos, MAX_MONTAGE, seed);
+
+    const storyboard = buildStoryboard({ photoCount: montage.length, fps: FPS });
     const fonts = await loadCardFonts();
     const pngs = await Promise.all(
-      storyboard.beats.map((beat) => renderBeatPng(beat, data, photos, fonts)),
+      storyboard.beats.map((beat) => renderBeatPng(beat, data, montage, fonts)),
     );
     const mp4 = await encodeClip({ beats: storyboard.beats, pngs, fps: FPS });
 
@@ -67,7 +75,7 @@ export async function GET(req: Request): Promise<Response> {
 async function renderBeatPng(
   beat: Beat,
   data: CardData,
-  photos: ReadonlyArray<{ signedUrl: string }>,
+  montage: ReadonlyArray<{ signedUrl: string }>,
   fonts: Awaited<ReturnType<typeof loadCardFonts>>,
 ): Promise<Buffer> {
   const element =
@@ -75,7 +83,8 @@ async function renderBeatPng(
       ? renderPhotoCard(data)
       : beat.kind === "intro"
         ? renderIntroFrame(data.groupName)
-        : renderMontageFrame(photos[beat.photoIndex ?? 0]?.signedUrl ?? null);
+        : // D-D: 몽타주도 사진 카드 레이아웃. 카드 프레임 고정 + 히어로 사진만 순환.
+          renderPhotoCard({ ...data, heroUrl: montage[beat.photoIndex ?? 0]?.signedUrl ?? null });
 
   const response = new ImageResponse(element, {
     width: 1080,
