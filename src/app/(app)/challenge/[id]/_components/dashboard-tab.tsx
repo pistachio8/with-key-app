@@ -3,6 +3,7 @@
 
 import { Card } from "@/components/ui/card";
 import { MemberStrip } from "./member-strip";
+import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 import type { ChallengeMemberView } from "@/lib/db/reads/challenge-detail";
 
 interface DashboardTabProps {
@@ -10,15 +11,16 @@ interface DashboardTabProps {
   totalActions: number;
   totalFailures: number;
   daysRemaining: number | null;
-  status: "pending" | "accepted" | "active" | "closed";
+  // ADR-0027 — status 가 아니라 phase. over(만기)는 "종료"(남은 0일 금지).
+  phase: ChallengePhase;
   members: ReadonlyArray<ChallengeMemberView>;
   goalCount: number;
 }
 
-function daysPillLabel(status: DashboardTabProps["status"], daysRemaining: number | null): string {
-  if (status === "pending") return "시작 전";
-  if (status === "accepted") return "곧 시작";
-  if (status === "active") return daysRemaining != null ? `남은 ${daysRemaining}일` : "—";
+function daysPillLabel(phase: ChallengePhase, daysRemaining: number | null): string {
+  if (phase === "pending") return "시작 전";
+  if (phase === "accepted") return "곧 시작";
+  if (phase === "running") return daysRemaining != null ? `남은 ${daysRemaining}일` : "—";
   return "종료";
 }
 
@@ -27,7 +29,7 @@ export function DashboardTab({
   totalActions,
   totalFailures,
   daysRemaining,
-  status,
+  phase,
   members,
   goalCount,
 }: DashboardTabProps) {
@@ -42,7 +44,7 @@ export function DashboardTab({
         <div className="mt-3 grid grid-cols-3 gap-1.5">
           <KpiPill label={`총 인증 ${totalActions}회`} />
           <KpiPill label={`실패 ${totalFailures}회`} />
-          <KpiPill label={daysPillLabel(status, daysRemaining)} />
+          <KpiPill label={daysPillLabel(phase, daysRemaining)} />
         </div>
       </Card>
       <MemberStrip goalCount={goalCount} members={members} />

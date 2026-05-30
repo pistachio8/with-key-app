@@ -21,6 +21,7 @@ function makeGroup(
       durationDays: 30,
       penaltyAmount: 1000,
       status: "active",
+      phase: "running",
       startAt: "2026-05-01T00:00:00Z",
       endAt: null,
       doneCount: 5,
@@ -53,9 +54,14 @@ describe("RunningChallengeList", () => {
   });
 
   it("pending 상태 → '대기' + '서명 대기' meta", () => {
-    render(<RunningChallengeList groups={[makeGroup({ status: "pending" })]} />);
+    render(<RunningChallengeList groups={[makeGroup({ status: "pending", phase: "pending" })]} />);
     expect(screen.getByText("대기")).toBeTruthy();
     expect(screen.getByText("서명 대기")).toBeTruthy();
+  });
+
+  it("over(만기) 챌린지는 진행 중 리스트에서 제외 (정산 대기로 분리)", () => {
+    const { container } = render(<RunningChallengeList groups={[makeGroup({ phase: "over" })]} />);
+    expect(container.firstChild).toBeNull();
   });
 
   it("active 이지만 내가 participant 가 아니면 다음 챌린지 안내 톤", () => {

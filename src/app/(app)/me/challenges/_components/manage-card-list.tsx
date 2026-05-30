@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { endChallenge, deleteChallenge, leaveChallenge } from "@/app/(app)/challenge/[id]/_actions";
+import { challengePhase, type ChallengePhase } from "@/lib/challenge/lifecycle";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import type { MyChallengeItem } from "@/lib/db/reads/my-challenges";
 
@@ -20,13 +21,16 @@ interface ManageCardListProps {
   items: ReadonlyArray<MyChallengeItem>;
 }
 
-const STATUS_LABEL: Record<
-  MyChallengeItem["status"],
+// ADR-0027 — 배지(표시)는 phase 기준(over→"정산 대기"). 단 아래 canEnd/canDelete/canLeave 는
+// "DB row 를 변경할 수 있는가"(쓰기 권한)라 status 기준 유지 — over 도 운영자가 종료할 수 있어야 한다.
+const PHASE_LABEL: Record<
+  ChallengePhase,
   { label: string; tone: "primary" | "neutral" | "success" }
 > = {
   pending: { label: "서명 대기", tone: "neutral" },
   accepted: { label: "곧 시작", tone: "neutral" },
-  active: { label: "진행 중", tone: "primary" },
+  running: { label: "진행 중", tone: "primary" },
+  over: { label: "정산 대기", tone: "neutral" },
   closed: { label: "종료", tone: "success" },
 };
 
@@ -80,7 +84,7 @@ export function ManageCardList({ title, role, items }: ManageCardListProps) {
         </h2>
         <ul className="flex flex-col gap-2">
           {items.map((c) => {
-            const label = STATUS_LABEL[c.status];
+            const label = PHASE_LABEL[challengePhase(c.status, c.endAt)];
             const canEnd = role === "owner" && c.status === "active";
             const canDelete = role === "owner" && c.status !== "closed";
             const canLeave = role === "member" && c.status !== "closed";

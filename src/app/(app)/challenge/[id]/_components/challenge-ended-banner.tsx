@@ -1,5 +1,5 @@
-// F17 lazy 종료 표시 — endAt 지난 active 챌린지 진입 시 recap 진입 배너.
-// 서버 status 갱신은 후속 cron(#37). 본 컴포넌트는 시각만.
+// F17 lazy 종료 표시 — endAt 지난 active(phase='over') 챌린지 진입 시 recap 진입 배너.
+// 서버 status 갱신은 deadline-push cron 의 auto-close(ADR-0027) 가 담당. 본 컴포넌트는 시각만.
 
 import Link from "next/link";
 import { Trophy, ChevronRight } from "lucide-react";

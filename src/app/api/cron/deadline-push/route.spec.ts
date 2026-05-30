@@ -9,19 +9,30 @@ type AdminResponse<T = unknown> = { data: T; error: unknown };
 const challengesPlan: { rows: Array<{ id: string }>; error?: unknown } = {
   rows: [],
 };
+// ADR-0027 — auto-close UPDATE 경로의 결과(닫힌 행).
+const closePlan: { rows: Array<{ id: string }>; error?: unknown } = {
+  rows: [],
+};
 const dispatchedMap: Record<string, boolean> = {};
 
 function challengesChain() {
-  const chain: Record<string, unknown> = {};
-  const resolved: AdminResponse = {
-    data: challengesPlan.rows,
-    error: challengesPlan.error ?? null,
-  };
+  // 한 challengesChain 인스턴스는 SELECT(deadline 스캔) 또는 UPDATE(auto-close) 중 하나.
+  // .update() 호출 여부로 분기해 서로 다른 plan 을 resolve 한다.
+  const chain: Record<string, unknown> = { __isUpdate: false };
   chain.select = () => chain;
+  chain.update = () => {
+    chain.__isUpdate = true;
+    return chain;
+  };
   chain.eq = () => chain;
   chain.gte = () => chain;
   chain.lte = () => chain;
-  chain.then = (onFulfilled: (r: AdminResponse) => unknown) => onFulfilled(resolved);
+  chain.then = (onFulfilled: (r: AdminResponse) => unknown) => {
+    if (chain.__isUpdate) {
+      return onFulfilled({ data: closePlan.rows, error: closePlan.error ?? null });
+    }
+    return onFulfilled({ data: challengesPlan.rows, error: challengesPlan.error ?? null });
+  };
   return chain;
 }
 
@@ -77,6 +88,8 @@ function req(auth?: string): Request {
 beforeEach(() => {
   challengesPlan.rows = [];
   challengesPlan.error = undefined;
+  closePlan.rows = [];
+  closePlan.error = undefined;
   for (const k of Object.keys(dispatchedMap)) delete dispatchedMap[k];
   dispatchDeadlineNotification.mockReset();
   dispatchDeadlineNotification.mockResolvedValue(undefined);
@@ -134,6 +147,39 @@ describe("POST /api/cron/deadline-push — dispatch", () => {
     challengesPlan.error = { code: "XX000", message: "db down" };
     const res = await POST(req("Bearer supersecret"));
     expect(res.status).toBe(500);
+  });
+});
+
+describe("POST /api/cron/deadline-push — auto-close (ADR-0027)", () => {
+  it("closes expired active challenges and reports the closed count", async () => {
+    challengesPlan.rows = []; // 마감 push 대상 없음
+    closePlan.rows = [{ id: "expired-1" }, { id: "expired-2" }];
+
+    const res = await POST(req("Bearer supersecret"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, closed: 2 });
+  });
+
+  it("reports closed=0 when nothing is expired", async () => {
+    closePlan.rows = [];
+    const res = await POST(req("Bearer supersecret"));
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true, closed: 0 });
+  });
+
+  it("does not fail the cron when auto-close errors — closed=0, still 200", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    closePlan.error = { code: "XX000", message: "update blocked" };
+
+    const res = await POST(req("Bearer supersecret"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, closed: 0 });
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
 

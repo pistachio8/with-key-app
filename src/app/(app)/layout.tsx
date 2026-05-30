@@ -49,8 +49,9 @@ async function AppShellSection({ children }: { children: React.ReactNode }) {
     fetchCurrentChallenges(user.id),
   ]);
 
+  // ADR-0027 — 인증 FAB 는 running 만. over(만기)는 제출이 게이트·RLS 로 차단되므로 제외.
   const activeChallenges = current
-    .filter((g) => g.challenge?.status === "active" && g.challenge.userIsParticipant)
+    .filter((g) => g.challenge?.phase === "running" && g.challenge.userIsParticipant)
     .map((g) => ({
       id: g.challenge!.id,
       title: g.challenge!.title,

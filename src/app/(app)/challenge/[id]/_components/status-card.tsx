@@ -3,10 +3,12 @@
 
 import { goalCountLabel } from "@/lib/challenge/frequency";
 import { penaltyLabel } from "@/lib/challenge/penalty";
+import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 
 interface StatusCardProps {
   title: string;
-  status: "pending" | "accepted" | "active" | "closed";
+  // ADR-0027 — status 가 아니라 phase. over(만기 active)는 "종료"로 표시(D-0 금지).
+  phase: ChallengePhase;
   goalCount: number;
   durationDays: number;
   penaltyAmount: number;
@@ -18,30 +20,30 @@ interface StatusCardProps {
 }
 
 function socialProofFor(
-  status: StatusCardProps["status"],
+  phase: ChallengePhase,
   participantCount: number,
   signedCount: number,
   isOwner: boolean,
 ): string {
   const isSolo = participantCount === 1;
-  if (status === "pending") {
+  if (phase === "pending") {
     if (isSolo) return isOwner ? "서명 대기 · 지금 초대하면 함께 시작해요" : "서명 대기 중";
     return `${signedCount}/${participantCount}명 서명`;
   }
-  if (status === "accepted") {
+  if (phase === "accepted") {
     return `${participantCount}명 모두 서명 완료 · 곧 시작`;
   }
-  if (status === "active") {
+  if (phase === "running") {
     if (isSolo) return isOwner ? "혼자 시작했어요 · 다음 챌린지엔 함께해요" : "혼자 진행 중";
     return `${participantCount}명이 함께해요`;
   }
-  // closed
+  // over | closed
   return isSolo ? "혼자 마쳤어요" : `${participantCount}명이 함께했어요`;
 }
 
 export function StatusCard({
   title,
-  status,
+  phase,
   goalCount,
   durationDays,
   penaltyAmount,
@@ -51,14 +53,14 @@ export function StatusCard({
   ownerName,
   daysLeft,
 }: StatusCardProps) {
-  const socialProof = socialProofFor(status, participantCount, signedCount, isOwner);
+  const socialProof = socialProofFor(phase, participantCount, signedCount, isOwner);
   const meta = `${goalCountLabel(goalCount).detail} · ${durationDays}일 · ${penaltyLabel(penaltyAmount)}`;
   const dayLabel =
-    status === "active" && daysLeft !== null
+    phase === "running" && daysLeft !== null
       ? `D-${daysLeft}`
-      : status === "pending"
+      : phase === "pending"
         ? "서명 대기"
-        : status === "accepted"
+        : phase === "accepted"
           ? "곧 시작"
           : "종료";
 

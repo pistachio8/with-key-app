@@ -1,30 +1,29 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-type Status = "pending" | "accepted" | "active" | "closed";
+import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 
 type Props = {
-  status: Status;
+  phase: ChallengePhase;
   isParticipant: boolean;
   mySigned: boolean;
   isSolo: boolean;
 };
 
 // PRD §3.4 dual-mode reframing · §4 상태머신. 챌린지 상세 진입 시 "다음에 뭘
-// 해야 할지" 를 명시한다. active 상태는 FAB(카메라)로 인증 진입하므로 여기서는
-// 그 외 상태(비참가자 / pending / accepted / closed)만 분기.
-export function NextStepCta({ status, isParticipant, mySigned, isSolo }: Props) {
+// 해야 할지" 를 명시한다. running 은 FAB(카메라)로 인증 진입하므로 여기서는
+// 그 외(비참가자 / pending / accepted / over / closed)만 분기 (ADR-0027 — over 는 closed 취급).
+export function NextStepCta({ phase, isParticipant, mySigned, isSolo }: Props) {
   if (!isParticipant) {
-    if (status === "active") {
+    if (phase === "running") {
       return <Notice text="이미 시작된 챌린지예요. 다음 챌린지부터 함께해요." />;
     }
     return <Notice text="이 챌린지의 참가자가 아니에요." />;
   }
-  if (status === "closed") {
+  if (phase === "over" || phase === "closed") {
     return <Notice text="종료된 챌린지에요." />;
   }
-  if (status === "pending" || status === "accepted") {
+  if (phase === "pending" || phase === "accepted") {
     if (!mySigned) {
       return (
         <Link href="/pledge" className={cn(buttonVariants({ size: "lg" }), "h-12 w-full")}>

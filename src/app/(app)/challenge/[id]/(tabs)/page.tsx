@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { challengePhase, isChallengeOver } from "@/lib/challenge/lifecycle";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
@@ -72,10 +73,9 @@ async function FeedSection({
   const me = detail.members.find((m) => m.id === user.id);
   const isParticipant = me != null;
   const mySigned = me?.signed ?? false;
-  // layout.tsx 와 동일 SoT — 종료(closed) 또는 만기 도달(active+past end_at) → kudos 잠금.
-  const isEndedByDate =
-    detail.status === "active" && detail.endAt != null && new Date(detail.endAt) < new Date();
-  const isEnded = detail.status === "closed" || isEndedByDate;
+  // ADR-0027 — layout.tsx 와 동일 SoT(challengePhase/isChallengeOver). over/closed → kudos 잠금.
+  const phase = challengePhase(detail.status, detail.endAt);
+  const isEnded = isChallengeOver(detail.status, detail.endAt);
 
   const feed = await fetchChallengeFeed(id, user.id);
   const todayAuthorIds = new Set(
@@ -94,7 +94,7 @@ async function FeedSection({
         participantCount={detail.participantCount}
         todayDoneCount={todayDoneCount}
         todayMissingNames={todayMissingNames}
-        status={detail.status}
+        phase={phase}
         isParticipant={isParticipant}
         mySigned={mySigned}
         isEnded={isEnded}

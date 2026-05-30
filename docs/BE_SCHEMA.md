@@ -185,7 +185,8 @@ stateDiagram-v2
     pending --> pending: 조건 수정 / 멤버 재구성 (AC-7, owner only)
     pending --> accepted: 일부 서명 진행 중
     accepted --> active: 전원 서명 완료 (signed_at ALL NOT NULL)
-    active --> closed: end_at 도달 (cron or 조회 시 lazy 전이)
+    active --> closed: end_at 도달 (auto-close cron · ADR-0027)
+    active --> closed: 운영자 수동 종료(endChallenge)
     active --> closed: 그룹 해산(owner 이탈, POC)
     closed --> [*]
 ```
@@ -194,6 +195,7 @@ stateDiagram-v2
 - `accepted → active`: 전원 서명 + 서버에서 `start_at = now()`, `end_at = (활성화 KST 날짜 + duration_days)일의 00:00 KST` 계산 (ADR-0026 — KST 자정 정렬, 신규 활성화부터).
 - **서명 거부 시** (PRD §3.4 Edge): 상태 전이 없이 `pending` 유지. 그룹장이 해당 멤버를 `challenge_participants`에서 제외 후 재시도 (`pending → pending`).
 - `active` 이후 멤버 freeze(AC-6). 조건·기간·금액 수정 불가.
+- `active → closed` (만기): **표시는 `challengePhase`(status + end_at) 파생**이라 만기(end_at ≤ now) 즉시 "종료/정산 대기"로 보인다(ADR-0027). DB `status` 전이는 `deadline-push` cron 의 **auto-close**(`UPDATE challenges SET status='closed' WHERE status='active' AND end_at<=now()`)가 KST 09:00 경 수행 — 0029 슬롯 해제·status truthful 화. 운영자 수동 종료(`endChallenge`)도 동일 결과. 만기~cron 사이 제출·좋아요는 게이트·RLS(`now() between start_at and end_at`)가 이미 차단.
 
 ---
 

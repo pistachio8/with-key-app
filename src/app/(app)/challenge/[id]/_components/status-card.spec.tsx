@@ -13,48 +13,60 @@ const baseProps = {
   participantCount: 1,
   signedCount: 0,
   isOwner: true,
-  status: "pending" as const,
+  phase: "pending" as const,
 };
 
 describe("StatusCard socialProof", () => {
   it("pending + solo + owner → '지금 초대하면 함께 시작해요'", () => {
-    render(<StatusCard {...baseProps} status="pending" participantCount={1} signedCount={0} />);
+    render(<StatusCard {...baseProps} phase="pending" participantCount={1} signedCount={0} />);
     expect(screen.getByText(/지금 초대하면 함께 시작해요/)).toBeTruthy();
   });
 
   it("pending + solo + 비owner → '서명 대기 중'", () => {
-    render(<StatusCard {...baseProps} status="pending" participantCount={1} isOwner={false} />);
+    render(<StatusCard {...baseProps} phase="pending" participantCount={1} isOwner={false} />);
     expect(screen.getByText("서명 대기 중")).toBeTruthy();
   });
 
   it("pending + multi → '{signed}/{N}명 서명'", () => {
-    render(<StatusCard {...baseProps} status="pending" participantCount={3} signedCount={1} />);
+    render(<StatusCard {...baseProps} phase="pending" participantCount={3} signedCount={1} />);
     expect(screen.getByText("1/3명 서명")).toBeTruthy();
   });
 
   it("accepted + multi → '모두 서명 완료 · 곧 시작'", () => {
-    render(<StatusCard {...baseProps} status="accepted" participantCount={3} signedCount={3} />);
+    render(<StatusCard {...baseProps} phase="accepted" participantCount={3} signedCount={3} />);
     expect(screen.getByText("3명 모두 서명 완료 · 곧 시작")).toBeTruthy();
   });
 
-  it("active + solo + owner → '혼자 시작했어요 · 다음 챌린지엔 함께해요'", () => {
-    render(<StatusCard {...baseProps} status="active" participantCount={1} />);
+  it("running + solo + owner → '혼자 시작했어요 · 다음 챌린지엔 함께해요'", () => {
+    render(<StatusCard {...baseProps} phase="running" participantCount={1} />);
     expect(screen.getByText(/혼자 시작했어요/)).toBeTruthy();
     expect(screen.getByText(/다음 챌린지엔 함께해요/)).toBeTruthy();
   });
 
-  it("active + multi → '{N}명이 함께해요'", () => {
-    render(<StatusCard {...baseProps} status="active" participantCount={3} />);
+  it("running + multi → '{N}명이 함께해요'", () => {
+    render(<StatusCard {...baseProps} phase="running" participantCount={3} />);
     expect(screen.getByText("3명이 함께해요")).toBeTruthy();
   });
 
   it("closed + solo → '혼자 마쳤어요'", () => {
-    render(<StatusCard {...baseProps} status="closed" participantCount={1} />);
+    render(<StatusCard {...baseProps} phase="closed" participantCount={1} />);
     expect(screen.getByText("혼자 마쳤어요")).toBeTruthy();
   });
 
   it("closed + multi → '{N}명이 함께했어요'", () => {
-    render(<StatusCard {...baseProps} status="closed" participantCount={3} />);
+    render(<StatusCard {...baseProps} phase="closed" participantCount={3} />);
     expect(screen.getByText("3명이 함께했어요")).toBeTruthy();
+  });
+
+  it("over(만기) → closed 처럼 '함께했어요' + dayLabel '종료' (D-N 금지)", () => {
+    render(<StatusCard {...baseProps} phase="over" participantCount={3} daysLeft={0} />);
+    expect(screen.getByText("3명이 함께했어요")).toBeTruthy();
+    expect(screen.getByText("종료")).toBeTruthy();
+    expect(screen.queryByText(/D-/)).toBeNull();
+  });
+
+  it("running → dayLabel 'D-{daysLeft}'", () => {
+    render(<StatusCard {...baseProps} phase="running" daysLeft={5} />);
+    expect(screen.getByText("D-5")).toBeTruthy();
   });
 });

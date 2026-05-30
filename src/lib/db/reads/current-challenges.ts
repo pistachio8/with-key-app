@@ -1,8 +1,13 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { toKstDayKey } from "@/lib/challenge/done-days";
+import {
+  challengePhase,
+  remainingDays,
+  type ChallengePhase,
+  type ChallengeStatus,
+} from "@/lib/challenge/lifecycle";
 import { computeAccruedPot } from "@/lib/challenge/settlement";
 import { createClient } from "@/lib/supabase/server";
-import type { ChallengeStatus } from "./active-challenge";
 
 export type GroupChallengeView = {
   groupId: string;
@@ -20,6 +25,8 @@ export type GroupChallengeView = {
     durationDays: number;
     penaltyAmount: number;
     status: ChallengeStatus;
+    // status + end_at 파생 phase (ADR-0027). 표시·자격 분기는 status 가 아니라 phase 로.
+    phase: ChallengePhase;
     startAt: string | null;
     endAt: string | null;
     doneCount: number;
@@ -166,9 +173,9 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
         challenge: null,
       };
     }
-    const daysLeft = c.end_at
-      ? Math.max(0, Math.ceil((new Date(c.end_at).getTime() - Date.now()) / 86_400_000))
-      : c.duration_days;
+    const phase = challengePhase(c.status, c.end_at);
+    // daysLeft 는 running 일 때만 D-N 으로 렌더된다(ADR-0027). 미시작은 duration_days 폴백.
+    const daysLeft = c.end_at ? remainingDays(c.end_at) : c.duration_days;
     const participantIds = participantIdsByChallenge.get(c.id) ?? [];
     const daysByUser = dayKeysByChallengeUser.get(c.id);
     const myDayKeys = daysByUser?.get(userId);
@@ -185,6 +192,7 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
         durationDays: c.duration_days,
         penaltyAmount: c.penalty_amount,
         status: c.status,
+        phase,
         startAt: c.start_at,
         endAt: c.end_at,
         doneCount: myDayKeys?.size ?? 0,

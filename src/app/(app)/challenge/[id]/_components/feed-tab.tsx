@@ -6,6 +6,7 @@ import { ChallengeFeed } from "./challenge-feed";
 import { NextStepCta } from "./next-step-cta";
 import { TodayBanner } from "./today-banner";
 import { formatFeedTimestamp } from "@/lib/challenge/feed-time";
+import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
 
 interface FeedTabProps {
@@ -14,11 +15,11 @@ interface FeedTabProps {
   participantCount: number;
   todayDoneCount: number;
   todayMissingNames: ReadonlyArray<string>;
-  status: "pending" | "accepted" | "active" | "closed";
+  // ADR-0027 — status 가 아니라 phase. over(만기)는 closed 처럼 종료 취급(오늘 배너·인증 유도 숨김).
+  phase: ChallengePhase;
   isParticipant: boolean;
   mySigned: boolean;
-  // 종료(status='closed') 또는 만기 도달(status='active' && end_at < now) 시 true.
-  // 자식 KudosBar 의 disabled 와 FeedCard 의 편집 링크 hide 에 전파.
+  // over(phase) 또는 closed 시 true. 자식 KudosBar 의 disabled 와 FeedCard 편집 링크 hide 에 전파.
   isEnded: boolean;
 }
 
@@ -28,16 +29,16 @@ export function FeedTab({
   participantCount,
   todayDoneCount,
   todayMissingNames,
-  status,
+  phase,
   isParticipant,
   mySigned,
   isEnded,
 }: FeedTabProps) {
   const isSolo = participantCount === 1;
-  const showNextStep = !(isParticipant && status === "active");
+  const showNextStep = !(isParticipant && phase === "running");
   // 시작 전(pending/accepted) 에는 인증 로그가 존재할 수 없으므로 피드 섹션 자체를 숨김.
   // "첫 번째 인증을 올려보세요" 폴백이 시작 전엔 거짓 안내가 된다. NextStepCta 가 안내 역할.
-  const showFeedSection = status === "active" || status === "closed";
+  const showFeedSection = phase === "running" || phase === "over" || phase === "closed";
   // 상대 시간 label 은 시점 의존이라 cache(read)에 넣지 않고 RSC render 의 now 로 계산한다.
   // server 에서 한 번 계산해 string 으로 내려보내므로 client hydration 불일치가 없다.
   const now = new Date();
@@ -47,7 +48,7 @@ export function FeedTab({
   }));
   return (
     <div className="flex flex-col gap-3">
-      {status === "active" && (
+      {phase === "running" && (
         <TodayBanner
           todayDoneCount={todayDoneCount}
           participantCount={participantCount}
@@ -57,7 +58,7 @@ export function FeedTab({
       {showNextStep && (
         <section aria-label="다음 액션">
           <NextStepCta
-            status={status}
+            phase={phase}
             isParticipant={isParticipant}
             mySigned={mySigned}
             isSolo={isSolo}
