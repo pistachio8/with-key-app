@@ -1,10 +1,33 @@
 // src/app/(app)/challenge/[id]/recap/_components/share-card-action.tsx
 "use client";
 import { useState } from "react";
+import { Check, Clapperboard, Image as ImageIcon, Play, Share2, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 type Template = "clip" | "photo" | "ticket";
+type PreviewKind = "photo" | "ticket";
 type Props = { challengeId: string; shareMessage: string };
+
+const FORMATS: ReadonlyArray<{ value: Template; label: string; Icon: typeof Clapperboard }> = [
+  { value: "clip", label: "영상", Icon: Clapperboard },
+  { value: "photo", label: "사진", Icon: ImageIcon },
+  { value: "ticket", label: "티켓", Icon: Ticket },
+];
+
+const PREVIEW_KIND: Record<Template, PreviewKind> = {
+  clip: "photo",
+  photo: "photo",
+  ticket: "ticket",
+};
+
+const PREVIEW_ALT: Record<PreviewKind, string> = {
+  photo: "사진형 공유 카드 미리보기",
+  ticket: "티켓형 공유 카드 미리보기",
+};
+
+function ogCardSrc(challengeId: string, kind: PreviewKind): string {
+  return `/api/og/recap-card?${new URLSearchParams({ challengeId, template: kind }).toString()}`;
+}
 
 async function shareCard(challengeId: string, template: Template, text: string): Promise<void> {
   const isClip = template === "clip";
@@ -38,8 +61,73 @@ async function shareCard(challengeId: string, template: Template, text: string):
   URL.revokeObjectURL(url);
 }
 
+function SharePreview({
+  challengeId,
+  seen,
+  template,
+}: {
+  challengeId: string;
+  seen: ReadonlySet<PreviewKind>;
+  template: Template;
+}) {
+  const kind = PREVIEW_KIND[template];
+  const [status, setStatus] = useState<Record<PreviewKind, "loading" | "loaded" | "error">>({
+    photo: "loading",
+    ticket: "loading",
+  });
+
+  return (
+    <div
+      className="bg-muted relative mx-auto w-[160px] overflow-hidden rounded-xl"
+      style={{ aspectRatio: "4 / 5" }}
+    >
+      {status[kind] === "loading" && (
+        <div data-testid="share-preview-skeleton" className="absolute inset-0 animate-pulse" />
+      )}
+      {status[kind] === "error" && (
+        <div className="text-muted-foreground absolute inset-0 flex items-center justify-center px-3 text-center text-[11px]">
+          미리보기를 불러오지 못했어요
+        </div>
+      )}
+      {(["photo", "ticket"] as const).map((previewKind) =>
+        seen.has(previewKind) ? (
+          // eslint-disable-next-line @next/next/no-img-element -- same-origin OG 라우트 미리보기는 인증 쿠키 전달이 필요하다.
+          <img
+            key={previewKind}
+            src={ogCardSrc(challengeId, previewKind)}
+            alt={PREVIEW_ALT[previewKind]}
+            loading="lazy"
+            onLoad={() => setStatus((prev) => ({ ...prev, [previewKind]: "loaded" }))}
+            onError={() => setStatus((prev) => ({ ...prev, [previewKind]: "error" }))}
+            className={`absolute inset-0 size-full object-cover ${
+              previewKind === kind && status[previewKind] === "loaded" ? "" : "hidden"
+            }`}
+          />
+        ) : null,
+      )}
+      {template === "clip" && status[kind] === "loaded" && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="absolute right-2 top-2 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            MP4
+          </span>
+          <span className="flex size-9 items-center justify-center rounded-full bg-white/90 shadow">
+            <Play
+              className="text-foreground size-4 translate-x-px"
+              fill="currentColor"
+              aria-hidden="true"
+            />
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ShareCardAction({ challengeId, shareMessage }: Props) {
   const [template, setTemplate] = useState<Template>("clip");
+  const [seenPreviewKinds, setSeenPreviewKinds] = useState<ReadonlySet<PreviewKind>>(
+    () => new Set([PREVIEW_KIND.clip]),
+  );
   const [pending, setPending] = useState(false);
 
   async function onShare(): Promise<void> {
@@ -59,34 +147,52 @@ export function ShareCardAction({ challengeId, shareMessage }: Props) {
     }
   }
 
+  function selectTemplate(value: Template): void {
+    setTemplate(value);
+    const previewKind = PREVIEW_KIND[value];
+    setSeenPreviewKinds((prev) => (prev.has(previewKind) ? prev : new Set(prev).add(previewKind)));
+  }
+
   return (
-    <div className="mt-2 flex flex-col gap-2">
-      <div
-        className="bg-muted flex gap-1 rounded-full p-1"
-        role="tablist"
-        aria-label="공유 카드 종류"
-      >
-        {(["clip", "photo", "ticket"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={template === t}
-            onClick={() => setTemplate(t)}
-            className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition ${
-              template === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            {t === "clip" ? "영상" : t === "photo" ? "사진형" : "티켓형"}
-          </button>
-        ))}
+    <div className="mt-2 flex flex-col gap-3">
+      <SharePreview challengeId={challengeId} seen={seenPreviewKinds} template={template} />
+
+      <div role="radiogroup" aria-label="공유 형식" className="mt-1 grid grid-cols-3 gap-2">
+        {FORMATS.map(({ value, label, Icon }) => {
+          const checked = template === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => selectTemplate(value)}
+              className={`relative flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] py-3 text-[13px] font-semibold transition-colors ${
+                checked
+                  ? "border-secondary bg-secondary text-secondary-foreground"
+                  : "border-border/60 bg-card text-foreground/85 hover:bg-muted"
+              }`}
+            >
+              {checked && (
+                <span className="bg-foreground absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full">
+                  <Check className="size-2.5 text-white" strokeWidth={3} aria-hidden="true" />
+                </span>
+              )}
+              <Icon className="size-[22px]" aria-hidden="true" />
+              {label}
+            </button>
+          );
+        })}
       </div>
+
       <button
         type="button"
         onClick={() => void onShare()}
         disabled={pending}
-        className="bg-primary text-primary-foreground rounded-full py-3 text-[13px] font-semibold transition-transform active:scale-95 disabled:opacity-60"
+        className="bg-primary text-primary-foreground flex items-center justify-center gap-1.5 rounded-xl py-3 text-[13px] font-semibold transition-transform active:scale-95 disabled:opacity-60"
       >
+        <Share2 className="size-4" aria-hidden="true" />
         {pending ? (template === "clip" ? "영상 만드는 중..." : "카드 만드는 중...") : "공유하기"}
       </button>
     </div>
