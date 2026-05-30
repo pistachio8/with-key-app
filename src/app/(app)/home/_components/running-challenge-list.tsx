@@ -1,5 +1,5 @@
 // 모킹업 §2-B `ch-item` — 진행 중 챌린지 카드 리스트.
-// 각 row: 컬러 썸네일 + 제목 + meta(인원·오늘상태·벌금) + D-N. 챌린지 상세로 link.
+// 각 row: 컬러 썸네일 + 제목 + meta(인원·오늘상태·누적 벌금) + D-N. 챌린지 상세로 link.
 
 import Link from "next/link";
 import { Activity, Check, Circle, Clock, Users } from "lucide-react";
@@ -135,7 +135,7 @@ function ChallengeMeta({
         <span>서명 대기</span>
       )}
       <Dot />
-      <span className="tabular-nums">벌금 {formatKRW(potTotal)}</span>
+      <span className="tabular-nums">누적 벌금 {formatKRW(potTotal)}</span>
     </p>
   );
 }
