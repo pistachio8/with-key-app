@@ -9,12 +9,14 @@ const photos = [
     signedUrl: "https://sig/a.jpg",
     takenAt: "2026-05-05T00:00:00Z",
     ownerDisplayName: "민지",
+    ownerId: "u-1",
   },
   {
     id: "2",
     signedUrl: "https://sig/b.jpg",
     takenAt: "2026-05-06T00:00:00Z",
     ownerDisplayName: "JJ",
+    ownerId: "u-2",
   },
 ];
 
