@@ -191,7 +191,7 @@ stateDiagram-v2
 ```
 
 - `pending → accepted`: 서명 1건이라도 존재하면 전이 (UI 피드백용 구분).
-- `accepted → active`: 전원 서명 + 서버에서 `start_at = now()`, `end_at = start_at + duration_days` 계산.
+- `accepted → active`: 전원 서명 + 서버에서 `start_at = now()`, `end_at = (활성화 KST 날짜 + duration_days)일의 00:00 KST` 계산 (ADR-0026 — KST 자정 정렬, 신규 활성화부터).
 - **서명 거부 시** (PRD §3.4 Edge): 상태 전이 없이 `pending` 유지. 그룹장이 해당 멤버를 `challenge_participants`에서 제외 후 재시도 (`pending → pending`).
 - `active` 이후 멤버 freeze(AC-6). 조건·기간·금액 수정 불가.
 
@@ -256,7 +256,7 @@ stateDiagram-v2
 | `penalty_amount` | int         | NO   | —                   | `CHECK BETWEEN 0 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** (migration 0025_penalty_allow_zero.sql에서 0원 허용으로 완화됨, PR #45)                                    |
 | `status`         | text        | NO   | `'pending'`         | `CHECK IN ('pending','accepted','active','closed')`                                                                                                                              |
 | `start_at`       | timestamptz | YES  | null                | `active` 전이 시 서버가 `now()`로 채움                                                                                                                                           |
-| `end_at`         | timestamptz | YES  | null                | `start_at + duration_days`                                                                                                                                                       |
+| `end_at`         | timestamptz | YES  | null                | (활성화 KST 날짜 + duration_days)일의 00:00 KST — ADR-0026                                                                                                                       |
 | `created_at`     | timestamptz | NO   | `now()`             |                                                                                                                                                                                  |
 
 - **그룹당 동시 1개 제약**: partial unique index `challenges_one_open_per_group on challenges(group_id) where status in ('pending','accepted','active')` (migration 0029). closed 는 제외하여 종료 챌린지 history 누적 보존.
@@ -419,7 +419,7 @@ $$;
 ### 8.4 `signPledge(challengeId)`
 
 - `challenge_participants.signed_at = now()` (self)
-- 전원 서명 시 **원자적으로** `challenges.status = 'active'`, `start_at = now()`, `end_at = start_at + duration_days`
+- 전원 서명 시 **원자적으로** `challenges.status = 'active'`, `start_at = now()`, `end_at = (활성화 KST 날짜 + duration_days)일의 00:00 KST` (ADR-0026)
 - 이벤트: `challenge_signed` · (전원) `challenge_activated` · 시작 푸시 발송
 
 ### 8.5 `submitActionLog(input)`
