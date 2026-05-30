@@ -27,8 +27,10 @@ function pickThumbTone(challengeId: string): string {
 }
 
 export function RunningChallengeList({ groups }: Props) {
-  const rows = groups.filter((g): g is GroupChallengeView & { challenge: ChallengeView } =>
-    Boolean(g.challenge),
+  // 진행 중 섹션은 pending/accepted/running 만. over(만기)는 SettlementPendingList 로 분리(ADR-0027).
+  const rows = groups.filter(
+    (g): g is GroupChallengeView & { challenge: ChallengeView } =>
+      g.challenge != null && g.challenge.phase !== "over",
   );
   if (rows.length === 0) return null;
 
@@ -45,7 +47,7 @@ export function RunningChallengeList({ groups }: Props) {
       </header>
       <ul className="flex flex-col">
         {rows.map(({ challenge: c }) => {
-          const joinedLate = c.status === "active" && !c.userIsParticipant;
+          const joinedLate = c.phase === "running" && !c.userIsParticipant;
           return (
             <li key={c.id}>
               <Link
@@ -78,7 +80,7 @@ export function RunningChallengeList({ groups }: Props) {
                 <RowPendingIndicator
                   daysLeft={c.daysLeft}
                   joinedLate={joinedLate}
-                  status={c.status}
+                  phase={c.phase}
                 />
               </Link>
             </li>

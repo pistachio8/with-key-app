@@ -4,28 +4,24 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { challengePhase, remainingDays, type ChallengePhase } from "@/lib/challenge/lifecycle";
 import type { GroupChallengeRow } from "@/lib/db/reads/group-detail";
 
 interface GroupChallengesListProps {
   challenges: ReadonlyArray<GroupChallengeRow>;
 }
 
-const STATUS_LABEL: Record<
-  GroupChallengeRow["status"],
+// ADR-0027 — 배지·D-N 은 status 가 아니라 phase 기준. over(만기 active)는 "정산 대기".
+const PHASE_LABEL: Record<
+  ChallengePhase,
   { label: string; tone: "primary" | "neutral" | "success" }
 > = {
   pending: { label: "서명 대기", tone: "neutral" },
   accepted: { label: "곧 시작", tone: "neutral" },
-  active: { label: "진행 중", tone: "primary" },
+  running: { label: "진행 중", tone: "primary" },
+  over: { label: "정산 대기", tone: "neutral" },
   closed: { label: "종료", tone: "success" },
 };
-
-function daysLeftLabel(endAt: string | null): string | null {
-  if (!endAt) return null;
-  const diff = Math.ceil((new Date(endAt).getTime() - Date.now()) / 86_400_000);
-  if (diff <= 0) return "마감";
-  return `D-${diff}`;
-}
 
 export function GroupChallengesList({ challenges }: GroupChallengesListProps) {
   if (challenges.length === 0) return null;
@@ -34,8 +30,9 @@ export function GroupChallengesList({ challenges }: GroupChallengesListProps) {
       <h2 className="t-caption">챌린지 ({challenges.length}개)</h2>
       <ul className="flex flex-col gap-2">
         {challenges.map((c) => {
-          const label = STATUS_LABEL[c.status];
-          const dDay = c.status === "active" ? daysLeftLabel(c.endAt) : null;
+          const phase = challengePhase(c.status, c.endAt);
+          const label = PHASE_LABEL[phase];
+          const dDay = phase === "running" ? `D-${remainingDays(c.endAt)}` : null;
           return (
             <li key={c.id}>
               <Link

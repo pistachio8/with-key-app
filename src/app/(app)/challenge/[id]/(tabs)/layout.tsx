@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { challengePhase, isChallengeOver, remainingDays } from "@/lib/challenge/lifecycle";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { ChallengeEndedBanner } from "../_components/challenge-ended-banner";
@@ -12,11 +13,6 @@ import { StatusCard } from "../_components/status-card";
 import { TabNav } from "../_components/tab-nav";
 
 type Params = Promise<{ id: string }>;
-
-function computeDaysLeft(endAtIso: string | null): number | null {
-  if (!endAtIso) return null;
-  return Math.max(0, Math.ceil((new Date(endAtIso).getTime() - Date.now()) / 86_400_000));
-}
 
 // Next.js 16 cacheComponents: 셸은 sync — children 만 통과해 static prerender 가능.
 // dynamic params/auth/fetch 는 LayoutHeader async 자식으로 격리되어 Suspense 안에서 평가.
@@ -60,15 +56,15 @@ async function LayoutHeader({ params }: { params: Params }) {
   const isParticipant = me != null;
   const mySigned = me?.signed ?? false;
   const isOwner = detail.group.ownerId === user.id;
-  const isEndedByDate =
-    detail.status === "active" && detail.endAt != null && new Date(detail.endAt) < new Date();
-  const showEndedBanner = detail.status === "closed" || isEndedByDate;
+  // ADR-0027 — 종료 판정·D-N 은 phase(status + end_at) 로 일원화. over 면 배너 + StatusCard "종료".
+  const phase = challengePhase(detail.status, detail.endAt);
+  const showEndedBanner = isChallengeOver(detail.status, detail.endAt);
 
   const ownerName =
     detail.members.find((m) => m.id === detail.group.ownerId)?.displayName ?? "운영자";
   const totalSigned = detail.members.filter((m) => m.signed).length;
   const unsignedCount = detail.members.length - totalSigned;
-  const daysLeft = computeDaysLeft(detail.endAt);
+  const daysLeft = detail.endAt ? remainingDays(detail.endAt) : null;
 
   return (
     <>
@@ -82,7 +78,7 @@ async function LayoutHeader({ params }: { params: Params }) {
       <JoinedLateCard />
       <StatusCard
         title={detail.title}
-        status={detail.status}
+        phase={phase}
         goalCount={detail.goalCount}
         durationDays={detail.durationDays}
         penaltyAmount={detail.penaltyAmount}

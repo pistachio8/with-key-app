@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { challengePhase, remainingDays } from "@/lib/challenge/lifecycle";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";
@@ -7,11 +8,6 @@ import { DashboardTab } from "../../_components/dashboard-tab";
 import DashboardLoading from "./loading";
 
 type Params = Promise<{ id: string }>;
-
-function computeDaysLeft(endAtIso: string | null): number | null {
-  if (!endAtIso) return null;
-  return Math.max(0, Math.ceil((new Date(endAtIso).getTime() - Date.now()) / 86_400_000));
-}
 
 // Next.js 16 cacheComponents: 셸은 sync, dynamic await 는 DashboardSection 자식에서.
 export default function ChallengeDashboardPage({ params }: { params: Params }) {
@@ -33,7 +29,9 @@ async function DashboardSection({ params }: { params: Params }) {
   const feed = await fetchChallengeFeed(id, user.id);
   const totalFailures = 0; // PRD §35 결정 전 placeholder — 기존 page.tsx 와 동일.
   const totalPenalty = totalFailures * detail.penaltyAmount;
-  const daysLeft = computeDaysLeft(detail.endAt);
+  // ADR-0027 — phase 로 일원화. running 만 "남은 N일", over/closed 는 "종료".
+  const phase = challengePhase(detail.status, detail.endAt);
+  const daysLeft = detail.endAt ? remainingDays(detail.endAt) : null;
 
   return (
     <>
@@ -42,7 +40,7 @@ async function DashboardSection({ params }: { params: Params }) {
         totalActions={feed.length}
         totalFailures={totalFailures}
         daysRemaining={daysLeft}
-        status={detail.status}
+        phase={phase}
         members={detail.members}
         goalCount={detail.goalCount}
       />

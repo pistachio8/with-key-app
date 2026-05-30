@@ -5,16 +5,15 @@
 
 import { useLinkStatus } from "next/link";
 import { Loader2 } from "lucide-react";
-
-type Status = "pending" | "accepted" | "active" | "closed";
+import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 
 interface Props {
   daysLeft: number;
   joinedLate: boolean;
-  status: Status;
+  phase: ChallengePhase;
 }
 
-export function RowPendingIndicator({ daysLeft, joinedLate, status }: Props) {
+export function RowPendingIndicator({ daysLeft, joinedLate, phase }: Props) {
   const { pending } = useLinkStatus();
   if (pending) {
     return (
@@ -28,7 +27,7 @@ export function RowPendingIndicator({ daysLeft, joinedLate, status }: Props) {
   }
   return (
     <span className="t-caption shrink-0 tabular-nums">
-      {joinedLate ? "다음부터" : status === "active" ? `D-${daysLeft}` : "대기"}
+      {joinedLate ? "다음부터" : phase === "running" ? `D-${daysLeft}` : "대기"}
     </span>
   );
 }

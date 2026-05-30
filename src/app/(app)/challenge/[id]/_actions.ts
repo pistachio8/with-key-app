@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { kudosInputSchema, type KudosInput } from "@/lib/validators/kudos";
+import { isChallengeOver, type ChallengeStatus } from "@/lib/challenge/lifecycle";
 import { decryptAccountNumber } from "@/lib/crypto/account-cipher";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
@@ -37,11 +38,9 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
       ? logForGuard.challenges[0]
       : logForGuard.challenges;
     if (!ch) return failure("not_found");
+    // ADR-0027 — 종료 판정 canonical 헬퍼. closed 또는 만기(active + end_at <= now) → 차단.
     const endAt = ch.end_at as string | null;
-    const isEnded =
-      ch.status === "closed" ||
-      (ch.status === "active" && endAt != null && new Date(endAt) < new Date());
-    if (isEnded) return failure("forbidden");
+    if (isChallengeOver(ch.status as ChallengeStatus, endAt)) return failure("forbidden");
 
     const { data: existing } = await supabase
       .from("kudos")

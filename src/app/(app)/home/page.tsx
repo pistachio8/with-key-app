@@ -16,6 +16,7 @@ import {
 } from "./_components/invited-challenge-banner";
 import { StatsGrid } from "./_components/stats-grid";
 import { RunningChallengeList } from "./_components/running-challenge-list";
+import { SettlementPendingList } from "./_components/settlement-pending-list";
 import { PwaGate } from "./_components/pwa-gate";
 
 // Phase 5-1: cached read 를 Suspense 안에서 호출하기 위해 page 셸 분리.
@@ -47,9 +48,10 @@ async function HomeSection() {
     fetchMyDisplayName(user.id),
   ]);
 
+  // ADR-0027 — stats("진행 N개"·"예정 벌금")는 running 만. over(만기)는 정산 대상이라 제외.
   const activeChallenges = groups
     .map((g) => g.challenge)
-    .filter((c): c is NonNullable<typeof c> => c?.status === "active" && c.userIsParticipant);
+    .filter((c): c is NonNullable<typeof c> => c?.phase === "running" && c.userIsParticipant);
   const pendingChallenges = groups
     .map((g) => ({ groupName: g.groupName, challenge: g.challenge }))
     .filter(
@@ -115,6 +117,7 @@ async function HomeSection() {
           <InvitedChallengeBanner invites={invites} />
           <StatsGrid {...stats} />
           <RunningChallengeList groups={groups} />
+          <SettlementPendingList groups={groups} />
         </>
       ) : (
         <EmptyState

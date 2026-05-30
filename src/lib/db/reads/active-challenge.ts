@@ -1,8 +1,10 @@
 import { countDoneDaysByUser } from "@/lib/challenge/done-days";
+import { remainingDays, type ChallengeStatus } from "@/lib/challenge/lifecycle";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "./current-challenges";
 
-export type ChallengeStatus = "pending" | "accepted" | "active" | "closed";
+// ChallengeStatus 의 SoT 는 @/lib/challenge/lifecycle. 기존 import 경로 호환을 위해 re-export.
+export type { ChallengeStatus };
 
 export type ActiveChallengeView = {
   id: string;
@@ -47,10 +49,13 @@ export async function fetchActiveChallenge(
   const usingDefaults = options.statuses === undefined;
   if (usingDefaults) {
     const groups = await fetchCurrentChallenges(userId);
-    const firstWithChallenge = groups.find(
-      (g) =>
-        g.challenge !== null && (g.challenge.status !== "active" || g.challenge.userIsParticipant),
-    );
+    // ADR-0027 — over(만기 active)·closed 는 현재 챌린지에서 제외. running 은 참가자만.
+    const firstWithChallenge = groups.find((g) => {
+      const c = g.challenge;
+      if (!c) return false;
+      if (c.phase === "running") return c.userIsParticipant;
+      return c.phase === "pending" || c.phase === "accepted";
+    });
     if (!firstWithChallenge || !firstWithChallenge.challenge) return null;
     const c = firstWithChallenge.challenge;
     return {
@@ -73,8 +78,9 @@ export async function fetchActiveChallenge(
   const requestedStatuses = options.statuses;
   if (requestedStatuses?.length === 1 && requestedStatuses[0] === "active") {
     const groups = await fetchCurrentChallenges(userId);
+    // ADR-0027 — /action·/feed redirect 대상은 running 만(over 로 redirect 시 차단된 인증 화면).
     const firstActiveParticipantChallenge = groups.find(
-      (g) => g.challenge?.status === "active" && g.challenge.userIsParticipant,
+      (g) => g.challenge?.phase === "running" && g.challenge.userIsParticipant,
     );
     if (!firstActiveParticipantChallenge?.challenge) return null;
     const c = firstActiveParticipantChallenge.challenge;
@@ -123,9 +129,7 @@ export async function fetchActiveChallenge(
     .select("user_id", { count: "exact", head: true })
     .eq("challenge_id", c.id);
 
-  const daysLeft = c.end_at
-    ? Math.max(0, Math.ceil((new Date(c.end_at).getTime() - Date.now()) / 86_400_000))
-    : c.duration_days;
+  const daysLeft = c.end_at ? remainingDays(c.end_at) : c.duration_days;
 
   return {
     id: c.id,
