@@ -28,6 +28,7 @@ describe("SettlementReceipt", () => {
         bankCode="004"
         accountHolder="김민지"
         accountNumberLast4="1234"
+        groupId={null}
       />,
     );
     expect(screen.getByText(/우리 그룹/)).toBeTruthy();
@@ -54,6 +55,7 @@ describe("SettlementReceipt", () => {
         bankCode="004"
         accountHolder="김민지"
         accountNumberLast4="1234"
+        groupId={null}
       />,
     );
     expect(screen.getByText("0원")).toBeTruthy();
@@ -78,6 +80,7 @@ describe("SettlementReceipt", () => {
         bankCode="004"
         accountHolder="김민지"
         accountNumberLast4="1234"
+        groupId={null}
       />,
     );
     expect(screen.queryByText("CREW")).toBeNull();
@@ -97,6 +100,7 @@ describe("SettlementReceipt", () => {
         bankCode={null}
         accountHolder={null}
         accountNumberLast4={null}
+        groupId={null}
       />,
     );
     expect(screen.queryByText("ACCOUNT")).toBeNull();
@@ -117,6 +121,7 @@ describe("SettlementReceipt", () => {
         bankCode={null}
         accountHolder={null}
         accountNumberLast4={null}
+        groupId={null}
       />,
     );
     expect(screen.getByText("4,000원")).toBeTruthy();

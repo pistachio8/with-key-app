@@ -114,6 +114,7 @@ export default async function RecapPage({ params }: { params: Params }) {
         bankCode={recap.group?.bankCode ?? null}
         accountHolder={recap.group?.accountHolder ?? null}
         accountNumberLast4={recap.group?.accountNumberLast4 ?? null}
+        groupId={recap.group?.id ?? null}
       />
 
       <PhotoGallery photos={photos} />
