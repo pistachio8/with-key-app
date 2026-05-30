@@ -23,6 +23,8 @@ vi.mock("next/og", () => ({
 const { GET } = await import("./route");
 const { createClient } = await import("@/lib/supabase/server");
 const { fetchRecap } = await import("@/lib/db/reads/recap");
+const { fetchChallengePhotos } = await import("@/lib/db/reads/challenge-photos");
+const { duotoneDataUrl } = await import("@/lib/share/hero-image");
 
 function authed() {
   (createClient as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -92,5 +94,47 @@ describe("GET /api/og/recap-card", () => {
     const res = await GET(buildReq("challengeId=c1&template=ticket"));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/image\/png/);
+  });
+
+  it("template=ticket → 내 사진(u1) 중 seed로 골라 duotone 적용", async () => {
+    authed();
+    (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(RECAP);
+    (fetchChallengePhotos as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        id: "p1",
+        signedUrl: "https://s/p1.jpg",
+        takenAt: "t",
+        ownerDisplayName: "나",
+        ownerId: "u1",
+      },
+      {
+        id: "p2",
+        signedUrl: "https://s/p2.jpg",
+        takenAt: "t",
+        ownerDisplayName: "남",
+        ownerId: "u2",
+      },
+    ]);
+    const res = await GET(buildReq("challengeId=c1&template=ticket&seed=1"));
+    expect(res.status).toBe(200);
+    // 내 사진(u1=p1)만 후보 → 단일 후보라 seed 무관하게 p1 선택 → duotone 호출.
+    expect(duotoneDataUrl).toHaveBeenCalledWith("https://s/p1.jpg");
+  });
+
+  it("내 사진 0장이면 전체 사진에서 고른다(fallback)", async () => {
+    authed();
+    (fetchRecap as ReturnType<typeof vi.fn>).mockResolvedValue(RECAP);
+    (fetchChallengePhotos as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        id: "p2",
+        signedUrl: "https://s/p2.jpg",
+        takenAt: "t",
+        ownerDisplayName: "남",
+        ownerId: "u2",
+      },
+    ]);
+    const res = await GET(buildReq("challengeId=c1&template=ticket&seed=3"));
+    expect(res.status).toBe(200);
+    expect(duotoneDataUrl).toHaveBeenCalledWith("https://s/p2.jpg");
   });
 });

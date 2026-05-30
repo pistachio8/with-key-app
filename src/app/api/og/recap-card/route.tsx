@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { duotoneDataUrl } from "@/lib/share/hero-image";
+import { pickOne } from "@/lib/share/seeded-pick";
 import { loadCardFonts } from "@/lib/share/og-fonts";
 import { formatSharePeriod } from "@/lib/share/period";
 import { renderPhotoCard, renderTicketCard, type CardData } from "./templates";
@@ -24,9 +25,16 @@ export async function GET(req: Request): Promise<Response> {
   const recap = await fetchRecap(user.id, { challengeId });
   if (!recap) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  const seed = Number(url.searchParams.get("seed")) || 0;
   const photos = await fetchChallengePhotos(challengeId, { client: supabase });
-  const latest = photos.length > 0 ? photos[photos.length - 1].signedUrl : null;
-  const heroUrl = latest ? (template === "ticket" ? await duotoneDataUrl(latest) : latest) : null;
+  // 내 사진 우선 → 없으면 전체 → 없으면 null (D-E)
+  const mine = photos.filter((p) => p.ownerId === user.id);
+  const picked = pickOne(mine.length > 0 ? mine : photos, seed);
+  const heroUrl = picked
+    ? template === "ticket"
+      ? await duotoneDataUrl(picked.signedUrl)
+      : picked.signedUrl
+    : null;
   const allAchieved = recap.members.length > 0 && recap.members.every((m) => m.achieved);
 
   const data: CardData = {
