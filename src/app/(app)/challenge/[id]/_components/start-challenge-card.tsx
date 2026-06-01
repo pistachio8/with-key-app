@@ -52,7 +52,9 @@ export function StartChallengeCard({ challengeId, signedCount, unsignedCount }: 
           <Play className="size-4 fill-current" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="t-h3">시작할 준비가 됐어요</h3>
+          <h3 className="t-h3">
+            {unsignedCount === 0 ? "전원 서명 완료 🎉" : "시작할 준비가 됐어요"}
+          </h3>
           <p className="text-muted-foreground mt-1 break-keep text-xs">
             서명한 {signedCount}명으로 지금 시작할 수 있어요.
             {unsignedCount > 0
