@@ -8,6 +8,8 @@ import { getAuthedUser } from "@/lib/supabase/auth";
 import { fetchInvitePreview } from "@/lib/db/reads/invite";
 import { detectInAppBrowser } from "@/lib/auth/in-app-browser";
 import { ShareCard } from "@/components/ui/share-card";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AcceptForm } from "./_components/accept-form";
 
 type Params = Promise<{ token: string }>;
@@ -113,8 +115,12 @@ async function InviteSection({ params }: { params: Params }) {
       <InviteShell>
         <h1 className="text-xl font-semibold">그룹이 가득 찼어요</h1>
         <p className="text-muted-foreground break-keep text-sm">
-          이 그룹은 이미 4명이 참여 중이에요 (최대 인원).
+          이 그룹은 이미 4명이 참여 중이에요 (최대 인원). 이미 이 그룹 멤버라면 from.with 홈에서 새
+          서약서를 확인하고 서명할 수 있어요.
         </p>
+        <Link href="/home" className={cn(buttonVariants({ size: "lg" }), "h-11 w-full")}>
+          홈으로 가기
+        </Link>
       </InviteShell>
     );
   }
