@@ -11,10 +11,9 @@ interface InfoTabProps {
   ownerName: string;
   inviteSlot?: React.ReactNode;
   accountSlot?: React.ReactNode;
-  startSlot?: React.ReactNode;
 }
 
-export function InfoTab({ detail, ownerName, inviteSlot, accountSlot, startSlot }: InfoTabProps) {
+export function InfoTab({ detail, ownerName, inviteSlot, accountSlot }: InfoTabProps) {
   return (
     <div className="flex flex-col gap-3">
       <PledgePreviewCard
@@ -34,7 +33,6 @@ export function InfoTab({ detail, ownerName, inviteSlot, accountSlot, startSlot 
         <InfoRow label="참여 인원" value={`${detail.participantCount}명`} />
         <InfoRow label="모인 예정 벌금" value={formatKRW(detail.potTotal)} />
       </Card>
-      {startSlot}
       {inviteSlot}
       {accountSlot}
     </div>
