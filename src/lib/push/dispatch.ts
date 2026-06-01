@@ -394,3 +394,31 @@ export async function dispatchOwnerStartNudge(
 
   return { recipientCount: targets.length, quietHours };
 }
+
+// 새 서약서(pending 챌린지) 생성 시 기존 그룹 멤버(오너 제외)에게 서명 유도 push.
+// create_challenge 가 그룹 멤버 전원을 미서명 참가자로 시드하므로 참가자 fan-out
+// 헬퍼 dispatch() 를 그대로 재사용한다(오너는 excludeUserId 로 제외 — 본인이 생성).
+// 생성은 1회성이라 dedup 컬럼 불필요 — createChallenge 성공 후 after() 로 1회 발사.
+// 옵트인은 기존 "start" 키, 분석 type 도 "start"(notification_sent union 불변).
+// 미옵트인/실패 시 인앱 InvitedChallengeBanner 가 fallback.
+export async function dispatchNewChallengeCreatedNotification(
+  challengeId: string,
+  ownerUserId: string,
+  challengeTitle: string,
+): Promise<DispatchSummary> {
+  const targetUrl = `/challenge/${challengeId}/pledge`;
+  return dispatch(
+    challengeId,
+    "start",
+    {
+      title: "새 서약서가 도착했어요",
+      body: `${challengeTitle} · 탭해서 서명하기`,
+      url: targetUrl,
+      type: "start",
+      category: "reminder",
+      targetUrl,
+      challengeId,
+    },
+    { excludeUserId: ownerUserId },
+  );
+}

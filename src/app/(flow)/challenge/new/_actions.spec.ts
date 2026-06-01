@@ -56,6 +56,13 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
+// after(cb) 는 request 컨텍스트 의존 — 테스트에서 콜백 즉시 실행.
+vi.mock("next/server", () => ({ after: (cb: () => unknown) => cb() }));
+const newChallengePush = vi.fn();
+vi.mock("@/lib/push/dispatch", () => ({
+  dispatchNewChallengeCreatedNotification: (...args: unknown[]) => newChallengePush(...args),
+}));
+
 import { createChallenge } from "./_actions";
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111111";
@@ -99,6 +106,8 @@ beforeEach(() => {
   readOwnerGroupsForChallengeForm.mockReset();
   redirectMock.mockClear();
   trackCalls.length = 0;
+  newChallengePush.mockReset();
+  newChallengePush.mockResolvedValue({ recipientCount: 1, quietHours: false });
 });
 
 describe("createChallenge", () => {
@@ -146,6 +155,20 @@ describe("createChallenge", () => {
     expect(created?.event.props.challengeId).toBe(CHALLENGE_ID);
     const inviteSent = trackCalls.find((c) => c.event.name === "invite_sent");
     expect(inviteSent).toBeTruthy();
+  });
+
+  it("생성 성공 시 기존 멤버에게 서명 유도 push 를 after() 로 발사", async () => {
+    authedUser();
+    rpc.mockResolvedValueOnce({
+      data: [{ id: CHALLENGE_ID, participant_count: 2 }],
+      error: null,
+    });
+    inviteInsert.mockResolvedValueOnce({ error: null });
+
+    await expect(createChallenge(validInput)).rejects.toThrow(/NEXT_REDIRECT/);
+
+    expect(newChallengePush).toHaveBeenCalledTimes(1);
+    expect(newChallengePush).toHaveBeenCalledWith(CHALLENGE_ID, USER_ID, validInput.title);
   });
 
   it("ownerSignatureDataUrl 있음 → sign_and_maybe_activate 호출 + done segment redirect", async () => {
