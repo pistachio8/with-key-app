@@ -6,6 +6,8 @@ import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
+import { after } from "next/server";
+import { dispatchOwnerStartNudge } from "@/lib/push/dispatch";
 
 const signInputSchema = z.object({ challengeId: z.string().uuid() });
 type SignInput = z.infer<typeof signInputSchema>;
@@ -41,6 +43,17 @@ export const signPledge = withUser<SignInput, SignResult>(
       },
       { userId: user.id },
     );
+
+    // ADR-0028 — 전원 서명 완료 + 마지막 서명자가 멤버면 오너에게 시작 nudge.
+    // RPC 가 atomic 하게 1회만 should_nudge_owner=true 로 판정(start_nudge_sent_at).
+    if (row.should_nudge_owner && row.owner_user_id) {
+      const ownerId = row.owner_user_id as string;
+      after(() =>
+        dispatchOwnerStartNudge(parsed.data.challengeId, ownerId).catch((e) =>
+          console.error("[signPledge] owner start nudge dispatch failed", e),
+        ),
+      );
+    }
 
     return success({
       challengeId: parsed.data.challengeId,
