@@ -332,3 +332,65 @@ export async function dispatchKudosReceivedNotification(args: {
 
   return { recipientCount: targets.length, quietHours };
 }
+
+// ADR-0028 — 전원 서명 완료(마지막 서명자가 멤버) 시 오너 1명에게 시작 nudge.
+// dedup 은 challenges.start_nudge_sent_at(sign RPC atomic)이 보장 — 여기선 보내기만 한다.
+// 옵트인은 기존 "start" prefs 키 재사용, 분석 type 도 "start"(notification_sent union 불변).
+// 푸시 실패/미구독 시 인앱 StartChallengeCard 가 fallback 이므로 kudos 식 보상 로직은 두지 않는다.
+export async function dispatchOwnerStartNudge(
+  challengeId: string,
+  ownerUserId: string,
+): Promise<DispatchSummary> {
+  const quietHours = isQuietHoursKST();
+  const admin = adminClient();
+
+  const { data: owner } = await admin
+    .from("users")
+    .select("notification_prefs")
+    .eq("id", ownerUserId)
+    .maybeSingle();
+  const prefs = notificationPrefsSchema.safeParse(owner?.notification_prefs);
+  if (!prefs.success || !prefs.data.start) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("user_id, endpoint, p256dh, auth")
+    .eq("user_id", ownerUserId);
+  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
+    userId: s.user_id as string,
+    endpoint: s.endpoint as string,
+    p256dh: s.p256dh as string,
+    auth: s.auth as string,
+  }));
+  if (targets.length === 0) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  const targetUrl = `/challenge/${challengeId}`;
+  const payload: PushPayload = {
+    title: "전원 서명 완료 🎉",
+    body: "이제 챌린지를 시작할 수 있어요",
+    url: targetUrl,
+    type: "start",
+    category: "reminder",
+    targetUrl,
+    challengeId,
+  };
+
+  await Promise.allSettled(
+    targets.map(async (target) => {
+      const outcome: Outcome = quietHours ? "suppressed" : await safeSend(target, payload);
+      void track(
+        {
+          name: "notification_sent",
+          props: { type: "start", challengeId, suppressed: quietHours, outcome },
+        },
+        { userId: target.userId },
+      );
+    }),
+  );
+
+  return { recipientCount: targets.length, quietHours };
+}
