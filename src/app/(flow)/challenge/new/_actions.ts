@@ -12,6 +12,8 @@ import { createClient } from "@/lib/supabase/server";
 import { readOwnerGroupsForChallengeForm } from "@/lib/db/reads/owner-groups-for-challenge-form";
 import { defaultGroupBaseName } from "@/lib/groups/default-name";
 import { generateInviteToken } from "@/lib/invite/token";
+import { after } from "next/server";
+import { dispatchNewChallengeCreatedNotification } from "@/lib/push/dispatch";
 
 // ADR-0012: groupId 없으면 owner 그룹 수로 persistent crew 매칭.
 // plan §PR5: createChallenge 가 그룹/챌린지/운영자 자가 서명/invite 토큰 까지 처리.
@@ -140,6 +142,14 @@ export const createChallenge = withUser<CreateChallengeInput, never>(
     revalidatePath("/pledge");
     revalidatePath(`/group/${groupId}`);
     revalidatePath(`/challenge/${challengeId}`, "layout");
+
+    // 새 서약서 생성 → 기존 그룹 멤버(오너 제외)에게 서명 유도 push.
+    // 생성 1회성이라 dedup 불필요 · 미옵트인/실패 시 인앱 InvitedChallengeBanner 가 fallback.
+    after(() =>
+      dispatchNewChallengeCreatedNotification(challengeId, user.id, challengeFields.title).catch(
+        (e) => console.error("[createChallenge] new challenge sign push failed", e),
+      ),
+    );
 
     redirect(
       `/challenge/new/done/${challengeId}?token=${encodeURIComponent(token)}`,
