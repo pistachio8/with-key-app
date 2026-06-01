@@ -3,12 +3,15 @@
 import { Stamp } from "@/components/ui/stamp";
 import { goalCountLabel } from "@/lib/challenge/frequency";
 import { penaltyLabel } from "@/lib/challenge/penalty";
+import { formatPledgeDateRange } from "@/lib/challenge/pledge-date-range";
 
 interface PledgePreviewCardProps {
   title: string;
   durationDays: number;
   goalCount: number;
   penaltyAmount: number;
+  startAt?: string | null;
+  endAt?: string | null;
   ownerName?: string;
   bodyText?: string;
 }
@@ -21,10 +24,17 @@ export function PledgePreviewCard({
   durationDays,
   goalCount,
   penaltyAmount,
+  startAt,
+  endAt,
   ownerName,
   bodyText,
 }: PledgePreviewCardProps) {
-  const dateRangeText = formatDateRange(durationDays);
+  const { text: dateRangeText, isEstimate } = formatPledgeDateRange({
+    durationDays,
+    startAt: startAt ?? null,
+    endAt: endAt ?? null,
+  });
+  const dateLabel = isEstimate ? `예정 ${dateRangeText}` : dateRangeText;
   return (
     <div className="bg-primary text-primary-foreground relative rounded-[14px] p-5">
       <Stamp variant="wordmark" tone="onPrimary" className="absolute right-3 top-3 size-14" />
@@ -34,7 +44,7 @@ export function PledgePreviewCard({
         {bodyText ?? DEFAULT_BODY(durationDays)}
       </p>
       <dl className="mt-4 flex flex-col gap-1.5 text-[12px]">
-        <PledgeRow label="기간" value={`${durationDays}일 · ${dateRangeText}`} />
+        <PledgeRow label="기간" value={`${durationDays}일 · ${dateLabel}`} />
         <PledgeRow label="인증 빈도" value={goalCountLabel(goalCount).detail} />
         <PledgeRow label="벌금" value={penaltyLabel(penaltyAmount)} />
         {ownerName && <PledgeRow label="작성자" value={ownerName} />}
@@ -50,12 +60,4 @@ function PledgeRow({ label, value }: { label: string; value: string }) {
       <dd className="font-semibold tabular-nums">{value}</dd>
     </div>
   );
-}
-
-function formatDateRange(durationDays: number): string {
-  const start = new Date();
-  const end = new Date();
-  end.setDate(start.getDate() + durationDays);
-  const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-  return `${fmt(start)} ~ ${fmt(end)}`;
 }

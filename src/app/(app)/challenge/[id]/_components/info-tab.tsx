@@ -22,6 +22,8 @@ export function InfoTab({ detail, ownerName, inviteSlot, accountSlot, startSlot 
         durationDays={detail.durationDays}
         goalCount={detail.goalCount}
         penaltyAmount={detail.penaltyAmount}
+        startAt={detail.startAt}
+        endAt={detail.endAt}
         ownerName={ownerName}
       />
       <Card padding="md" className="flex flex-col gap-2">
