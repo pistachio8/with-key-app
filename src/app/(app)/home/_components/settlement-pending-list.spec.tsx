@@ -25,6 +25,7 @@ function makeGroup(
       doneCount: 5,
       daysLeft: 0,
       potTotal: 3000,
+      myConfirmedPenalty: 1000,
       participantCount: 4,
       userIsParticipant: true,
       verifiedToday: false,
