@@ -1,12 +1,18 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { toKstDayKey } from "@/lib/challenge/done-days";
+import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
 import {
   challengePhase,
   remainingDays,
   type ChallengePhase,
   type ChallengeStatus,
 } from "@/lib/challenge/lifecycle";
-import { computeAccruedPot } from "@/lib/challenge/settlement";
+import {
+  weekBucketsFromDayKeys,
+  computeAccruedPot,
+  confirmedPenalty,
+  type CutoffContext,
+  type CutoffPhase,
+} from "@/lib/challenge/weekly";
 import { createClient } from "@/lib/supabase/server";
 
 export type GroupChallengeView = {
@@ -32,6 +38,8 @@ export type GroupChallengeView = {
     doneCount: number;
     daysLeft: number;
     potTotal: number;
+    // 내 확정 벌금(끝난 주 미달 합·단조). 홈 "내 벌금" stat 용. (spec C0·C3)
+    myConfirmedPenalty: number;
     // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
     participantCount: number;
     // 그룹 멤버이지만 이미 시작된 챌린지 코호트에는 없을 수 있다.
@@ -65,6 +73,7 @@ type ChallengeRow = {
   status: ChallengeStatus;
   start_at: string | null;
   end_at: string | null;
+  closed_at: string | null;
   created_at: string;
 };
 
@@ -98,7 +107,7 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
   const { data: challenges } = await supabase
     .from("challenges")
     .select(
-      "id, group_id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, created_at",
+      "id, group_id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at, created_at",
     )
     .in("group_id", groupIds)
     .in("status", [...DEFAULT_CURRENT_STATUSES])
@@ -179,6 +188,37 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
     const participantIds = participantIdsByChallenge.get(c.id) ?? [];
     const daysByUser = dayKeysByChallengeUser.get(c.id);
     const myDayKeys = daysByUser?.get(userId);
+
+    // 주 단위 누적 — 끝난 주만 합산(spec C3·C4). 시작된 챌린지만.
+    // 주의: 이 read 는 cacheLife("minutes") 다. now baking 의 stale 은 주 경계 자정 직후
+    // 최대 1분(주 단위 변화)이라 무해. 장기(hours/days) cache 로 올리지 말 것.
+    const startKey = c.start_at ? toKstDayKey(c.start_at) : null;
+    const settleable = phase === "running" || phase === "over" || phase === "closed";
+    let potTotal = 0;
+    let myConfirmedPenalty = 0;
+    if (settleable && startKey) {
+      const ctx: CutoffContext = {
+        phase: phase as CutoffPhase,
+        durationDays: c.duration_days,
+        todayDayIndex: dayIndexOf(todayKstKey, startKey),
+        closedAt: c.closed_at ?? null,
+        startKey,
+      };
+      const params = { goalCount: c.goal_count, penaltyAmount: c.penalty_amount };
+      potTotal = computeAccruedPot(
+        participantIds.map((uid) => ({
+          doneByWeek: weekBucketsFromDayKeys(daysByUser?.get(uid) ?? [], startKey, c.duration_days),
+        })),
+        ctx,
+        params,
+      );
+      myConfirmedPenalty = confirmedPenalty(
+        weekBucketsFromDayKeys(myDayKeys ?? [], startKey, c.duration_days),
+        ctx,
+        params,
+      );
+    }
+
     return {
       groupId: g.id,
       groupName: g.name,
@@ -197,14 +237,8 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
         endAt: c.end_at,
         doneCount: myDayKeys?.size ?? 0,
         daysLeft,
-        // 그 챌린지의 총 누적금 — 정보탭과 동일(computeAccruedPot). 미달자 기준 실제
-        // 정산액 합계이며 "인원수 × 벌금"(최대값)이 아니다. 미시작(pending/accepted)은 0.
-        potTotal: computeAccruedPot({
-          status: c.status,
-          goalCount: c.goal_count,
-          penaltyAmount: c.penalty_amount,
-          members: participantIds.map((uid) => ({ doneCount: daysByUser?.get(uid)?.size ?? 0 })),
-        }),
+        potTotal,
+        myConfirmedPenalty,
         participantCount: participantIds.length,
         userIsParticipant: myParticipantChallengeIds.has(c.id),
         verifiedToday: myDayKeys?.has(todayKstKey) ?? false,

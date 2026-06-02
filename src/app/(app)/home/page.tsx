@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
-import { computePerHeadPenalty } from "@/lib/challenge/settlement";
 import { fetchMyDisplayName, hasEverCreatedChallenge } from "@/lib/db/reads/me";
 import { HomeGreeting } from "./_components/home-greeting";
 import {
@@ -82,18 +81,9 @@ async function HomeSection() {
     activeCount: activeChallenges.length,
     completedToday: activeChallenges.filter((c) => c.verifiedToday).length,
     pendingToday: activeChallenges.filter((c) => !c.verifiedToday).length,
-    // 홈 stat = "내 예정 벌금" — 주간 goal 미달성 시 내가 낼 노출액(그룹 pot 아님).
-    // recap 과 동일한 computePerHeadPenalty 로 산정해 홈↔정산 일관성 유지.
-    totalPenalty: activeChallenges.reduce(
-      (sum, c) =>
-        sum +
-        computePerHeadPenalty({
-          doneCount: c.doneCount,
-          goalCount: c.goalCount,
-          penaltyAmount: c.penaltyAmount,
-        }),
-      0,
-    ),
+    // 홈 stat = "내 벌금" — 끝난 주 미달 합(확정·단조). current-challenges 가 주 단위로 산정.
+    // 인증해도 즉시 0으로 안 떨어진다(현재 주 위험은 현황판 링이 담당 — spec C0).
+    totalPenalty: activeChallenges.reduce((sum, c) => sum + c.myConfirmedPenalty, 0),
   };
 
   // 모킹업 §2-A — 빈 상태 분기 기준은 "그룹 존재"가 아니라 "진행/대기 챌린지 존재".

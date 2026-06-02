@@ -1,6 +1,12 @@
 import { cache } from "react";
-import { countDoneDaysByUser } from "@/lib/challenge/done-days";
-import { computeAccruedPot } from "@/lib/challenge/settlement";
+import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
+import { challengePhase } from "@/lib/challenge/lifecycle";
+import {
+  countDoneDaysByUserByWeek,
+  computeAccruedPot,
+  type CutoffContext,
+  type CutoffPhase,
+} from "@/lib/challenge/weekly";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChallengeMemberView = {
@@ -8,6 +14,8 @@ export type ChallengeMemberView = {
   displayName: string;
   doneCount: number;
   signed: boolean;
+  // 주차별 done (week → distinct day count). dashboard H3 viewer 칩·링 계산용 (서버 전용).
+  doneByWeek: ReadonlyMap<number, number>;
 };
 
 export type ChallengeGroupView = {
@@ -27,6 +35,8 @@ export type ChallengeDetailView = {
   status: "pending" | "accepted" | "active" | "closed";
   startAt: string | null;
   endAt: string | null;
+  // 조기 종료 cutoff 산정용 (ADR-0030). 미종료/레거시는 null.
+  closedAt: string | null;
   members: ChallengeMemberView[];
   potTotal: number;
   group: ChallengeGroupView;
@@ -43,7 +53,7 @@ export const fetchChallengeDetail = cache(
     const { data: c, error } = await supabase
       .from("challenges")
       .select(
-        "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
+        "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at, group_id, groups!inner(id, owner_id, bank_code, account_holder, account_number_last4)",
       )
       .eq("id", challengeId)
       .maybeSingle();
@@ -67,20 +77,47 @@ export const fetchChallengeDetail = cache(
       .from("action_logs")
       .select("user_id, created_at")
       .eq("challenge_id", challengeId);
-    // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
-    const counts = countDoneDaysByUser(logs ?? []);
+    const status = c.status as ChallengeDetailView["status"];
+    const startKey = c.start_at ? toKstDayKey(c.start_at) : null;
+    // 하루 N개 피드도 인증은 1회 → KST distinct day → 주차 버킷. startKey 없으면(미시작) 빈 집계.
+    const byUserByWeek = startKey
+      ? countDoneDaysByUserByWeek(logs ?? [], startKey, c.duration_days)
+      : new Map<string, Map<number, number>>();
 
     const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
       const u = Array.isArray(p.users) ? p.users[0] : p.users;
+      const doneByWeek = byUserByWeek.get(p.user_id) ?? new Map<number, number>();
+      // doneCount = 전체 distinct day (주차 합). 멤버 strip 표시용 — 기존 의미 유지.
+      let doneCount = 0;
+      for (const n of doneByWeek.values()) doneCount += n;
       return {
         id: p.user_id,
         displayName: u?.display_name ?? "익명",
-        doneCount: counts.get(p.user_id) ?? 0,
+        doneCount,
         signed: p.signed_at != null,
+        doneByWeek,
       };
     });
 
-    const status = c.status as ChallengeDetailView["status"];
+    // 시간 의존: render 시점 now 1회. React cache() 라 요청마다 새로 실행 → stale 없음.
+    const now = new Date();
+    const phase = challengePhase(status, c.end_at, now.getTime());
+    // 주차 인덱싱이 가능한(시작된) 챌린지만 confirmed 합산. pending/accepted(start_at null)은 0.
+    const settleable = phase === "running" || phase === "over" || phase === "closed";
+    const potTotal =
+      settleable && startKey
+        ? computeAccruedPot(
+            members.map((m) => ({ doneByWeek: m.doneByWeek })),
+            {
+              phase: phase as CutoffPhase,
+              durationDays: c.duration_days,
+              todayDayIndex: dayIndexOf(toKstDayKey(now), startKey),
+              closedAt: c.closed_at ?? null,
+              startKey,
+            } satisfies CutoffContext,
+            { goalCount: c.goal_count, penaltyAmount: c.penalty_amount },
+          )
+        : 0;
 
     return {
       id: c.id,
@@ -91,14 +128,10 @@ export const fetchChallengeDetail = cache(
       status,
       startAt: c.start_at,
       endAt: c.end_at,
+      closedAt: c.closed_at ?? null,
       members,
-      // 미달자 기준 실제 정산액 합계. 미시작(pending/accepted)은 0.
-      potTotal: computeAccruedPot({
-        status,
-        goalCount: c.goal_count,
-        penaltyAmount: c.penalty_amount,
-        members,
-      }),
+      // 끝난 주 기준 per-head 합(단조). 미시작은 0. (spec C4)
+      potTotal,
       participantCount: members.length,
       group: {
         id: groupRow?.id ?? c.group_id,

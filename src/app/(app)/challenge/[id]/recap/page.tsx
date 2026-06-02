@@ -57,8 +57,9 @@ export default async function RecapPage({ params }: { params: Params }) {
     recap.group?.accountNumberLast4
   );
   // 조기 종료 = status='closed' AND end_at 가 아직 미래.
-  // status='closed' 는 endChallenge action 만 작성 (auto-close 없음) → 운영자가 명시적으로 종료 누름.
-  // end_at 미래면 만기 도달 전 종료 = 조기. 만기 도달 후 종료면 그냥 정상 종료로 본다.
+  // status='closed' 는 endChallenge action(수동) 또는 auto-close cron(만기, end_at<=now) 이 작성.
+  // auto-close 는 end_at<=now 에서만 일어나므로, end_at 미래 + closed = 운영자 수동 조기 종료가 확실.
+  // 정산 금액 cutoff 는 challenges.closed_at(ADR-0030)을 recap.ts 가 이미 반영한다.
   const isEarlyEnded =
     recap.status === "closed" && recap.endAt != null && new Date(recap.endAt) > new Date();
   const isSolo = recap.members.length === 1;
@@ -106,6 +107,8 @@ export default async function RecapPage({ params }: { params: Params }) {
         startAt={recap.startAt}
         endAt={recap.endAt}
         goalCount={recap.goalCount}
+        elapsedWeeks={recap.viewerElapsedWeeks}
+        achievedWeeks={recap.viewerAchievedWeeks}
         viewerDoneCount={recap.viewerDoneCount}
         viewerAchieved={recap.viewerAchieved}
         viewerPerHeadPenalty={recap.viewerPerHeadPenalty}

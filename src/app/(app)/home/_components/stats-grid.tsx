@@ -1,5 +1,5 @@
-// 모킹업 §2-B `stats4` — 4 stats (진행중·오늘완료·미인증·예정벌금).
-// 컬러 시멘틱: primary(active) · success(완료) · warn(미인증) · gray(내 예정 벌금).
+// 모킹업 §2-B `stats4` — 4 stats (진행중·오늘완료·미인증·내 벌금).
+// 컬러 시멘틱: primary(active) · success(완료) · warn(미인증) · gray(내 벌금·확정 누적).
 // 4번째 셀(예정 벌금)은 금액이 길어질 수 있어(예: "12,000원") 카운트와 달리 작은 글씨(text-lg)
 // + whitespace-nowrap 로 렌더 — grid-cols-4 셀 폭(~83px@390px)을 넘겨 이웃 셀과 겹치는 overflow 방지.
 // min-w-0 은 긴 값이 트랙을 밀어내는 grid blowout 을 차단.
@@ -33,7 +33,7 @@ export function StatsGrid({ activeCount, completedToday, pendingToday, totalPena
       <StatCell tone="primary" value={String(activeCount)} label="진행 중" />
       <StatCell tone="success" value={String(completedToday)} label="오늘 완료" />
       <StatCell tone="warn" value={String(pendingToday)} label="미인증" />
-      <StatCell tone="muted" value={penalty.number} unit={penalty.unit} label="예정 벌금" />
+      <StatCell tone="muted" value={penalty.number} unit={penalty.unit} label="내 벌금" />
     </section>
   );
 }

@@ -61,9 +61,10 @@ export async function POST(req: Request): Promise<Response> {
   // 마감 push 스캔(미래 end_at)과 대상 창이 달라 충돌 없음. adminClient 가 RLS 를 우회한다.
   // 표시는 challengePhase 가 이미 정확하지만, 이 전이가 0029 슬롯을 풀고 status 를 truthful 하게 만든다.
   let closed = 0;
+  // ADR-0030 — 자연 종료(만기)도 closed_at 기록. closed_at >= end_at 이라 cutoff=duration 으로 수렴.
   const { data: closedRows, error: closeErr } = await admin
     .from("challenges")
-    .update({ status: "closed" })
+    .update({ status: "closed", closed_at: new Date(now).toISOString() })
     .eq("status", "active")
     .lte("end_at", new Date(now).toISOString())
     .select("id");

@@ -52,7 +52,7 @@ export function SettlementPendingList({ groups }: Props) {
                   <span aria-hidden="true" className="text-muted-foreground/60">
                     ·
                   </span>
-                  <span className="tabular-nums">누적 벌금 {formatKRW(c.potTotal)}</span>
+                  <span className="tabular-nums">모인 벌금 {formatKRW(c.potTotal)}</span>
                 </p>
               </div>
               <ChevronRight className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />

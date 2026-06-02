@@ -1,8 +1,17 @@
 // src/lib/db/reads/recap.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { countDoneDaysByUser } from "@/lib/challenge/done-days";
-import { computePerHeadPenalty, pickMvpIds } from "@/lib/challenge/settlement";
+import { toKstDayKey } from "@/lib/challenge/done-days";
+import {
+  countDoneDaysByUserByWeek,
+  confirmedPenalty,
+  achievedAllElapsedWeeks,
+  doneInElapsedWeeks,
+  countAchievedWeeks,
+  elapsedWeeks,
+  pickMvpIds,
+  type CutoffContext,
+} from "@/lib/challenge/weekly";
 
 export type RecapMemberView = {
   id: string;
@@ -34,6 +43,9 @@ export type RecapView = {
   viewerAchieved: boolean;
   viewerDoneCount: number;
   viewerPerHeadPenalty: number;
+  // 영수증 주차 요약 — viewer 기준. cutoff 안에 끝난 주 수 / 그중 달성한 주 수.
+  viewerElapsedWeeks: number;
+  viewerAchievedWeeks: number;
   // PRD §10 / 모킹업 §11 — 정산 시점 그룹 계좌 lazy prompt 에 필요.
   group: RecapGroupView | null;
   members: ReadonlyArray<RecapMemberView>;
@@ -49,12 +61,13 @@ type ChallengeRow = {
   status: "active" | "closed";
   start_at: string | null;
   end_at: string | null;
+  closed_at: string | null;
 };
 
 type ParticipantRow = {
   user_id: string;
   display_name: string | null;
-  done_count: number;
+  doneByWeek: Map<number, number>;
 };
 
 export function buildRecapView(input: {
@@ -65,21 +78,34 @@ export function buildRecapView(input: {
   group?: RecapGroupView | null;
 }): RecapView {
   const { challenge, participants, viewerId } = input;
-  const mvpIds = pickMvpIds({
-    goalCount: challenge.goal_count,
-    members: participants.map((p) => ({ id: p.user_id, doneCount: p.done_count })),
-  });
+  // recap 진입 조건은 isChallengeOver — closed 또는 active+만기(over). running 미진입.
+  const phase = challenge.status === "closed" ? "closed" : "over";
+  const startKey = challenge.start_at ? toKstDayKey(challenge.start_at) : "";
+  const ctx: CutoffContext = {
+    phase,
+    durationDays: challenge.duration_days,
+    todayDayIndex: 0, // over/closed 는 today 비의존
+    closedAt: challenge.closed_at,
+    startKey,
+  };
+  const params = { goalCount: challenge.goal_count, penaltyAmount: challenge.penalty_amount };
+
+  const mvpIds = pickMvpIds(
+    participants.map((p) => ({ id: p.user_id, doneByWeek: p.doneByWeek })),
+    ctx,
+    { goalCount: challenge.goal_count },
+  );
 
   const members: RecapMemberView[] = participants.map((p) => ({
     id: p.user_id,
     displayName: p.display_name ?? "익명",
-    doneCount: p.done_count,
-    achieved: p.done_count >= challenge.goal_count,
+    doneCount: doneInElapsedWeeks(p.doneByWeek, ctx),
+    achieved: achievedAllElapsedWeeks(p.doneByWeek, ctx, { goalCount: challenge.goal_count }),
     isMvp: mvpIds.includes(p.user_id),
   }));
 
-  const viewer = members.find((m) => m.id === viewerId);
-  const viewerDoneCount = viewer?.doneCount ?? 0;
+  const viewerPart = participants.find((p) => p.user_id === viewerId);
+  const viewerDoneByWeek = viewerPart?.doneByWeek ?? new Map<number, number>();
 
   return {
     challengeId: challenge.id,
@@ -91,12 +117,14 @@ export function buildRecapView(input: {
     endAt: challenge.end_at,
     status: challenge.status,
     viewerId,
-    viewerAchieved: viewerDoneCount >= challenge.goal_count,
-    viewerDoneCount,
-    viewerPerHeadPenalty: computePerHeadPenalty({
-      doneCount: viewerDoneCount,
+    viewerAchieved: achievedAllElapsedWeeks(viewerDoneByWeek, ctx, {
       goalCount: challenge.goal_count,
-      penaltyAmount: challenge.penalty_amount,
+    }),
+    viewerDoneCount: doneInElapsedWeeks(viewerDoneByWeek, ctx),
+    viewerPerHeadPenalty: confirmedPenalty(viewerDoneByWeek, ctx, params),
+    viewerElapsedWeeks: elapsedWeeks(ctx).length,
+    viewerAchievedWeeks: countAchievedWeeks(viewerDoneByWeek, ctx, {
+      goalCount: challenge.goal_count,
     }),
     group: input.group ?? null,
     members,
@@ -127,7 +155,7 @@ export async function fetchRecap(
   let cq = supabase
     .from("challenges")
     .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
+      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
     )
     .or(`status.eq.closed,and(status.eq.active,end_at.lte.${nowIso})`);
   if (options.challengeId) cq = cq.eq("id", options.challengeId);
@@ -144,6 +172,7 @@ export async function fetchRecap(
     status: raw.status as ChallengeRow["status"],
     start_at: raw.start_at as string | null,
     end_at: raw.end_at as string | null,
+    closed_at: raw.closed_at as string | null,
   };
   const groupRow = Array.isArray(raw.groups) ? raw.groups[0] : raw.groups;
   const group: RecapGroupView | null = groupRow
@@ -167,15 +196,18 @@ export async function fetchRecap(
     .select("user_id, created_at")
     .eq("challenge_id", challenge.id);
 
-  // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
-  const doneByUser = countDoneDaysByUser(logs ?? []);
+  // 하루 N개 피드도 인증은 1회 → KST distinct day → 주차 버킷. start_at 없으면 빈 집계.
+  const startKey = challenge.start_at ? toKstDayKey(challenge.start_at) : null;
+  const byUserByWeek = startKey
+    ? countDoneDaysByUserByWeek(logs ?? [], startKey, challenge.duration_days)
+    : new Map<string, Map<number, number>>();
 
   const participants: ParticipantRow[] = (parts ?? []).map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;
     return {
       user_id: p.user_id,
       display_name: u?.display_name ?? null,
-      done_count: doneByUser.get(p.user_id) ?? 0,
+      doneByWeek: byUserByWeek.get(p.user_id) ?? new Map<number, number>(),
     };
   });
 
