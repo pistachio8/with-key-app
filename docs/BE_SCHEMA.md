@@ -253,7 +253,7 @@ stateDiagram-v2
 | `group_id`       | uuid        | NO   | —                   | FK → `groups.id`                                                                                                                                                                 |
 | `title`          | text        | NO   | —                   | `char_length BETWEEN 1 AND 30`                                                                                                                                                   |
 | `type`           | text        | NO   | `'fitness'`         | `CHECK IN ('fitness')` — POC                                                                                                                                                     |
-| `goal_count`     | int         | NO   | `3`                 | `CHECK BETWEEN 1 AND 7` (주 단위)                                                                                                                                                |
+| `goal_count`     | int         | NO   | `3`                 | `CHECK BETWEEN 1 AND 7` — 주 N회(주간 빈도). 벌금은 끝난 주마다 미달 시 누적(`lib/challenge/weekly.ts`)                                                                          |
 | `duration_days`  | int         | NO   | `7`                 | `CHECK BETWEEN 1 AND 90` ← **D-006**. 사용자 종료일 picker 로 7~90일 선택 (최소 1주 — [ADR-0004](./adr/0004-2026-05-14-end-date-picker-min-week.md), PR5 머지 후 FE 가드 해제됨) |
 | `penalty_amount` | int         | NO   | —                   | `CHECK BETWEEN 0 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** (migration 0025_penalty_allow_zero.sql에서 0원 허용으로 완화됨, PR #45)                                    |
 | `status`         | text        | NO   | `'pending'`         | `CHECK IN ('pending','accepted','active','closed')`                                                                                                                              |
@@ -263,6 +263,7 @@ stateDiagram-v2
 
 - **그룹당 동시 1개 제약**: partial unique index `challenges_one_open_per_group on challenges(group_id) where status in ('pending','accepted','active')` (migration 0029). closed 는 제외하여 종료 챌린지 history 누적 보존.
 - `created_by` 컬럼은 POC 에서 추가하지 않음 — owner=creator 모델 유지 (ADR-0011).
+- **`closed_at timestamptz null`** (migration 0041, 2026-06-02): 종료(closed) 시각. 조기 종료 정산 cutoff 산정용 — [ADR-0030](./adr/0030-early-close-settlement-cutoff.md). NULL=미종료 또는 레거시(폴백 `duration_days`). 종료 경로 둘(`endChallenge` Server Action · auto-close cron)이 `status='closed'` 전이와 함께 `now()`로 set. CHECK·RLS 무변경.
 
 ### 5.6 `challenge_participants`
 
@@ -295,7 +296,7 @@ stateDiagram-v2
 | `created_at`        | timestamptz | NO   | `now()`             | 서버 타임 (AC-5)                                                                                                                   |
 | `edited_at`         | timestamptz | YES  | null                | 5분 이내 편집 시에만 세팅(AC-7)                                                                                                    |
 
-- **`counted` 컬럼 제거**: POC 전체 로그 ~30건 규모에서 트리거+타임존 하드코딩 비용이 집계 쿼리보다 크다. "1일 1회 카운트"(AC-4)는 조회 시 `COUNT(DISTINCT date_trunc('day', created_at AT TIME ZONE 'Asia/Seoul'))` 집계로 처리. 집계 헬퍼는 `lib/challenge/progress.ts`에 1개로 통일. → v1에서 트래픽 증가 시 재검토(§13).
+- **`counted` 컬럼 제거**: POC 전체 로그 ~30건 규모에서 트리거+타임존 하드코딩 비용이 집계 쿼리보다 크다. "1일 1회 카운트"(AC-4)는 조회 시 `COUNT(DISTINCT date_trunc('day', created_at AT TIME ZONE 'Asia/Seoul'))` 집계로 처리. 집계 헬퍼는 `lib/challenge/done-days.ts`(KST distinct day)에 통일, 주 단위 벌금 누적 평가는 `lib/challenge/weekly.ts`. → v1에서 트래픽 증가 시 재검토(§13).
 - **AI 일기 결과 흡수**: `feed_items` 별도 테이블 폐지. JOIN 없이 단일 SELECT로 피드 렌더링.
 - **직접 입력 일기**([spec 2026-05-28-action-manual-diary](superpowers/specs/2026-05-28-action-manual-diary.md)): `memo` 가 채워진 제출은 AI 를 건너뛰고 입력 글을 `ai_summary` 에 그대로 저장한다(`prompt_version='manual'` · `template_fallback=false` · `selected_keywords=[]` · `memo` 컬럼 null). 빈 `selected_keywords` 는 `array_length`=NULL 로 기존 CHECK 를 통과하므로 마이그레이션이 필요 없다.
 
@@ -430,7 +431,7 @@ $$;
 - 챌린지 active + 기간 내 확인
 - **단일 트랜잭션**에서 `lib/ai/diary.ts` 호출 → `action_logs` 삽입(AI 결과 컬럼 포함)
   - AI 실패 시 `template_fallback=true` + 키워드 활용 템플릿을 `ai_summary`에 기록
-- "1일 1회 카운트"(AC-4)는 저장 시 계산하지 않고 **조회 시 집계**(`lib/challenge/progress.ts`)
+- "1일 1회 카운트"(AC-4)는 저장 시 계산하지 않고 **조회 시 집계**(`lib/challenge/done-days.ts` — KST distinct day. 주 단위 누적은 `weekly.ts`)
 - 이벤트: `action_logged` · `ai_generated`
 
 ### 8.6 `giveKudos(actionLogId, emoji)`
@@ -470,20 +471,25 @@ $$;
 
 ## 11. Follow-up (문서 확정 후 태스크)
 
-- [x] ~~**PRD §3.3 AC-1 업데이트**~~ — 2026-05-15 ADR-0004(최소 1주, 사용자 선택) + D-007(0~10,000) 반영 완료. `goal_count`는 주 단위 독립 평가로 코드(`progress.ts`)에 구현됨.
+- [x] ~~**PRD §3.3 AC-1 업데이트**~~ — 2026-05-15 ADR-0004(최소 1주, 사용자 선택) + D-007(0~10,000) 반영. `goal_count`(주 N회)의 **주 단위 누적 평가는 2026-06-02 `lib/challenge/weekly.ts`로 구현 완료**([spec](superpowers/specs/2026-06-02-weekly-penalty-accrual.md))로, 이전 `settlement.ts` 전체 1회 평가(D-006 측정단위 모순)를 대체. cutoff는 `challenges.closed_at`([ADR-0030](./adr/0030-early-close-settlement-cutoff.md)).
 - [x] ~~[src/lib/validators/challenge.ts](src/lib/validators/challenge.ts) D-006/007 반영~~ — 2026-05-15 코드 적용 완료(`durationDays.min(7).max(90)` · `penaltyAmount.min(0).max(10000)`).
 - [x] ~~**`supabase/migrations/0025_penalty_allow_zero.sql` 추가**~~ — PR5 (#45, 2026-05-15) 머지와 함께 적용 완료. `penalty_amount BETWEEN 0 AND 10000`으로 완화.
 - [ ] `supabase/migrations/0001_init.sql` 실DDL 작성 — 본 문서 §5 테이블 순서대로 + 상태 가드 포함.
 - [ ] `supabase/migrations/0002_rls.sql` 작성 — `is_group_member` 헬퍼 + §7 정책(+ `action_logs` AI 컬럼 column-level 보호).
 - [ ] `supabase/seed.sql` — 테스트 유저 4명 + `pending` 챌린지 1개(D-006/007 범위 내 샘플 값).
 - [ ] [src/lib/validators/](src/lib/validators/) 에 `group.ts` · `invite.ts` 추가 (Server Action 입력 커버리지 맞춤). `feed.ts`는 제거 — AI 결과가 `action-log.ts`에 흡수됨.
-- [ ] `lib/challenge/progress.ts` 신설 — 1일 1회 카운트 집계 헬퍼(`date_trunc('day', ... AT TIME ZONE 'Asia/Seoul')` 기반).
+- [x] ~~`lib/challenge/progress.ts` 신설~~ — 단일 progress.ts 계획 폐기. **`done-days.ts`(KST distinct day 집계) + `weekly.ts`(주 단위 벌금 누적 평가)** 로 분리 구현(2026-06-02).
 - [ ] `supabase gen types typescript` 로 [src/types/supabase.ts](src/types/supabase.ts) 생성 플로우 정비(ONBOARDING §5.4).
 
 ---
 
 ## 12. Changelog
 
+- **v0.5** (2026-06-02) — **주 단위 벌금 누적 모델 반영** (Ian · [spec/plan 2026-06-02-weekly-penalty-accrual](superpowers/specs/2026-06-02-weekly-penalty-accrual.md))
+  - §5.5 `challenges.closed_at timestamptz null` 추가(조기 종료 정산 cutoff — [ADR-0030](./adr/0030-early-close-settlement-cutoff.md), migration 0041). CHECK·RLS 무변경.
+  - §5.5/§5.7/§8 집계 서술: `goal_count`(주 N회) 벌금이 **끝난 주마다 독립 평가·누적**됨을 명시(D-006 측정단위 모순 해소). 이전 `settlement.ts` 전체 1회 평가를 `lib/challenge/weekly.ts`로 대체.
+  - §11 Follow-up: 집계 헬퍼 `progress.ts` 단일 신설 계획 폐기 → `done-days.ts`(distinct day) + `weekly.ts`(주 단위 누적) 분리 구현 반영.
+  - 표시-only 전제 유지 — 실제 정산/이체는 v1(§13).
 - **v0.4** (2026-05-16) — **2026-05-14 UI 리비전 후속 cleanup** (Ian · PR8)
   - §1: D-006 정합성 메모를 ADR-0004(사용자 종료일 선택, 최소 1주) 반영으로 갱신.
   - §5.5 `challenges.duration_days`: "FE는 PRD 업데이트 전까지 7로 가드" 주석 제거 — PR5(#45) 머지로 FE 가드 해제됨. CHECK·default 무변경.
