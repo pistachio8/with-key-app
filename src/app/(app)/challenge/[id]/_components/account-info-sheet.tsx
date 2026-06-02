@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import {
   Dialog,
@@ -14,8 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 import { maskAccountNumber } from "@/lib/bank/format";
-import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
-import { revealAccountNumber } from "../_actions";
+import { useCopyAccountNumber } from "./use-copy-account-number";
 
 type Props = {
   open: boolean;
@@ -25,10 +22,6 @@ type Props = {
   accountHolder: string | null;
   accountNumberLast4: string | null;
 };
-
-const userMessage = makeUserMessage({
-  not_found: "오너가 아직 계좌를 등록하지 않았어요.",
-});
 
 function bankDisplay(code: string | null): string | null {
   if (!code) return null;
@@ -45,37 +38,14 @@ export function AccountInfoSheet({
   accountHolder,
   accountNumberLast4,
 }: Props) {
-  const [copying, setCopying] = useState(false);
-
   const hasAccount = bankCode !== null && accountHolder !== null && accountNumberLast4 !== null;
   const bankLabel = bankDisplay(bankCode);
   const masked = accountNumberLast4 ? maskAccountNumber(accountNumberLast4) : null;
-
-  async function copy() {
-    setCopying(true);
-    try {
-      const res = await revealAccountNumber({ groupId });
-      if (!res.ok) {
-        toast.error(userMessage(res.error));
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(res.data.accountNumber);
-        toast.success("계좌번호가 복사되었어요");
-      } catch {
-        toast.error("복사에 실패했어요. 다시 시도해 주세요.");
-      }
-    } catch (err) {
-      console.error("[AccountInfoSheet] revealAccountNumber threw", err);
-      toast.error(FALLBACK_ERROR_MESSAGE);
-    } finally {
-      setCopying(false);
-    }
-  }
+  const { copy, copying } = useCopyAccountNumber(groupId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>정산 계좌</DialogTitle>
           <DialogDescription>
@@ -106,7 +76,7 @@ export function AccountInfoSheet({
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <Button
             size="lg"
-            className="h-12 w-full gap-2"
+            className="h-11 w-full gap-2"
             onClick={copy}
             disabled={!hasAccount || copying}
           >

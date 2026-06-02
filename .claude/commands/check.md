@@ -1,8 +1,9 @@
 ---
 description: 타입체크 + 린트 + 테스트 실행
-agent: build
+agent: "everything-claude-code:build-error-resolver"
 ---
 
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 기본 검증을 Claude/ECC에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행한다.
 > 풀 빌드까지 포함한 검증이 필요하면 `./build-check.md`를 사용한다.
 
@@ -25,6 +26,7 @@ agent: build
 
 ## 금지
 
+- `../../docs/QUALITY_GATE.md` 의 금지 사항과 아키텍처 가드레일을 우선한다.
 - zod 스키마 시그니처(타입 SoT) 임의 변경 금지 — 도메인 타입은 `src/lib/validators/`에서 `z.infer`로만 도출
 - `src/lib/analytics/track.ts`의 `AnalyticsEvent` 유니온 임의 확장 금지 (PO 승인 필요)
 - `any` 추가로 타입 오류를 무마하지 말 것 — `unknown` + 좁히기 우선

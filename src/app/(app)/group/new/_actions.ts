@@ -1,6 +1,7 @@
 "use server";
 
-import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import type { z } from "zod";
 import { groupInputSchema } from "@/lib/validators/group";
 import { encryptAccountNumber } from "@/lib/crypto/account-cipher";
 import { track } from "@/lib/analytics/track";
@@ -8,12 +9,9 @@ import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
+import { nextDefaultGroupName } from "@/lib/groups/default-name";
 
-// 폼 입력. 생성 플로우에서는 name 이 필수 — groupInputSchema 의 optional 을 required 로 좁힌다.
-const createGroupInputSchema = z.intersection(
-  z.object({ name: z.string().min(1).max(30) }),
-  groupInputSchema,
-);
+const createGroupInputSchema = groupInputSchema;
 
 export type CreateGroupInput = z.infer<typeof createGroupInputSchema>;
 
@@ -26,12 +24,16 @@ function toPgByteaHex(buf: Buffer): string {
 // BE_SCHEMA §5.2 · RPC create_group_with_owner (0017 migration).
 // D-016: 평문 계좌번호는 서버 Action 안에서만 접근 → AES-GCM 암호화 후 bytea hex 로 RPC 전달.
 // 평문은 DB/RPC/로그/analytics 어디에도 흘러가지 않는다.
-export const createGroup = withUser<CreateGroupInput, { id: string }>(
-  async (user, input): Promise<ActionResult<{ id: string }>> => {
-    const parsed = createGroupInputSchema.safeParse(input);
+export const createGroup = withUser<CreateGroupInput, { id: string; name: string }>(
+  async (user, input): Promise<ActionResult<{ id: string; name: string }>> => {
+    const normalizedInput = {
+      ...input,
+      name: typeof input.name === "string" ? input.name.trim() || undefined : input.name,
+    };
+    const parsed = createGroupInputSchema.safeParse(normalizedInput);
     if (!parsed.success) return validationFailure(parsed.error);
 
-    const { name, bankCode, accountHolder, accountNumber } = parsed.data;
+    const { bankCode, accountHolder, accountNumber } = parsed.data;
     const hasAccount =
       bankCode !== undefined && accountHolder !== undefined && accountNumber !== undefined;
 
@@ -39,6 +41,28 @@ export const createGroup = withUser<CreateGroupInput, { id: string }>(
     const last4 = hasAccount ? accountNumber.slice(-4) : null;
 
     const supabase = await createClient();
+    let name = parsed.data.name;
+    if (!name) {
+      const { data: me, error: meError } = await supabase
+        .from("users")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (meError) return failure(mapSupabaseError(meError));
+
+      const { data: existingGroups, error: groupsError } = await supabase
+        .from("groups")
+        .select("name")
+        .eq("owner_id", user.id)
+        .is("disbanded_at", null);
+      if (groupsError) return failure(mapSupabaseError(groupsError));
+
+      name = nextDefaultGroupName(
+        me?.display_name ?? "내",
+        (existingGroups ?? []).map((group) => group.name as string | null),
+      );
+    }
+
     const { data, error } = await supabase.rpc("create_group_with_owner", {
       p_name: name,
       p_bank_code: bankCode ?? null,
@@ -62,6 +86,10 @@ export const createGroup = withUser<CreateGroupInput, { id: string }>(
       { userId: user.id },
     );
 
-    return success({ id: data });
+    // (app) layout 의 fetchMyGroups()/fetchOwnerGroupsForChallengeForm() 캐시 무효화 —
+    // 헤더 sheet 와 challenge 폼 select 에 새 그룹이 즉시 노출되도록.
+    revalidatePath("/", "layout");
+
+    return success({ id: data, name });
   },
 );

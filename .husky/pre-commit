@@ -1,0 +1,16 @@
+# with-key pre-commit hook — 저마찰 ergonomics
+#
+# 동작:
+# - lint-staged가 staged 파일에만 prettier --write, eslint --fix 실행
+# - 자동 수정만 — commit 차단 거의 없음 (eslint 오류는 자동 수정 안 되면 실패)
+# - typecheck / test / spec-check은 CI에 위임
+#
+# 우회 (급할 때 또는 hook 자체가 버그일 때):
+#   WITHKEY_HOOKS=skip git commit ...   # with-key 합의된 우회 신호
+#   git commit --no-verify ...          # 표준 Git 우회
+#
+# Hook이 commit을 차단하거나 1초 이상 느려지면 그 자체가 버그 — issue로 보고.
+
+[ "$WITHKEY_HOOKS" = "skip" ] && exit 0
+
+pnpm lint-staged

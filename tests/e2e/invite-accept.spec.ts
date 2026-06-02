@@ -35,12 +35,18 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
   if (!challenge) throw new Error("failed to seed challenge");
 
   await page.goto(`/challenge/${challenge.id}`);
+  // PR5: 초대 링크는 챌린지 상세의 "정보" 탭 안.
+  await page.getByRole("tab", { name: "정보" }).click();
   await page.getByRole("button", { name: "친구 초대 링크 공유" }).click();
 
   // Wait for toast, then read clipboard.
   await expect(page.getByText("초대 링크를 복사했어요")).toBeVisible({ timeout: 10_000 });
-  const inviteUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(inviteUrl).toMatch(/\/invite\//);
+  // Clipboard payload is "<메시지>\n\n<URL>" (카톡 등에 줄바꿈을 강제하기 위해 묶어서 복사).
+  // 본 E2E 는 URL 자체만 필요하므로 정규식으로 추출.
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  const urlMatch = clipboardText.match(/https?:\/\/\S+\/invite\/\S+/);
+  if (!urlMatch) throw new Error(`invite URL not found in clipboard: ${clipboardText}`);
+  const inviteUrl = urlMatch[0];
 
   // Second user: seed a fresh @supabase/ssr cookie onto a new context. The
   // dev-login route is disabled in production (playwright uses `pnpm start`),
@@ -57,14 +63,23 @@ test("owner creates invite, second user accepts and lands on /pledge", async ({
       const joinerPage = await joinerContext.newPage();
       // Session cookie already set — direct navigation lands on the authed page.
       await joinerPage.goto(inviteUrl);
-      await expect(joinerPage.getByRole("button", { name: "참여하고 서명하러 가기" })).toBeVisible({
+      await expect(joinerPage.getByRole("button", { name: "참여하기" })).toBeVisible({
         timeout: 15_000,
       });
-      await joinerPage.getByRole("button", { name: "참여하고 서명하러 가기" }).click();
+      await joinerPage.getByRole("button", { name: "참여하기" }).click();
 
-      // Joiner should land on /pledge and see the pending pledge for signing.
-      await expect(joinerPage).toHaveURL(/\/pledge$/, { timeout: 10_000 });
-      await expect(joinerPage.getByText("e2e-invite")).toBeVisible({ timeout: 10_000 });
+      // ADR-0002: pledge 는 /challenge/[id]/pledge sub-route.
+      // accept-form 이 /pledge 로 push → /pledge 가 본인의 pending pledge 로 redirect.
+      await expect(joinerPage).toHaveURL(/\/challenge\/[0-9a-f-]{36}\/pledge$/, {
+        timeout: 10_000,
+      });
+      // 모킹업 §3-C — pledge 페이지의 PledgePreviewCard 는 챌린지 제목을 <h3.t-h3>에 렌더.
+      // cacheComponents Activity 가 직전 /invite/[token] 의 ShareCard 를 hidden DOM 으로
+      // 보존해 getByText 가 2개 매치 (strict mode violation). heading role + level=3 으로
+      // 좁혀 pledge 페이지의 현재 가시 요소만 매칭.
+      await expect(joinerPage.getByRole("heading", { name: "e2e-invite", level: 3 })).toBeVisible({
+        timeout: 10_000,
+      });
 
       // Direct DB check: joiner is group_members row AND participant of pending challenge.
       const { count: memberCount } = await admin

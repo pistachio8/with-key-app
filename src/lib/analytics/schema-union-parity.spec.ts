@@ -22,6 +22,7 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       challengeId: "11111111-1111-4111-8111-111111111111",
       penaltyAmount: 3000,
       goalCount: 3,
+      participantCount: 1,
     },
   },
   challenge_signed: {
@@ -33,7 +34,11 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
   },
   challenge_activated: {
     name: "challenge_activated",
-    props: { challengeId: "11111111-1111-4111-8111-111111111111", signToActiveMs: 1000 },
+    props: {
+      challengeId: "11111111-1111-4111-8111-111111111111",
+      signToActiveMs: 1000,
+      participantCount: 3,
+    },
   },
   action_started: {
     name: "action_started",
@@ -41,7 +46,12 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
   },
   keywords_shown: {
     name: "keywords_shown",
-    props: { activityType: "gym", shownKeywords: ["펌핑"], source: "initial" },
+    props: {
+      activityType: "gym",
+      shownKeywords: ["펌핑"],
+      source: "initial",
+      poolVersion: "v1.1-meal-2026-05-22",
+    },
   },
   keywords_reroll: {
     name: "keywords_reroll",
@@ -63,6 +73,7 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       rerollCount: 0,
       photoSize: 0,
       photoAttached: false,
+      poolVersion: "v1.1-meal-2026-05-22",
     },
   },
   ai_generated: {
@@ -110,4 +121,62 @@ describe("TS union ↔ Zod schema parity", () => {
       expect(r.success, JSON.stringify(r, null, 2)).toBe(true);
     });
   }
+});
+
+describe("notification_sent kudos_received variant (ADR-0017)", () => {
+  it("type=kudos_received + actionLogId + actorUserId 채워진 fixture 통과", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "kudos_received",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: false,
+        outcome: "sent",
+        actionLogId: "22222222-2222-4222-8222-222222222222",
+        actorUserId: "33333333-3333-4333-8333-333333333333",
+      },
+    };
+    const r = analyticsEventSchema.safeParse(fixture);
+    expect(r.success, JSON.stringify(r, null, 2)).toBe(true);
+  });
+
+  it("optional 필드 누락 (kudos_received 이지만 actionLogId/actorUserId 없음) 도 parse 성공", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "kudos_received",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: true,
+        outcome: "suppressed",
+      },
+    };
+    const r = analyticsEventSchema.safeParse(fixture);
+    expect(r.success).toBe(true);
+  });
+});
+
+describe("notification_sent friend_action variant", () => {
+  it("type=friend_action fixture가 zod schema를 통과한다", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "friend_action",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: false,
+        outcome: "sent",
+      },
+    };
+    expect(analyticsEventSchema.parse(fixture)).toEqual(fixture);
+  });
+
+  it("notification_opened type=friend_action fixture가 통과한다", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_opened",
+      props: {
+        type: "friend_action",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+      },
+    };
+    expect(analyticsEventSchema.parse(fixture)).toEqual(fixture);
+  });
 });

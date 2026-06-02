@@ -5,6 +5,7 @@
 > **Pre-read**:
 > - [IDEATION.md](./IDEATION.md) v0.8 — **왜** 만드는가
 > - [PRD.md](./PRD.md) v0.1 — **무엇을** 만드는가 (§8 데이터 모델 · §9 이벤트 필수)
+> - [QUALITY_GATE.md](./QUALITY_GATE.md) — 코딩 품질 · 검증 기준 · 금지 사항의 공통 원본
 > - [TEAM_SHARE_DESIGN_BRIEF.md](../.claude/drafts/TEAM_SHARE_DESIGN_BRIEF.md) v0.1 — **어떻게 보일 것인가** (§5 컴포넌트 명명 계약, 로컬 전용)
 >
 > **이 문서의 역할**: 개발자 Day 1에 **"clone → 로컬 실행 → 첫 커밋"** 을 1시간 안에 끝낼 수 있는 실전 가이드.
@@ -52,6 +53,7 @@
 with-key/
 ├─ README.md                  ← 이 문서 요약본
 ├─ AGENTS.md                  ← Next.js 16 공식 안내 (코드 작성 전 docs 읽기)
+├─ docs/QUALITY_GATE.md       ← 코딩 품질·검증 기준의 공통 원본
 ├─ .env.example              ← env 변수 템플릿 (§7)
 ├─ .env.local                ← 개인 로컬용 (gitignore)
 ├─ .nvmrc                    ← Node 20
@@ -404,14 +406,18 @@ FEATURE_ALIMTALK=false            # 알림톡은 POC 기본 off
 ### 8.1 브랜치 전략 (POC 경량)
 
 ```text
-main (보호됨, Vercel Production)
-  ↑ PR merge
+main (장기 안정 · v1 컷오버 시 Production — DEPLOY.md 참조)
+  ↑ release PR (POC 기간엔 정기 머지 없음)
+develop (POC 통합 브랜치 · Vercel Preview 배포 대상)
+  ↑ feat/fix/chore PR
 feat/<scope>-<short-desc>
 fix/<scope>-<short-desc>
 chore/<desc>
 ```
 
-- `develop` 브랜치 **없음**. Trunk-based.
+- **PR 베이스는 `develop`**. 모든 feat/fix/chore PR이 `develop` 으로 머지된다.
+- `develop` 직접 커밋은 트리비얼 docs/chore(오타 · 룰 인덱스 · 의존 버전 bump)에 한정. 그 외는 새 브랜치 + PR 필수.
+- `main` 은 v1 컷오버 시 Production이 될 장기 안정 브랜치 — POC 기간 정기 머지 없음 (필요 시 release PR).
 - 브랜치 수명: **최대 2일**. 길어지면 분할.
 - PR은 **작게 자주**. 300줄 초과 시 분할 요청 가능.
 
@@ -458,14 +464,20 @@ docs: ONBOARDING에 env 변수 추가
 ### 8.5 배포 흐름
 
 ```text
-feat/* → PR → review + CI green → squash merge → main
+feat/* → PR → review + CI green → squash merge → develop
                                                    │
                                                    ↓
-                                      Vercel Production 자동 배포
+                              Vercel Preview 자동 배포 (shared with-key Supabase)
+                                                   │
+                                                   ↓
+                                    수동 QA (모바일 Safari · DevTools 에뮬레이션)
                                                    │
                                                    ↓
                                     Supabase migration 수동 apply*
 ```
+
+- POC 기간 `develop` 머지 = 테스트/dogfood 환경 갱신. Production 배포는 v1 컷오버 시점에 `main` 으로 승격.
+- Production 컷오버 절차는 [`DEPLOY.md`](./DEPLOY.md) "Production 컷오버 체크리스트" 참조.
 
 *Supabase migration은 수동 apply (CI에서 자동화는 POC 이후).
 

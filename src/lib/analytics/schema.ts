@@ -32,6 +32,7 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       challengeId: uuid,
       penaltyAmount: z.number().int(),
       goalCount: z.number().int(),
+      participantCount: z.number().int().min(1),
     }),
   }),
   z.object({
@@ -40,7 +41,11 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   }),
   z.object({
     name: z.literal("challenge_activated"),
-    props: z.object({ challengeId: uuid, signToActiveMs: z.number().int() }),
+    props: z.object({
+      challengeId: uuid,
+      signToActiveMs: z.number().int().min(0),
+      participantCount: z.number().int().min(1),
+    }),
   }),
   z.object({ name: z.literal("action_started"), props: z.object({ challengeId: uuid }) }),
   z.object({
@@ -49,6 +54,8 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       activityType,
       shownKeywords: z.array(z.string()).min(1),
       source: z.enum(["initial", "reroll"]),
+      // spec 2026-05-22 — 키워드 풀 v1.1 release 분기점 (ADR-0015).
+      poolVersion: z.string(),
     }),
   }),
   z.object({
@@ -76,6 +83,8 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
       rerollCount: z.number().int().min(0).max(5),
       photoSize: z.number().int().min(0),
       photoAttached: z.boolean(),
+      // spec 2026-05-22 — 키워드 풀 v1.1 release 분기점 (ADR-0015).
+      poolVersion: z.string(),
     }),
   }),
   z.object({
@@ -99,16 +108,19 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("notification_sent"),
     props: z.object({
-      type: z.enum(["start", "deadline"]),
+      type: z.enum(["start", "deadline", "friend_action", "kudos_received"]),
       challengeId: uuid,
       suppressed: z.boolean(),
       outcome: z.enum(["sent", "cleaned", "failed", "suppressed"]),
+      // kudos_received 만 채움. start/deadline/friend_action 발송에는 의미 없음.
+      actionLogId: uuid.optional(),
+      actorUserId: uuid.optional(),
     }),
   }),
   z.object({
     name: z.literal("notification_opened"),
     props: z.object({
-      type: z.enum(["start", "deadline"]),
+      type: z.enum(["start", "deadline", "friend_action"]),
       challengeId: uuid,
     }),
   }),

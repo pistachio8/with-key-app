@@ -1,7 +1,10 @@
+import { countDoneDaysByUser } from "@/lib/challenge/done-days";
+import { remainingDays, type ChallengeStatus } from "@/lib/challenge/lifecycle";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "./current-challenges";
 
-export type ChallengeStatus = "pending" | "accepted" | "active" | "closed";
+// ChallengeStatus 의 SoT 는 @/lib/challenge/lifecycle. 기존 import 경로 호환을 위해 re-export.
+export type { ChallengeStatus };
 
 export type ActiveChallengeView = {
   id: string;
@@ -16,6 +19,8 @@ export type ActiveChallengeView = {
   doneCount: number;
   daysLeft: number;
   potTotal: number;
+  // 코호트 분리(솔로 1 / 그룹 ≥2) + Kudos UI 분기에 사용 — PR-2.
+  participantCount: number;
 };
 
 type FetchActiveChallengeOptions = {
@@ -39,12 +44,18 @@ export async function fetchActiveChallenge(
   userId: string,
   options: FetchActiveChallengeOptions = {},
 ): Promise<ActiveChallengeView | null> {
-  // 기본 status 사용 시 — 멀티 그룹 환경에서 첫 그룹의 최신 챌린지를 그대로 반환하여
-  // 레거시 홈/스펙 호출자와 계약 유지.
+  // 기본 status 사용 시 — active 챌린지는 내가 참가자인 경우만 현재 챌린지로 취급한다.
+  // active 이후 초대 유입자는 다음 챌린지 대기 상태이므로 레거시 /action, /feed 진입에서 제외.
   const usingDefaults = options.statuses === undefined;
   if (usingDefaults) {
     const groups = await fetchCurrentChallenges(userId);
-    const firstWithChallenge = groups.find((g) => g.challenge !== null);
+    // ADR-0027 — over(만기 active)·closed 는 현재 챌린지에서 제외. running 은 참가자만.
+    const firstWithChallenge = groups.find((g) => {
+      const c = g.challenge;
+      if (!c) return false;
+      if (c.phase === "running") return c.userIsParticipant;
+      return c.phase === "pending" || c.phase === "accepted";
+    });
     if (!firstWithChallenge || !firstWithChallenge.challenge) return null;
     const c = firstWithChallenge.challenge;
     return {
@@ -60,6 +71,33 @@ export async function fetchActiveChallenge(
       doneCount: c.doneCount,
       daysLeft: c.daysLeft,
       potTotal: c.potTotal,
+      participantCount: c.participantCount,
+    };
+  }
+
+  const requestedStatuses = options.statuses;
+  if (requestedStatuses?.length === 1 && requestedStatuses[0] === "active") {
+    const groups = await fetchCurrentChallenges(userId);
+    // ADR-0027 — /action·/feed redirect 대상은 running 만(over 로 redirect 시 차단된 인증 화면).
+    const firstActiveParticipantChallenge = groups.find(
+      (g) => g.challenge?.phase === "running" && g.challenge.userIsParticipant,
+    );
+    if (!firstActiveParticipantChallenge?.challenge) return null;
+    const c = firstActiveParticipantChallenge.challenge;
+    return {
+      id: c.id,
+      groupId: firstActiveParticipantChallenge.groupId,
+      title: c.title,
+      goalCount: c.goalCount,
+      durationDays: c.durationDays,
+      penaltyAmount: c.penaltyAmount,
+      status: c.status,
+      startAt: c.startAt,
+      endAt: c.endAt,
+      doneCount: c.doneCount,
+      daysLeft: c.daysLeft,
+      potTotal: c.potTotal,
+      participantCount: c.participantCount,
     };
   }
 
@@ -78,20 +116,20 @@ export async function fetchActiveChallenge(
   if (error || !challenges?.[0]) return null;
   const c = challenges[0];
 
-  const { count: doneCount } = await supabase
+  // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
+  const { data: myLogs } = await supabase
     .from("action_logs")
-    .select("id", { count: "exact", head: true })
+    .select("user_id, created_at")
     .eq("challenge_id", c.id)
     .eq("user_id", userId);
+  const doneCount = countDoneDaysByUser(myLogs ?? []).get(userId) ?? 0;
 
   const { count: memberCount } = await supabase
     .from("challenge_participants")
     .select("user_id", { count: "exact", head: true })
     .eq("challenge_id", c.id);
 
-  const daysLeft = c.end_at
-    ? Math.max(0, Math.ceil((new Date(c.end_at).getTime() - Date.now()) / 86_400_000))
-    : c.duration_days;
+  const daysLeft = c.end_at ? remainingDays(c.end_at) : c.duration_days;
 
   return {
     id: c.id,
@@ -103,8 +141,9 @@ export async function fetchActiveChallenge(
     status: c.status as ChallengeStatus,
     startAt: c.start_at,
     endAt: c.end_at,
-    doneCount: doneCount ?? 0,
+    doneCount,
     daysLeft,
     potTotal: (memberCount ?? 0) * c.penalty_amount,
+    participantCount: memberCount ?? 0,
   };
 }

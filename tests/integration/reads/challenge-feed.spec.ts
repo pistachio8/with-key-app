@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { asUser, admin } from "../setup";
+import { withIntegrationClient } from "../test-context";
 import { createUser, createGroup, addMember, createPendingChallenge } from "../factories";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 
@@ -47,11 +48,16 @@ async function seedActive() {
 }
 
 async function fetchChallengeFeedAsUser(
-  viewer: { id: string; email: string },
+  viewer: { id: string; email: string; password: string },
   challengeId: string,
 ) {
+  // ADR-0024 이후: Layer 1 (`listVisibleActionLogIds`)만 `createClient()` 호출 → RLS gate.
+  // `withIntegrationClient` 가 AsyncLocalStorage 로 signed-in viewer client 를 binding 하고
+  // `setup.ts` 의 vi.mock 이 그 client 를 production createClient 자리에 끼워 cookies() 우회.
+  // hydrate 단계(Layer 2/3)는 `adminClient()` → setup.ts 의 admin mock (service-role).
+  // `_options.client` 는 Phase 4 에서 deprecated — 미전달.
   const client = await asUser(viewer);
-  return fetchChallengeFeed(challengeId, viewer.id, { client });
+  return withIntegrationClient(client, () => fetchChallengeFeed(challengeId, viewer.id));
 }
 
 describe("fetchChallengeFeed", () => {
@@ -102,5 +108,35 @@ describe("fetchChallengeFeed", () => {
     const outsider = await createUser();
     const rows = await fetchChallengeFeedAsUser(outsider, challenge.id);
     expect(rows).toEqual([]);
+  });
+
+  // ADR-0024 회귀 방어: hydrate 단계가 adminClient (RLS 우회) 로 바뀐 뒤, viewer-specific
+  // kudos 는 `.eq('user_id', viewerId)` SQL filter 만이 leak 을 막는다. 두 멤버가 같은
+  // action_log 에 서로 다른 emoji 를 달았을 때, 각 viewer 는 자기 것만 viewerKudos 로 보고
+  // 집계(kudosByEmoji)는 동일해야 한다.
+  it("does not leak other viewers' kudos: each viewer sees only their own viewerKudos", async () => {
+    const { owner, challenge, logId } = await seedActive();
+    // log 작성자는 `other` 라 owner 와 third 둘 다 kudos 가능 (kudos_insert_self_not_own).
+    const third = await createUser();
+    await addMember(challenge.group_id, third.id);
+    const cpInsert = await admin
+      .from("challenge_participants")
+      .insert({ challenge_id: challenge.id, user_id: third.id });
+    expect(cpInsert.error).toBeNull();
+    const kudosInsert = await admin.from("kudos").insert([
+      { action_log_id: logId, user_id: owner.id, emoji: "🔥" },
+      { action_log_id: logId, user_id: third.id, emoji: "💪" },
+    ]);
+    expect(kudosInsert.error).toBeNull();
+
+    const ownerRows = await fetchChallengeFeedAsUser(owner, challenge.id);
+    const thirdRows = await fetchChallengeFeedAsUser(third, challenge.id);
+
+    // 집계는 둘 다 동일.
+    expect(ownerRows[0].kudosByEmoji).toEqual({ "🔥": 1, "💪": 1, "👏": 0 });
+    expect(thirdRows[0].kudosByEmoji).toEqual({ "🔥": 1, "💪": 1, "👏": 0 });
+    // viewerKudos 는 각자 자기 것만 — leak 없음.
+    expect(ownerRows[0].viewerKudos).toEqual(["🔥"]);
+    expect(thirdRows[0].viewerKudos).toEqual(["💪"]);
   });
 });

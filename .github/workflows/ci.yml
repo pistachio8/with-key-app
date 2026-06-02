@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    # ready_for_review: draft → ready 전환 시 integration · e2e 가 자동으로 1회 실행되도록.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [develop, main]
 
@@ -14,11 +16,38 @@ jobs:
     name: Lint + Type + Unit
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    outputs:
+      has_code: ${{ steps.gate.outputs.has_code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # check-spec-required가 git diff base...HEAD를 필요로 함.
+          # docs-only 판별 step 도 같은 fetch-depth 를 재사용한다.
+          fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
+      - name: Detect non-docs code changes (PR only; push events default to true)
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "has_code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="origin/${{ github.base_ref }}"
+          changed=$(git diff --name-only "$base"...HEAD)
+          echo "$changed"
+          # docs-only 패턴: *.md (어디든), .github/ISSUE_TEMPLATE/*, LICENSE, CHANGELOG.
+          # docs/ 디렉토리 전체 제외는 의도적으로 피한다 — docs/seed.sql 같은 비-md 가 들어가면 코드로 본다.
+          if echo "$changed" | grep -Ev '(\.md$|^\.github/ISSUE_TEMPLATE/|^LICENSE$|^CHANGELOG$)' | grep -q .; then
+            echo "has_code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_code=false" >> "$GITHUB_OUTPUT"
+          fi
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm validate:docs
+      - name: Check spec-required (soft — stderr 경고만, exit 0)
+        if: github.event_name == 'pull_request'
+        run: pnpm check:spec-required --base origin/${{ github.base_ref }}
       - run: pnpm test:ci
 
   integration:
@@ -26,7 +55,30 @@ jobs:
     needs: quick
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    # 라벨 의미 ↔ if 일치: run-full-ci 는 docs-only · draft 양쪽 모두 무시하고 OR 동급 분기.
+    # ✅ (draft == false && has_code) || label
+    # ❌ draft == false && (has_code || label) — 라벨이 draft 를 못 뚫음 (금지 형태)
+    if: |
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (
+          (
+            github.event.pull_request.draft == false &&
+            needs.quick.outputs.has_code == 'true'
+          ) ||
+          contains(github.event.pull_request.labels.*.name, 'run-full-ci')
+        )
+      ) ||
+      (
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/develop'
+      )
+    concurrency:
+      # 공유 Supabase 프로젝트 race 차단을 위한 전역 mutex.
+      # cancel-in-progress: false — 중간 취소 시 부분 시드 잔존이 더 큰 race 위험.
+      group: integration-shared-supabase
+      cancel-in-progress: false
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -35,23 +87,56 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_APP_CODENAME: with-key
+      # 두 RPC 가 공유하는 project ref guard:
+      #   1) truncate_test_data — cleanup step 이 잘못된 (production) 프로젝트 cleanup 사고 방지
+      #   2) reenable_on_auth_user_created (0038) — reenable-trigger step 의 강제 재생성 안전 가드
+      # apply-migrations.sh 의 SUPABASE_PROJECT_REF 와 같은 값이지만 의도(가드 책임) 가 다르므로 분리.
+      SUPABASE_CLEANUP_ALLOWED_REF: ohvcaytmzzwxkbxsmyny
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-pnpm
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
           version: latest
       - name: Apply pending migrations (no-op if up to date)
+        timeout-minutes: 2
         run: bash scripts/ci/apply-migrations.sh
+      - name: Re-enable on_auth_user_created trigger (외부 disable 회귀 봉합)
+        # ADR-0018 §회귀 history 4회째 (1시간 이내 재발) 단기 봉합.
+        # 0038 의 service_role security definer RPC 를 호출해 매 잡 시작 시 트리거 보장.
+        # 근본 해결책은 ADR-0005 §후속 영향 (local Supabase 이전).
+        run: pnpm test:integration:reenable-trigger
       - name: Run integration tests
+        # job timeout 15m 보다 짧게 잡아 cleanup 이 항상 실행되도록 마진 확보.
+        timeout-minutes: 12
         run: pnpm test:integration
+      - name: Cleanup integration test data
+        # 잡 성공/실패 무관하게 시드 잔존을 0 으로 만든다 (race 두 번째 방어선).
+        # 실패 시 잡 빨강(continue-on-error: false 기본) — 부분 잔존을 다음 잡에 알리는 신호.
+        if: always()
+        timeout-minutes: 2
+        run: pnpm test:integration:cleanup
 
   e2e:
     name: Playwright E2E
-    needs: integration
+    needs: [quick, integration]
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    # always() + needs.integration.result == 'success' 패턴:
+    # needs.*.result 표현을 if 에서 평가하려면 always() 가 선행해야 한다 (그렇지 않으면
+    # needs 가 skipped/failed 인 경우 e2e 가 자동 skip 되어 result 평가 자체가 발생 안 함).
+    if: |
+      always() &&
+      needs.integration.result == 'success' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (
+        (
+          github.event.pull_request.draft == false &&
+          needs.quick.outputs.has_code == 'true'
+        ) ||
+        contains(github.event.pull_request.labels.*.name, 'run-full-ci')
+      )
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
@@ -65,8 +150,17 @@ jobs:
       VAPID_PRIVATE_KEY: dummy
       VAPID_SUBJECT: mailto:ci@with-key.local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-pnpm
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          # 부분 hit 폴백: lockfile 해시만 바뀐 경우 이전 캐시 복원 후 누락분만 추가 다운로드.
+          restore-keys: |
+            pw-${{ runner.os }}-
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright tests
@@ -85,3 +179,32 @@ jobs:
           name: playwright-traces
           path: test-results
           retention-days: 7
+
+  build:
+    name: Production build (develop · main)
+    needs: quick
+    # push: develop · main 시점에서 production 빌드 회귀를 Vercel 외부에서 한 번 더 검증.
+    # develop = Vercel preview/dogfood 도메인 소스 — 머지 직후 빌드 실패가 곧 dogfood 깨짐.
+    # main = production 배포 직전 마지막 게이트.
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # next build 가 환경 변수 부재로 실패하지 않도록 dummy/secret 셋을 e2e 와 동일 수준으로 제공.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_APP_CODENAME: with-key
+      OPENAI_API_KEY: sk-dummy-ci
+      OPENAI_MODEL: gpt-4o-mini
+      AI_MONTHLY_BUDGET_KRW: "50000"
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: dummy
+      VAPID_PRIVATE_KEY: dummy
+      VAPID_SUBJECT: mailto:ci@with-key.local
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm build

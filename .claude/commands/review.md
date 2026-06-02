@@ -1,8 +1,10 @@
 ---
 description: 단일 파일 코드 리뷰 (with-key 관점)
-agent: plan
+agent: "everything-claude-code:code-reviewer"
 subtask: true
 ---
+
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 리뷰 기준을 Claude/ECC에서 실행하는 어댑터다.
 
 `$ARGUMENTS` 파일을 리뷰해줘. 파일 인자가 없으면 현재 열려있는 파일을 대상으로 한다.
 

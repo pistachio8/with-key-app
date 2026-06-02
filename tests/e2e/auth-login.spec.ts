@@ -2,24 +2,26 @@ import { test, expect } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("login form submits and surfaces a toast", async ({ page }) => {
+test("login surfaces Kakao OAuth primary path (magic-link hidden by default)", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { level: 1, name: "윗키" })).toBeVisible();
 
-  const emailInput = page.getByLabel("이메일");
-  const submitBtn = page.getByRole("button", { name: "이메일로 로그인 링크 받기" });
+  // PR #55 브랜딩 변경: h1 텍스트 "윗키" → <Image alt="from.with"> 로 교체.
+  // accessible name 은 이미지 alt 에서 오므로 새 브랜드명으로 매칭한다.
+  await expect(page.getByRole("heading", { level: 1, name: "from.with" })).toBeVisible();
 
-  await expect(submitBtn).toBeDisabled(); // empty email
-  await emailInput.focus();
-  await emailInput.pressSequentially(`smoke+${Date.now()}@test.local`, { delay: 10 });
-  await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
-  await submitBtn.click();
+  // ADR-0008: 카카오 OAuth 가 1차 로그인 경로. default 상태에서 버튼 노출 + 클릭 가능해야 한다.
+  // 실제 OAuth 리다이렉트는 외부 service 라 E2E 에서 mock 없이 검증 불가 — visible/enabled 만 검증.
+  const kakaoBtn = page.getByRole("button", { name: "카카오로 시작하기" });
+  await expect(kakaoBtn).toBeVisible();
+  await expect(kakaoBtn).toBeEnabled();
 
-  // Success, upstream_error, or rate_limited toast — all three prove the
-  // form+Server Action round-trip works. Supabase may reject @test.local
-  // domains (rate-limit or allowlist), which is independent of auth wiring.
-  const successToast = page.getByText("로그인 링크를 이메일로 보냈어요");
-  const errorToast = page.getByText("로그인 링크를 보내지 못했어요");
-  const rateLimitedToast = page.getByText("요청이 너무 많아요");
-  await expect(successToast.or(errorToast).or(rateLimitedToast)).toBeVisible({ timeout: 15_000 });
+  // ADR-0008: 매직링크 UI 는 NEXT_PUBLIC_ENABLE_MAGIC_LINK=true 토글 시에만 노출.
+  // default(false) 환경에서는 DOM 에 아예 렌더되지 않는다 — 비상 fallback 코드는 살아 있음.
+  await expect(page.getByLabel("이메일")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "이메일로 로그인 링크 받기" })).toHaveCount(0);
+
+  // 동의 안내는 카카오/매직링크 토글과 무관하게 항상 노출.
+  await expect(
+    page.getByText("이용약관 및 개인정보 수집·이용에 동의한 것으로 간주돼요"),
+  ).toBeVisible();
 });

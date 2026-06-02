@@ -31,18 +31,26 @@ describe("pushSubscriptionSchema", () => {
 });
 
 describe("notificationPrefsSchema", () => {
-  it("accepts both booleans", () => {
-    expect(notificationPrefsSchema.safeParse({ start: true, deadline: false }).success).toBe(true);
+  it("accepts three booleans (start/deadline/kudos)", () => {
+    expect(
+      notificationPrefsSchema.safeParse({ start: true, deadline: false, kudos: true }).success,
+    ).toBe(true);
   });
 
-  it("rejects when a key is missing", () => {
-    expect(notificationPrefsSchema.safeParse({ start: true }).success).toBe(false);
+  it("rejects when kudos key is missing (post migration 0033)", () => {
+    expect(notificationPrefsSchema.safeParse({ start: true, deadline: false }).success).toBe(false);
+  });
+
+  it("rejects when start key is missing", () => {
+    expect(notificationPrefsSchema.safeParse({ deadline: false, kudos: false }).success).toBe(
+      false,
+    );
   });
 
   it("rejects non-boolean values", () => {
-    expect(notificationPrefsSchema.safeParse({ start: "yes", deadline: false }).success).toBe(
-      false,
-    );
+    expect(
+      notificationPrefsSchema.safeParse({ start: "yes", deadline: false, kudos: false }).success,
+    ).toBe(false);
   });
 });
 

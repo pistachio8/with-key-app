@@ -33,6 +33,7 @@ const baseItem = {
   kudosByEmoji: { "🔥": 2, "💪": 0, "👏": 0 } as const,
   viewerKudos: [] as const,
   createdAt: "2026-04-30T00:00:00Z",
+  createdAtLabel: "4월 30일",
 };
 
 describe("ChallengeFeed", () => {
@@ -43,7 +44,9 @@ describe("ChallengeFeed", () => {
 
   it("increments the emoji count immediately on click (optimistic)", async () => {
     toggleMock.mockResolvedValue({ ok: true, data: { toggled: "added" } });
-    render(<ChallengeFeed items={[baseItem]} viewerId="viewer-1" />);
+    render(
+      <ChallengeFeed items={[baseItem]} viewerId="viewer-1" participantCount={4} isEnded={false} />,
+    );
     const fireBtn = screen
       .getAllByRole("button")
       .find((b) => b.textContent?.includes("🔥")) as HTMLButtonElement;
@@ -54,7 +57,9 @@ describe("ChallengeFeed", () => {
 
   it("rolls back the count and surfaces an error toast when the action fails", async () => {
     toggleMock.mockResolvedValue({ ok: false, error: "forbidden" });
-    render(<ChallengeFeed items={[baseItem]} viewerId="viewer-1" />);
+    render(
+      <ChallengeFeed items={[baseItem]} viewerId="viewer-1" participantCount={4} isEnded={false} />,
+    );
     const fireBtn = screen
       .getAllByRole("button")
       .find((b) => b.textContent?.includes("🔥")) as HTMLButtonElement;
@@ -67,16 +72,20 @@ describe("ChallengeFeed", () => {
 
   it("disables kudos buttons on the viewer's own log (RLS forbids self-kudos)", () => {
     const ownLog = { ...baseItem, authorId: "viewer-1" };
-    render(<ChallengeFeed items={[ownLog]} viewerId="viewer-1" />);
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const btn of buttons) {
+    render(
+      <ChallengeFeed items={[ownLog]} viewerId="viewer-1" participantCount={4} isEnded={false} />,
+    );
+    const kudosButtons = screen
+      .getAllByRole("button")
+      .filter((b) => /응원/.test(b.getAttribute("aria-label") ?? ""));
+    expect(kudosButtons.length).toBeGreaterThan(0);
+    for (const btn of kudosButtons) {
       expect((btn as HTMLButtonElement).disabled).toBe(true);
     }
   });
 
   it("renders an empty state when items is empty", () => {
-    render(<ChallengeFeed items={[]} viewerId="viewer-1" />);
+    render(<ChallengeFeed items={[]} viewerId="viewer-1" participantCount={1} isEnded={false} />);
     expect(screen.getByText(/아직 인증이 없어요/)).toBeTruthy();
   });
 });

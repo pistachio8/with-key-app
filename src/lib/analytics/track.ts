@@ -14,14 +14,33 @@ export type AnalyticsEvent =
   | { name: "invite_opened"; props: { groupId: string; fromOrganicUser: boolean } }
   | {
       name: "challenge_created";
-      props: { challengeId: string; penaltyAmount: number; goalCount: number };
+      props: {
+        challengeId: string;
+        penaltyAmount: number;
+        goalCount: number;
+        // 코호트 분리(솔로 1 / 그룹 ≥2)에 사용. 생성 시점 참가자 수 — PR-2 도입.
+        participantCount: number;
+      };
     }
   | { name: "challenge_signed"; props: { challengeId: string; userId: string } }
-  | { name: "challenge_activated"; props: { challengeId: string; signToActiveMs: number } }
+  | {
+      name: "challenge_activated";
+      props: {
+        challengeId: string;
+        signToActiveMs: number;
+        // 활성화 시점 참가자 수 — 코호트 분리 기준 (J-2(a): created_at→active 측정).
+        participantCount: number;
+      };
+    }
   | { name: "action_started"; props: { challengeId: string } }
   | {
       name: "keywords_shown";
-      props: { activityType: ActivityType; shownKeywords: string[]; source: "initial" | "reroll" };
+      props: {
+        activityType: ActivityType;
+        shownKeywords: string[];
+        source: "initial" | "reroll";
+        poolVersion: string;
+      };
     }
   | { name: "keywords_reroll"; props: { activityType: ActivityType; rerollCount: number } }
   | {
@@ -45,6 +64,7 @@ export type AnalyticsEvent =
         rerollCount: number;
         photoSize: number;
         photoAttached: boolean;
+        poolVersion: string;
       };
     }
   | {
@@ -62,15 +82,18 @@ export type AnalyticsEvent =
   | {
       name: "notification_sent";
       props: {
-        type: "start" | "deadline";
+        type: "start" | "deadline" | "friend_action" | "kudos_received";
         challengeId: string;
         suppressed: boolean;
         outcome: "sent" | "cleaned" | "failed" | "suppressed";
+        // kudos_received 만 채움 (ADR-0017). start/deadline/friend_action 발송에는 의미 없음.
+        actionLogId?: string;
+        actorUserId?: string;
       };
     }
   | {
       name: "notification_opened";
-      props: { type: "start" | "deadline"; challengeId: string };
+      props: { type: "start" | "deadline" | "friend_action"; challengeId: string };
     }
   | { name: "penalty_displayed"; props: { amount: number } };
 

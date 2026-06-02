@@ -1,8 +1,9 @@
 ---
 description: 프로덕션 빌드까지 포함한 풀 검증 (배포 직전 · 설정 변경 시 필수)
-agent: build
+agent: "everything-claude-code:build-error-resolver"
 ---
 
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 build-sensitive 검증을 Claude/ECC에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행.
 > 이 명령은 **`next.config.ts` / `middleware.ts` / `eslint.config.mjs` / `tsconfig.json` / Tailwind·PostCSS 설정 / Supabase migration 추가** 시 사용한다. 일반 변경은 `./check.md`로 충분하다.
 
@@ -36,6 +37,7 @@ agent: build
 
 ## 금지
 
+- `../../docs/QUALITY_GATE.md` 의 금지 사항과 아키텍처 가드레일을 우선한다.
 - `middleware.ts`의 auth 가드 예외 경로(`/`, `/login`, `/invite/*`) 임의 변경 금지
 - `supabase/migrations/*.sql` 파일 재정렬·삭제 금지 (append-only)
 - `NEXT_PUBLIC_` 접두를 서버 전용 키(`SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `VAPID_PRIVATE_KEY`)에 붙이는 수정 금지

@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { dispatchDeadlineNotification } from "@/lib/push/dispatch";
 
-export const runtime = "nodejs";
-
 // Vercel hobby plan 은 cron 을 하루 1 회까지만 허용해 `vercel.json` 의 스케줄이
 // `0 0 * * *` (UTC 자정 = KST 09 시) 로 잡혀 있다. "마감 24 시간 전" 의도를
 // ±12 시간 허용 창으로 넓혀 24 시간 주기에서도 누락이 생기지 않게 한다.
@@ -59,7 +57,25 @@ export async function POST(req: Request): Promise<Response> {
     dispatched += 1;
   }
 
-  return NextResponse.json({ ok: true, scanned: ids.length, dispatched });
+  // ADR-0027 — 만기 도달(active + end_at <= now) 챌린지를 closed 로 전이(auto-close).
+  // 마감 push 스캔(미래 end_at)과 대상 창이 달라 충돌 없음. adminClient 가 RLS 를 우회한다.
+  // 표시는 challengePhase 가 이미 정확하지만, 이 전이가 0029 슬롯을 풀고 status 를 truthful 하게 만든다.
+  let closed = 0;
+  // ADR-0030 — 자연 종료(만기)도 closed_at 기록. closed_at >= end_at 이라 cutoff=duration 으로 수렴.
+  const { data: closedRows, error: closeErr } = await admin
+    .from("challenges")
+    .update({ status: "closed", closed_at: new Date(now).toISOString() })
+    .eq("status", "active")
+    .lte("end_at", new Date(now).toISOString())
+    .select("id");
+  if (closeErr) {
+    // deadline-push 는 성공했으므로 cron 전체를 실패 처리하지 않는다. idempotent 라 다음 실행이 재시도.
+    console.error("[deadline-push] auto-close failed", closeErr);
+  } else {
+    closed = (closedRows ?? []).length;
+  }
+
+  return NextResponse.json({ ok: true, scanned: ids.length, dispatched, closed });
 }
 
 // Vercel Cron 은 GET 요청으로도 호출한다. 동일 핸들러에 위임한다.

@@ -1,124 +1,43 @@
 # Code Review Standards
 
-## Purpose
+> 공통 리뷰 기준 원본: [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md) §리뷰 기준. 이 파일은 트리거·심각도·에이전트 매핑만 추가.
 
-Code review ensures quality, security, and maintainability before code is merged. This rule defines when and how to conduct code reviews.
+## 리뷰 트리거 (필수)
 
-## When to Review
+- 코드 작성/수정 후
+- 공유 브랜치 커밋 전
+- 보안 민감 코드(인증·결제·사용자 데이터) 변경
+- 아키텍처 변경
+- PR 머지 전
 
-**MANDATORY review triggers:**
+리뷰 요청 전: CI/CD 통과 · 충돌 해결 · target 브랜치와 최신 동기화.
 
-- After writing or modifying code
-- Before any commit to shared branches
-- When security-sensitive code is changed (auth, payments, user data)
-- When architectural changes are made
-- Before merging pull requests
+## 심각도 / 머지 결정
 
-**Pre-Review Requirements:**
+| Level | 의미 | 조치 |
+|-------|------|------|
+| CRITICAL | 보안 취약점/데이터 손실 | BLOCK — 머지 전 수정 |
+| HIGH | 버그 또는 중대한 품질 이슈 | WARN — 머지 전 수정 권장 |
+| MEDIUM | 유지보수 우려 | INFO — 가능하면 수정 |
+| LOW | 스타일/사소한 제안 | NOTE — 선택 |
 
-Before requesting review, ensure:
+승인: CRITICAL/HIGH 없으면 Approve. CRITICAL이면 Block.
 
-- All automated checks (CI/CD) are passing
-- Merge conflicts are resolved
-- Branch is up to date with target branch
+## 보안 트리거 → 즉시 `everything-claude-code:security-reviewer`
 
-## Review Checklist
+- 인증/인가, 사용자 입력, DB 쿼리, 파일 시스템, 외부 API, 암호화, 결제
 
-Before marking code complete:
+## 리뷰 에이전트
 
-- [ ] Code is readable and well-named
-- [ ] Functions are focused (<50 lines)
-- [ ] Files are cohesive (<800 lines)
-- [ ] No deep nesting (>4 levels)
-- [ ] Errors are handled explicitly
-- [ ] No hardcoded secrets or credentials
-- [ ] No console.log or debug statements
-- [ ] Tests exist for new functionality
-- [ ] Test coverage meets 80% minimum
+| Agent | 용도 |
+|-------|------|
+| `everything-claude-code:code-reviewer` | 일반 품질·패턴 |
+| `everything-claude-code:security-reviewer` | OWASP Top 10·취약점 |
+| `everything-claude-code:typescript-reviewer` | TS/JS 특화 |
+| `everything-claude-code:database-reviewer` | 스키마/쿼리 |
 
-## Security Review Triggers
+## 자주 잡히는 이슈
 
-**STOP and use security-reviewer agent when:**
-
-- Authentication or authorization code
-- User input handling
-- Database queries
-- File system operations
-- External API calls
-- Cryptographic operations
-- Payment or financial code
-
-## Review Severity Levels
-
-| Level | Meaning | Action |
-|-------|---------|--------|
-| CRITICAL | Security vulnerability or data loss risk | **BLOCK** - Must fix before merge |
-| HIGH | Bug or significant quality issue | **WARN** - Should fix before merge |
-| MEDIUM | Maintainability concern | **INFO** - Consider fixing |
-| LOW | Style or minor suggestion | **NOTE** - Optional |
-
-## Agent Usage
-
-Use these agents for code review:
-
-| Agent | Purpose |
-|-------|---------|
-| **code-reviewer** | General code quality, patterns, best practices |
-| **security-reviewer** | Security vulnerabilities, OWASP Top 10 |
-| **typescript-reviewer** | TypeScript/JavaScript specific issues |
-| **python-reviewer** | Python specific issues |
-| **go-reviewer** | Go specific issues |
-| **rust-reviewer** | Rust specific issues |
-
-## Review Workflow
-
-```
-1. Run git diff to understand changes
-2. Check security checklist first
-3. Review code quality checklist
-4. Run relevant tests
-5. Verify coverage >= 80%
-6. Use appropriate agent for detailed review
-```
-
-## Common Issues to Catch
-
-### Security
-
-- Hardcoded credentials (API keys, passwords, tokens)
-- SQL injection (string concatenation in queries)
-- XSS vulnerabilities (unescaped user input)
-- Path traversal (unsanitized file paths)
-- CSRF protection missing
-- Authentication bypasses
-
-### Code Quality
-
-- Large functions (>50 lines) - split into smaller
-- Large files (>800 lines) - extract modules
-- Deep nesting (>4 levels) - use early returns
-- Missing error handling - handle explicitly
-- Mutation patterns - prefer immutable operations
-- Missing tests - add test coverage
-
-### Performance
-
-- N+1 queries - use JOINs or batching
-- Missing pagination - add LIMIT to queries
-- Unbounded queries - add constraints
-- Missing caching - cache expensive operations
-
-## Approval Criteria
-
-- **Approve**: No CRITICAL or HIGH issues
-- **Warning**: Only HIGH issues (merge with caution)
-- **Block**: CRITICAL issues found
-
-## Integration with Other Rules
-
-This rule works with:
-
-- [testing.md](testing.md) - Test coverage requirements
-- [security.md](security.md) - Security checklist
-- [git-workflow.md](git-workflow.md) - Commit standards
-- [agents.md](agents.md) - Agent delegation
+- **보안**: 하드코딩된 credential, SQL 인젝션, XSS, path traversal, CSRF 미보호, 인증 우회
+- **품질**: 50줄 초과 함수, 800줄 초과 파일, 4단계 초과 중첩, 미처리 에러, 변이 패턴, 누락 테스트
+- **성능**: N+1 쿼리, 미페이지네이션, 무제한 쿼리, 캐싱 누락

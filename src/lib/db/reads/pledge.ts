@@ -10,17 +10,22 @@ export type PledgeView = {
   mySigned: boolean;
 };
 
-export async function fetchPendingPledge(userId: string): Promise<PledgeView | null> {
+export async function fetchPendingPledge(
+  userId: string,
+  challengeId?: string,
+): Promise<PledgeView | null> {
   const supabase = await createClient();
-  const { data: self } = await supabase
+  let query = supabase
     .from("challenge_participants")
     .select(
       "challenge_id, challenges!inner(id, title, goal_count, duration_days, penalty_amount, status)",
     )
     .eq("user_id", userId)
-    .in("challenges.status", ["pending", "accepted"])
-    .limit(1)
-    .maybeSingle();
+    .in("challenges.status", ["pending", "accepted"]);
+  if (challengeId) {
+    query = query.eq("challenge_id", challengeId);
+  }
+  const { data: self } = await query.limit(1).maybeSingle();
 
   if (!self) return null;
   const c = Array.isArray(self.challenges) ? self.challenges[0] : self.challenges;

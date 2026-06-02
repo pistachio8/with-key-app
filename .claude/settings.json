@@ -3,6 +3,19 @@
     "everything-claude-code@everything-claude-code": true
   },
   "env": {
-    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,pre:bash:dispatcher"
+    "ECC_DISABLED_HOOKS": ""
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get(\"tool_input\",{}).get(\"file_path\",\"\"))' 2>/dev/null); [ -z \"$file\" ] && exit 0; case \"$file\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) cd \"${CLAUDE_PROJECT_DIR:-.}\" 2>/dev/null || exit 0; pnpm exec eslint --fix \"$file\" >/dev/null 2>&1 || true; pnpm exec prettier --write \"$file\" >/dev/null 2>&1 || true ;; esac; exit 0"
+          }
+        ]
+      }
+    ]
   }
 }

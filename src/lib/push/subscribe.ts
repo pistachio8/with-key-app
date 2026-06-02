@@ -23,13 +23,21 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return arr;
 }
 
-export async function subscribeToPush(vapidPublicKey: string): Promise<BrowserPushSubscription> {
+// Browser PushManager 를 진실 원천으로 사용한다. 기존 구독이 있으면 reuse(idempotent),
+// 없을 때만 새 subscribe. server `push_subscriptions` row 와 매 호출 시 자연 정합화되며,
+// 사용자 측 토글 OFF→ON 으로 인한 클라이언트 state staleness 를 우회 차단한다.
+export async function syncBrowserSubscription(
+  vapidPublicKey: string,
+): Promise<BrowserPushSubscription> {
   if (!isPushSupported()) throw new Error("push_unsupported");
   const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-  });
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+  }
   const json = sub.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
     throw new Error("subscription_incomplete");

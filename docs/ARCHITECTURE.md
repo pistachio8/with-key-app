@@ -2,6 +2,8 @@
 
 `with-key` (윗키) 프로젝트의 아키텍처 레퍼런스. AI 코딩 도구(Claude Code, Cursor)와 개발자가 프로젝트 구조를 이해하기 위해 참조한다.
 
+코딩 품질, 금지 사항, 변경 유형별 검증 기준은 [`QUALITY_GATE.md`](./QUALITY_GATE.md)를 우선한다.
+
 ## 프로젝트 개요
 
 **with-key**는 친구 3~4명이 주간 운동 챌린지를 서약서 형태로 약속하고, 사진 + 키워드 칩 원탭으로 인증하면 AI가 운동 일기를 대신 써주는 모바일 웹(PWA) POC다.
@@ -19,6 +21,8 @@
 - **dev 서버**: Turbopack (`next dev` 기본)
 - **린터/포맷터**: ESLint (Next flat config) + Prettier
 - **테스트**: Vitest (jsdom, util 중심)
+
+품질 게이트의 실행 순서와 추가 검증 조건은 [`QUALITY_GATE.md`](./QUALITY_GATE.md) "테스트와 검증"을 따른다.
 
 ## 아키텍처 원칙
 
@@ -140,6 +144,9 @@ with-key/
 - 루트 `middleware.ts`가 `updateSession()`을 호출 → 쿠키 리프레시 + 미인증 시 `/login` 리다이렉트
 - `/`, `/login`, `/invite/*` 는 가드 예외 처리
 - 정적 자산과 이미지 경로는 matcher에서 제외
+- **로그인 경로** ([ADR-0008](./adr/0008-kakao-oauth-introduction.md)): 1차는 카카오 OAuth (`supabase.auth.signInWithOAuth({ provider: 'kakao' })`), 비상 fallback 은 이메일 매직링크. 매직링크 UI는 `NEXT_PUBLIC_ENABLE_MAGIC_LINK=true` env 토글 시에만 노출되고 코드는 항상 유지(분 단위 운영 복구). `src/app/auth/callback/route.ts` 가 공통 callback — invite next 자동 가입(`accept_invite` RPC) · `?welcome={groupName}` cushion · `user_signed_up`/`invite_opened` emit 책임.
+- **인앱뷰 가드** ([ADR-0008](./adr/0008-kakao-oauth-introduction.md)): 카카오톡·인스타·페북·네이버·라인 인앱브라우저는 OAuth 세션 쿠키 유지가 불안정해 외부 브라우저 전환 안내로 CTA 영역 대체. `src/lib/auth/in-app-browser.ts` (UA detection · kind 분기) + `src/components/auth/in-app-browser-guard.tsx` (Guide UI). `/login` · `/invite/[token]` 두 페이지에서 SSR `headers().get('user-agent')` 기반 1차 분기 + hydration 후 `navigator.userAgent` 보강.
+- **카카오 OAuth scope 운영 제약** (ADR-0008 §Consequences): Supabase GoTrue 의 카카오 provider 가 `account_email` 을 서버 측 default scope 로 hardcoded — 카카오 콘솔 동의항목에 `카카오계정(이메일)` 을 **선택 동의로 반드시 등록**해야 한다. Supabase Dashboard 의 "Allow users without an email" 옵션으로 비동의 케이스 흡수.
 
 ## 데이터 모델 (PRD §8)
 
@@ -153,6 +160,7 @@ push_subscriptions
 ```
 
 **핵심 인덱스** (PRD §8.3):
+
 - `challenges(group_id, status)`
 - `action_logs(challenge_id, user_id, created_at DESC)`
 - `action_logs(user_id, created_at DESC)` — "오늘 인증 여부" 조회
@@ -231,7 +239,7 @@ pnpm test             # Vitest (util 중심)
 
 ## 참조 문서
 
-- [`docs/CLAUDE.md`](./CLAUDE.md) — Claude Code 작업 규칙
+- [`CLAUDE.md`](../CLAUDE.md) — Claude Code 컨텍스트 인덱스 (작업별 진입 문서 매핑)
 - [`docs/PRD.md`](./PRD.md) — 기능 스펙 · AC · 이벤트 · 데이터 모델
 - [`docs/BE_SCHEMA.md`](./BE_SCHEMA.md) — 테이블 · 제약 · 인덱스 · RLS · 상태 전이 SoT
 - [`docs/ONBOARDING.md`](./ONBOARDING.md) — Day 1 실행 가이드

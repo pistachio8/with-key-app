@@ -1,33 +1,44 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const pretendard = localFont({
+  src: "../../public/fonts/PretendardVariable.woff2",
+  display: "swap",
+  variable: "--font-sans",
+  weight: "45 920",
 });
 
 export const metadata: Metadata = {
-  title: "윗키 · with-key",
-  description: "친구와 함께하는 운동 각서",
+  title: "from. with",
+  description: "혼자, 또는 친구와 함께하는 운동 기록",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon-180.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "from. with",
+    statusBarStyle: "default",
   },
 };
 
+// WCAG 1.4.4 Resize Text — `maximumScale: 1`은 사용자 줌을 차단해 a11y AA 미달.
+// 모바일 PWA에서 자동 줌-인 회피는 input font-size ≥ 16px로 처리하고,
+// 사용자 줌은 항상 허용한다.
+// interactiveWidget `resizes-content` — 가상 키보드가 뜨면 viewport가 같이 축소돼
+// `min-h-svh` 가 줄어들고 폼이 자동으로 위로 올라온다. 기본값(overlays-content)에서는
+// iOS Safari가 키보드로 폼을 덮어버려 /login email input 등이 가려졌다.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -36,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="ko" className={`${pretendard.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <PwaRegister />
         {children}

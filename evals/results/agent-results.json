@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "description": "with-key agent eval baseline — append-only. 새 run은 runs[] 끝에만 추가, 기존 항목 수정 금지.",
+  "tasks": [
+    {
+      "id": "EVAL-0001",
+      "title": "Server Action — kudos 생성",
+      "spec": "../tasks/0001-server-action-create-kudos.md",
+      "status": "pending"
+    },
+    {
+      "id": "EVAL-0002",
+      "title": "AI 일기 — 타임아웃 폴백 동작",
+      "spec": "../tasks/0002-ai-diary-fallback.md",
+      "status": "pending"
+    },
+    {
+      "id": "EVAL-0003",
+      "title": "Supabase migration — RLS 정책 추가",
+      "spec": "../tasks/0003-rls-migration.md",
+      "status": "pending"
+    }
+  ],
+  "runs": []
+}

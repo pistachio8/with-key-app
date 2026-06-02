@@ -3,10 +3,13 @@ description: "Setup Node 20 + pnpm 10.7 + install deps with cache"
 runs:
   using: "composite"
   steps:
-    - uses: pnpm/action-setup@v4
+    # Action runtime 은 Node.js 24 (2026-06-02 GitHub Actions Node 20 deprecation 대응).
+    # 앱 Node.js 자체는 .nvmrc 와 동일하게 20 LTS 로 setup-node 가 설치.
+    # setup-node v6 부터 자동 캐싱은 npm 한정 → pnpm 은 cache 입력 명시 유지.
+    - uses: pnpm/action-setup@v6
       with:
         version: 10.7.0
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         node-version: 20
         cache: pnpm

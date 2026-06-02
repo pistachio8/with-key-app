@@ -44,9 +44,7 @@ const from = vi.fn((table: string) => {
     };
   }
   if (next.table !== table) {
-    throw new Error(
-      `dispatch test expected next from() to be "${next.table}", got "${table}"`,
-    );
+    throw new Error(`dispatch test expected next from() to be "${next.table}", got "${table}"`);
   }
   return {
     select: () => chainResolvingTo(next.rows, next.error ?? null),
@@ -72,7 +70,7 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
-import { dispatchStartNotification } from "./dispatch";
+import { dispatchActionCompletedNotification, dispatchStartNotification } from "./dispatch";
 
 // -----------------------------------------------------------------------------
 // Fixtures
@@ -80,28 +78,27 @@ import { dispatchStartNotification } from "./dispatch";
 
 const CHALLENGE_ID = "00000000-0000-4000-8000-000000000001";
 
-function queueHappyPath(overrides: {
-  participants?: Array<{ user_id: string }>;
-  users?: Array<{ id: string; notification_prefs: unknown }>;
-  subs?: Array<{
-    user_id: string;
-    endpoint: string;
-    p256dh: string;
-    auth: string;
-  }>;
-} = {}) {
+function queueHappyPath(
+  overrides: {
+    participants?: Array<{ user_id: string }>;
+    users?: Array<{ id: string; notification_prefs: unknown }>;
+    subs?: Array<{
+      user_id: string;
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+    }>;
+  } = {},
+) {
   tablePlans.push({
     table: "challenge_participants",
-    rows: overrides.participants ?? [
-      { user_id: "user-a" },
-      { user_id: "user-b" },
-    ],
+    rows: overrides.participants ?? [{ user_id: "user-a" }, { user_id: "user-b" }],
   });
   tablePlans.push({
     table: "users",
     rows: overrides.users ?? [
-      { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      { id: "user-b", notification_prefs: { start: true, deadline: true } },
+      { id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } },
+      { id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } },
     ],
   });
   tablePlans.push({
@@ -139,12 +136,10 @@ describe("dispatchStartNotification", () => {
   it("sends push only to participants opted in with prefs.start=true", async () => {
     queueHappyPath({
       users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-        { id: "user-b", notification_prefs: { start: false, deadline: true } },
+        { id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } },
+        { id: "user-b", notification_prefs: { start: false, deadline: true, kudos: false } },
       ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" },
-      ],
+      subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
 
     await dispatchStartNotification(CHALLENGE_ID);
@@ -170,20 +165,17 @@ describe("dispatchStartNotification", () => {
     expect(sendPush).not.toHaveBeenCalled();
     expect(trackCalls).toHaveLength(2);
     for (const call of trackCalls) {
-      expect((call.event as { props: { suppressed: boolean; outcome: string } }).props)
-        .toMatchObject({ suppressed: true, outcome: "suppressed" });
+      expect(
+        (call.event as { props: { suppressed: boolean; outcome: string } }).props,
+      ).toMatchObject({ suppressed: true, outcome: "suppressed" });
     }
   });
 
   it("cleans up subscriptions on 410 Gone and records outcome=cleaned", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-gone", p256dh: "p", auth: "a" },
-      ],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-a", endpoint: "ep-gone", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("gone"), { statusCode: 410 });
     sendPush.mockRejectedValue(err);
@@ -192,20 +184,14 @@ describe("dispatchStartNotification", () => {
 
     expect(deletedEndpoints).toEqual(["ep-gone"]);
     expect(trackCalls).toHaveLength(1);
-    expect(
-      (trackCalls[0].event as { props: { outcome: string } }).props.outcome,
-    ).toBe("cleaned");
+    expect((trackCalls[0].event as { props: { outcome: string } }).props.outcome).toBe("cleaned");
   });
 
   it("records outcome=failed on non-Gone errors without deleting subscription", async () => {
     queueHappyPath({
       participants: [{ user_id: "user-a" }],
-      users: [
-        { id: "user-a", notification_prefs: { start: true, deadline: true } },
-      ],
-      subs: [
-        { user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" },
-      ],
+      users: [{ id: "user-a", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
     });
     const err = Object.assign(new Error("boom"), { statusCode: 500 });
     sendPush.mockRejectedValue(err);
@@ -214,9 +200,7 @@ describe("dispatchStartNotification", () => {
 
     expect(deletedEndpoints).toHaveLength(0);
     expect(trackCalls).toHaveLength(1);
-    expect(
-      (trackCalls[0].event as { props: { outcome: string } }).props.outcome,
-    ).toBe("failed");
+    expect((trackCalls[0].event as { props: { outcome: string } }).props.outcome).toBe("failed");
   });
 
   it("skips users whose prefs fail schema validation", async () => {
@@ -224,11 +208,9 @@ describe("dispatchStartNotification", () => {
       participants: [{ user_id: "user-x" }, { user_id: "user-y" }],
       users: [
         { id: "user-x", notification_prefs: "garbage" },
-        { id: "user-y", notification_prefs: { start: true, deadline: true } },
+        { id: "user-y", notification_prefs: { start: true, deadline: true, kudos: false } },
       ],
-      subs: [
-        { user_id: "user-y", endpoint: "ep-y", p256dh: "p", auth: "a" },
-      ],
+      subs: [{ user_id: "user-y", endpoint: "ep-y", p256dh: "p", auth: "a" }],
     });
 
     await dispatchStartNotification(CHALLENGE_ID);
@@ -238,5 +220,91 @@ describe("dispatchStartNotification", () => {
       expect.objectContaining({ endpoint: "ep-y" }),
       expect.anything(),
     );
+  });
+});
+
+describe("dispatchActionCompletedNotification", () => {
+  it("첫 인증(isFirstOfDay=true): 활동별 title + 완료 body, actor 제외", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }, { user_id: "user-c" }],
+      users: [
+        { id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } },
+        { id: "user-c", notification_prefs: { start: true, deadline: true, kudos: false } },
+      ],
+      subs: [
+        { user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" },
+        { user_id: "user-c", endpoint: "ep-c", p256dh: "p", auth: "a" },
+      ],
+    });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "gym", isFirstOfDay: true },
+    );
+
+    expect(sendPush).toHaveBeenCalledTimes(2);
+    for (const [, payload] of sendPush.mock.calls) {
+      expect((payload as { title: string }).title).toBe("🏋️ 헬스 인증!");
+      expect((payload as { body: string }).body).toBe("민지님이 오늘 인증을 완료했어요 💪");
+      expect((payload as { type: string }).type).toBe("friend_action");
+      expect((payload as { category: string }).category).toBe("friend_action");
+    }
+    const recipientIds = trackCalls.map((c) => (c.options as { userId?: string }).userId);
+    expect(recipientIds).toEqual(expect.arrayContaining(["user-b", "user-c"]));
+    expect(recipientIds).not.toContain("actor");
+    // notification_sent.type 은 friend_action (게이팅 키 start 와 분리)
+    for (const c of trackCalls) {
+      expect((c.event as { props: { type: string } }).props.type).toBe("friend_action");
+    }
+  });
+
+  it("재제출(isFirstOfDay=false): 활동별 '또' title + 재제출 body", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }],
+      users: [{ id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" }],
+    });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "meal", isFirstOfDay: false },
+    );
+
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    const [, payload] = sendPush.mock.calls[0]!;
+    expect((payload as { title: string }).title).toBe("🥗 식단 또!");
+    expect((payload as { body: string }).body).toBe("민지님이 한 번 더 인증했어요");
+  });
+
+  it("기타(other) 활동은 활동명 없는 title", async () => {
+    queueHappyPath({
+      participants: [{ user_id: "actor" }, { user_id: "user-b" }],
+      users: [{ id: "user-b", notification_prefs: { start: true, deadline: true, kudos: false } }],
+      subs: [{ user_id: "user-b", endpoint: "ep-b", p256dh: "p", auth: "a" }],
+    });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "actor", displayName: "민지" },
+      { activityType: "other", isFirstOfDay: true },
+    );
+
+    const [, payload] = sendPush.mock.calls[0]!;
+    expect((payload as { title: string }).title).toBe("✨ 인증 도착!");
+  });
+
+  it("actor가 유일 참가자면 발송하지 않는다", async () => {
+    tablePlans.push({ table: "challenge_participants", rows: [{ user_id: "solo" }] });
+
+    await dispatchActionCompletedNotification(
+      CHALLENGE_ID,
+      { userId: "solo", displayName: "혼자" },
+      { activityType: "gym", isFirstOfDay: true },
+    );
+
+    expect(sendPush).not.toHaveBeenCalled();
+    expect(trackCalls).toHaveLength(0);
   });
 });

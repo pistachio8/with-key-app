@@ -14,6 +14,13 @@ const userMessage = makeUserMessage({
   conflict: "잠시 후 다시 시도해 주세요.",
 });
 
+// 메시지와 URL 사이에 빈 줄(\n\n) 을 강제하려면 share API 의 url 필드를 비우고 text 한 덩이로 보낸다.
+// url 을 따로 두면 OS(특히 카톡) 가 "텍스트 URL" 을 한 줄로 join 해버려 줄바꿈을 못 보낸다.
+const SHARE_MESSAGE = "함께 운동 서약서를 써볼래?";
+function buildShareText(url: string): string {
+  return `${SHARE_MESSAGE}\n\n${url}`;
+}
+
 type Props = {
   groupId: string;
 };
@@ -36,10 +43,12 @@ export function InviteTrigger({ groupId }: Props) {
         const url = buildInviteUrl(origin, res.data.token);
         setLastUrl(url);
 
-        const shared = await tryWebShare(url);
+        const shareText = buildShareText(url);
+
+        const shared = await tryWebShare(shareText);
         if (shared) return;
 
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(shareText);
         toast.success("초대 링크를 복사했어요. 친구에게 보내주세요.");
       } catch (err) {
         console.error("[InviteTrigger] unexpected throw:", err);
@@ -62,15 +71,16 @@ export function InviteTrigger({ groupId }: Props) {
   );
 }
 
-async function tryWebShare(url: string): Promise<boolean> {
+async function tryWebShare(text: string): Promise<boolean> {
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return false;
   }
   try {
+    // url 필드를 굳이 두지 않는 이유: 메시지·URL 사이의 줄바꿈을 OS·앱마다 다르게 처리하므로
+    // text 한 덩이로 보내 layout 을 우리가 결정한다.
     await navigator.share({
-      title: "윗키 초대",
-      text: "함께 운동 서약서를 써볼래?",
-      url,
+      title: "from.with 초대",
+      text,
     });
     return true;
   } catch {

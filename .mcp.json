@@ -5,8 +5,12 @@
             "args": [
                 "-y",
                 "@supabase/mcp-server-supabase@latest",
-                "--project-ref": ""
-            ]
+                "--read-only",
+                "--project-ref=${SUPABASE_PROJECT_REF}"
+            ],
+            "env": {
+                "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+            }
         },
         "vercel": {
             "type": "http",
@@ -26,7 +30,7 @@
                 "@modelcontextprotocol/server-github"
             ],
             "env": {
-                "GITHUB_PERSONAL_ACCESS_TOKEN": "..."
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
             }
         },
         "playwright": {
