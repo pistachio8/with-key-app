@@ -48,7 +48,7 @@ export function PenaltyPicker({ value, onChange }: Props) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend id={legendId} className="text-sm font-semibold">
-        1회 실패 시 예정 벌금
+        주 목표 미달 시 벌금
       </legend>
       <div
         role="radiogroup"

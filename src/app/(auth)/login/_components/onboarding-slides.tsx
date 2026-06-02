@@ -30,8 +30,8 @@ const SLIDES: Slide[] = [
   {
     illust: "💵",
     illustTone: "secondary",
-    title: "인증 실패 시 벌금 누적",
-    body: "하루 안에 인증 못 하면 벌금이\n자동으로 쌓여요. 강제력 ON.",
+    title: "주 목표 미달 시 벌금 누적",
+    body: "한 주 목표를 못 채우면 벌금이\n쌓여요. 강제력 ON.",
   },
   {
     illust: "👯",
