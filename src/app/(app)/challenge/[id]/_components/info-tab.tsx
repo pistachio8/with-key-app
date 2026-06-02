@@ -31,7 +31,7 @@ export function InfoTab({ detail, ownerName, inviteSlot, accountSlot }: InfoTabP
         <InfoRow label="인증 빈도" value={goalCountLabel(detail.goalCount).detail} />
         <InfoRow label="벌금" value={penaltyLabel(detail.penaltyAmount)} />
         <InfoRow label="참여 인원" value={`${detail.participantCount}명`} />
-        <InfoRow label="모인 예정 벌금" value={formatKRW(detail.potTotal)} />
+        <InfoRow label="모인 벌금" value={formatKRW(detail.potTotal)} />
       </Card>
       {inviteSlot}
       {accountSlot}
