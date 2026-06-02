@@ -1,61 +1,51 @@
-// 모킹업 §8-B 현황판 탭 — primary bg status-card (누적 벌금 + KPI pills) + 멤버 strip.
-// daysPill 라벨은 status 로 직접 분기 (spec C5).
+// spec C6 현황판 H3 — 누적 금액(확정·단조) + viewer 주차 칩 + 이번 주 링 + 멤버 strip(유지).
+// D-day·기간은 헤더(StatusCard)에 통합돼 있어 여기서는 중복 표시하지 않는다.
 
 import { Card } from "@/components/ui/card";
 import { MemberStrip } from "./member-strip";
+import { WeekChips } from "./week-chips";
+import { WeekRing } from "./week-ring";
 import type { ChallengePhase } from "@/lib/challenge/lifecycle";
 import type { ChallengeMemberView } from "@/lib/db/reads/challenge-detail";
+import type { WeekChip, CurrentWeekStatus } from "@/lib/challenge/weekly";
 
 interface DashboardTabProps {
-  totalPenalty: number;
-  totalActions: number;
-  totalFailures: number;
+  potTotal: number; // 그룹 확정 누적(단조)
+  weeks: ReadonlyArray<WeekChip>; // viewer 주차 칩
+  currentWeek: CurrentWeekStatus | null; // viewer 이번 주(running 일 때만)
   daysRemaining: number | null;
-  // ADR-0027 — status 가 아니라 phase. over(만기)는 "종료"(남은 0일 금지).
   phase: ChallengePhase;
-  members: ReadonlyArray<ChallengeMemberView>;
   goalCount: number;
-}
-
-function daysPillLabel(phase: ChallengePhase, daysRemaining: number | null): string {
-  if (phase === "pending") return "시작 전";
-  if (phase === "accepted") return "곧 시작";
-  if (phase === "running") return daysRemaining != null ? `남은 ${daysRemaining}일` : "—";
-  return "종료";
+  members: ReadonlyArray<ChallengeMemberView>;
 }
 
 export function DashboardTab({
-  totalPenalty,
-  totalActions,
-  totalFailures,
-  daysRemaining,
-  phase,
-  members,
+  potTotal,
+  weeks,
+  currentWeek,
   goalCount,
+  members,
 }: DashboardTabProps) {
   return (
     <div className="flex flex-col gap-3">
       <Card tone="primary" padding="lg" className="text-center">
-        <div className="text-[12px] opacity-85">누적 벌금</div>
+        <div className="text-[12px] opacity-85">모인 벌금</div>
         <div className="mt-1 text-[32px] font-extrabold tracking-tight tabular-nums">
-          {totalPenalty.toLocaleString()}
+          {potTotal.toLocaleString()}
           <sub className="ml-1 align-baseline text-[14px] font-semibold opacity-90">원</sub>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <KpiPill label={`총 인증 ${totalActions}회`} />
-          <KpiPill label={`실패 ${totalFailures}회`} />
-          <KpiPill label={daysPillLabel(phase, daysRemaining)} />
-        </div>
       </Card>
-      <MemberStrip goalCount={goalCount} members={members} />
-    </div>
-  );
-}
 
-function KpiPill({ label }: { label: string }) {
-  return (
-    <div className="rounded-[10px] bg-white/15 py-2 text-center text-[11px] font-semibold text-white tabular-nums">
-      {label}
+      {weeks.length > 0 && (
+        <Card padding="md" className="flex flex-col gap-3">
+          <h3 className="t-h3">주차 기록</h3>
+          <WeekChips weeks={weeks} />
+        </Card>
+      )}
+
+      {currentWeek && <WeekRing status={currentWeek} />}
+
+      <MemberStrip goalCount={goalCount} members={members} />
     </div>
   );
 }
