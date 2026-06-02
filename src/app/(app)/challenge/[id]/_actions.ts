@@ -273,9 +273,10 @@ export const endChallenge = withUser<ChallengeIdInput, { id: string }>(
     if (!ok) return failure("forbidden");
 
     const admin = adminClient();
+    // ADR-0030 — 조기 종료 cutoff 산정용으로 종료 시각도 함께 기록.
     const { error } = await admin
       .from("challenges")
-      .update({ status: "closed" })
+      .update({ status: "closed", closed_at: new Date().toISOString() })
       .eq("id", parsed.data.challengeId);
     if (error) return failure(mapSupabaseError(error));
     // status 'active' → 'closed' 가 /home · /me/challenges · /challenge/[id] 등 광범위에 영향.

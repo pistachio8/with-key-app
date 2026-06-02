@@ -14,14 +14,16 @@ const closePlan: { rows: Array<{ id: string }>; error?: unknown } = {
   rows: [],
 };
 const dispatchedMap: Record<string, boolean> = {};
+let lastUpdatePayload: Record<string, unknown> | null = null;
 
 function challengesChain() {
   // 한 challengesChain 인스턴스는 SELECT(deadline 스캔) 또는 UPDATE(auto-close) 중 하나.
   // .update() 호출 여부로 분기해 서로 다른 plan 을 resolve 한다.
   const chain: Record<string, unknown> = { __isUpdate: false };
   chain.select = () => chain;
-  chain.update = () => {
+  chain.update = (payload: Record<string, unknown>) => {
     chain.__isUpdate = true;
+    lastUpdatePayload = payload;
     return chain;
   };
   chain.eq = () => chain;
@@ -90,6 +92,7 @@ beforeEach(() => {
   challengesPlan.error = undefined;
   closePlan.rows = [];
   closePlan.error = undefined;
+  lastUpdatePayload = null;
   for (const k of Object.keys(dispatchedMap)) delete dispatchedMap[k];
   dispatchDeadlineNotification.mockReset();
   dispatchDeadlineNotification.mockResolvedValue(undefined);
@@ -160,6 +163,13 @@ describe("POST /api/cron/deadline-push — auto-close (ADR-0027)", () => {
 
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ ok: true, closed: 2 });
+  });
+
+  it("auto-close 시 closed_at 을 함께 set (ADR-0030)", async () => {
+    closePlan.rows = [{ id: "expired-1" }];
+    await POST(req("Bearer supersecret"));
+    expect(lastUpdatePayload).toMatchObject({ status: "closed" });
+    expect(typeof lastUpdatePayload?.closed_at).toBe("string");
   });
 
   it("reports closed=0 when nothing is expired", async () => {
