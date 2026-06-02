@@ -1,6 +1,8 @@
 // src/app/(app)/challenge/[id]/recap/_components/settlement-receipt.tsx
 import Image from "next/image";
 import { formatKRW } from "@/lib/challenge/penalty";
+import { goalCountLabel } from "@/lib/challenge/frequency";
+import { totalWeeks } from "@/lib/challenge/weekly";
 import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
 import { Stamp } from "@/components/ui/stamp";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,9 @@ type Props = {
   startAt: string | null; // null 이면 기간 줄 생략
   endAt: string | null;
   goalCount: number;
+  // 주차 요약 (recap.viewerElapsedWeeks · viewerAchievedWeeks). 2주 이상일 때만 표시.
+  elapsedWeeks: number;
+  achievedWeeks: number;
   viewerDoneCount: number;
   viewerAchieved: boolean;
   viewerPerHeadPenalty: number;
@@ -47,6 +52,8 @@ export function SettlementReceipt({
   startAt,
   endAt,
   goalCount,
+  elapsedWeeks,
+  achievedWeeks,
   viewerDoneCount,
   viewerAchieved,
   viewerPerHeadPenalty,
@@ -92,9 +99,17 @@ export function SettlementReceipt({
       {/* 항목 */}
       <dl className="text-[13px] leading-[2]">
         <div className="flex justify-between">
-          <dt className="text-[var(--invite-muted)]">목표 인증</dt>
-          <dd className="font-semibold">{goalCount}회</dd>
+          <dt className="text-[var(--invite-muted)]">목표</dt>
+          <dd className="font-semibold">{goalCountLabel(goalCount).detail}</dd>
         </div>
+        {totalWeeks(durationDays) > 1 && (
+          <div className="flex justify-between">
+            <dt className="text-[var(--invite-muted)]">주차 달성</dt>
+            <dd className="font-semibold tabular-nums">
+              {elapsedWeeks}주 중 {achievedWeeks}주
+            </dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-[var(--invite-muted)]">나의 인증</dt>
           <dd className="font-semibold">{viewerDoneCount}회</dd>

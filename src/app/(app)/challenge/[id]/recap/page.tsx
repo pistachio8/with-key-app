@@ -106,6 +106,8 @@ export default async function RecapPage({ params }: { params: Params }) {
         startAt={recap.startAt}
         endAt={recap.endAt}
         goalCount={recap.goalCount}
+        elapsedWeeks={recap.viewerElapsedWeeks}
+        achievedWeeks={recap.viewerAchievedWeeks}
         viewerDoneCount={recap.viewerDoneCount}
         viewerAchieved={recap.viewerAchieved}
         viewerPerHeadPenalty={recap.viewerPerHeadPenalty}

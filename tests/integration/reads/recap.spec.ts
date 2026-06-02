@@ -6,9 +6,15 @@ import { buildRecapView } from "@/lib/db/reads/recap";
 
 async function closeChallenge(challengeId: string, endAt: Date) {
   const startAt = new Date(endAt.getTime() - 7 * 86_400_000);
+  // ADR-0030 — 자연 종료 mirror: closed_at >= end_at → cutoff=duration_days.
   await admin
     .from("challenges")
-    .update({ status: "closed", start_at: startAt.toISOString(), end_at: endAt.toISOString() })
+    .update({
+      status: "closed",
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      closed_at: endAt.toISOString(),
+    })
     .eq("id", challengeId);
 }
 
@@ -63,7 +69,9 @@ describe("fetchRecap integration", () => {
     // RLS + 집계 동작을 buildRecapView 에 주입할 데이터로 검증.
     const { data: challenges } = await (await asUser(minji))
       .from("challenges")
-      .select("id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at")
+      .select(
+        "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at",
+      )
       .eq("id", c.id)
       .limit(1);
     expect(challenges?.[0]).toBeTruthy();
@@ -77,10 +85,24 @@ describe("fetchRecap integration", () => {
 
     const view = buildRecapView({
       challenge: challenges![0] as Parameters<typeof buildRecapView>[0]["challenge"],
+      // 7일(1주) 챌린지라 모든 done 을 week1 버킷에 둔다. 로그 created_at 은 종료 후라
+      // 실제 주차 분배 시 stray 가드에 걸리므로, 집계 의도(주차 done)를 직접 주입한다.
       participants: [
-        { user_id: minji.id, display_name: "민지", done_count: doneByUser.get(minji.id) ?? 0 },
-        { user_id: jj.id, display_name: "JJ", done_count: doneByUser.get(jj.id) ?? 0 },
-        { user_id: hee.id, display_name: "희수", done_count: doneByUser.get(hee.id) ?? 0 },
+        {
+          user_id: minji.id,
+          display_name: "민지",
+          doneByWeek: new Map([[1, doneByUser.get(minji.id) ?? 0]]),
+        },
+        {
+          user_id: jj.id,
+          display_name: "JJ",
+          doneByWeek: new Map([[1, doneByUser.get(jj.id) ?? 0]]),
+        },
+        {
+          user_id: hee.id,
+          display_name: "희수",
+          doneByWeek: new Map([[1, doneByUser.get(hee.id) ?? 0]]),
+        },
       ],
       viewerId: minji.id,
       now: new Date(),

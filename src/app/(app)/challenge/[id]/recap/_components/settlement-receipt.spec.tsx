@@ -5,10 +5,12 @@ import { SettlementReceipt } from "./settlement-receipt";
 
 const base = {
   title: "아침 루틴",
-  durationDays: 12,
+  durationDays: 12, // 2주(주1: 7일·주2: 자투리 5일)
   startAt: "2026-05-01T00:00:00Z",
   endAt: "2026-05-12T00:00:00Z",
-  goalCount: 12,
+  goalCount: 3, // 주 단위 빈도 (1~7)
+  elapsedWeeks: 2,
+  achievedWeeks: 1,
   members: [
     { id: "a", displayName: "민지", isMvp: true },
     { id: "b", displayName: "현우", isMvp: false },
@@ -32,7 +34,8 @@ describe("SettlementReceipt", () => {
       />,
     );
     expect(screen.getByText(/우리 그룹/)).toBeTruthy();
-    expect(screen.getByText("12회")).toBeTruthy(); // 목표 인증
+    expect(screen.getByText("주 3회")).toBeTruthy(); // 목표 (주간 빈도)
+    expect(screen.getByText("2주 중 1주")).toBeTruthy(); // 주차 달성
     expect(screen.getByText("9회")).toBeTruthy(); // 나의 인증
     expect(screen.getByText(/미달/)).toBeTruthy();
     expect(screen.getByText("4,000원")).toBeTruthy();
@@ -59,7 +62,7 @@ describe("SettlementReceipt", () => {
       />,
     );
     expect(screen.getByText("0원")).toBeTruthy();
-    expect(screen.getByText(/달성/)).toBeTruthy();
+    expect(screen.getByText("달성 🎉")).toBeTruthy(); // 판정 (주차 달성 라벨과 구분)
     expect(screen.getByText(/끝까지 해냈어요/)).toBeTruthy();
   });
 
@@ -70,7 +73,9 @@ describe("SettlementReceipt", () => {
         durationDays={12}
         startAt="2026-05-01T00:00:00Z"
         endAt="2026-05-12T00:00:00Z"
-        goalCount={12}
+        goalCount={3}
+        elapsedWeeks={2}
+        achievedWeeks={2}
         members={[{ id: "a", displayName: "민지", isMvp: true }]}
         groupName={null}
         isSolo={true}
