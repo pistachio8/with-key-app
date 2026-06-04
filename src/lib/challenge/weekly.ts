@@ -188,6 +188,9 @@ export type CurrentWeekStatus = {
   shortfall: number;
   atRiskAmount: number; // 이대로 끝나면 물 금액 (회복 가능). 0원 챌린지·달성 시 0
   imminent: boolean; // 무여유: 남은 가능일 <= 부족분
+  // 회복 불가: 남은 가능일 < 부족분 → 이번 주 목표 달성이 수학적으로 불가능(실패 확정).
+  // penalty 무관(0원 챌린지도 "달성 불가" 판정에 사용). 금액 노출은 atRiskAmount 로 별도 게이팅.
+  unreachable: boolean;
 };
 
 // 진행 중인 주 상태 — phase==='running' 일 때만. over/closed 면 null.
@@ -206,7 +209,9 @@ export function currentWeekStatus(
   const hasPenalty = Number.isFinite(params.penaltyAmount) && params.penaltyAmount > 0;
   const atRiskAmount = hasPenalty && done < goal ? params.penaltyAmount : 0;
   const imminent = hasPenalty && shortfall > 0 && daysLeftInWeek <= shortfall;
-  return { week, goal, done, daysLeftInWeek, shortfall, atRiskAmount, imminent };
+  // 회복 불가는 시간(일 경계)으로 결정되며 penalty 와 무관 — 0원 챌린지도 "달성 불가" 로 표시.
+  const unreachable = shortfall > 0 && daysLeftInWeek < shortfall;
+  return { week, goal, done, daysLeftInWeek, shortfall, atRiskAmount, imminent, unreachable };
 }
 
 export type WeekChipState = "achieved" | "missed" | "current" | "future";
@@ -227,9 +232,35 @@ export function buildWeekChips(
     const done = doneByWeek.get(w) ?? 0;
     let state: WeekChipState;
     if (elapsed.has(w)) state = done >= goal ? "achieved" : "missed";
-    else if (w === currentWeek) state = "current";
-    else state = "future";
+    else if (w === currentWeek) {
+      // 진행 중인 주라도 회복 불가(남은 가능일 < 부족분)면 미달로 표시 — currentWeekStatus.unreachable 과 동일 규칙.
+      const daysLeftInWeek = weekEndDayIndex(w, ctx.durationDays) - ctx.todayDayIndex + 1;
+      const shortfall = Math.max(0, goal - done);
+      state = shortfall > daysLeftInWeek ? "missed" : "current";
+    } else state = "future";
     chips.push({ week: w, goal, done, state });
   }
   return chips;
+}
+
+export type UnreachableParticipant = { userId: string; week: number; atRiskAmount: number };
+
+// running 챌린지에서 "이번 주 회복 불가(unreachable)"인 참가자 목록 — 일 경계 cron 통지 대상(순수).
+// 로그 0건 참가자(done=0)도 잡아야 하므로 logs 가 아닌 participantIds 를 순회한다.
+export function unreachableParticipants(
+  logs: ReadonlyArray<{ user_id: string; created_at: string }>,
+  participantIds: ReadonlyArray<string>,
+  ctx: CutoffContext,
+  params: WeeklyParams,
+): UnreachableParticipant[] {
+  if (ctx.phase !== "running") return [];
+  const byUser = countDoneDaysByUserByWeek(logs, ctx.startKey, ctx.durationDays);
+  const out: UnreachableParticipant[] = [];
+  for (const userId of participantIds) {
+    const status = currentWeekStatus(byUser.get(userId) ?? new Map(), ctx, params);
+    if (status?.unreachable) {
+      out.push({ userId, week: status.week, atRiskAmount: status.atRiskAmount });
+    }
+  }
+  return out;
 }

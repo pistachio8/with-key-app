@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { dispatchDeadlineNotification } from "@/lib/push/dispatch";
+import {
+  dispatchDeadlineNotification,
+  dispatchGoalUnreachableNotification,
+} from "@/lib/push/dispatch";
+import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
+import { unreachableParticipants, type CutoffContext } from "@/lib/challenge/weekly";
 
 // Vercel hobby plan 은 cron 을 하루 1 회까지만 허용해 `vercel.json` 의 스케줄이
 // `0 0 * * *` (UTC 자정 = KST 09 시) 로 잡혀 있다. "마감 24 시간 전" 의도를
@@ -75,7 +80,59 @@ export async function POST(req: Request): Promise<Response> {
     closed = (closedRows ?? []).length;
   }
 
-  return NextResponse.json({ ok: true, scanned: ids.length, dispatched, closed });
+  // 회복 불가(이번 주 달성 불가) 전환 통지 — running 챌린지 참가자별 (challenge,user,week) 1회.
+  // give-up(인증 중단)은 제출이 없어 결과 모달로 못 잡으므로 일 경계 cron 이 감지·통지(dispatch 가 dedup).
+  let unreachableNotified = 0;
+  const { data: running } = await admin
+    .from("challenges")
+    .select("id, goal_count, duration_days, penalty_amount, start_at")
+    .eq("status", "active")
+    .gt("end_at", new Date(now).toISOString())
+    .not("start_at", "is", null);
+  const todayKstKey = toKstDayKey(new Date(now));
+  for (const ch of running ?? []) {
+    const startKey = toKstDayKey(ch.start_at as string);
+    const todayDayIndex = dayIndexOf(todayKstKey, startKey);
+    if (todayDayIndex < 1) continue; // 시작 전 방어 — active 면 보통 없음
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: ch.duration_days as number,
+      todayDayIndex,
+      closedAt: null,
+      startKey,
+    };
+    const { data: parts } = await admin
+      .from("challenge_participants")
+      .select("user_id")
+      .eq("challenge_id", ch.id as string);
+    const participantIds = (parts ?? []).map((p) => p.user_id as string);
+    if (participantIds.length === 0) continue;
+    const { data: logs } = await admin
+      .from("action_logs")
+      .select("user_id, created_at")
+      .eq("challenge_id", ch.id as string);
+    const targets = unreachableParticipants(logs ?? [], participantIds, ctx, {
+      goalCount: ch.goal_count as number,
+      penaltyAmount: ch.penalty_amount as number,
+    });
+    for (const t of targets) {
+      const summary = await dispatchGoalUnreachableNotification({
+        challengeId: ch.id as string,
+        userId: t.userId,
+        week: t.week,
+        atRiskAmount: t.atRiskAmount,
+      });
+      if (summary.recipientCount > 0) unreachableNotified += 1;
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    scanned: ids.length,
+    dispatched,
+    closed,
+    unreachableNotified,
+  });
 }
 
 // Vercel Cron 은 GET 요청으로도 호출한다. 동일 핸들러에 위임한다.

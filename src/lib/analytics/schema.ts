@@ -108,13 +108,15 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("notification_sent"),
     props: z.object({
-      type: z.enum(["start", "deadline", "friend_action", "kudos_received"]),
+      type: z.enum(["start", "deadline", "friend_action", "kudos_received", "goal_unreachable"]),
       challengeId: uuid,
       suppressed: z.boolean(),
       outcome: z.enum(["sent", "cleaned", "failed", "suppressed"]),
       // kudos_received 만 채움. start/deadline/friend_action 발송에는 의미 없음.
       actionLogId: uuid.optional(),
       actorUserId: uuid.optional(),
+      // goal_unreachable 만 채움 — (challenge,user,week) dedup 키. 주차 1-based.
+      week: z.number().int().min(1).optional(),
     }),
   }),
   z.object({

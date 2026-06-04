@@ -22,6 +22,11 @@ function chainResolvingTo(rows: unknown, error: unknown = null) {
   chain.select = () => chain;
   chain.eq = () => chain;
   chain.in = () => chain;
+  chain.contains = () => chain;
+  chain.gt = () => chain;
+  chain.not = () => chain;
+  chain.limit = () => chain;
+  chain.maybeSingle = () => Promise.resolve(resolved);
   chain.then = (onFulfilled: (r: AdminResponse) => unknown) => onFulfilled(resolved);
   return chain;
 }
@@ -70,7 +75,11 @@ vi.mock("@/lib/analytics/track", () => ({
   },
 }));
 
-import { dispatchActionCompletedNotification, dispatchStartNotification } from "./dispatch";
+import {
+  dispatchActionCompletedNotification,
+  dispatchGoalUnreachableNotification,
+  dispatchStartNotification,
+} from "./dispatch";
 
 // -----------------------------------------------------------------------------
 // Fixtures
@@ -306,5 +315,60 @@ describe("dispatchActionCompletedNotification", () => {
 
     expect(sendPush).not.toHaveBeenCalled();
     expect(trackCalls).toHaveLength(0);
+  });
+});
+
+describe("dispatchGoalUnreachableNotification", () => {
+  const args = { challengeId: CHALLENGE_ID, userId: "user-a", week: 1, atRiskAmount: 3000 };
+
+  it("이미 (challenge,user,week) 로 보냈으면 skip (events dedup)", async () => {
+    tablePlans.push({ table: "events", rows: [{ id: "prior" }] });
+    const r = await dispatchGoalUnreachableNotification(args);
+    expect(r.recipientCount).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
+    expect(trackCalls).toHaveLength(0);
+  });
+
+  it("deadline 옵트인 off 면 skip", async () => {
+    tablePlans.push({ table: "events", rows: [] });
+    tablePlans.push({
+      table: "users",
+      rows: { notification_prefs: { start: true, deadline: false, kudos: false } },
+    });
+    const r = await dispatchGoalUnreachableNotification(args);
+    expect(r.recipientCount).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
+  });
+
+  it("미발송 + 옵트인 시 push + track(type=goal_unreachable, week, userId)", async () => {
+    tablePlans.push({ table: "events", rows: [] });
+    tablePlans.push({
+      table: "users",
+      rows: { notification_prefs: { start: true, deadline: true, kudos: false } },
+    });
+    tablePlans.push({
+      table: "push_subscriptions",
+      rows: [{ user_id: "user-a", endpoint: "ep-a", p256dh: "p", auth: "a" }],
+    });
+
+    const r = await dispatchGoalUnreachableNotification(args);
+
+    expect(r.recipientCount).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.objectContaining({ endpoint: "ep-a" }),
+      expect.objectContaining({
+        title: "이번 주 목표 달성 불가",
+        body: expect.stringContaining("3,000"),
+      }),
+    );
+    expect(trackCalls).toHaveLength(1);
+    const ev = trackCalls[0].event as {
+      props: { type: string; week: number; outcome: string };
+    };
+    expect(ev.props.type).toBe("goal_unreachable");
+    expect(ev.props.week).toBe(1);
+    expect(ev.props.outcome).toBe("sent");
+    expect((trackCalls[0].options as { userId?: string }).userId).toBe("user-a");
   });
 });

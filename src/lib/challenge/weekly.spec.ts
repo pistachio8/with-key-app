@@ -16,6 +16,7 @@ import {
   pickMvpIds,
   currentWeekStatus,
   buildWeekChips,
+  unreachableParticipants,
   type CutoffContext,
 } from "./weekly";
 
@@ -449,6 +450,53 @@ describe("currentWeekStatus", () => {
     expect(s?.atRiskAmount).toBe(0);
     expect(s?.imminent).toBe(false);
   });
+
+  it("회복 불가(unreachable): 7일·주7회, done 1, 남은 2일 → shortfall 6 > daysLeft 2 → true", () => {
+    // b088ae54 실측 케이스: goal 7(매일)·1일만 인증·day6.
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: 7,
+      todayDayIndex: 6,
+      closedAt: null,
+      startKey: "2026-05-01",
+    };
+    const s = currentWeekStatus(dbw([[1, 1]]), ctx, { goalCount: 7, penaltyAmount: 3000 });
+    expect(s?.shortfall).toBe(6);
+    expect(s?.daysLeftInWeek).toBe(2);
+    expect(s?.unreachable).toBe(true);
+    expect(s?.imminent).toBe(true); // unreachable ⊂ imminent
+    expect(s?.atRiskAmount).toBe(3000);
+  });
+
+  it("경계: shortfall == daysLeft → 아직 회복 가능 (unreachable=false, imminent=true)", () => {
+    // today day6 → daysLeft 2. done 1·goal 3 → shortfall 2 == daysLeft 2.
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: 7,
+      todayDayIndex: 6,
+      closedAt: null,
+      startKey: "2026-05-01",
+    };
+    const s = currentWeekStatus(dbw([[1, 1]]), ctx, params);
+    expect(s?.shortfall).toBe(2);
+    expect(s?.daysLeftInWeek).toBe(2);
+    expect(s?.unreachable).toBe(false);
+    expect(s?.imminent).toBe(true);
+  });
+
+  it("unreachable 는 penalty 무관: 0원 챌린지도 달성 불가면 true (atRiskAmount=0)", () => {
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: 7,
+      todayDayIndex: 6,
+      closedAt: null,
+      startKey: "2026-05-01",
+    };
+    const s = currentWeekStatus(new Map(), ctx, { goalCount: 7, penaltyAmount: 0 });
+    expect(s?.unreachable).toBe(true); // done 0, shortfall 7 > daysLeft 2
+    expect(s?.atRiskAmount).toBe(0);
+    expect(s?.imminent).toBe(false); // penalty 0 → imminent false
+  });
 });
 
 describe("buildWeekChips", () => {
@@ -498,5 +546,73 @@ describe("buildWeekChips", () => {
       { week: 1, goal: 3, done: 3, state: "achieved" },
       { week: 2, goal: 2, done: 1, state: "missed" },
     ]);
+  });
+
+  it("running 현재 주가 회복 불가면 'missed'(current 아님)", () => {
+    // 7일·주3회, today day6 → daysLeft 2. done 0·goal 3 → shortfall 3 > 2 → 회복 불가.
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: 7,
+      todayDayIndex: 6,
+      closedAt: null,
+      startKey: "2026-05-01",
+    };
+    expect(buildWeekChips(new Map(), ctx, params)).toEqual([
+      { week: 1, goal: 3, done: 0, state: "missed" },
+    ]);
+  });
+
+  it("running 현재 주가 아직 회복 가능하면 'current' 유지", () => {
+    // 7일·주3회, today day3 → daysLeft weekEnd(1,7)-3+1 = 5. shortfall 3 <= 5 → current.
+    const ctx: CutoffContext = {
+      phase: "running",
+      durationDays: 7,
+      todayDayIndex: 3,
+      closedAt: null,
+      startKey: "2026-05-01",
+    };
+    expect(buildWeekChips(new Map(), ctx, params)).toEqual([
+      { week: 1, goal: 3, done: 0, state: "current" },
+    ]);
+  });
+});
+
+describe("unreachableParticipants", () => {
+  const params = { goalCount: 7, penaltyAmount: 3000 };
+  const runningCtx: CutoffContext = {
+    phase: "running",
+    durationDays: 7,
+    todayDayIndex: 6,
+    closedAt: null,
+    startKey: "2026-05-30",
+  };
+
+  it("회복 불가 참가자만 (week·atRiskAmount 동반) 반환", () => {
+    // u1: 5/30 1회만(done 1, shortfall 6 > daysLeft 2) → 회복 불가.
+    // u2: 5/30~6/4 6일(done 6, shortfall 1 <= 2) → 아직 가능.
+    const u2Days = [
+      "2026-05-30",
+      "2026-05-31",
+      "2026-06-01",
+      "2026-06-02",
+      "2026-06-03",
+      "2026-06-04",
+    ];
+    const logs = [
+      { user_id: "u1", created_at: "2026-05-30T01:00:00Z" },
+      ...u2Days.map((d) => ({ user_id: "u2", created_at: `${d}T01:00:00Z` })),
+    ];
+    const out = unreachableParticipants(logs, ["u1", "u2"], runningCtx, params);
+    expect(out).toEqual([{ userId: "u1", week: 1, atRiskAmount: 3000 }]);
+  });
+
+  it("로그 0건 참가자(done 0)도 회복 불가로 잡는다", () => {
+    const out = unreachableParticipants([], ["solo"], runningCtx, params);
+    expect(out).toEqual([{ userId: "solo", week: 1, atRiskAmount: 3000 }]);
+  });
+
+  it("running 이 아니면 빈 배열 (over/closed 는 정산이 담당)", () => {
+    const overCtx: CutoffContext = { ...runningCtx, phase: "over" };
+    expect(unreachableParticipants([], ["solo"], overCtx, params)).toEqual([]);
   });
 });

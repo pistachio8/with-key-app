@@ -573,7 +573,7 @@ push_subscriptions
 | `ai_generated`         | AI 일기 성공                                                  | actionLogId, latencyMs, fallback, keywordCoverage (포함된 키워드 수/선택 수)                 |
 | `feed_view`            | 챌린지 상세 인증 피드 탭 활성화 (`/challenge/[id]`)           | unreadCount                                                                                  |
 | `kudos_given`          | 응원 발송                                                     | emoji, feedItemId                                                                            |
-| `notification_sent`    | 알림 발송                                                     | type (start / deadline)                                                                      |
+| `notification_sent`    | 알림 발송                                                     | type (start / deadline / friend_action / kudos_received / goal_unreachable), week (goal_unreachable 만) |
 | `notification_opened`  | 알림 탭                                                       | type                                                                                         |
 | `penalty_displayed`    | 마감 임박 카드 노출                                           | amount                                                                                       |
 

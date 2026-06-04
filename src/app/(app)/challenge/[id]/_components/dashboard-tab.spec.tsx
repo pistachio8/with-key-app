@@ -16,6 +16,7 @@ const currentWeek: CurrentWeekStatus = {
   shortfall: 2,
   atRiskAmount: 3000,
   imminent: false,
+  unreachable: false,
 };
 const baseProps = {
   potTotal: 6000,
