@@ -1,5 +1,6 @@
 // spec C6 — 이번 주 진척 링(작은 게이지) + 동적 카피.
 // 평소: "{shortfall}번 더 채우면 추가 벌금 0원"(긍정). imminent: "이대로면 +N원" 추가.
+// unreachable(회복 불가): "이번 주 목표 달성 불가" + "종료 시 +N 확정" — 회복 가능한 척하지 않는다.
 // 카피는 동적 — literal "3번" 금지(goalCount 1~7·자투리에 따라 가변).
 import { formatKRW } from "@/lib/challenge/penalty";
 import type { CurrentWeekStatus } from "@/lib/challenge/weekly";
@@ -10,10 +11,12 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 export function WeekRing({ status }: { status: CurrentWeekStatus }) {
   const pct = status.goal > 0 ? Math.min(1, status.done / status.goal) : 0;
   const dashOffset = CIRCUMFERENCE * (1 - pct);
-  const headline =
-    status.shortfall > 0
+  const headline = status.unreachable
+    ? "이번 주 목표 달성 불가"
+    : status.shortfall > 0
       ? `${status.shortfall}번 더 채우면 추가 벌금 0원`
       : "이번 주 목표를 채웠어요";
+  const strokeClass = status.unreachable ? "stroke-brand-warn" : "stroke-primary";
 
   return (
     <div className="flex items-center gap-4 rounded-[14px] border p-4">
@@ -29,7 +32,7 @@ export function WeekRing({ status }: { status: CurrentWeekStatus }) {
           strokeDasharray={CIRCUMFERENCE}
           strokeDashoffset={dashOffset}
           transform="rotate(-90 32 32)"
-          className="stroke-primary transition-[stroke-dashoffset]"
+          className={`${strokeClass} transition-[stroke-dashoffset]`}
         />
         <text
           x="32"
@@ -43,11 +46,16 @@ export function WeekRing({ status }: { status: CurrentWeekStatus }) {
       <div className="flex flex-col gap-0.5">
         <p className="t-caption text-muted-foreground">이번 주 진척</p>
         <p className="t-body font-semibold break-keep">{headline}</p>
-        {status.imminent && status.atRiskAmount > 0 && (
-          <p className="t-caption text-brand-warn font-semibold">
-            이대로면 +{formatKRW(status.atRiskAmount)}
-          </p>
-        )}
+        {status.atRiskAmount > 0 &&
+          (status.unreachable ? (
+            <p className="t-caption text-brand-warn font-semibold">
+              종료 시 +{formatKRW(status.atRiskAmount)} 확정
+            </p>
+          ) : status.imminent ? (
+            <p className="t-caption text-brand-warn font-semibold">
+              이대로면 +{formatKRW(status.atRiskAmount)}
+            </p>
+          ) : null)}
       </div>
     </div>
   );

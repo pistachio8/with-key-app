@@ -10,6 +10,7 @@ import {
 import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
 import type { KudosEmoji } from "@/lib/validators/kudos";
 import type { ActivityType } from "@/lib/keywords/pool";
+import { formatKRW } from "@/lib/challenge/penalty";
 
 type NotificationKind = "start" | "deadline";
 type NotificationSentType = "start" | "deadline" | "friend_action";
@@ -208,6 +209,91 @@ export async function dispatchDeadlineNotification(challengeId: string): Promise
     targetUrl,
     challengeId,
   });
+}
+
+// 회복 불가(이번 주 목표 달성 수학적 불가) 전환 시 해당 사용자에게 1회 통지.
+// give-up(인증 중단) 케이스는 제출이 없어 결과 모달로 못 잡으므로 일 경계 cron 이 이 경로로 알린다.
+// dedup: events(notification_sent · user_id · props{type,challengeId,week}) 1건이라도 있으면 skip
+//   → (challenge,user,week) 당 정확히 1회. cron 은 09:00 KST(비-Quiet Hours) 1회 실행이라 race 없음.
+// 옵트인은 기존 "deadline" prefs 키 재사용(마감·벌금 리마인더 계열). 분석 type 은 "goal_unreachable",
+// payload.type 은 알림센터 분류용으로 기존 "penalty_added"(category "penalty") 재사용 — send.ts·SW 불변.
+export async function dispatchGoalUnreachableNotification(args: {
+  challengeId: string;
+  userId: string;
+  week: number;
+  atRiskAmount: number;
+}): Promise<DispatchSummary> {
+  const { challengeId, userId, week, atRiskAmount } = args;
+  const quietHours = isQuietHoursKST();
+  const admin = adminClient();
+
+  // 1. dedup — 같은 (challenge,user,week) 로 이미 보냈으면 재발송 안 함.
+  const { data: prior } = await admin
+    .from("events")
+    .select("id")
+    .eq("name", "notification_sent")
+    .eq("user_id", userId)
+    .contains("props", { type: "goal_unreachable", challengeId, week })
+    .limit(1);
+  if ((prior ?? []).length > 0) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 2. 옵트인 (deadline 키 재사용).
+  const { data: user } = await admin
+    .from("users")
+    .select("notification_prefs")
+    .eq("id", userId)
+    .maybeSingle();
+  const prefs = notificationPrefsSchema.safeParse(user?.notification_prefs);
+  if (!prefs.success || !prefs.data.deadline) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  // 3. 구독.
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("user_id, endpoint, p256dh, auth")
+    .eq("user_id", userId);
+  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
+    userId: s.user_id as string,
+    endpoint: s.endpoint as string,
+    p256dh: s.p256dh as string,
+    auth: s.auth as string,
+  }));
+  if (targets.length === 0) {
+    return { recipientCount: 0, quietHours };
+  }
+
+  const targetUrl = `/challenge/${challengeId}/dashboard`;
+  const body =
+    atRiskAmount > 0
+      ? `이번 주 목표 달성이 어려워요 · 종료 시 +${formatKRW(atRiskAmount)} 확정`
+      : "이번 주 목표 달성이 어려워요";
+  const payload: PushPayload = {
+    title: "이번 주 목표 달성 불가",
+    body,
+    url: targetUrl,
+    type: "penalty_added",
+    category: "penalty",
+    targetUrl,
+    challengeId,
+  };
+
+  await Promise.allSettled(
+    targets.map(async (target) => {
+      const outcome: Outcome = quietHours ? "suppressed" : await safeSend(target, payload);
+      void track(
+        {
+          name: "notification_sent",
+          props: { type: "goal_unreachable", challengeId, week, suppressed: quietHours, outcome },
+        },
+        { userId },
+      );
+    }),
+  );
+
+  return { recipientCount: targets.length, quietHours };
 }
 
 // ADR-0016 / ADR-0017 / plan 2026-05-22-kudos-received-notification
