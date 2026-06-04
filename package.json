@@ -32,6 +32,11 @@
     "validate:docs": "node scripts/validate-doc-paths.mjs",
     "check:spec-required": "node scripts/check-spec-required.mjs",
     "new": "node scripts/new-doc.mjs",
+    "harness:check": "node scripts/harness-check.mjs",
+    "harness:drift": "node scripts/harness-drift.mjs",
+    "harness:summarize-diff": "node scripts/harness-summarize-diff.mjs",
+    "harness:context": "node scripts/harness-context.mjs",
+    "harness:verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm harness:check",
     "icons:pwa": "node scripts/generate-pwa-icons.mjs",
     "prepare": "husky"
   },
