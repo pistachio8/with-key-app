@@ -65,7 +65,6 @@ supabase/.branches/
 !/.claude/project-log-policy.md
 # Personal subtrees under .claude/rules/ (if any) should be re-ignored here.
 .cursor/
-.agents/
 .codex/
 
 # Personal journal (Ian's dev log — not for team)

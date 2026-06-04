@@ -28,6 +28,20 @@ agent 코드베이스 변경 → 점수 회귀를 catch하는 게이트. AI-Read
 - task spec은 한 번 정하면 비교 가능성을 위해 **수정 금지**. 새 task가 필요하면 `0002-`, `0003-` 으로 추가.
 - prompt에 시크릿(API 키, supabase secret) 포함 금지.
 
+## RN 하네스 task (0004+) frontmatter 확장
+
+ADR-0031 / spec `2026-06-04-harness-mvp-file-structure-design`에 따라 **0004번부터** frontmatter를 확장한다. 0001~0003은 grandfather(소급 변경 없음 — 비교 가능성 보존).
+
+스키마 SoT: [`../.agents/backlog/AGENT_TASK_TEMPLATE.md`](../.agents/backlog/AGENT_TASK_TEMPLATE.md).
+
+- `Track`: port | greenfield (D2 — 보존 eval 적용 여부)
+- `Kind`: migration | regression (migration=닫히는 work-unit / regression=영속 baseline)
+- `Parent`: spine 인용(PRD AC → ... → Agent Task)
+- `Status`: todo | blocked | in_progress | done
+- `Blocked-by`: blocked일 때 해제 조건(예: G1-PoC θ 확정)
+
+drift 리포트는 [`drift-reports/`](drift-reports/)에 append-only 누적된다.
+
 ## See also / Cross-module dependencies
 
 - 결정 이력: [`../docs/adr/`](../docs/adr/) (회귀 catch 시 ADR 한 건 추가)

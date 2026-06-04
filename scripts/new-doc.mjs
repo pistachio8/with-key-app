@@ -11,15 +11,43 @@ import { execSync } from "node:child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
 
+const DEFAULT_TEMPLATE_DIR = "docs/superpowers/templates";
+const PM_TEMPLATE_DIR = ".agents/pm/templates";
+
 const TYPES = {
   plan: { dir: "docs/superpowers/plans", template: "plan.md" },
   spec: { dir: "docs/superpowers/specs", template: "spec.md" },
   adr: { dir: "docs/adr", template: "adr.md" },
+  // PM family — template source는 .agents/pm/templates/ (ADR-0031 §3)
+  prd: { dir: ".agents/pm", template: "PRD_TEMPLATE.md", templateDir: PM_TEMPLATE_DIR },
+  "job-story": {
+    dir: "docs/stories",
+    template: "JOB_STORY_TEMPLATE.md",
+    templateDir: PM_TEMPLATE_DIR,
+  },
+  "eng-story": {
+    dir: "docs/eng-stories",
+    template: "ENGINEERING_STORY_TEMPLATE.md",
+    templateDir: PM_TEMPLATE_DIR,
+  },
+  "test-scenario": {
+    dir: "docs/stories",
+    template: "TEST_SCENARIO_TEMPLATE.md",
+    templateDir: PM_TEMPLATE_DIR,
+  },
+  "acceptance-criteria": {
+    dir: ".agents/pm",
+    template: "ACCEPTANCE_CRITERIA_TEMPLATE.md",
+    templateDir: PM_TEMPLATE_DIR,
+  },
 };
 
 function usage() {
-  console.error("Usage: pnpm new <plan|spec|adr> <topic-kebab>");
+  console.error(
+    "Usage: pnpm new <plan|spec|adr|prd|job-story|eng-story|test-scenario|acceptance-criteria> <topic-kebab>",
+  );
   console.error("  예: pnpm new spec auth-magiclink-fix");
+  console.error("  예: pnpm new eng-story point-ledger");
   process.exit(1);
 }
 
@@ -72,7 +100,9 @@ const [, , typeArg, topicArg] = process.argv;
 if (!typeArg || !topicArg) usage();
 const cfg = TYPES[typeArg];
 if (!cfg) {
-  console.error(`Unknown type: ${typeArg}. Allowed: plan | spec | adr`);
+  console.error(
+    `Unknown type: ${typeArg}. Allowed: plan | spec | adr | prd | job-story | eng-story | test-scenario | acceptance-criteria`,
+  );
   process.exit(1);
 }
 if (!isValidTopic(topicArg)) {
@@ -97,7 +127,7 @@ if (typeArg === "adr") {
 }
 
 const outPath = uniquePath(cfg.dir, baseName);
-const templatePath = resolve(REPO_ROOT, "docs/superpowers/templates", cfg.template);
+const templatePath = resolve(REPO_ROOT, cfg.templateDir ?? DEFAULT_TEMPLATE_DIR, cfg.template);
 
 if (!existsSync(templatePath)) {
   console.error(`Template not found: ${templatePath}`);

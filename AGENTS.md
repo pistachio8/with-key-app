@@ -22,6 +22,15 @@
 - **기간**: POC 2주 (Week 1 빌드 / Week 2 dogfood · GO/NO-GO)
 - **구조 원칙**: Next.js 공식 route colocation(`app/(app)/<route>/_components` · `_actions.ts`) + 얇은 공용 `src/lib/*` + shadcn primitive `src/components/ui/*`. `src/features/` 신설 금지
 
+## 1.5 하네스 라우팅 (PWA→RN 전환)
+
+PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워크플로·정책)는 tool-agnostic [`.agents/`](.agents/README.md)에, 인스턴스(PRD·Story·Agent Task)는 `docs/`·`evals/`에 있다(ADR-0031).
+
+- 진입점: [`.agents/README.md`](.agents/README.md) — 작업 종류 → workflow 매핑
+- 검증: `pnpm harness:check` · `pnpm harness:drift` · `pnpm harness:verify`
+- Codex도 동일: `AGENTS.md → .agents/README.md → workflows/*.md` 평문 markdown 직접 실행
+- 세부 결정: [ADR-0031](docs/adr/0031-harness-structure-agents-home.md) · [05-rn-harness-decisions](docs/migration/05-rn-harness-decisions.md)
+
 ## 2. 작업 시작 프로토콜
 
 사소하지 않은(non-trivial) 요청에 대해 코드를 변경하기 전에, 다음 형식의 짧은 사실 기반 브리프를 한국어로 보고하세요.
