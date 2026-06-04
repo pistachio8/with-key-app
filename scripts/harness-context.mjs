@@ -1,9 +1,75 @@
 #!/usr/bin/env node
-// scripts/harness-context.mjs  →  pnpm harness:context <task-id>
-// Agent Task 의 Source Files + 규칙 포인터를 모아 컨텍스트 번들 생성(=collect-context 대체).
-// create-agent-tasks / implement-agent-task 의 Read First 입력. 구현 예정(spec §8).
-// 현재: SKELETON — 배너 출력 후 0 종료.
-console.error(
-  "[harness:context] SKELETON — 컨텍스트 번들 미구현 (spec §8 후속 코드 단계). exit 0.",
-);
-process.exit(0);
+import {
+  describeFile,
+  findTask,
+  formatPathList,
+  loadMigrationTasks,
+  validateTask,
+} from "./harness-lib.mjs";
+
+const taskId = process.argv[2];
+
+if (!taskId) {
+  const available = loadMigrationTasks()
+    .map((task) => task.frontmatter.Task)
+    .filter(Boolean)
+    .join(", ");
+  console.error("[harness:context] Usage: pnpm harness:context <task-id>");
+  console.error(`[harness:context] Available migration tasks: ${available || "none"}`);
+  process.exit(1);
+}
+
+const task = findTask(taskId);
+if (!task) {
+  console.error(`[harness:context] Task not found: ${taskId}`);
+  process.exit(1);
+}
+
+const errors = validateTask(task);
+if (errors.length > 0) {
+  console.error(`[harness:context] Task is invalid: ${task.frontmatter.Task}`);
+  for (const error of errors) {
+    console.error(`- ${error}`);
+  }
+  process.exit(1);
+}
+
+const inspected = uniquePaths([...task.parentPaths, ...task.sourcePaths, ...task.targetPaths])
+  .map((item) => `- ${item.display} — ${describeFile(item)}`)
+  .join("\n");
+
+console.log(`# Harness Context: ${task.frontmatter.Task}
+
+Task file: ${task.repoPath}
+Track: ${task.frontmatter.Track}
+Kind: ${task.frontmatter.Kind}
+Status: ${task.frontmatter.Status}
+
+## Parent Paths
+${formatPathList(task.parentPaths)}
+
+## Source Files to Inspect
+${formatPathList(task.sourcePaths)}
+
+## Target Files
+${formatPathList(task.targetPaths)}
+
+## Verification Commands
+${task.verificationCommands || "(none listed)"}
+
+## Read First
+${inspected}
+`);
+
+function uniquePaths(items) {
+  const seen = new Set();
+  const output = [];
+  for (const item of items) {
+    if (seen.has(item.absolutePath)) {
+      continue;
+    }
+    seen.add(item.absolutePath);
+    output.push(item);
+  }
+  return output;
+}
