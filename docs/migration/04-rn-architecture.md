@@ -9,8 +9,9 @@
 > - [00-rn-conversion-plan](./00-rn-conversion-plan.md) — 라우트·Server Action 인벤토리(§9 승격 매트릭스, §10 route map)
 > - [01-rn-mvp-prd](./01-rn-mvp-prd.md) — RN MVP 범위(P0 포팅 + P1 정산 + P2 자동검증)
 > - [02-rn-migration-harness](./02-rn-migration-harness.md) — 반복 빌드·검증 루프 + 보존 eval 게이트
+> - [05-rn-harness-decisions](./05-rn-harness-decisions.md) — 02~04를 가로지르는 하네스 결정(D1~D12)
 >
-> **이 문서의 역할**: 03 rules가 *각 레이어를 무엇으로 옮기나*의 규칙 카탈로그라면, 이 문서는 그 규칙을 with-key 코드베이스 실측에 적용해 내린 **신규 RN 프로젝트의 구체 아키텍처 결정**(ADR-lite 집합 + 청사진)이다. 12개 핵심 결정(§0.2)을 grill-me 인터뷰로 확정했고, 각 결정의 *왜*와 *상태*(확정/ADR/spec 필요)를 함께 기록한다. 코드 변경은 없는 설계 문서다.
+> **이 문서의 역할**: 03 rules가 *각 레이어를 무엇으로 옮기나*의 규칙 카탈로그라면, 이 문서는 그 규칙을 with-key 코드베이스 실측에 적용해 내린 **신규 RN 프로젝트의 구체 아키텍처 결정**(ADR-lite 집합 + 청사진)이다. 12개 핵심 결정(§0.2)을 grill-me 인터뷰로 확정했고, 각 결정의 *왜*와 _상태_(확정/ADR/spec 필요)를 함께 기록한다. 코드 변경은 없는 설계 문서다.
 
 ---
 
@@ -44,20 +45,20 @@
 
 > **상태** 범례 — `확정`: 채택 즉시 적용 / `ADR`: `docs/adr/` 기록 필요(되돌리기 비용 큼) / `spec`: `docs/superpowers/specs/` 설계 결정 필요 / ⚠️: 기존 문서·AC와 긴장(아래 §9).
 
-| # | 영역 | 결정 | 상태 | 본문 |
-| --- | --- | --- | --- | --- |
-| A1 | Repo 토폴로지 | 전면 restructure → `apps/web` + `apps/mobile` + `packages/domain` | ⚠️ ADR | §1 |
-| A2 | domain 소비 | TS source 직접(no build), `@withkey/domain`, transpilePackages + Metro | 확정 | §1 |
-| A3 | task 실행기 | pnpm `-r`(Turborepo 연기) | 확정 | §1 |
-| A4 | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON | 확정 | §2 |
-| A5 | 네비게이션 셸 | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필] | ⚠️ 확정(PO 승인) | §3 |
-| A6 | Kakao OAuth | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO) | ADR | §4 |
-| A7 | 딥링크 | Universal/App Links(https) + scheme, deferred = re-tap(MVP) | ⚠️ 확정(PO) | §4 |
-| A8 | 쓰기/BFF | Hybrid: RPC direct + apps/web Next API as BFF(Bearer) | 확정 | §5 |
-| A9 | 푸시 테이블 | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지 | ADR | §7 |
-| A10 | 디자인 토큰 | Mobile-local(hex), 공유 `packages/tokens`는 cutover 후 | spec | §6 |
-| A11 | 테스트 | RN Testing Library + jest-expo · Vitest 공유 도메인 · Maestro E2E | 확정 | §8 |
-| A12 | 앱 variant | env별 bundle id(APP_VARIANT) ↔ EAS profile | 확정 | §2·§8 |
+| #   | 영역            | 결정                                                                   | 상태             | 본문  |
+| --- | --------------- | ---------------------------------------------------------------------- | ---------------- | ----- |
+| A1  | Repo 토폴로지   | 전면 restructure → `apps/web` + `apps/mobile` + `packages/domain`      | ⚠️ ADR           | §1    |
+| A2  | domain 소비     | TS source 직접(no build), `@withkey/domain`, transpilePackages + Metro | 확정             | §1    |
+| A3  | task 실행기     | pnpm `-r`(Turborepo 연기)                                              | 확정             | §1    |
+| A4  | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON                         | 확정             | §2    |
+| A5  | 네비게이션 셸   | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필]              | ⚠️ 확정(PO 승인) | §3    |
+| A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | ADR              | §4    |
+| A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ⚠️ 확정(PO)      | §4    |
+| A8  | 쓰기/BFF        | Hybrid: RPC direct + apps/web Next API as BFF(Bearer)                  | 확정             | §5    |
+| A9  | 푸시 테이블     | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지          | ADR              | §7    |
+| A10 | 디자인 토큰     | Mobile-local(hex), 공유 `packages/tokens`는 cutover 후                 | spec             | §6    |
+| A11 | 테스트          | RN Testing Library + jest-expo · Vitest 공유 도메인 · Maestro E2E      | 확정             | §8    |
+| A12 | 앱 variant      | env별 bundle id(APP_VARIANT) ↔ EAS profile                             | 확정             | §2·§8 |
 
 **묻지 않고 채택한 기본값**(이견 시 조정): SecureStore chunked 세션 adapter(§4) · BFF는 `Authorization: Bearer` 검증(§5) · invite 자동수락 client-side orchestration(§4) · Zustand는 ephemeral UI만, 세션은 Supabase auth listener(§6) · analytics는 `/events` BFF(RLS-safe, §5) · image 파이프라인 size 상수는 domain 공유(§7) · MVP 오프라인 persist 없음(§6) · CI에 mobile lane + EAS 빌드 트리거(§8).
 
@@ -100,12 +101,12 @@ with-key/
 
 ```ts
 // apps/mobile/app.config.ts (개념)
-const variant = process.env.APP_VARIANT ?? 'dev'
+const variant = process.env.APP_VARIANT ?? "dev";
 const ids = {
-  dev:     { bundleId: 'app.fromwith.dev',     name: 'fromwith (dev)' },
-  staging: { bundleId: 'app.fromwith.staging', name: 'fromwith (stg)' },
-  prod:    { bundleId: 'app.fromwith',         name: 'fromwith' },
-}[variant]
+  dev: { bundleId: "app.fromwith.dev", name: "fromwith (dev)" },
+  staging: { bundleId: "app.fromwith.staging", name: "fromwith (stg)" },
+  prod: { bundleId: "app.fromwith", name: "fromwith" },
+}[variant];
 // plugins: [expo-camera, expo-secure-store, expo-notifications, kakao-login(plugin), ...]
 // newArchEnabled: true
 ```
@@ -168,10 +169,10 @@ PWA 인증은 **magic link**(`signInWithOtp`, token_hash flow, ADR-0007) + **Kak
 
 secret이 필요한 작업(AI 일기·계좌 암호화·푸시 발송·자동검증·정산)은 서버가 필수다. **Hybrid**로 나눈다.
 
-| 경로 | 무엇 | 어디 |
-| --- | --- | --- |
-| RLS-safe write/read | `create_challenge`·`accept_invite`·`sign_and_maybe_activate`·`toggle_kudos`·`rename_group`·read query | **Supabase RPC/PostgREST 직접** |
-| secret 필요 write | `submitActionLog`(Storage+AI+push)·`revealAccountNumber`·group account 암호화·push register·settlement trigger | **apps/web Next API route (BFF)** |
+| 경로                | 무엇                                                                                                           | 어디                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| RLS-safe write/read | `create_challenge`·`accept_invite`·`sign_and_maybe_activate`·`toggle_kudos`·`rename_group`·read query          | **Supabase RPC/PostgREST 직접**   |
+| secret 필요 write   | `submitActionLog`(Storage+AI+push)·`revealAccountNumber`·group account 암호화·push register·settlement trigger | **apps/web Next API route (BFF)** |
 
 ### 결정과 왜
 
@@ -204,13 +205,13 @@ apps/mobile/src/
 
 "계층"은 **import 방향 규칙**이 없으면 의미가 없다. 아래를 `eslint-plugin-boundaries`(또는 `import/no-restricted-paths`)로 강제한다.
 
-| 계층 | import 허용 | 금지 |
-| --- | --- | --- |
-| `app/`(routes) | features · capabilities · services · shared · `@withkey/domain` | — |
-| `features/*` | capabilities · services · shared · `@withkey/domain` | **다른 feature**(공개 API `features/x/index.ts` 경유만) · `app/` |
-| `capabilities/*` | shared 만 | **features · services**(capability는 leaf·device wrapper) |
-| `services/*` | shared · `@withkey/domain` | features · capabilities |
-| `shared/*` | (없음, leaf) | 위 전부 |
+| 계층             | import 허용                                                     | 금지                                                             |
+| ---------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `app/`(routes)   | features · capabilities · services · shared · `@withkey/domain` | —                                                                |
+| `features/*`     | capabilities · services · shared · `@withkey/domain`            | **다른 feature**(공개 API `features/x/index.ts` 경유만) · `app/` |
+| `capabilities/*` | shared 만                                                       | **features · services**(capability는 leaf·device wrapper)        |
+| `services/*`     | shared · `@withkey/domain`                                      | features · capabilities                                          |
+| `shared/*`       | (없음, leaf)                                                    | 위 전부                                                          |
 
 **왜**: capability가 feature를 import하기 시작하면 "격리"라는 존재 이유가 무너진다. 이 표가 없으면 매 리뷰에서 직관으로 다투게 된다.
 
@@ -233,7 +234,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 - **도메인 로직은 `@withkey/domain` 소비** — `features/*`는 UI·screen·RN hook·api만. 벌금/정산/done day/keyword 계산을 feature에 재구현하면 [harness §1-① 드리프트](./02-rn-migration-harness.md)가 재발한다([04 A2](#1-repo-토폴로지--모노레포-a1a2a3)).
 - **`navigation/` 두지 않음** — Expo Router(A4/A5)에서 `app/`의 `_layout.tsx`가 곧 네비게이션이다. linking/deep-link 매핑은 `capabilities/deep-linking`, 셸은 `app/_layout`.
-- **`services/` = 인프라 한정** — supabase client·세션 adapter·BFF fetch(Bearer, A8)·query client만. 도메인 엔드포인트 호출은 feature 응집을 위해 `features/<domain>/api`에 둔다(services를 *사용*).
+- **`services/` = 인프라 한정** — supabase client·세션 adapter·BFF fetch(Bearer, A8)·query client만. 도메인 엔드포인트 호출은 feature 응집을 위해 `features/<domain>/api`에 둔다(services를 _사용_).
 - **`capabilities/app-state` = RN `AppState` 생명주기**(foreground/background/active — push 수신 처리 §7에 필요). **전역 client 상태(Zustand)는 capability가 아니다** → feature 또는 `shared`(§6).
 - **feature는 lazy 생성** — 빈 7~10개를 미리 만들지 않는다. 기능을 옮길 때 그 슬라이스만 추가([harness §4](./02-rn-migration-harness.md) 기능 단위 루프와 동일 리듬). `index.ts` 공개 API는 cross-feature import가 실제 생길 때 도입.
 - **`home`은 feature가 아니라 조합 화면** — 여러 feature의 공개 컴포넌트를 `app/(tabs)/home`에서 합친다(feature끼리 직접 import 금지). cross-feature 공유 타입은 `@withkey/domain`.
@@ -263,6 +264,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
   ```
 
   기존 `push_subscriptions`(Web Push: endpoint·p256dh·auth)는 **cutover까지 web 잔존**, dispatch sender가 두 테이블을 조회해 전송. **왜**: 한 테이블에 Web Push·Expo를 섞으면 nullable·분기·RLS가 지저분해진다([03 §8](./03-rn-migration-rules.md)). **migration ADR 필요**([AGENTS.md §4](../../AGENTS.md)). `src/lib/push/dispatch.ts`의 수신자 선정·quiet hours·dedup은 유지하고 sender만 Expo push로 교체.
+
 - **이미지 (기본값)**: 렌더=`expo-image`, 선택=`expo-image-picker`, 촬영=`expo-camera`, 압축/리사이즈=`expo-image-manipulator`. **5MB/1920px/JPEG 0.85** 정책 상수는 `packages/domain`(`image/prepare-upload` 상수)에서 공유, browser canvas/heic2any 구현만 RN으로 교체. Storage는 private bucket + signed URL([03 §4·§7](./03-rn-migration-rules.md)).
 
 ---
@@ -285,14 +287,14 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 ### 작성할 ADR/spec
 
-| 산출물 | 대상 결정 | 트리거 경로 |
-| --- | --- | --- |
-| ADR — 모노레포 전면 restructure | A1 | `src/lib/supabase/**` 이동 → ADR |
-| ADR — RN Kakao 네이티브 인증 | A6 | `src/lib/supabase/**` 인증 백본 |
-| ADR — `device_push_tokens` 신설 | A9 | `supabase/migrations/**` |
-| spec — server/client 상태 라이브러리(TanStack Query·Zustand) | A8·§6 | 아키텍처 결정 |
-| spec — mobile 디자인 토큰 | A10 | `apps/mobile/theme` |
-| (기존) ADR — `point_ledger`·`settlements`·immutability 예외 | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**` |
+| 산출물                                                       | 대상 결정                         | 트리거 경로                      |
+| ------------------------------------------------------------ | --------------------------------- | -------------------------------- |
+| ADR — 모노레포 전면 restructure                              | A1                                | `src/lib/supabase/**` 이동 → ADR |
+| ADR — RN Kakao 네이티브 인증                                 | A6                                | `src/lib/supabase/**` 인증 백본  |
+| ADR — `device_push_tokens` 신설                              | A9                                | `supabase/migrations/**`         |
+| spec — server/client 상태 라이브러리(TanStack Query·Zustand) | A8·§6                             | 아키텍처 결정                    |
+| spec — mobile 디자인 토큰                                    | A10                               | `apps/mobile/theme`              |
+| (기존) ADR — `point_ledger`·`settlements`·immutability 예외  | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**`         |
 
 ### 기존 문서 정합 (2026-06-04 반영 완료)
 
