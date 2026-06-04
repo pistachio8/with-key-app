@@ -1,0 +1,37 @@
+{
+  "version": "0.1",
+  "project": "fromwith-rn",
+  "paths": {
+    "pm": ".agents/pm",
+    "engineeringIndex": ".agents/engineering/INDEX.md",
+    "migrationIndex": ".agents/migration/INDEX.md",
+    "engStories": "docs/eng-stories",
+    "jobStories": "docs/stories",
+    "agentTasks": "evals/tasks",
+    "driftReports": "evals/drift-reports",
+    "metaEval": "evals/meta",
+    "decisions": "docs/adr",
+    "specs": "docs/superpowers/specs"
+  },
+  "tracks": {
+    "port":       { "preserveEval": true,  "passK": "100%" },
+    "greenfield": { "preserveEval": false, "passAt": 3 }
+  },
+  "gates": {
+    "ledger_invariant": { "kind": "deterministic", "active": true },
+    "idempotency":      { "kind": "deterministic", "active": true },
+    "false_flag_rate":  { "kind": "threshold", "theta": null, "active": false, "blockedBy": "G1-PoC" },
+    "legal_signoff":    { "kind": "boolean", "value": false, "blockedBy": "G2-legal" }
+  },
+  "drift": {
+    "anchors": ["define", "record", "sweep"],
+    "tier1Deterministic": ["validate-docs", "citation-resolve", "preserve-eval", "analytics-parity"],
+    "tier2Model": { "enabled": true, "onlyDuring": "sweep" }
+  },
+  "sotPrecedence": ["PRD", "EngineeringStory", "JobStory"],
+  "metaEval": {
+    "mechanicsPaths": [".agents/**", "evals/**", ".claude/rules/**", "docs/migration/0[2-5]*"],
+    "weakenReasonCodes": ["THRESHOLD_LOWERED","TOLERANCE_WIDENED","EVAL_REMOVED","EVAL_DISABLED","SEVERITY_DOWNGRADED","SOT_PRECEDENCE_RELAXED","AUTONOMY_EXPANDED","APPROVAL_GATE_NARROWED"],
+    "recurrenceAlertThreshold": 3
+  }
+}
