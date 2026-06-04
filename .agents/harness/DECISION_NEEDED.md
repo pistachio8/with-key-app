@@ -19,7 +19,7 @@
 - **PM-INSTANCE-HOME**: 정규화 PM 산출물(`.agents/pm/{prd,job-stories,test-scenarios,acceptance-criteria,risks-assumptions}.md`)이 ADR-0031 §1(인스턴스→`docs/`·`evals/`, 머시너리 `.agents/pm`엔 templates·raw·adapter만)과 충돌. `PM_PLUGIN_ADAPTER.md`·`workflows/create-prd.md`·`workflows/create-test-scenarios.md` + plan/spec이 인스턴스를 머시너리 트리로 출력하도록 명시. 인스턴스 아직 미생성 = 무비용 정정 시점.
   - 차단: 첫 PM-plugin/greenfield normalize 실행.
   - 해소 조건: PO 방향 택1 — **(A·권장)** 출력처를 `docs/`로 이동해 ADR-0031에 정합(greenfield test-scenarios·acceptance-criteria·risks-assumptions의 `docs/` 홈 신규 정의 + README 인스턴스 홈 갱신, PM_PLUGIN_ADAPTER·create-prd·create-test-scenarios·plan·spec 경로 교정) / **(B)** ADR-0031 개정으로 `.agents/pm/` 정규화 staging을 의도적 예외로 명문화(meta-eval weaken: `SOT_PRECEDENCE_RELAXED`).
-  - 상태: open.
+  - 상태: resolved (2026-06-04, PO 방향 A) — `docs/pm/` 신설 + `PM_PLUGIN_ADAPTER`·`create-prd`·`create-test-scenarios`·`.agents/README` 정정. raw는 `.agents/pm/raw/` 머시너리 유지(ADR-0031 후속영향 #2). plan·spec은 동일 날짜 설계 기록이라 소급 재작성 대신 본 항목·CHANGELOG로 supersede(ADR-0031 §1 상위 SoT).
 
 읽는 workflow: propose-harness-update.
 업데이트 시점: 미결정 추가/해소 시.
