@@ -224,6 +224,8 @@ pnpm validate:docs       # 문서 내부 링크 검사
 - [`migration/00-rn-conversion-plan.md`](./migration/00-rn-conversion-plan.md) — 라우트/기능별 재사용·재작성 분류, Phase 0~8
 - [`migration/01-rn-mvp-prd.md`](./migration/01-rn-mvp-prd.md) — RN MVP 범위(P0 포팅 + P1 포인트 정산 + P2 사진 자동검증)
 - [`migration/02-rn-migration-harness.md`](./migration/02-rn-migration-harness.md) — 기능 단위 마이그레이션을 반복·검증하는 하네스(작업환경·루프·보존 eval)
+- [`migration/03-rn-migration-rules.md`](./migration/03-rn-migration-rules.md) — 레이어별(라우팅·이미지·저장소·푸시·폼·분석 등) 전환 규칙 + 권장 스택·결정 상태
+- [`migration/04-rn-architecture.md`](./migration/04-rn-architecture.md) — 신규 RN 프로젝트 아키텍처 결정(grill-me 12: 모노레포·Expo·Kakao 네이티브 인증·BFF·푸시 테이블 등 + ADR/spec 후속)
 
 ## 참조 문서
 

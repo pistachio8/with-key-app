@@ -143,6 +143,8 @@
 
 ## 4. 재작성해야 할 UI/라우팅/플랫폼 코드
 
+> 아래 표는 *무엇을* 재작성하나의 인벤토리다. *각 레이어를 어떤 라이브러리·패턴으로* 옮길지의 규칙(레이어별 매핑·권장 스택·판단 기준)은 [03-rn-migration-rules](./03-rn-migration-rules.md)를 따른다.
+
 | 범주                                      | 현재 경로                                                                                     | RN에서 할 일                                                          |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Next App Router pages/layouts             | `src/app/**/page.tsx`, `src/app/**/layout.tsx`, `loading.tsx`                                 | Expo Router route tree로 재작성                                       |
@@ -213,7 +215,7 @@
 | 1   | Route/action/read inventory freeze | 이 문서의 라우트 표에 각 route의 RN 처리 방식이 있으며, 모든 `_actions.ts` export가 RPC/API/폐기 중 하나로 분류된 보조 matrix가 작성됨                                                      |
 | 2   | RN target architecture decision    | `apps/mobile`/별도 repo, shared package 위치, PWA 유지 범위, BFF 유지 범위가 ADR 또는 spec으로 결정됨                                                                                       |
 | 3   | Supabase RN auth PoC               | dev build에서 Kakao OAuth 또는 magic link로 로그인, 앱 재시작 후 session restore, logout 성공                                                                                               |
-| 4   | Invite deep link PoC               | `fromwith://invite/<token>` 또는 app/universal link로 앱이 열리고, 미인증이면 로그인 후 같은 token 수락 흐름으로 복귀                                                                       |
+| 4   | Invite deep link PoC               | **설치된 앱**: universal/app link(https) 또는 `fromwith://invite/<token>`로 앱이 열리고, 미인증이면 token stash → 로그인 후 같은 token 수락으로 **자동 복귀**. **미설치**: 웹 랜딩 → 스토어 → 설치 후 **같은 링크 재탭**으로 수락(자동 deferred 아님 — Firebase Dynamic Links 종료, [04 A7](./04-rn-architecture.md)) |
 | 5   | Expo Router skeleton               | `/login`, `/invite/[token]`, `/home`, `/challenge/[id]`, `/challenge/[id]/action`, `/challenge/[id]/pledge`, `/challenge/[id]/recap`, `/me`에 해당하는 RN route가 존재하고 auth gate가 동작 |
 | 6   | Shared domain package build        | validators/keywords/challenge/bank/share pure modules가 RN과 Next에서 import 가능하고 unit tests가 양쪽에서 통과                                                                            |
 | 7   | Read model contract                | Home/challenge/group/recap/me read contract가 RN-safe 함수 또는 API로 정의되고 service-role/cache 의존 여부가 명시됨                                                                        |

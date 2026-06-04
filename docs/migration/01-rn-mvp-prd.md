@@ -143,9 +143,12 @@ POC에서 검증된 "그룹 운동 각서" 핵심 루프(서약→인증→Kudos
 
 ### 6.3 RN 플랫폼 전환 (migration §4 참조)
 
+> 레이어별 전환 규칙(라우팅·이미지·저장소·푸시·폼·분석 등)과 권장 스택 결정 상태는 [03-rn-migration-rules](./03-rn-migration-rules.md).
+
 - 카메라/사진: Expo ImagePicker/ImageManipulator + 온디바이스 사전검증.
 - 푸시: Expo push token(`device_push_tokens` 신설 또는 `push_subscriptions` 확장 — ADR).
-- 딥링크: 초대·알림 targetUrl을 앱 route로 매핑(migration §10 route map).
+- 딥링크: 초대·알림 targetUrl을 앱 route로 매핑(migration §10 route map). 외부 진입은 Universal/App Links(https), 내부 이동은 `fromwith://` scheme([04 A7](./04-rn-architecture.md)).
+- 네비게이션: **Root Stack + 인증 후 Bottom Tabs**[홈·내챌린지·알림·프로필] 도입([04 A5](./04-rn-architecture.md)). 챌린지 상세·그룹은 탭 위 push, 생성 flow는 modal. ⚠️ **PWA에 없던 새 IA(Information Architecture, 정보구조) → PO 승인 + 핵심 플로우 screenshot acceptance 필요**.
 
 ### 6.4 측정/이벤트
 
