@@ -73,4 +73,10 @@ docs/JOURNAL.md
 # QA triage snapshot (local — Slack #qa dogfood, not for team)
 docs/QA_TRIAGE.md
 
+# Vendored skills (.agents/skills/) are external copies (npm-package-like), not our code.
+# Track only the manifest (skills-lock.json, repo root); keep the skill files local.
+# Rationale: no in-repo vendoring tool to verify/reinstall, so tracking files just
+# accumulates drift (ECC auto-drops, ghost lock pins). Manifest = source of truth. ADR-0031.
+/.agents/skills/
+
 .superpowers/
