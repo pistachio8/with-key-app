@@ -32,6 +32,7 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 ## 검증 (도구 무관 CLI)
 
 - `pnpm harness:context <task-id>` — 구현 전 컨텍스트 번들
+- `pnpm harness:goal [<task-id> ...]` — AT 에서 /goal 실행 프롬프트 파생(인자 없으면 `*.goal.md` 미생성 task 일괄 `--write`)
 - `pnpm harness:summarize-diff` — 구현 후 Task Summary
 - `pnpm harness:check` — 결정론 Tier 1 추적성·구조 lint
 - `pnpm harness:drift` — 7 drift 점검 → drift report

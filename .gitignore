@@ -35,6 +35,9 @@ next-env.d.ts
 /apps/web/playwright-report/
 /apps/web/tests/e2e/.auth/
 
+# Harness — /goal 파생 뷰(pnpm harness:goal --write). SoT 는 task 파일이라 버전관리 안 함.
+evals/tasks/*.goal.md
+
 # Vercel
 .vercel
 

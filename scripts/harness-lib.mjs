@@ -14,15 +14,19 @@ export function loadMigrationTasks() {
     return [];
   }
 
-  return readdirSync(tasksDir)
-    .filter((file) => /^\d{4}-.*\.md$/.test(file))
-    .filter((file) => Number(file.slice(0, 4)) >= 4)
-    .sort()
-    .map((file) => {
-      const absolutePath = path.join(tasksDir, file);
-      const content = readFileSync(absolutePath, "utf8");
-      return parseTaskFile(absolutePath, content);
-    });
+  return (
+    readdirSync(tasksDir)
+      .filter((file) => /^\d{4}-.*\.md$/.test(file))
+      // .goal.md 는 harness:goal 의 파생 뷰 — task 아님. 재-ingest 시 batch 비멱등·check 오탐.
+      .filter((file) => !file.endsWith(".goal.md"))
+      .filter((file) => Number(file.slice(0, 4)) >= 4)
+      .sort()
+      .map((file) => {
+        const absolutePath = path.join(tasksDir, file);
+        const content = readFileSync(absolutePath, "utf8");
+        return parseTaskFile(absolutePath, content);
+      })
+  );
 }
 
 export function findTask(taskId) {
@@ -385,4 +389,147 @@ export function validateAcTraceability(index, citationFiles) {
     }
   }
   return errors;
+}
+
+// ════════════════════════════════════════════════════════════════
+// /goal 프롬프트 렌더러 (harness:goal) — task 파일을 SoT 로 한 파생 뷰.
+// 하드코딩 프롬프트 대신 task 의 구조화 섹션(Goal·Requirements·Non-goals·AC·
+// Verification·Harness Impact·Stop)에서 deterministic 렌더 → 중복/drift 0.
+// 분기 신호(ADR 게이트·수동 핸드오프·worktree base)는 task frontmatter/섹션에서 도출한다.
+// ════════════════════════════════════════════════════════════════
+
+function firstFeatBranch(text) {
+  const match = (text || "").match(/feat\/[a-z0-9][a-z0-9-]*/);
+  return match ? match[0] : null;
+}
+
+function slugFromRepoPath(repoPath) {
+  const base = repoPath.split("/").pop() || "";
+  return base.replace(/^\d+-/, "").replace(/\.md$/, "");
+}
+
+// 선행 task(Blocked-by)의 Work Package 브랜치를 찾아 worktree base 로 쓴다.
+// 파일시스템 비의존 테스트를 위해 renderGoalPrompt 에 주입 가능(validateTask 패턴).
+function defaultLookupBranch(evalId) {
+  const predecessor = findTask(evalId);
+  if (!predecessor) {
+    return null;
+  }
+  return firstFeatBranch(extractSection(predecessor.content, "Parent Links"));
+}
+
+export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = {}) {
+  const id = task.frontmatter.Task;
+  const titleMatch = task.content.match(/^#\s+(EVAL-[^\n]+)$/m);
+  const title = titleMatch ? titleMatch[1] : id;
+  const blockedBy = task.frontmatter["Blocked-by"] || "";
+
+  const parentLinks = extractSection(task.content, "Parent Links");
+  const requirements = extractSection(task.content, "Requirements").trim();
+  const nonGoals = extractSection(task.content, "Non-goals").trim();
+  const ac = extractSection(task.content, "Acceptance Criteria").trim();
+  const harnessImpact = extractSection(task.content, "Harness Impact Questions").trim();
+  const stop = extractSection(task.content, "Stop Condition").trim();
+  const verify = (task.verificationCommands || "").trim();
+
+  const wpBranch = firstFeatBranch(parentLinks) || `feat/${slugFromRepoPath(task.repoPath)}`;
+  const predecessor = (blockedBy.match(/EVAL-\d+/) || [])[0];
+  const baseBranch = (predecessor && lookupBranch(predecessor)) || "develop";
+  const worktreeDir = `../with-key-${wpBranch.replace(/^feat\//, "").replace(/\//g, "-")}`;
+
+  const adrGate = /\bADR\b/.test(blockedBy);
+  // 수동/외부 단계는 task 저자가 Verification 의 # 주석으로 표시한다(예: "# manual/dev-build: ...").
+  // AC 본문의 "dev build config" 같은 기능명에 오탐하지 않도록 # 주석만 신호로 쓴다.
+  const manualHandoff = /(^|\n)\s*#/.test(verify);
+  const mobile =
+    /apps\/mobile/.test(task.content) ||
+    [...task.sourcePaths, ...task.targetPaths].some((item) => /apps\/mobile/.test(item.display));
+
+  const sourceList = task.sourcePaths.map((item) => item.display).join(" · ") || "(none)";
+  const targetList = task.targetPaths.map((item) => item.display).join(" · ") || "(none)";
+  const envRule = mobile
+    ? "모바일 번들 env 는 EXPO_PUBLIC_* 만 (서버 키 sb_secret_*·OPENAI·VAPID private·레거시명 금지)."
+    : "클라이언트 번들에 서버 시크릿 금지 (서버 키에 NEXT_PUBLIC_ 접두 금지).";
+
+  const fallbackVerify = `pnpm harness:context ${id}\npnpm -r typecheck && pnpm -r lint && pnpm -r test\npnpm harness:check && pnpm validate:docs`;
+
+  const out = [];
+  out.push(`# /goal prompt — ${title}`);
+  out.push(
+    `# 생성: pnpm harness:goal ${id} · SoT=${task.repoPath} (파생 뷰 — 직접 수정 말고 task 를 고쳐 재생성)`,
+  );
+  out.push("");
+  out.push("## 실행 방식");
+  out.push(
+    `- harness \`.agents/workflows/implement-agent-task.md\` 를 따른다. 대상 task: \`${task.repoPath}\` (이 1개만 — Story/PRD 핸드오프 금지).`,
+  );
+  if (adrGate) {
+    out.push(
+      `- ⚠️ ADR 게이트: 이 task 는 선행 결정에 막혀 있다 — "Blocked-by: ${blockedBy}". 해당 ADR 이 docs/adr/ 에 accepted 로 없으면 \`pnpm new adr <topic>\` 로 초안만 작성하고 **STOP — PO 수락 요청**. 수락 전 관련 구성을 코드로 확정하지 않는다.`,
+    );
+  }
+  out.push("");
+  out.push("## Step 0 — 격리 (worktree · 병행 세션·main 무손상)");
+  out.push("```bash");
+  out.push(`git worktree add -b ${wpBranch} ${worktreeDir} ${baseBranch}`);
+  out.push(`cd ${worktreeDir} && pnpm install`);
+  out.push("```");
+  out.push("- docs/pm · docs/stories · .agents/pm 는 건드리지 않는다 (병행 PM 세션 소유).");
+  out.push("");
+  out.push("## Step 1 — 컨텍스트");
+  out.push("```bash");
+  out.push(`pnpm harness:context ${id}`);
+  out.push("```");
+  out.push(`- 읽기: ${sourceList} · .agents/engineering/INDEX.md`);
+  out.push(
+    "- 외부 라이브러리/SDK 는 Context7/공식 docs 로 최신 API 확인 후 구현 (학습데이터와 다를 수 있음).",
+  );
+  out.push("");
+  out.push("## Step 2 — 구현 (Target Files 만, Non-goals 봉인, surgical)");
+  out.push(requirements || "(task Requirements 참조)");
+  out.push("");
+  out.push(`Target: ${targetList}`);
+  out.push("");
+  out.push("## 가드레일 (위반 시 멈추고 보고)");
+  out.push("Non-goals:");
+  out.push(nonGoals || "(task Non-goals 참조)");
+  out.push("");
+  out.push(`- ${envRule}`);
+  out.push(
+    "- 도메인 로직은 @withkey/domain 소비 (재구현 금지). 변경은 surgical — 무관 코드·문서 손대지 않음.",
+  );
+  out.push("");
+  out.push("## 성공 기준 (verify loop — 전부 green 될 때까지, pass@3)");
+  out.push("Acceptance Criteria:");
+  out.push(ac || "(task AC 참조)");
+  out.push("");
+  out.push("Verification:");
+  if (verify) {
+    // task.verificationCommands 는 이미 ```bash 펜스를 포함한다(extractSection). 이중 펜스 방지.
+    out.push(verify);
+  } else {
+    out.push("```bash");
+    out.push(fallbackVerify);
+    out.push("```");
+  }
+  if (manualHandoff) {
+    out.push(
+      '- 위 중 주석(#)·"manual/dev-build/실기기/device" 항목은 자동 검증 불가 → **PO·실기기 핸드오프, 통과 위조 금지**.',
+    );
+  }
+  out.push("");
+  out.push("## Harness Impact (구현 후 답변 → drift 루프)");
+  out.push(harnessImpact || "(task Harness Impact Questions 참조)");
+  out.push(`→ 하나라도 yes 면 evals/drift-reports/${id}-*.md 에 노트 + pnpm harness:drift.`);
+  out.push("");
+  out.push("## 완료 / 보고");
+  out.push(
+    `- 한국어 "작업 종료 보고"(명세·구현·변경 파일·영향·검증·미해결).${manualHandoff ? " 자동 불가(수동/외부) 항목은 PO 액션으로 명시." : ""}`,
+  );
+  out.push("- 커밋/푸시는 사용자 확인 후에만 (git 계정 pistachio8).");
+  out.push("");
+  out.push("## Stop Condition");
+  out.push(stop || "(task Stop Condition 참조)");
+  out.push("");
+  return out.join("\n");
 }
