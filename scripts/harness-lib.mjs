@@ -56,7 +56,7 @@ export function parseTaskFile(absolutePath, content) {
   };
 }
 
-export function validateTask(task) {
+export function validateTask(task, { exists = existsSync } = {}) {
   const errors = [];
 
   for (const key of REQUIRED_FRONTMATTER) {
@@ -65,8 +65,10 @@ export function validateTask(task) {
     }
   }
 
-  if (task.frontmatter.Task && !/^EVAL-\d{4}$/.test(task.frontmatter.Task)) {
-    errors.push(`${task.repoPath}: Task must look like EVAL-0004`);
+  // 템플릿 SoT(.agents/backlog/AGENT_TASK_TEMPLATE.md)는 번호형(EVAL-0004)과
+  // 슬러그형(EVAL-<feature>-<slug>)을 둘 다 허용 — EVAL- 접두 + 영숫자/하이픈만 강제.
+  if (task.frontmatter.Task && !/^EVAL-[A-Za-z0-9][A-Za-z0-9-]*$/.test(task.frontmatter.Task)) {
+    errors.push(`${task.repoPath}: Task must look like EVAL-0004 or EVAL-<feature>-<slug>`);
   }
 
   if (task.frontmatter.Track && !TRACKS.has(task.frontmatter.Track)) {
@@ -97,7 +99,7 @@ export function validateTask(task) {
     }
 
     for (const item of paths) {
-      if (!existsSync(item.absolutePath)) {
+      if (!exists(item.absolutePath)) {
         errors.push(`${task.repoPath}: ${label} path missing: ${item.display}`);
       }
     }
@@ -119,8 +121,9 @@ export function toRepoPath(absolutePath) {
   return path.relative(repoRoot, absolutePath).split(path.sep).join("/");
 }
 
-function parseFrontmatter(content) {
-  const lines = content.split(/\r?\n/);
+export function parseFrontmatter(content) {
+  // BOM 제거 후 첫 줄이 --- 여야 frontmatter (에디터/템플릿이 BOM 을 삽입할 수 있다).
+  const lines = content.replace(/^\uFEFF/, "").split(/\r?\n/);
   if (lines[0] !== "---") {
     return {};
   }
@@ -131,18 +134,24 @@ function parseFrontmatter(content) {
     if (line === "---") {
       break;
     }
+    if (line.trim().startsWith("#")) {
+      continue; // 주석 라인 무시 — 템플릿이 설명용 # 라인을 둔다.
+    }
     const match = line.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
     if (!match) {
       continue;
     }
-    frontmatter[match[1]] = match[2].trim();
+    // 값 뒤 인라인 주석(" # ...") 제거 — 템플릿이 enum 설명을 값 옆에 단다.
+    frontmatter[match[1]] = match[2].replace(/\s+#.*$/, "").trim();
   }
   return frontmatter;
 }
 
-function extractSection(content, heading) {
+export function extractSection(content, heading) {
   const lines = content.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  // 헤딩 뒤 부가 텍스트 허용 — 템플릿은 "## Parent Links (추적성 …)" 처럼 단다.
+  const headingRe = new RegExp(`^## ${heading}(?:\\s|$)`);
+  const start = lines.findIndex((line) => headingRe.test(line.trim()));
   if (start === -1) {
     return "";
   }
@@ -209,20 +218,25 @@ function pathsFromBulletSection(markdown, baseDir) {
   return paths;
 }
 
-function normalizeLinkedPath(value) {
+export function normalizeLinkedPath(value) {
   const stripped = value.trim().replace(/^<|>$/g, "").split("#")[0];
-  if (!stripped || /^[a-z]+:/i.test(stripped)) {
+  if (!stripped || isPlaceholder(stripped) || /^[a-z]+:/i.test(stripped)) {
     return null;
   }
   return stripped;
 }
 
-function normalizeRepoPath(value) {
+export function normalizeRepoPath(value) {
   const stripped = value.trim().replace(/^<|>$/g, "").split("#")[0];
-  if (!stripped || stripped.includes("*") || /^[a-z]+:/i.test(stripped)) {
+  if (!stripped || isPlaceholder(stripped) || /^[a-z]+:/i.test(stripped)) {
     return null;
   }
   return stripped;
+}
+
+// 템플릿 placeholder/글롭은 실재 경로가 아니다 — 잔여 꺾쇠·중괄호·별표·"..." 를 거른다.
+function isPlaceholder(token) {
+  return /[<>{}*]/.test(token) || token.includes("...");
 }
 
 function pathRecord(target, baseDir) {

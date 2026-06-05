@@ -2,7 +2,7 @@
 import { loadMigrationTasks, validateTask } from "./harness-lib.mjs";
 
 const tasks = loadMigrationTasks();
-const errors = tasks.flatMap(validateTask);
+const errors = tasks.flatMap((task) => validateTask(task));
 
 if (errors.length > 0) {
   console.error(`[harness:check] FAIL — ${errors.length} violation(s).`);
