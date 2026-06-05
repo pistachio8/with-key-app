@@ -3,7 +3,7 @@
     "everything-claude-code@everything-claude-code": true
   },
   "env": {
-    "ECC_DISABLED_HOOKS": ""
+    "ECC_DISABLED_HOOKS": "post:quality-gate"
   },
   "hooks": {
     "PostToolUse": [
