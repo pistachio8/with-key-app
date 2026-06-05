@@ -17,14 +17,25 @@
 - **native 체이닝 없음.** 골 하나가 achieved되면 `/goal clear` 후 다음 골 조건을 다시 `/goal`로 붙인다 (수동 게이트). session-scoped — 별도 goal 파일/로그 없음.
 - **bound 필수.** 무한 루프 방지로 모든 조건 끝에 "N턴 내 못 끝내면 멈춘다"를 둔다. 턴 예산 안에 green 못 만들면 골이 과대 → [`split-work-packages`](../../.agents/workflows/split-work-packages.md)로 분해.
 
-**실행 루프 (수동):**
+**실행 루프 (수동) — 골당 입력 2개(브리프 + `/goal`):**
 
 ```
 1. §1 DAG에서 의존성 충족된 골 1개 고른다 (G1부터).
-2. §3의 해당 골 "/goal 조건"을 복사해 `/goal <조건>` 으로 붙인다.
-3. achieved 뜨면 → `/goal clear`.
-4. 골이 큰 경우(분해 표시) 끝나기 전에 evals/tasks/ Agent Task로 쪼갠다.
+2. 아래 "작업 브리프 템플릿"에서 골 번호만 교체해 붙인다(일반 메시지).
+3. §3의 해당 골 "/goal 조건"을 복사해 `/goal <조건>` 으로 붙인다(루프 무장).
+4. achieved 뜨면 → `/goal clear`. 골이 크면(분해 표시) 끝나기 전 evals/tasks/ Agent Task로 쪼갠다.
 5. 다음 의존성 충족 골로 이동, 2로.
+```
+
+**작업 브리프 템플릿 (재사용 — 골 번호만 교체):**
+
+골별 세부(소스·scope seal·증거)는 이미 맵 §2·§3에 있어 브리프는 짧게 유지된다. `Gn`만 바꿔 매 골에 재사용하고, 골이 특이하면(G1·G2처럼) 한두 줄만 덧붙인다.
+
+```
+docs/migration/06-rn-goal-map.md §3 의 Gn 을 .agents/workflows/implement-agent-task.md 절차로 진행해줘.
+- 그 골의 "출처"(맵 §2 열)와 Source Files를 먼저 읽어 컨텍스트 확보.
+- 맵의 scope seal을 지키고(다른 골 범위·금지 경로 안 건드림), 막히면 split-work-packages로 분해.
+- 끝나면 그 골 /goal 조건의 "증명:" 항목을 transcript에 출력하고, 대응 evals/tasks Status를 갱신.
 ```
 
 > 10골을 사람이 안 넘기고 한 번에 자동으로 돌리려면 `/goal`이 아니라 **Workflow 스크립트**가 문서상 유일한 경로다. POC 단계에선 골 사이 사람 게이트(검토·커밋)가 안전하므로 **수동 체이닝을 기본**으로 한다.
