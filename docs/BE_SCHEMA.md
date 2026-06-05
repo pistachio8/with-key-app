@@ -44,7 +44,7 @@
 
 ---
 
-## 2. 테이블 인벤토리 (10개)
+## 2. 테이블 인벤토리 (12개)
 
 | #   | 테이블                   | 목적                                            | PRD 근거      |
 | --- | ------------------------ | ----------------------------------------------- | ------------- |
@@ -54,12 +54,14 @@
 | 4   | `invites`                | 초대 토큰 · 72h 만료                            | §3.3 AC-2     |
 | 5   | `challenges`             | 서약서 본문(제목·횟수·기간·금액) + 상태         | §3, §8.2      |
 | 6   | `challenge_participants` | 서명/참여 여부, `signed_at`                     | §3.3 AC-3/5   |
-| 7   | `action_logs`            | 사진+종류+키워드칩 인증 **+ AI 일기 결과 흡수** | §4, §5, §8.2  |
-| 8   | `kudos`                  | 3고정 이모지 응원(토글)                         | §7, §8.2      |
-| 9   | `push_subscriptions`     | Web Push 구독 토큰                              | §6            |
-| 10  | `events`                 | 분석 이벤트 로그(§9) · AI 비용 추적 포함        | §9            |
+| 7   | `point_ledger`           | append-only 포인트 원장, 잔액=`SUM(delta)`      | §5.C P1       |
+| 8   | `settlements`            | 챌린지별 불변 정산 스냅샷                       | §5.C P1       |
+| 9   | `action_logs`            | 사진+종류+키워드칩 인증 **+ AI 일기 결과 흡수** | §4, §5, §8.2  |
+| 10  | `kudos`                  | 3고정 이모지 응원(토글)                         | §7, §8.2      |
+| 11  | `push_subscriptions`     | Web Push 구독 토큰                              | §6            |
+| 12  | `events`                 | 분석 이벤트 로그(§9) · AI 비용 추적 포함        | §9            |
 
-> 신규 추가: `invites` · `events` (PRD §8.1 명시 9종 외 운영 필수).
+> 신규 추가: `invites` · `events` (PRD §8.1 명시 9종 외 운영 필수), `point_ledger` · `settlements` (P1 포인트 정산 실데이터).
 > **제외(POC out of scope)**:
 >
 > - `ai_cost_log` — 규모 불필요. `events(name='ai_generated')` 집계로 대체. → §13 v1 백로그.
@@ -76,14 +78,18 @@ erDiagram
     users ||--o{ action_logs : "authors"
     users ||--o{ kudos : "gives"
     users ||--o{ challenge_participants : "joins"
+    users ||--o{ point_ledger : "owns point deltas"
     users ||--o{ events : "tracks"
 
     groups ||--o{ group_members : "has"
     groups ||--o{ invites : "generates"
     groups ||--o{ challenges : "runs"
+    groups ||--o{ point_ledger : "scopes"
 
     challenges ||--o{ challenge_participants : "requires signatures"
     challenges ||--o{ action_logs : "records"
+    challenges ||--o{ point_ledger : "may reference"
+    challenges ||--|| settlements : "settles once"
 
     action_logs ||--o{ kudos : "receives"
 
@@ -133,6 +139,24 @@ erDiagram
         uuid user_id PK,FK
         timestamptz signed_at
         timestamptz joined_at
+        int deposit_points
+    }
+    point_ledger {
+        uuid id PK
+        uuid user_id FK
+        uuid group_id FK
+        uuid challenge_id FK
+        int delta
+        text reason
+        uuid ref_id
+        timestamptz created_at
+    }
+    settlements {
+        uuid challenge_id PK,FK
+        timestamptz settled_at
+        text settled_by
+        int pool_points
+        jsonb distribution
     }
     action_logs {
         uuid id PK
@@ -267,14 +291,50 @@ stateDiagram-v2
 
 ### 5.6 `challenge_participants`
 
-| 컬럼           | 타입        | Null | Default | 제약/비고                            |
-| -------------- | ----------- | ---- | ------- | ------------------------------------ |
-| `challenge_id` | uuid        | NO   | —       | PK, FK → `challenges.id`             |
-| `user_id`      | uuid        | NO   | —       | PK, FK → `users.id`                  |
-| `signed_at`    | timestamptz | YES  | null    | `NULL = 미서명`, 값 존재 = 서명 완료 |
-| `joined_at`    | timestamptz | NO   | `now()` |                                      |
+| 컬럼             | 타입        | Null | Default | 제약/비고                                                                               |
+| ---------------- | ----------- | ---- | ------- | --------------------------------------------------------------------------------------- |
+| `challenge_id`   | uuid        | NO   | —       | PK, FK → `challenges.id`                                                                |
+| `user_id`        | uuid        | NO   | —       | PK, FK → `users.id`                                                                     |
+| `signed_at`      | timestamptz | YES  | null    | `NULL = 미서명`, 값 존재 = 서명 완료                                                    |
+| `joined_at`      | timestamptz | NO   | `now()` |                                                                                         |
+| `deposit_points` | int         | NO   | `0`     | 보증금 hold 금액의 게이지 read용 denormalized cache. `CHECK >= 0`. SoT는 `point_ledger` |
 
 - 전원 서명 판별: `COUNT(*) FILTER (WHERE signed_at IS NULL) = 0`.
+- `deposit_points`는 `signed_at` self-update 정책에 우발적으로 노출되지 않도록 BEFORE INSERT/UPDATE 트리거가 service_role 외 변경을 차단한다(migration 0042).
+
+### 5.6.1 `point_ledger`
+
+Append-only 포인트 원장. 잔액 컬럼은 두지 않고, 표시 잔액은 항상 `user_id + group_id` 스코프의 `SUM(delta)`로 도출한다(ADR-0032, `AC-deposit-hold-5`).
+
+| 컬럼           | 타입        | Null | Default             | 제약/비고                                                                                   |
+| -------------- | ----------- | ---- | ------------------- | ------------------------------------------------------------------------------------------- |
+| `id`           | uuid        | NO   | `gen_random_uuid()` | PK                                                                                          |
+| `user_id`      | uuid        | NO   | —                   | FK → `users.id`                                                                             |
+| `group_id`     | uuid        | NO   | —                   | FK → `groups.id`                                                                            |
+| `challenge_id` | uuid        | YES  | null                | FK → `challenges.id`, 가입/번들 지급처럼 챌린지와 무관한 행은 NULL 허용                     |
+| `delta`        | int         | NO   | —                   | signed point delta, `CHECK (delta <> 0)`                                                    |
+| `reason`       | text        | NO   | —                   | `bundle_grant` · `deposit_hold` · `deposit_release` · `penalty` · `distribution` · `refund` |
+| `ref_id`       | uuid        | YES  | null                | 원천 행(`settlements.challenge_id`, RPC idempotency key 등) 추적용                          |
+| `created_at`   | timestamptz | NO   | `now()`             |                                                                                             |
+
+- 인덱스: `(user_id, group_id, created_at desc)`, `(group_id, created_at desc)`, partial `challenge_id`, partial `ref_id`.
+- RLS: 본인(`user_id=auth.uid()`) 또는 같은 그룹 멤버 read. INSERT/UPDATE/DELETE 정책 없음.
+- 가드 트리거: service_role 외 INSERT는 `42501`, UPDATE/DELETE는 append-only 위반으로 `42501`.
+
+### 5.6.2 `settlements`
+
+챌린지별 불변 정산 스냅샷. `challenge_id`를 PK로 두어 이중 정산을 스키마 레벨에서 차단한다(`AC-settle-trigger-3`).
+
+| 컬럼           | 타입        | Null | Default       | 제약/비고                                        |
+| -------------- | ----------- | ---- | ------------- | ------------------------------------------------ |
+| `challenge_id` | uuid        | NO   | —             | PK, FK → `challenges.id`                         |
+| `settled_at`   | timestamptz | NO   | `now()`       | 정산 확정 시각                                   |
+| `settled_by`   | text        | NO   | —             | `CHECK IN ('owner','auto')`                      |
+| `pool_points`  | int         | NO   | —             | 그룹 공동 주머니로 이월되는 포인트, `CHECK >= 0` |
+| `distribution` | jsonb       | NO   | `'{}'::jsonb` | 확정 시점 분배 스냅샷. 사후 재계산하지 않음      |
+
+- RLS: 연결된 `challenges.group_id`의 그룹 멤버 read. INSERT/UPDATE/DELETE 정책 없음.
+- 가드 트리거: service_role 외 INSERT는 `42501`, UPDATE/DELETE는 불변 스냅샷 위반으로 `42501`.
 
 ### 5.7 `action_logs` ⭐ (AI 일기 흡수)
 
@@ -344,16 +404,21 @@ stateDiagram-v2
 
 PRD §8.3을 기준으로 본 문서에서 확정:
 
-| 인덱스                                                                                            | 용도                    |
-| ------------------------------------------------------------------------------------------------- | ----------------------- |
-| `idx_challenges_group_status` ON `challenges(group_id, status)`                                   | 그룹의 활성 챌린지 조회 |
-| `idx_action_logs_challenge_user_created` ON `action_logs(challenge_id, user_id, created_at DESC)` | 주간 목표 집계          |
-| `idx_action_logs_user_created` ON `action_logs(user_id, created_at DESC)`                         | "오늘 인증 여부" 조회   |
-| `idx_kudos_action_log` ON `kudos(action_log_id)`                                                  | 피드 카드당 카운트      |
-| `idx_action_logs_keywords_gin` ON `action_logs USING GIN (selected_keywords)`                     | Week 2 키워드 분포 분석 |
-| `idx_events_name_created` ON `events(name, created_at DESC)`                                      | 이벤트 집계(§9)         |
-| `idx_invites_token` ON `invites(token)`                                                           | 초대 링크 조회          |
-| `idx_push_sub_user` ON `push_subscriptions(user_id)`                                              | 발송 대상 조회          |
+| 인덱스                                                                                            | 용도                      |
+| ------------------------------------------------------------------------------------------------- | ------------------------- |
+| `idx_challenges_group_status` ON `challenges(group_id, status)`                                   | 그룹의 활성 챌린지 조회   |
+| `idx_action_logs_challenge_user_created` ON `action_logs(challenge_id, user_id, created_at DESC)` | 주간 목표 집계            |
+| `idx_action_logs_user_created` ON `action_logs(user_id, created_at DESC)`                         | "오늘 인증 여부" 조회     |
+| `idx_kudos_action_log` ON `kudos(action_log_id)`                                                  | 피드 카드당 카운트        |
+| `idx_action_logs_keywords_gin` ON `action_logs USING GIN (selected_keywords)`                     | Week 2 키워드 분포 분석   |
+| `idx_events_name_created` ON `events(name, created_at DESC)`                                      | 이벤트 집계(§9)           |
+| `idx_invites_token` ON `invites(token)`                                                           | 초대 링크 조회            |
+| `idx_push_sub_user` ON `push_subscriptions(user_id)`                                              | 발송 대상 조회            |
+| `idx_point_ledger_user_group_created` ON `point_ledger(user_id, group_id, created_at DESC)`       | user/group 잔액·이력 조회 |
+| `idx_point_ledger_group_created` ON `point_ledger(group_id, created_at DESC)`                     | 그룹 정산 투명성 조회     |
+| `idx_point_ledger_challenge` ON `point_ledger(challenge_id) WHERE challenge_id IS NOT NULL`       | 챌린지 관련 원장 조회     |
+| `idx_point_ledger_ref` ON `point_ledger(ref_id) WHERE ref_id IS NOT NULL`                         | 원천 행/idempotency 추적  |
+| `idx_settlements_settled_at` ON `settlements(settled_at DESC)`                                    | 최근 정산 조회            |
 
 ---
 
@@ -372,24 +437,28 @@ language sql stable as $$
 $$;
 ```
 
-| 테이블                   | SELECT                              | INSERT                                                                           | UPDATE                                                  | DELETE                 |
-| ------------------------ | ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------- |
-| `users`                  | self + 같은 그룹 멤버               | self only                                                                        | self only (display_name/avatar)                         | ❌                     |
-| `groups`                 | 멤버만                              | 인증된 사용자 (owner = self)                                                     | owner만 (name, status→'disbanded')                      | ❌ POC                 |
-| `group_members`          | 멤버만                              | 초대 수락 Server Action 경유(service role)                                       | ❌                                                      | owner 또는 self (탈퇴) |
-| `invites`                | 그룹 owner + 토큰 정확 일치 시 anon | owner only                                                                       | ❌                                                      | owner only             |
-| `challenges`             | 그룹 멤버                           | 그룹 owner                                                                       | owner AND status='pending'                              | ❌                     |
-| `challenge_participants` | 그룹 멤버                           | 참여자 self(서명)                                                                | self (signed_at 채움, 되돌리기 금지)                    | ❌                     |
-| `action_logs`            | 그룹 멤버                           | self AND 챌린지 active (AI 컬럼은 서버만)                                        | self AND 5분 이내 AND keyword/memo만 (AI 컬럼은 서버만) | ❌ (AC-6)              |
-| `kudos`                  | 그룹 멤버                           | self AND 본인 action_log 금지 AND 같은 그룹 멤버                                 | ❌                                                      | self (토글 취소)       |
-| `push_subscriptions`     | self                                | self                                                                             | self                                                    | self                   |
-| `events`                 | 서버만                              | self(`user_id=auth.uid()`) 또는 anon(`user_id IS NULL`) — 클라이언트 이벤트 허용 | ❌                                                      | ❌                     |
+| 테이블                   | SELECT                              | INSERT                                                                           | UPDATE                                                          | DELETE                             |
+| ------------------------ | ----------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------- |
+| `users`                  | self + 같은 그룹 멤버               | self only                                                                        | self only (display_name/avatar)                                 | ❌                                 |
+| `groups`                 | 멤버만                              | 인증된 사용자 (owner = self)                                                     | owner만 (name, status→'disbanded')                              | ❌ POC                             |
+| `group_members`          | 멤버만                              | 초대 수락 Server Action 경유(service role)                                       | ❌                                                              | owner 또는 self (탈퇴)             |
+| `invites`                | 그룹 owner + 토큰 정확 일치 시 anon | owner only                                                                       | ❌                                                              | owner only                         |
+| `challenges`             | 그룹 멤버                           | 그룹 owner                                                                       | owner AND status='pending'                                      | ❌                                 |
+| `challenge_participants` | 그룹 멤버                           | service role/RPC only                                                            | self (`signed_at` 채움, `deposit_points`는 trigger로 서버 전용) | ❌                                 |
+| `point_ledger`           | 본인 또는 그룹 멤버                 | ❌ 정책 없음(RPC/server only)                                                    | ❌ 정책 없음 + append-only trigger                              | ❌ 정책 없음 + append-only trigger |
+| `settlements`            | 그룹 멤버                           | ❌ 정책 없음(RPC/server only)                                                    | ❌ 정책 없음 + immutable trigger                                | ❌ 정책 없음 + immutable trigger   |
+| `action_logs`            | 그룹 멤버                           | self AND 챌린지 active (AI 컬럼은 서버만)                                        | self AND 5분 이내 AND keyword/memo만 (AI 컬럼은 서버만)         | ❌ (AC-6)                          |
+| `kudos`                  | 그룹 멤버                           | self AND 본인 action_log 금지 AND 같은 그룹 멤버                                 | ❌                                                              | self (토글 취소)                   |
+| `push_subscriptions`     | self                                | self                                                                             | self                                                            | self                               |
+| `events`                 | 서버만                              | self(`user_id=auth.uid()`) 또는 anon(`user_id IS NULL`) — 클라이언트 이벤트 허용 | ❌                                                              | ❌                                 |
 
 **방어 이중화 포인트**:
 
 - `kudos` 본인 action_log 금지: RLS 정책 + zod 검증 + 앱 레이어 3중.
 - 5분 내 편집 제한: UPDATE 정책에서 `created_at > now() - interval '5 minutes'`.
 - `challenges` `status` 전이: UPDATE 정책에서 status 전환 조건부(pending→pending 수정만 허용; accepted/active/closed 전이는 Server Action + service role).
+- `point_ledger`/`settlements`: SELECT만 열고 write 정책을 두지 않는다. service_role 외 직접 INSERT는 BEFORE trigger가 `42501`, UPDATE/DELETE는 원장 append-only·스냅샷 immutable 위반으로 `42501`.
+- `challenge_participants.deposit_points`: 기존 self UPDATE 정책은 서명용으로 유지하되, 보증금 cache 컬럼 변경은 BEFORE trigger가 service_role 전용으로 차단.
 - `action_logs.ai_summary`/`template_fallback`/`regenerate_count`/`prompt_version`: 클라이언트 INSERT/UPDATE 시 컬럼 차단 — column-level RLS 또는 Server Action 단일 경로 강제.
 - `events` INSERT 완화 배경: PRD §9.1 중 `keywords_shown`/`keywords_reroll`/`keyword_selected`/`memo_fallback_opened`/`feed_view`/`notification_opened` 6종은 클라이언트 전용이라 Server Action 왕복 없이 직접 insert 허용. **서버 이벤트**(AI 성공/실패·알림 발송 등)는 여전히 서버에서 track.
 
@@ -461,11 +530,13 @@ $$;
 
 > ONBOARDING §4.3 원칙: 파일명 `000X_<snake_case>.sql`, 번호 append-only, down 없음. **Append-only는 "기존 번호 재배치 금지"가 취지이지 "작게 쪼개기"가 아님** — Day 1 초기 DDL은 한 파일에 묶는다.
 
-| 파일            | 내용                                                                   |
-| --------------- | ---------------------------------------------------------------------- |
-| `0001_init.sql` | §5의 10개 테이블 + 제약 + 인덱스(§6) + `challenges.status` UPDATE 가드 |
-| `0002_rls.sql`  | §7 RLS 정책 + `is_group_member` 헬퍼                                   |
-| 이후            | Day 1 이후의 **신규 변경만** `0003_<snake_case>.sql` 부터 append.      |
+| 파일                    | 내용                                                                       |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `0001_init.sql`         | §5의 10개 테이블 + 제약 + 인덱스(§6) + `challenges.status` UPDATE 가드     |
+| `0002_rls.sql`          | §7 RLS 정책 + `is_group_member` 헬퍼                                       |
+| `0042_point_ledger.sql` | `challenge_participants.deposit_points` + `point_ledger` + RLS/가드 트리거 |
+| `0043_settlements.sql`  | `settlements` + RLS/가드 트리거                                            |
+| 이후                    | Day 1 이후의 **신규 변경만** `0003_<snake_case>.sql` 부터 append.          |
 
 ---
 
@@ -485,6 +556,10 @@ $$;
 
 ## 12. Changelog
 
+- **v0.6** (2026-06-06) — **정산 데이터 레이어 반영** (Ian · [ADR-0032](./adr/0032-settlement-verification-data-model.md) · EVAL-0005)
+  - §2/§3/§5.6: `point_ledger`(append-only, 잔액=`SUM(delta)`)와 `settlements`(`challenge_id` PK 불변 스냅샷) 추가.
+  - §5.6: `challenge_participants.deposit_points` 추가. 게이지 read cache이며 SoT는 `point_ledger`; trigger로 service_role 외 변경 차단.
+  - §7/§10: point ledger/settlements SELECT-only RLS, service_role-only INSERT guard, UPDATE/DELETE 불변성 guard, migration 0042/0043 반영.
 - **v0.5** (2026-06-02) — **주 단위 벌금 누적 모델 반영** (Ian · [spec/plan 2026-06-02-weekly-penalty-accrual](superpowers/specs/2026-06-02-weekly-penalty-accrual.md))
   - §5.5 `challenges.closed_at timestamptz null` 추가(조기 종료 정산 cutoff — [ADR-0030](./adr/0030-early-close-settlement-cutoff.md), migration 0041). CHECK·RLS 무변경.
   - §5.5/§5.7/§8 집계 서술: `goal_count`(주 N회) 벌금이 **끝난 주마다 독립 평가·누적**됨을 명시(D-006 측정단위 모순 해소). 이전 `settlement.ts` 전체 1회 평가를 `lib/challenge/weekly.ts`로 대체.
