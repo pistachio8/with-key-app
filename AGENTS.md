@@ -167,7 +167,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 
 ### pre-commit hook (저마찰)
 
-`pnpm install` 시 husky가 `.husky/pre-commit`을 활성화. **동작**: `lint-staged`가 staged 파일에만 `prettier --write` + `eslint --fix` 자동 적용. 차단 거의 없음. typecheck · test · spec-check은 CI 책임이라 hook에 두지 않음.
+`pnpm install` 시 husky가 `.husky/pre-commit`을 활성화. **동작**: `lint-staged`가 staged 파일에만 `prettier --write` 자동 적용. 차단 거의 없음. **ESLint · typecheck · test · spec-check은 CI 책임이라 hook에 두지 않는다** — ESLint는 모노레포 전환(EVAL-0010) 후 루트 eslint config 부재로 pre-commit에서 제외하고 CI `pnpm -r lint`로 일원화했다.
 
 **우회 채널** (급할 때 또는 hook 자체가 버그일 때):
 
