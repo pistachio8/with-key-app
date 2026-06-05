@@ -2,6 +2,10 @@
 
 > 하네스 머시너리 변경 이력. 모든 harness workflow가 변경 시 1줄 추가한다.
 
+## 0.2 — 2026-06-05
+
+- `harness:check` 실구현 (skeleton → 결정론 Tier 1 lint, spec §4.6 계약). `evals/tasks/*.md` frontmatter 파싱 → Track·Status 검증 + Parent 인용 경로 resolve(hallucinated-path 검출). 0001~0003 grandfather skip, 0004+ frontmatter 필수(evals/README §33). `scripts/harness-check.spec.mjs` 단위 테스트 14건 동반.
+
 ## 0.1 — 2026-06-04
 
 - 하네스 MVP 파일 구조 scaffold (spec `2026-06-04-harness-mvp-file-structure-design` · ADR-0031).
