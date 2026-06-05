@@ -12,7 +12,7 @@ status: draft
 
 ## Parent / 직교 인용
 
-- 상위 Job Story: [JS-settle-1 … 5](../pm/job-stories.md)
+- 상위 Job Story: [JS-settle-1 … 5](../stories/2026-06-05-p1-settlement-job-stories.md)
 - 상위 PRD AC: `AC-deposit-hold-*` · `AC-deposit-gauge-*` · `AC-settle-*` · `AC-settle-trigger-*` · `AC-points-use-*` ([PRD §5.C](../migration/01-rn-mvp-prd.md))
 - 직교 결정(인용만 — 본문 복제 아님):
   - 데이터 모델: [ADR-0032 정산·자동검증 데이터 모델](../adr/0032-settlement-verification-data-model.md) (point_ledger · settlements · 가드 트리거)

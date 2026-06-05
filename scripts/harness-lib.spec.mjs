@@ -20,6 +20,7 @@ import {
   validateAcTraceability,
   loadAcIndex,
   loadCitationFiles,
+  renderGoalPrompt,
 } from "./harness-lib.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
@@ -238,4 +239,78 @@ test("loadAcIndex: 실제 PRD 에서 greenfield AC id 로드", () => {
 test("validateAcTraceability: 실제 repo 의 모든 spine 인용이 resolve (drift 0)", () => {
   const errors = validateAcTraceability(loadAcIndex(), loadCitationFiles());
   assert.deepEqual(errors, []);
+});
+
+// ── renderGoalPrompt (harness:goal) — task 섹션 → /goal 프롬프트 파생 ──
+test("renderGoalPrompt: ADR 게이트·수동 핸드오프·worktree base·mobile env 를 task 에서 도출", () => {
+  const task = {
+    repoPath: "evals/tasks/0099-rn-foo.md",
+    absolutePath: "/repo/evals/tasks/0099-rn-foo.md",
+    frontmatter: { Task: "EVAL-0099", "Blocked-by": "EVAL-0098 complete + ADR accepted." },
+    verificationCommands: "```bash\npnpm -r test\n# manual: device login\n```",
+    sourcePaths: [pr("docs/PRD.md")],
+    targetPaths: [pr("apps/mobile")],
+    content: [
+      "# EVAL-0099: Foo title",
+      "## Parent Links",
+      "- Parent Work Package: `feat/rn-foo` (EVAL-0099).",
+      "## Goal",
+      "goal text",
+      "## Requirements",
+      "- do x",
+      "## Non-goals",
+      "- not y",
+      "## Acceptance Criteria",
+      "- ac1",
+      "## Verification Commands",
+      "```bash",
+      "pnpm -r test",
+      "```",
+      "## Harness Impact Questions",
+      "1. folder? Yes",
+      "## Stop Condition",
+      "- done",
+    ].join("\n"),
+  };
+  const out = renderGoalPrompt(task, { lookupBranch: () => "feat/rn-base" });
+  assert.match(out, /# \/goal prompt — EVAL-0099: Foo title/);
+  assert.match(out, /git worktree add -b feat\/rn-foo \.\.\/with-key-rn-foo feat\/rn-base/);
+  assert.match(out, /ADR 게이트/);
+  assert.match(out, /PO·실기기 핸드오프/);
+  assert.match(out, /EXPO_PUBLIC_\* 만/);
+  assert.match(out, /do x/);
+  assert.match(out, /not y/);
+});
+
+test("renderGoalPrompt: ADR/mobile 신호 없으면 게이트·핸드오프 생략, base 기본 develop", () => {
+  const task = {
+    repoPath: "evals/tasks/0099-web-bar.md",
+    absolutePath: "/repo/evals/tasks/0099-web-bar.md",
+    frontmatter: { Task: "EVAL-0099" },
+    verificationCommands: "```bash\npnpm -r test\n```",
+    sourcePaths: [pr("docs/PRD.md")],
+    targetPaths: [pr("apps/web/src/x.ts")],
+    content: [
+      "# EVAL-0099: Bar title",
+      "## Parent Links",
+      "- Parent Work Package: `feat/web-bar`.",
+      "## Requirements",
+      "- do z",
+      "## Non-goals",
+      "- not w",
+      "## Acceptance Criteria",
+      "- ac",
+      "## Verification Commands",
+      "```bash",
+      "pnpm -r test",
+      "```",
+      "## Stop Condition",
+      "- done",
+    ].join("\n"),
+  };
+  const out = renderGoalPrompt(task);
+  assert.doesNotMatch(out, /ADR 게이트/);
+  assert.doesNotMatch(out, /PO·실기기 핸드오프/);
+  assert.match(out, /git worktree add -b feat\/web-bar \.\.\/with-key-web-bar develop/);
+  assert.match(out, /NEXT_PUBLIC_ 접두 금지/);
 });

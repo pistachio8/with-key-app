@@ -4,10 +4,10 @@
 
 ## 항목
 
-- **G1-θ**: false-flag 임계 θ 미확정.
-  - 차단: P2 부정탐지 Agent Task.
+- **G1-θ**: false-flag 임계 θ.
+  - 차단: P2 부정탐지 판정 Agent Task(EVAL-0022).
   - 해소 조건: G1 PoC 완료 + θ 주입(`docs/migration/01-rn-mvp-prd.md` §7 Q1).
-  - 상태: open.
+  - 상태: partial (2026-06-05, PO) — **θ 잠정확정·주입**(conservative: θ_rate ≤ 1% · phash 해밍 ≤6 → failed[동일-user/group; 전역 제외] · EXIF/스크린샷 단독 차단 안 함 · shadow mode[`VERIFY_ENFORCE=false`]). config(`false_flag_rate.theta`·`judge`)·spec·PRD §7 Q1 동기, EVAL-0022 blocked→todo 활성. **실측 G1 PoC는 open** → `false_flag_rate.active=false` 유지(PoC 통과 시 flip + resolved). spec: `docs/superpowers/specs/2026-06-05-false-flag-threshold-theta.md`.
 - **G2-legal**: 법무 검토 미완.
   - 차단: P1/P2 정산 기능 배포.
   - 해소 조건: 법무 통과 → boolean 게이트 flip(`docs/migration/01-rn-mvp-prd.md` §7 Q2).
@@ -20,6 +20,7 @@
   - 차단: 첫 PM-plugin/greenfield normalize 실행.
   - 해소 조건: PO 방향 택1 — **(A·권장)** 출력처를 `docs/`로 이동해 ADR-0031에 정합(greenfield test-scenarios·acceptance-criteria·risks-assumptions의 `docs/` 홈 신규 정의 + README 인스턴스 홈 갱신, PM_PLUGIN_ADAPTER·create-prd·create-test-scenarios·plan·spec 경로 교정) / **(B)** ADR-0031 개정으로 `.agents/pm/` 정규화 staging을 의도적 예외로 명문화(meta-eval weaken: `SOT_PRECEDENCE_RELAXED`).
   - 상태: resolved (2026-06-04, PO 방향 A) — `docs/pm/` 신설 + `PM_PLUGIN_ADAPTER`·`create-prd`·`create-test-scenarios`·`.agents/README` 정정. raw는 `.agents/pm/raw/` 머시너리 유지(ADR-0031 후속영향 #2). plan·spec은 동일 날짜 설계 기록이라 소급 재작성 대신 본 항목·CHANGELOG로 supersede(ADR-0031 §1 상위 SoT).
+  - 정정: 2026-06-05 (PO 편차정정) — 방향 A 의 job-stories 출력처가 `docs/pm/job-stories.md`로 **과잉적용**된 편차 수정. 방향 A 가 새 `docs/` 홈을 정의한 대상은 test-scenarios·AC·risks 뿐(job-stories·prd 는 기존 홈 보유); job-stories spine 홈 = `docs/stories/`(05 §2 D10 · `create-job-stories` · eng-stories README 와 이미 정합). P1 `docs/pm/job-stories.md` → `docs/stories/2026-06-05-p1-settlement-job-stories.md` 이동 + `PM_PLUGIN_ADAPTER`·`.agents/README`·eng-story/prd 역링크 정정. test-scenarios·AC·risks·prd-index 는 `docs/pm/` 유지(무충돌). meta-eval=**neutral**(relocation·정합 복원, weaken 아님).
 
 읽는 workflow: propose-harness-update.
 업데이트 시점: 미결정 추가/해소 시.

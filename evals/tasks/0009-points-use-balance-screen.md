@@ -15,7 +15,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - Parent PRD Feature: `AC-points-use-1`(현금화 불가 closed-loop) · `AC-points-use-2`(다음 보증금·구독 할인) · `AC-points-use-3`(잔액·이력 화면) · `AC-settle-trigger-4`(`settlement_triggered`/`settlement_auto` 이벤트) · `AC-deposit-gauge-3`(`points_balance_view`) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C·§9.1
 - Parent Test Scenario: `TS-points-use-1`(현금화 불가) · `TS-points-use-2`(다음 보증금 사용) — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-5`(돌려받은 포인트를 다음에 쓴다) — [docs/pm/job-stories.md](../../docs/pm/job-stories.md)
+- Parent Job Story: `JS-settle-5`(돌려받은 포인트를 다음에 쓴다) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
 - Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP5
 - Parent Work Package: `feat/rn-points-use` (WP5)
 

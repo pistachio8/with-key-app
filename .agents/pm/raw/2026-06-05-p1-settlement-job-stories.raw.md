@@ -5,7 +5,7 @@ Feature: P1 포인트 보증금 정산 (fromwith RN MVP)
 PRD SoT: docs/migration/01-rn-mvp-prd.md §5.C
 형식: JTBD "When [상황], I want to [동기], so I can [결과]" — 사용자 언어, 시스템 용어 없음.
 
-> raw 초안. normalize 시 표준 헤더 · `AC-<feature>-<n>` id · `Parent: PRD-AC-<id>` · `Track: greenfield` 주입 → docs/pm/job-stories.md.
+> raw 초안. normalize 시 표준 헤더 · `AC-<feature>-<n>` id · `Parent: PRD-AC-<id>` · `Track: greenfield` 주입 → docs/stories/2026-06-05-p1-settlement-job-stories.md (job-stories spine 홈 = docs/stories, 05 §2 D10).
 
 ---
 

@@ -14,24 +14,53 @@
     "specs": "docs/superpowers/specs"
   },
   "tracks": {
-    "port":       { "preserveEval": true,  "passK": "100%" },
+    "port": { "preserveEval": true, "passK": "100%" },
     "greenfield": { "preserveEval": false, "passAt": 3 }
   },
   "gates": {
     "ledger_invariant": { "kind": "deterministic", "active": true },
-    "idempotency":      { "kind": "deterministic", "active": true },
-    "false_flag_rate":  { "kind": "threshold", "theta": null, "active": false, "blockedBy": "G1-PoC" },
-    "legal_signoff":    { "kind": "boolean", "value": false, "blockedBy": "G2-legal" }
+    "idempotency": { "kind": "deterministic", "active": true },
+    "false_flag_rate": {
+      "kind": "threshold",
+      "theta": 0.01,
+      "thetaStatus": "provisional",
+      "active": false,
+      "blockedBy": "G1-PoC",
+      "judge": {
+        "phashHammingFailMax": 6,
+        "phashHammingReviewMax": 10,
+        "phashFailScopes": ["same_user", "same_group"],
+        "phashGlobalAction": "manual_review",
+        "exifTimeSignal": "record_only",
+        "screenshotSignal": "review_only"
+      },
+      "spec": "docs/superpowers/specs/2026-06-05-false-flag-threshold-theta.md"
+    },
+    "legal_signoff": { "kind": "boolean", "value": false, "blockedBy": "G2-legal" }
   },
   "drift": {
     "anchors": ["define", "record", "sweep"],
-    "tier1Deterministic": ["validate-docs", "citation-resolve", "preserve-eval", "analytics-parity"],
+    "tier1Deterministic": [
+      "validate-docs",
+      "citation-resolve",
+      "preserve-eval",
+      "analytics-parity"
+    ],
     "tier2Model": { "enabled": true, "onlyDuring": "sweep" }
   },
   "sotPrecedence": ["PRD", "EngineeringStory", "JobStory"],
   "metaEval": {
     "mechanicsPaths": [".agents/**", "evals/**", ".claude/rules/**", "docs/migration/0[2-5]*"],
-    "weakenReasonCodes": ["THRESHOLD_LOWERED","TOLERANCE_WIDENED","EVAL_REMOVED","EVAL_DISABLED","SEVERITY_DOWNGRADED","SOT_PRECEDENCE_RELAXED","AUTONOMY_EXPANDED","APPROVAL_GATE_NARROWED"],
+    "weakenReasonCodes": [
+      "THRESHOLD_LOWERED",
+      "TOLERANCE_WIDENED",
+      "EVAL_REMOVED",
+      "EVAL_DISABLED",
+      "SEVERITY_DOWNGRADED",
+      "SOT_PRECEDENCE_RELAXED",
+      "AUTONOMY_EXPANDED",
+      "APPROVAL_GATE_NARROWED"
+    ],
     "recurrenceAlertThreshold": 3
   }
 }
