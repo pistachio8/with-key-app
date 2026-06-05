@@ -30,15 +30,15 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 - `docs/pm/acceptance-criteria.md`
 - `docs/pm/test-scenarios.md`
 - `docs/migration/01-rn-mvp-prd.md`
-- `src/lib/analytics/track.ts`
-- `src/app/(app)/me`
-- `src/lib/db/reads`
+- `apps/web/src/lib/analytics/track.ts`
+- `apps/web/src/app/(app)/me`
+- `apps/web/src/lib/db/reads`
 
 ## Target Files
 
-- `src/app/(app)/me` — 포인트 잔액·이력 조회 화면
-- `src/lib/analytics/track.ts` — `settlement_triggered`·`settlement_auto`·`points_balance_view` 이벤트(PRD §9.1 union과 1:1, spec-required)
-- `src/lib/db/reads`
+- `apps/web/src/app/(app)/me` — 포인트 잔액·이력 조회 화면
+- `apps/web/src/lib/analytics/track.ts` — `settlement_triggered`·`settlement_auto`·`points_balance_view` 이벤트(PRD §9.1 union과 1:1, spec-required)
+- `apps/web/src/lib/db/reads`
 - `docs/superpowers/specs/` — AnalyticsEvent union 변경 spec (선행 산출물)
 
 ## Requirements

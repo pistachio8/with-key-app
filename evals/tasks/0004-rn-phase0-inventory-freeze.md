@@ -2,7 +2,7 @@
 Task: EVAL-0004
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/01-rn-mvp-prd.md, docs/migration/02-rn-migration-harness.md
 ---
 
@@ -28,8 +28,8 @@ RN 기능 포팅을 시작하기 전에 Phase 0 inventory freeze의 완료 조�
 - `docs/migration/02-rn-migration-harness.md`
 - `docs/migration/03-rn-migration-rules.md`
 - `docs/migration/04-rn-architecture.md`
-- `src/app`
-- `src/lib/db/reads`
+- `apps/web/src/app`
+- `apps/web/src/lib/db/reads`
 
 ## Target Files
 

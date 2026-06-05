@@ -130,7 +130,7 @@ with-key/
 | **② 마이그레이션 capability** | "이 기능을 RN으로 옮겨라" task를 에이전트가 1-shot으로 해내나 | 결정론 + 모델 보조 | **pass@3 ≥ 목표** |
 
 - **①이 진짜 안전장치다.** ②는 하네스(에이전트 자동화)의 신뢰성을 재는 것이고, ①은 *제품*이 안 깨졌는지를 잰다. 둘 다 같은 `evals/` 인프라에 쌓는다.
-- 기존 task 0001~0003(Server Action·AI fallback·RLS)은 ②의 선례 형식이다. 마이그레이션 task는 `0004-` 부터 append(스펙 수정 금지, README "Gotcha").
+- 기존 task 0001~0003(Server Action·AI fallback·RLS)은 ②의 선례 형식이다. 마이그레이션 task는 `0004-` 부터 append(스펙 수정 금지, README "Gotcha"). `0004`는 Phase 0 인벤토리 freeze이고(route/action/read 매트릭스를 [00 plan §13](./00-rn-conversion-plan.md)에 고정), 기능 포팅 task(`0005+`)는 그 §13을 Parent 인벤토리로 인용한다.
 
 ### 5.2 보존 eval을 어떤 채점자로 거나
 
@@ -155,10 +155,10 @@ with-key/
 
 ### 5.4 마이그레이션 eval task 템플릿
 
-기존 [0001 task](../../evals/tasks/0001-server-action-create-kudos.md) 형식을 마이그레이션용으로 확장한다. `evals/tasks/0004-rn-<feature>.md` 형태로 추가한다.
+기존 [0001 task](../../evals/tasks/0001-server-action-create-kudos.md) 형식을 마이그레이션용으로 확장한다. `evals/tasks/000N-rn-<feature>.md` 형태로 추가한다(기능 포팅은 `0005-`부터; `0004`는 인벤토리 freeze).
 
 ```markdown
-# EVAL-0004: RN 포팅 — <feature> (예: 챌린지 생성)
+# EVAL-000N: RN 포팅 — <feature> (예: 챌린지 생성)
 
 **Status**: pending baseline
 **Tier**: migration (PWA→RN 기능 단위)
@@ -249,7 +249,7 @@ with-key/
 
 하네스가 실제로 어떻게 도는지 한 기능으로 예시한다(개념 예시, 실제 구현 아님).
 
-1. **Define**: planner가 `/challenge/new`(00 plan §1) + `createChallenge`(§9)를 본다. 보존 항목 = `create_challenge` RPC 트랜잭션·기본 그룹명·penalty 범위 검증. UX 의도 = owner group 가드. → `evals/tasks/0004-rn-challenge-create.md` 초안.
+1. **Define**: planner가 `/challenge/new`(00 plan §1) + `createChallenge`(§9)를 본다. 보존 항목 = `create_challenge` RPC 트랜잭션·기본 그룹명·penalty 범위 검증. UX 의도 = owner group 가드. → `evals/tasks/000N-rn-challenge-create.md` 초안.
 2. **Extract**: `validators/challenge.ts`·`challenge/penalty.ts`·`groups/default-name.ts` 를 `packages/domain` 으로 이동, 기존 test 동반. web·RN typecheck 통과.
 3. **Port**: Expo Router `/(flow)/challenge/new` screen 작성. shadcn form → RN 입력 컴포넌트.
 4. **Wire**: `createChallenge` Server Action → `create_challenge` RPC 직접 호출 + invite 생성. service-role 없는지 reviewer 확인.
@@ -263,7 +263,7 @@ with-key/
 ## 9. 다음 단계 (이 문서 이후)
 
 1. `packages/domain` 추출 PoC 1건(예: `challenge/penalty.ts`) — web·RN 양쪽 import + test 동반(§3.2 검증).
-2. `evals/tasks/0004-rn-challenge-create.md` 작성 — §5.4 템플릿으로 첫 마이그레이션 task 실측(§1.1 "못 쓰던 인프라" 첫 가동).
+2. Phase 0 인벤토리 freeze는 `evals/tasks/0004-rn-phase0-inventory-freeze.md`로 완료(매트릭스는 [00 plan §13](./00-rn-conversion-plan.md)). 첫 기능 포팅 task(`evals/tasks/000N-rn-<feature>.md`)를 §5.4 템플릿으로 작성하고 §13을 Parent로 인용해 실측한다(§1.1 "못 쓰던 인프라" 첫 가동).
 3. 보존 eval P0 후보(§7) 중 `challenge/*`·`db/reads/*`·정산 정합성 task 우선 작성.
 4. G1(부정탐지 정밀도)·G2(법무) 게이트 일정 확정 — P1/P2 task `blocked` 해제 조건.
 5. run 레코드 필드(§5.5)를 `agent-results.json` schema에 반영(append-only 유지).

@@ -21,7 +21,7 @@ ADR과 spec의 차이는 **되돌리기 비용**입니다. spec은 가역적 설
 | 경로                                  | 이유                                                         |
 | ------------------------------------- | ------------------------------------------------------------ |
 | `src/lib/validators/**`               | 도메인 7개가 기능 진화 따라 빈번히 변경 — ADR이면 인플레이션 |
-| `src/lib/analytics/track.ts`          | PRD §9.1과 1:1 동기화 — 이벤트 추가/변경 시 근거 보존        |
+| `apps/web/src/lib/analytics/track.ts` | PRD §9.1과 1:1 동기화 — 이벤트 추가/변경 시 근거 보존        |
 | `src/lib/ai/**` (PROMPT_VERSION bump) | 프롬프트 가역 · A/B 비교 가능 — promptVersion이 롤백 키      |
 
 CI(`scripts/check-spec-required.mjs`)가 이 경로 변경에 spec(또는 ADR) 동반이 없으면 stderr 경고를 출력합니다(soft). 위 spec 권장 경로라도 작성자가 ADR로 격상해도 무방합니다(보수적 작성에 페널티 없음).

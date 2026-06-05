@@ -25,12 +25,12 @@ with-key의 **풀 포맷 ADR(Nygard)** 디렉터리. 한 결정당 한 파일.
 
 [`../../AGENTS.md`](../../AGENTS.md) §4 매핑상, 다음 4개 경로 변경은 ADR 작성이 권장됩니다.
 
-| 경로                       | 이유                                               |
-| -------------------------- | -------------------------------------------------- |
-| `supabase/migrations/**`   | 단방향(POC 정책), 데이터 손실 가능                 |
-| `src/lib/supabase/**`      | admin/client/server/middleware 전부 인증 백본      |
-| `middleware.ts`            | Next.js 인증 진입점                                |
-| `src/lib/keywords/pool.ts` | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
+| 경로                                | 이유                                               |
+| ----------------------------------- | -------------------------------------------------- |
+| `supabase/migrations/**`            | 단방향(POC 정책), 데이터 손실 가능                 |
+| `src/lib/supabase/**`               | admin/client/server/middleware 전부 인증 백본      |
+| `middleware.ts`                     | Next.js 인증 진입점                                |
+| `apps/web/src/lib/keywords/pool.ts` | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
 
 CI(`scripts/check-spec-required.mjs`)가 이 경로 변경에 ADR(또는 spec) 동반이 없으면 stderr 경고를 출력합니다(soft). 작성자가 ADR 대신 spec으로 처리해도 무방하며, 리뷰어가 적정성을 판단합니다.
 

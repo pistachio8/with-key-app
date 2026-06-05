@@ -30,14 +30,14 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 - `docs/eng-stories/2026-06-05-points-settlement.md`
 - `docs/pm/acceptance-criteria.md`
 - `docs/pm/test-scenarios.md`
-- `src/app/(app)/challenge`
-- `src/app/api/cron`
+- `apps/web/src/app/(app)/challenge`
+- `apps/web/src/app/api/cron`
 - `supabase/migrations/0041_challenge_closed_at.sql`
 
 ## Target Files
 
-- `src/app/(app)/challenge` — 그룹장 종료 화면 "정산 확정" 트리거(확정만, 재량 분배 아님)
-- `src/app/api/cron` — 마감 후 72h auto-settle cron (Route Handler — 외부 콜백 전용 경로)
+- `apps/web/src/app/(app)/challenge` — 그룹장 종료 화면 "정산 확정" 트리거(확정만, 재량 분배 아님)
+- `apps/web/src/app/api/cron` — 마감 후 72h auto-settle cron (Route Handler — 외부 콜백 전용 경로)
 - `supabase/migrations/` — 필요 시 cron 보조 view/RPC (예: 미정산 마감 챌린지 조회)
 
 ## Requirements

@@ -28,9 +28,7 @@ const secret = process.env.SUPABASE_SECRET_KEY;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
 if (!url || !secret || !appUrl) {
-  console.error(
-    "missing env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_APP_URL",
-  );
+  console.error("missing env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_APP_URL");
   process.exit(1);
 }
 

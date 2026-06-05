@@ -1,34 +1,7 @@
 {
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
+  // 모노레포 루트 base. 각 패키지(apps/web, packages/domain)는 자기 tsconfig.json 에서
+  // ./tsconfig.base.json 을 extends 한다. 이 루트 파일은 에디터 도구 + 하네스 경로 유효성용이며,
+  // 실제 타입체크는 `pnpm -r typecheck` 가 패키지별로 수행한다(루트에서 tsc 직접 실행 안 함).
+  "extends": "./tsconfig.base.json",
+  "include": []
 }

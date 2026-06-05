@@ -32,12 +32,12 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 - `supabase/migrations/0002_rls.sql`
 - `docs/superpowers/specs/2026-06-02-weekly-penalty-accrual.md`
 - `docs/adr/0030-early-close-settlement-cutoff.md`
-- `src/lib/db/reads`
+- `apps/web/src/lib/db/reads`
 
 ## Target Files
 
 - `supabase/migrations/` — 신규 정산 RPC migration(`grant_bundle_points`·`hold_deposit`·`deposit_release`·`settle_challenge`·`distribute_pool`)
-- `src/lib/db/reads/` — 잔액=Σdelta 조회 함수 (user·group 스코프)
+- `apps/web/src/lib/db/reads/` — 잔액=Σdelta 조회 함수 (user·group 스코프)
 - `docs/BE_SCHEMA.md`
 
 ## Requirements

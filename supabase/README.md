@@ -20,6 +20,6 @@ pnpm supabase db diff         # 로컬 변경사항 SQL 추출
 
 ## See also / Cross-module dependencies
 
-- 클라이언트 사용 지점 (depends on): [`../src/lib/supabase/`](../src/lib/supabase/) — client / server / middleware
+- 클라이언트 사용 지점 (depends on): [`../apps/web/src/lib/supabase/`](../apps/web/src/lib/supabase/) — client / server / middleware
 - 키 체계 ADR: [`../docs/adr/0001-supabase-publishable-secret-keys.md`](../docs/adr/0001-supabase-publishable-secret-keys.md)
 - 데이터 모델: [`../docs/BE_SCHEMA.md`](../docs/BE_SCHEMA.md)

@@ -9,6 +9,8 @@ import { execSync } from "node:child_process";
 
 // spec-required 경로 매핑 (AGENTS.md §4 · 2026-05-13 spec)
 // 매칭은 위에서 아래 순서 첫 매칭 적용.
+// EVAL-0010 모노레포 전환: src/ → apps/web/src/, middleware.ts → apps/web/proxy.ts.
+// supabase/migrations 는 루트 SoT 유지(불변).
 const WHITELIST = [
   {
     pattern: /^supabase\/migrations\//,
@@ -16,23 +18,31 @@ const WHITELIST = [
     reason: "단방향(POC 정책), 데이터 손실 가능",
   },
   {
-    pattern: /^src\/lib\/supabase\//,
+    pattern: /^apps\/web\/src\/lib\/supabase\//,
     recommend: "ADR",
     reason: "인증 백본(admin/client/server/middleware)",
   },
-  { pattern: /^middleware\.ts$/, recommend: "ADR", reason: "Next.js 인증 진입점" },
+  { pattern: /^apps\/web\/proxy\.ts$/, recommend: "ADR", reason: "Next.js 인증 진입점(proxy)" },
   {
-    pattern: /^src\/lib\/keywords\/pool\.ts$/,
+    pattern: /^apps\/web\/src\/lib\/keywords\/pool\.ts$/,
     recommend: "ADR",
     reason: "POC freeze 정책 — PO 승인 + VALIDATION 재논의",
   },
-  { pattern: /^src\/lib\/validators\//, recommend: "spec", reason: "도메인 zod 스키마 변경" },
   {
-    pattern: /^src\/lib\/analytics\/track\.ts$/,
+    pattern: /^apps\/web\/src\/lib\/validators\//,
+    recommend: "spec",
+    reason: "도메인 zod 스키마 변경",
+  },
+  {
+    pattern: /^apps\/web\/src\/lib\/analytics\/track\.ts$/,
     recommend: "spec",
     reason: "PRD §9.1과 1:1 동기화",
   },
-  { pattern: /^src\/lib\/ai\//, recommend: "spec", reason: "AI 프롬프트 가역 · A/B 비교 가능" },
+  {
+    pattern: /^apps\/web\/src\/lib\/ai\//,
+    recommend: "spec",
+    reason: "AI 프롬프트 가역 · A/B 비교 가능",
+  },
 ];
 
 function parseArgs(argv) {

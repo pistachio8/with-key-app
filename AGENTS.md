@@ -58,7 +58,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 - `src/lib/validators/*` zod 스키마가 **타입 SoT(Single Source of Truth)**. 도메인 타입은 `z.infer<>`로 도출. **왜**: 런타임 검증과 컴파일 타입을 한 곳에서 동기
 - `any` 금지. 불가피하면 `unknown` + 좁히기. **왜**: 타입 안전성 우회 누적은 디버깅 비용 ↑
-- DB 타입은 `pnpm db:types` 자동 생성본(`src/types/supabase.ts`) — 직접 수정 금지. **왜**: 다음 generate가 변경분을 덮어씀
+- DB 타입은 `pnpm db:types` 자동 생성본(`apps/web/src/types/supabase.ts`) — 직접 수정 금지. **왜**: 다음 generate가 변경분을 덮어씀
 
 ### §Supabase / RLS
 
@@ -67,7 +67,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 - migration 파일명: `000X_<snake_case>.sql`. 번호 맨 뒤에만 추가, 재정렬 금지. down 스크립트 없음(POC 단방향). **왜**: 머지된 migration은 production에서 이미 적용됨, 재정렬은 데이터 무결성 깨짐
 - Supabase Studio에서 DDL 직접 수정 금지. 모든 스키마 변경은 migration 파일로. **왜**: 재현 가능성
 
-### §키워드 풀 (`src/lib/keywords/pool.ts`)
+### §키워드 풀 (`apps/web/src/lib/keywords/pool.ts`)
 
 - **버전 정책**: v1.0 freeze (POC 시작) · v1.1 release 2026-05-22 (meal 추가, [ADR-0015](docs/adr/0015-meal-activity-type.md)) · **이후 추가 변경 금지**. 변경 시 PO 승인 + [`docs/VALIDATION.md`](docs/VALIDATION.md) 재논의 필요. **왜**: PRD §4.6 — 분석 편향 방지(데이터 일관성 보존)
 - `KEYWORD_POOL_VERSION` 상수를 `keywords_shown` · `action_logged` 이벤트에 명시 inject — 분석 분기점 marker. **왜**: 릴리스 timestamp 가 deploy 지연·cache·환경차로 부정확하므로 명시 marker 가 robust
@@ -88,7 +88,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 - `next` · `eslint-config-next` 는 현재 minor line(`16.2.x`) 으로 pin 한다. **왜**: patch 는 수용하되 private cache API 가 바뀔 수 있는 minor 자동 상승은 막는다
 - Next.js minor bump 전 `node_modules/next/dist/docs/` 의 `use-cache-private` · `cacheTag` · `cacheLife` · `cacheComponents` 문서와 changelog 를 확인한다. **왜**: private cache 는 v16 에서도 experimental 이라 API/동작 변경 가능성이 있다
 
-### §AnalyticsEvent (`src/lib/analytics/track.ts`)
+### §AnalyticsEvent (`apps/web/src/lib/analytics/track.ts`)
 
 - `AnalyticsEvent` 유니온은 **PRD §9.1 이벤트 표와 1:1**. 임의 이벤트 추가 금지 — PO 승인 필요. **왜**: 분석 파이프라인의 SoT는 PRD, 코드는 그 미러
 - 스키마 변경 시 spec(`docs/superpowers/specs/`)에 결정 근거 기록
@@ -98,7 +98,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 - 서버 전용 키(`SUPABASE_SECRET_KEY` · `OPENAI_API_KEY` · `VAPID_PRIVATE_KEY`)에 `NEXT_PUBLIC_` 접두 금지. **왜**: 클라이언트 번들에 포함되어 유출
 - Supabase 키는 **신규 체계**(`sb_publishable_*` / `sb_secret_*`)만 사용 — 레거시 `*_ANON_KEY` / `*_SERVICE_ROLE_KEY` 금지. 상세 [ADR-0001](docs/adr/0001-supabase-publishable-secret-keys.md)
 - production secret은 Vercel Environment Variables만. 메신저·커밋·로그에 붙여넣기 금지
-- 새 env 추가 시 [`.env.example`](.env.example) 주석 동기화 필수
+- 새 env 추가 시 [`apps/web/.env.example`](apps/web/.env.example) 주석 동기화 필수
 
 ## 4. spec-required 경로 매핑
 
@@ -109,9 +109,9 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 | `supabase/migrations/**`              | **ADR**     | 단방향(POC 정책), 데이터 손실 가능                 |
 | `src/lib/supabase/**`                 | **ADR**     | admin/client/server/middleware 전부 인증 백본      |
 | `middleware.ts`                       | **ADR**     | Next.js 인증 진입점                                |
-| `src/lib/keywords/pool.ts`            | **ADR**     | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
+| `apps/web/src/lib/keywords/pool.ts`   | **ADR**     | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
 | `src/lib/validators/**`               | **spec**    | 도메인 7개가 기능 진화 따라 빈번히 변경            |
-| `src/lib/analytics/track.ts`          | **spec**    | PRD §9.1과 1:1 동기화                              |
+| `apps/web/src/lib/analytics/track.ts` | **spec**    | PRD §9.1과 1:1 동기화                              |
 | `src/lib/ai/**` (PROMPT_VERSION bump) | **spec**    | 프롬프트 가역 · A/B 비교 가능                      |
 
 ADR과 spec의 구분은 [`docs/adr/README.md`](docs/adr/README.md), [`docs/superpowers/specs/README.md`](docs/superpowers/specs/README.md)를 참조. 작성자가 권장과 다른 산출물을 골라도 무방하며, 리뷰어가 적정성을 판단합니다.
@@ -153,7 +153,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 
 - Supabase migration / RLS / RPC 변경 → `pnpm supabase db reset` + 역할별(anon · authenticated) 접근 실측
 - 핵심 사용자 플로우 → 모바일 viewport(DevTools 또는 실기) 수동 확인 또는 E2E smoke
-- 인증 플로우(`middleware.ts` · `src/lib/supabase/middleware.ts`) → 로그인 → 보호 라우트 → 로그아웃 수동 재현
+- 인증 플로우(`middleware.ts` · `apps/web/src/lib/supabase/middleware.ts`) → 로그인 → 보호 라우트 → 로그아웃 수동 재현
 - 설정 변경(`next.config.*`, env, build) → `pnpm build`
 
 ## 8. PR · 커밋 · pre-commit hook

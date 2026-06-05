@@ -11,7 +11,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 
-config({ path: ".env.local", quiet: true });
+// 모노레포: 루트(cwd)에서 실행되며 env 는 apps/web 으로 이동했다(EVAL-0010).
+config({ path: "apps/web/.env.local", quiet: true });
 
 const SLACK_SECTION_LIMIT = 2900; // Slack section text 3000 제한 + 버퍼
 
