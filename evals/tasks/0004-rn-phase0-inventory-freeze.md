@@ -2,7 +2,7 @@
 Task: EVAL-0004
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/01-rn-mvp-prd.md, docs/migration/02-rn-migration-harness.md
 ---
 
