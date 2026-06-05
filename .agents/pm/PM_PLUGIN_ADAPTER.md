@@ -26,10 +26,10 @@ normalize 규칙:
 3. 트랙 슬롯 — 각 Feature에 `Track: port|greenfield`(미정이면 `TBD`, create-agent-tasks에서 확정).
 4. 도구 메타·민감정보 제거.
 
-출력(normalized) — 인스턴스 홈은 `docs/pm/`(ADR-0031 §1: 인스턴스→`docs/`. 머시너리 `.agents/pm`엔 templates·raw만):
+출력(normalized) — spine 노드(job stories)는 D10 spine 홈에, 나머지 PM 번들은 `docs/pm/`에(ADR-0031 §1: 인스턴스→`docs/`. 머시너리 `.agents/pm`엔 templates·raw만):
 
-- `docs/pm/prd.md`
-- `docs/pm/job-stories.md`
+- `docs/stories/<date>-<feature>-job-stories.md` — **job-stories spine 홈**(05 §2 D10: Job Story↔Eng Story 대칭). `create-job-stories` 워크플로 출력처와 일치. **왜**: D10 가 Job Story 홈을 `docs/stories/`로 못박았고, PM-INSTANCE-HOME 방향 A 가 새 `docs/` 홈을 정의한 대상은 test-scenarios·AC·risks 뿐(job-stories·prd 는 기존 홈 보유) — job-stories 를 `docs/pm/` 에 두던 건 방향 A 의 과잉적용 편차였다(DECISION_NEEDED 2026-06-05 정정).
+- `docs/pm/prd.md` — AC id 인덱스(본문 SoT 는 `docs/migration/01`, port 트랙은 생략)
 - `docs/pm/test-scenarios.md`
 - `docs/pm/acceptance-criteria.md`
 - `docs/pm/risks-assumptions.md`

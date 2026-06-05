@@ -60,4 +60,4 @@ status: draft
 
 ---
 
-> 각 JS의 측정 가능한 수용 기준은 [acceptance-criteria.md](./acceptance-criteria.md), 검증 시나리오는 [test-scenarios.md](./test-scenarios.md) 참조.
+> 각 JS의 측정 가능한 수용 기준은 [acceptance-criteria.md](../pm/acceptance-criteria.md), 검증 시나리오는 [test-scenarios.md](../pm/test-scenarios.md) 참조.

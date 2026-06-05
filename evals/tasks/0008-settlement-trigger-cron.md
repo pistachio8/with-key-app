@@ -15,7 +15,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - Parent PRD Feature: `AC-settle-trigger-1`(그룹장 정산 확정) · `AC-settle-trigger-2`(48h/72h auto-settle) · `AC-settle-trigger-3`(이중정산 방지) · `AC-settle-trigger-4`(이벤트) · `AC-settle-1`(달성자 환급·미달분 풀) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
 - Parent Test Scenario: `TS-settle-trigger-1`(48h/72h) · `TS-settle-trigger-2`(idempotency) · `TS-settle-trigger-3`(직전 doneCount 변동) · `TS-settle-1` — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-4`(그룹장 "정산" 한 번, 깜빡해도 자동) — [docs/pm/job-stories.md](../../docs/pm/job-stories.md)
+- Parent Job Story: `JS-settle-4`(그룹장 "정산" 한 번, 깜빡해도 자동) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
 - Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP4
 - Parent Work Package: `feat/rn-settlement-trigger` (WP4)
 

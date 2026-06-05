@@ -15,7 +15,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - Parent PRD Feature: `AC-deposit-hold-1`~`AC-deposit-hold-4`(서약 시 hold·잔액부족 차단·그랜트·공동풀 균등) · `AC-deposit-gauge-1`~`AC-deposit-gauge-3`(게이지·고지·조회 이벤트) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
 - Parent Test Scenario: `TS-deposit-hold-1`~`4` · `TS-deposit-gauge-1` — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-1`(서약 시 잠긴다) · `JS-settle-2`(진행 중 깎일 위기) — [docs/pm/job-stories.md](../../docs/pm/job-stories.md)
+- Parent Job Story: `JS-settle-1`(서약 시 잠긴다) · `JS-settle-2`(진행 중 깎일 위기) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
 - Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP3
 - Parent Work Package: `feat/rn-deposit-hold-gauge` (WP3)
 

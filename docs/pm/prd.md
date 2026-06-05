@@ -13,7 +13,7 @@ status: draft
 - **Source**: docs/migration/01-rn-mvp-prd.md §5.C (Plugin Mode normalize 2026-06-05)
 - **Track**: greenfield (보존 baseline 없음 — POC "표시만" penalty 를 실제 포인트 이동으로 신규 구축)
 - **데이터 모델 ADR**: [ADR-0032](../adr/0032-settlement-verification-data-model.md) (point_ledger · settlements · immutability 예외)
-- **하위 산출물**: [job-stories](./job-stories.md) · [test-scenarios](./test-scenarios.md) · [acceptance-criteria](./acceptance-criteria.md) · [risks-assumptions](./risks-assumptions.md)
+- **하위 산출물**: [job-stories](../stories/2026-06-05-p1-settlement-job-stories.md) · [test-scenarios](./test-scenarios.md) · [acceptance-criteria](./acceptance-criteria.md) · [risks-assumptions](./risks-assumptions.md)
 
 ## AC id 인덱스 (PRD §5.C 미러 — 측정 가능 기준의 SoT는 PRD)
 

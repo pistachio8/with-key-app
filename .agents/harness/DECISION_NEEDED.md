@@ -20,6 +20,7 @@
   - 차단: 첫 PM-plugin/greenfield normalize 실행.
   - 해소 조건: PO 방향 택1 — **(A·권장)** 출력처를 `docs/`로 이동해 ADR-0031에 정합(greenfield test-scenarios·acceptance-criteria·risks-assumptions의 `docs/` 홈 신규 정의 + README 인스턴스 홈 갱신, PM_PLUGIN_ADAPTER·create-prd·create-test-scenarios·plan·spec 경로 교정) / **(B)** ADR-0031 개정으로 `.agents/pm/` 정규화 staging을 의도적 예외로 명문화(meta-eval weaken: `SOT_PRECEDENCE_RELAXED`).
   - 상태: resolved (2026-06-04, PO 방향 A) — `docs/pm/` 신설 + `PM_PLUGIN_ADAPTER`·`create-prd`·`create-test-scenarios`·`.agents/README` 정정. raw는 `.agents/pm/raw/` 머시너리 유지(ADR-0031 후속영향 #2). plan·spec은 동일 날짜 설계 기록이라 소급 재작성 대신 본 항목·CHANGELOG로 supersede(ADR-0031 §1 상위 SoT).
+  - 정정: 2026-06-05 (PO 편차정정) — 방향 A 의 job-stories 출력처가 `docs/pm/job-stories.md`로 **과잉적용**된 편차 수정. 방향 A 가 새 `docs/` 홈을 정의한 대상은 test-scenarios·AC·risks 뿐(job-stories·prd 는 기존 홈 보유); job-stories spine 홈 = `docs/stories/`(05 §2 D10 · `create-job-stories` · eng-stories README 와 이미 정합). P1 `docs/pm/job-stories.md` → `docs/stories/2026-06-05-p1-settlement-job-stories.md` 이동 + `PM_PLUGIN_ADAPTER`·`.agents/README`·eng-story/prd 역링크 정정. test-scenarios·AC·risks·prd-index 는 `docs/pm/` 유지(무충돌). meta-eval=**neutral**(relocation·정합 복원, weaken 아님).
 
 읽는 workflow: propose-harness-update.
 업데이트 시점: 미결정 추가/해소 시.

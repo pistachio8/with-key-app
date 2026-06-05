@@ -14,7 +14,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - Parent PRD Feature: `AC-deposit-hold-5`(잔액=Σdelta 불변식) · `AC-settle-7`(원장 append + 스냅샷) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
 - Parent Test Scenario: `TS-deposit-hold-5`(잔액=Σdelta) · `TS-settle-4`(스냅샷 불변) — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-1`(서약 시 진짜 잃을 포인트가 잠긴다) — [docs/pm/job-stories.md](../../docs/pm/job-stories.md)
+- Parent Job Story: `JS-settle-1`(서약 시 진짜 잃을 포인트가 잠긴다) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
 - Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP1
 - Parent Work Package: `feat/rn-settlement-data` (WP1)
 

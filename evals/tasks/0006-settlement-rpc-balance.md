@@ -14,7 +14,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - Parent PRD Feature: `AC-settle-trigger-3`(이중정산 idempotency) · `AC-deposit-hold-5`(잔액=Σdelta) · `AC-settle-4`(미달분 주 단위 누적) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
 - Parent Test Scenario: `TS-settle-trigger-2`(이중 정산 no-op) · `TS-settle-1`(release+pool) · `TS-settle-2`(주 단위 누적) — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-3`(끝나면 돌려받고 미달분은 다음 밑천) — [docs/pm/job-stories.md](../../docs/pm/job-stories.md)
+- Parent Job Story: `JS-settle-3`(끝나면 돌려받고 미달분은 다음 밑천) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
 - Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP2
 - Parent Work Package: `feat/rn-settlement-rpc` (WP2)
 

@@ -43,6 +43,6 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 
 - PRD: `docs/PRD.md` · `docs/migration/01-rn-mvp-prd.md`
 - Job Story: `docs/stories/` · Engineering Story: `docs/eng-stories/`
-- PM 정규화(greenfield): `docs/pm/` — prd·job-stories·test-scenarios·acceptance-criteria·risks-assumptions. port 트랙은 `docs/PRD.md`·`docs/stories/` 재사용(신규 파일 없음)
+- PM 정규화(greenfield): `docs/pm/` — prd(AC-index)·test-scenarios·acceptance-criteria·risks-assumptions. **job-stories 는 spine 홈 `docs/stories/`** (05 §2 D10 — line 45). port 트랙은 `docs/PRD.md`·`docs/stories/` 재사용(신규 파일 없음)
 - Agent Task: `evals/tasks/` · 결과: `evals/results/`
 - 결정: `docs/adr/` · `docs/superpowers/specs/`
