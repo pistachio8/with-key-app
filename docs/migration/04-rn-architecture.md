@@ -287,14 +287,14 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 ### 작성할 ADR/spec
 
-| 산출물                                                       | 대상 결정                         | 트리거 경로                      |
-| ------------------------------------------------------------ | --------------------------------- | -------------------------------- |
-| ADR — 모노레포 전면 restructure                              | A1                                | `src/lib/supabase/**` 이동 → ADR |
-| ADR — RN Kakao 네이티브 인증                                 | A6                                | `src/lib/supabase/**` 인증 백본  |
-| ADR — `device_push_tokens` 신설                              | A9                                | `supabase/migrations/**`         |
-| spec — server/client 상태 라이브러리(TanStack Query·Zustand) | A8·§6                             | 아키텍처 결정                    |
-| spec — mobile 디자인 토큰                                    | A10                               | `apps/mobile/theme`              |
-| (기존) ADR — `point_ledger`·`settlements`·immutability 예외  | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**`         |
+| 산출물                                                                                                                 | 대상 결정                         | 트리거 경로                      |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------- |
+| ADR — 모노레포 전면 restructure                                                                                        | A1                                | `src/lib/supabase/**` 이동 → ADR |
+| ADR — RN Kakao 네이티브 인증                                                                                           | A6                                | `src/lib/supabase/**` 인증 백본  |
+| ADR — `device_push_tokens` 신설                                                                                        | A9                                | `supabase/migrations/**`         |
+| spec — server/client 상태 라이브러리(TanStack Query·Zustand)                                                           | A8·§6                             | 아키텍처 결정                    |
+| spec — mobile 디자인 토큰                                                                                              | A10                               | `apps/mobile/theme`              |
+| [ADR-0032](../adr/0032-settlement-verification-data-model.md) (draft) — `point_ledger`·`settlements`·immutability 예외 | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**`         |
 
 ### 기존 문서 정합 (2026-06-04 반영 완료)
 

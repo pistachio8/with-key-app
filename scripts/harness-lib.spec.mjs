@@ -13,6 +13,13 @@ import {
   normalizeLinkedPath,
   validateTask,
   loadMigrationTasks,
+  extractDefinedAcIds,
+  extractAcCitations,
+  resolveAcCitation,
+  buildAcIndex,
+  validateAcTraceability,
+  loadAcIndex,
+  loadCitationFiles,
 } from "./harness-lib.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
@@ -165,4 +172,70 @@ test("validateTask: 실제 EVAL-0004 task → 위반 0 (회귀 가드)", () => {
   const t = loadMigrationTasks().find((x) => x.frontmatter.Task === "EVAL-0004");
   assert.ok(t, "EVAL-0004 task 존재");
   assert.deepEqual(validateTask(t), []);
+});
+
+// ─────────────── 상류 AC 추적성 (D7 · 05 §7 Tier 1) ───────────────
+
+test("extractDefinedAcIds: full id + prefix(id 파생·* 선언) 추출", () => {
+  const d = extractDefinedAcIds("`AC-settle-1` 본문 ... 그리고 `AC-cheat-detect-*` 핸들");
+  assert.ok(d.ids.has("AC-settle-1"));
+  assert.ok(d.prefixes.has("AC-settle")); // full id 에서 파생
+  assert.ok(d.prefixes.has("AC-cheat-detect")); // * 선언에서
+});
+
+test("extractDefinedAcIds: settle 와 settle-trigger prefix 가 충돌하지 않음", () => {
+  const d = extractDefinedAcIds("`AC-settle-7` `AC-settle-trigger-3`");
+  assert.ok(d.prefixes.has("AC-settle"));
+  assert.ok(d.prefixes.has("AC-settle-trigger"));
+});
+
+test("extractAcCitations: id·prefix 인용 추출, PRD-AC- 도 AC- 로", () => {
+  const refs = extractAcCitations("Parent: PRD-AC-deposit-hold-1 · 의존 AC-peer-reject-*");
+  const raws = refs.map((r) => r.raw);
+  assert.ok(raws.includes("AC-deposit-hold-1"));
+  assert.ok(raws.includes("AC-peer-reject-*"));
+});
+
+test("resolveAcCitation: id 는 ids 또는 prefix 로, prefix 는 prefixes 로 resolve", () => {
+  const index = buildAcIndex(["`AC-settle-1` `AC-auto-verify-*`"]);
+  assert.equal(
+    resolveAcCitation({ kind: "id", id: "AC-settle-1", prefix: "AC-settle" }, index),
+    true,
+  );
+  // full id 정의는 없지만 feature prefix 가 선언된 경우(예: auto-verify-2)
+  assert.equal(
+    resolveAcCitation({ kind: "id", id: "AC-auto-verify-2", prefix: "AC-auto-verify" }, index),
+    true,
+  );
+  assert.equal(resolveAcCitation({ kind: "prefix", prefix: "AC-settle" }, index), true);
+  assert.equal(
+    resolveAcCitation({ kind: "id", id: "AC-ghost-9", prefix: "AC-ghost" }, index),
+    false,
+  );
+});
+
+test("validateAcTraceability: 사라진 AC 인용 → drift 위반, 중복은 1회", () => {
+  const index = buildAcIndex(["`AC-settle-1` `AC-deposit-hold-1`"]);
+  const ok = validateAcTraceability(index, [
+    { repoPath: "docs/eng-stories/x.md", content: "AC-settle-1 ... AC-settle-1" },
+  ]);
+  assert.deepEqual(ok, []);
+  const bad = validateAcTraceability(index, [
+    { repoPath: "docs/eng-stories/x.md", content: "AC-ghost-1 두 번 AC-ghost-1" },
+  ]);
+  assert.equal(bad.length, 1);
+  assert.ok(/AC citation does not resolve/.test(bad[0]));
+  assert.ok(/AC-ghost-1/.test(bad[0]));
+});
+
+// 통합 스모크 (실제 repo) — 현 인스턴스가 PRD 와 정합한지 회귀 가드
+test("loadAcIndex: 실제 PRD 에서 greenfield AC id 로드", () => {
+  const index = loadAcIndex();
+  assert.ok(index.ids.has("AC-settle-1"));
+  assert.ok(index.prefixes.has("AC-deposit-hold"));
+});
+
+test("validateAcTraceability: 실제 repo 의 모든 spine 인용이 resolve (drift 0)", () => {
+  const errors = validateAcTraceability(loadAcIndex(), loadCitationFiles());
+  assert.deepEqual(errors, []);
 });
