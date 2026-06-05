@@ -4,6 +4,7 @@
 
 ## 0.3 — 2026-06-05
 
+- G1-θ false-flag 임계 θ **잠정확정·주입**(PO conservative): `config/harness.config.example.json` `false_flag_rate.theta=0.01`·`judge`(phash 해밍 6/10 · EXIF/스크린샷 단독 차단 안 함) 주입, `active=false` 유지(실측 G1 PoC open). EVAL-0022 `blocked→todo` 활성(`Blocked-by`→`Depends-on`, intra-feature 순서·게이트 아님). spec `2026-06-05-false-flag-threshold-theta` 신설, PRD §7 Q1·DECISION_NEEDED `G1-θ`(partial) 동기. meta-eval=**neutral**(임계 주입·게이트 미flip — active threshold 약화 아님).
 - PM job-stories 출력처 편차 정정: `docs/pm/job-stories.md` → `docs/stories/`(spine 홈, 05 §2 D10). PM-INSTANCE-HOME 방향 A 의 과잉적용(job-stories 를 `docs/pm/`에 둠) 수정 — 방향 A 가 새 `docs/` 홈을 부여한 대상은 test-scenarios·AC·risks 뿐, job-stories 는 D10 `docs/stories/` 기존 홈 보유. P1 파일 이동 + `PM_PLUGIN_ADAPTER`·`.agents/README`·eng-story/prd 역링크 정정. test-scenarios·AC·risks·prd-index 는 `docs/pm/` 유지. meta-eval=**neutral**(relocation). 후속: P2 job-stories 는 `docs/stories/`로 normalize. (DECISION_NEEDED `PM-INSTANCE-HOME` 정정 항목)
 
 ## 0.2 — 2026-06-05

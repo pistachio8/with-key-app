@@ -37,7 +37,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 ## Requirements
 
-- perceptual hash 계산 = 결정론(동일 이미지 → 동일 hash). 그룹 내/전역 중복 조회 입력 제공(`AC-cheat-detect-1` ①).
+- perceptual hash 계산 = 결정론(동일 이미지 → 동일 hash). 그룹 내/전역 중복 조회 입력 제공(`AC-cheat-detect-1` ①). 해시 = **64비트 DCT pHash**(sharp grayscale→DCT) — EVAL-0022 θ 임계(해밍 6/10)가 이 비트수에 정합하므로 다른 비트수/알고리즘 채택 시 `docs/superpowers/specs/2026-06-05-false-flag-threshold-theta.md` θ 재도출 필요.
 - EXIF 촬영시각 파싱 → `photo_captured_at` 산출. 부재/조작 시 신호 플래그(`AC-cheat-detect-1` ②).
 - 스크린샷 휴리스틱: EXIF 카메라 정보 부재·상태바 패턴 등 결정론 신호(`AC-cheat-detect-1` ③).
 - 계산 결과는 EVAL-0020 컬럼(`photo_phash`·`photo_captured_at`·`auto_verify_score`·`auto_verify_model_version`)에 서버가 기록. 사진/본문 미로깅 — 신호 메타만.

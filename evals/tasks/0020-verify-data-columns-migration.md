@@ -48,6 +48,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 - 신호 계산 로직(phash/EXIF/스크린샷) — WP2a/EVAL-0021.
 - status 판정(θ 임계) 로직 — WP2b/EVAL-0022 (G1 blocked).
+- shadow mode 저장 — **신규 컬럼 불필요**. shadow(`VERIFY_ENFORCE=false`)는 would-be status를 `auto_verify_status`에 그대로 쓰고 doneCount가 read-time enforce 게이트로 무시한다(θ spec `2026-06-05-false-flag-threshold-theta`). enforce/shadow 플래그 컬럼은 추가 안 함.
 - 사진 교체 흐름 구현 — WP4/EVAL-0024 (본 task는 예외 *허용*까지).
 - 피어 반려 reaction 저장 — WP5/EVAL-0025.
 - **production migration apply** — 후속(스키마 설계·로컬 검증·코드까지). down 스크립트(POC forward-only).
