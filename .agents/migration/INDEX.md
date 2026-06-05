@@ -4,7 +4,6 @@
 
 - 전환 규칙 SoT(레이어별): `docs/migration/03-rn-migration-rules.md`
 - 인벤토리(무엇을 재사용/재작성하나): `docs/migration/00-rn-conversion-plan.md`
-- Goal Map(00 §8 골 → 순서·의존·`/goal` 조건, `/goal` 실행용): `docs/migration/06-rn-goal-map.md`
 - 하네스 결정(D1~D12): `docs/migration/05-rn-harness-decisions.md`
 
 ## 규율
