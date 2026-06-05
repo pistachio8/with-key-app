@@ -29,16 +29,16 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 - `docs/eng-stories/2026-06-05-points-settlement.md`
 - `docs/pm/acceptance-criteria.md`
 - `docs/pm/test-scenarios.md`
-- `src/app/(app)/pledge`
-- `src/app/(app)/challenge`
-- `src/lib/db/reads`
+- `apps/web/src/app/(app)/pledge`
+- `apps/web/src/app/(app)/challenge`
+- `apps/web/src/lib/db/reads`
 - `docs/superpowers/specs/2026-06-02-weekly-penalty-accrual.md`
 
 ## Target Files
 
-- `src/app/(app)/pledge` — 서약 시 hold 호출·잔액부족 차단·그랜트·공동풀 균등 분배 표시
-- `src/app/(app)/challenge` — 진행 중 차감 예정액 게이지 + "실제 이동" 고지
-- `src/lib/db/reads`
+- `apps/web/src/app/(app)/pledge` — 서약 시 hold 호출·잔액부족 차단·그랜트·공동풀 균등 분배 표시
+- `apps/web/src/app/(app)/challenge` — 진행 중 차감 예정액 게이지 + "실제 이동" 고지
+- `apps/web/src/lib/db/reads`
 
 ## Requirements
 

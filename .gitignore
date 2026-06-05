@@ -1,5 +1,6 @@
 # Dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -24,6 +25,15 @@ next-env.d.ts
 
 # Testing
 /coverage
+
+# Monorepo — apps/web build/test artifacts (위 root-anchored 패턴을 apps/web 으로 확장)
+/apps/web/.next/
+/apps/web/out/
+/apps/web/bin/ffmpeg
+/apps/web/coverage/
+/apps/web/test-results/
+/apps/web/playwright-report/
+/apps/web/tests/e2e/.auth/
 
 # Vercel
 .vercel

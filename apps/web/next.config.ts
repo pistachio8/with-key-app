@@ -17,6 +17,9 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // 모노레포 공유 도메인 패키지(@withkey/domain)를 Next 가 소스째 직접 트랜스파일한다
+  // (ADR-0033 A2 — dist 없는 TS source 소비). 도메인 실이동은 G6 후속.
+  transpilePackages: ["@withkey/domain"],
   // Phase 1b-3 — Next.js 16 Cache Components 활성화. plan v4 §Phase 1b-3.
   // Phase 1b-2a/1b-2b 에서 모든 (app)·(auth)·(flow) page/layout 의 dynamic
   // API 호출을 Suspense 안의 *Section 자식으로 격리 완료. 본 활성화로

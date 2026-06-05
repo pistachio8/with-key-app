@@ -19,7 +19,7 @@
 | 코드 리뷰 / PR       | `.claude/rules/common/code-review.md` · `.claude/rules/common/development-workflow.md`            |
 | Server Action / RSC  | `.claude/AGENTS.md` "with-key 가드레일 §아키텍처"                                                 |
 | Supabase migration   | `.claude/AGENTS.md` "with-key 가드레일 §Supabase / RLS" · `docs/BE_SCHEMA.md`                     |
-| AI 일기 / OpenAI     | `.claude/AGENTS.md` "with-key 가드레일 §AI 일기" · `src/lib/ai/**`                                |
+| AI 일기 / OpenAI     | `.claude/AGENTS.md` "with-key 가드레일 §AI 일기" · `apps/web/src/lib/ai/**`                       |
 | 분석 이벤트          | `.claude/AGENTS.md` "with-key 가드레일 §이벤트 로깅" · `docs/PRD.md §9.1`                         |
 | 문서 작성            | `.claude/rules/common/doc-readability.md`                                                         |
 | 룰 전체 색인         | `.claude/rules/INDEX.md`                                                                          |

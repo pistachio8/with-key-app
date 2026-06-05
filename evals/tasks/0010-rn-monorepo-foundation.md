@@ -31,18 +31,18 @@ Parent: docs/adr/0033-rn-target-architecture.md, docs/migration/04-rn-architectu
 - `docs/migration/00-rn-conversion-plan.md` — §6.2·§13.4 D-1
 - `pnpm-workspace.yaml`
 - `tsconfig.json`
-- `next.config.ts`
-- `vercel.json`
-- `src/lib/supabase`
+- `apps/web/next.config.ts`
+- `apps/web/vercel.json`
+- `apps/web/src/lib/supabase`
 
 ## Target Files
 
 - `pnpm-workspace.yaml` — `packages: ['apps/*','packages/*']` 추가
 - `package.json` — root는 workspace 오케스트레이터(`pnpm -r typecheck/lint/test`), 앱 의존은 `apps/web/package.json`로 이전
 - `tsconfig.json` — base/경로 재배치 (앱별 `tsconfig`가 `@/*`를 app-local로)
-- `next.config.ts` — `transpilePackages: ['@withkey/domain']` (이동 후 `apps/web/next.config.ts`)
-- `vercel.json` — root directory → `apps/web`
-- `src` — 전체를 `apps/web/src/`로 이동 (`@/* → ./src/*` 유지). 신규 `packages/domain/` shell(`src/index.ts` export, dist 없음) 생성
+- `apps/web/next.config.ts` — `transpilePackages: ['@withkey/domain']` 추가(이동 후 위치)
+- `apps/web/vercel.json` — Vercel root directory → `apps/web` (대시보드 설정은 수동)
+- `apps/web/src` — 루트 `src/` 전체를 이동 (`@/* → ./src/*` 유지). 신규 `packages/domain/` shell(`src/index.ts` export, dist 없음) 생성
 
 ## Requirements
 

@@ -28,7 +28,7 @@ pnpm db:types          # src/types/supabase.ts 재생성
 
 ## See also / Cross-module dependencies
 
-- 절대 원칙: [`../CLAUDE.md`](../CLAUDE.md) → [`../.claude/AGENTS.md`](../.claude/AGENTS.md)
-- 품질 게이트: [`../docs/QUALITY_GATE.md`](../docs/QUALITY_GATE.md)
-- 데이터 · RLS (depends on supabase): [`../docs/BE_SCHEMA.md`](../docs/BE_SCHEMA.md)
-- 키 체계 ADR: [`../docs/adr/0001-supabase-publishable-secret-keys.md`](../docs/adr/0001-supabase-publishable-secret-keys.md)
+- 절대 원칙: [`../../../CLAUDE.md`](../../../CLAUDE.md) → [`../../../.claude/AGENTS.md`](../../../.claude/AGENTS.md)
+- 품질 게이트: [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md)
+- 데이터 · RLS (depends on supabase): [`../../../docs/BE_SCHEMA.md`](../../../docs/BE_SCHEMA.md)
+- 키 체계 ADR: [`../../../docs/adr/0001-supabase-publishable-secret-keys.md`](../../../docs/adr/0001-supabase-publishable-secret-keys.md)

@@ -7,6 +7,24 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
+      lint-staged:
+        specifier: ^17.0.4
+        version: 17.0.4
+      prettier:
+        specifier: ^3.4.2
+        version: 3.8.3
+      supabase:
+        specifier: ^2.2.1
+        version: 2.95.4
+
+  apps/web:
     dependencies:
       '@base-ui/react':
         specifier: ^1.4.1
@@ -20,6 +38,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.105.1
         version: 2.105.1
+      '@withkey/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       canvas-confetti:
         specifier: ^1.9.3
         version: 1.9.4
@@ -132,27 +153,24 @@ importers:
       eslint-config-next:
         specifier: 16.2.x
         version: 16.2.6(@typescript-eslint/parser@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      husky:
-        specifier: ^9.1.7
-        version: 9.1.7
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1
-      lint-staged:
-        specifier: ^17.0.4
-        version: 17.0.4
-      prettier:
-        specifier: ^3.4.2
-        version: 3.8.3
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
-      supabase:
-        specifier: ^2.2.1
-        version: 2.95.4
       tailwindcss:
         specifier: ^4
         version: 4.2.4
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@20.19.39)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.13.6(@types/node@20.19.39)(typescript@5.9.3))
+
+  packages/domain:
+    devDependencies:
       typescript:
         specifier: ^5
         version: 5.9.3

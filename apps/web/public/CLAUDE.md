@@ -22,4 +22,4 @@ Next.js의 정적 자산 디렉터리. 빌드 산출물이 **아님** — 모든
 ## See also / Cross-module dependencies
 
 - Web Push 본체: [`../src/lib/push/`](../src/lib/push/) (구독 · dispatch · 스케줄러)
-- 키 체계 ADR: [`../docs/adr/0001-supabase-publishable-secret-keys.md`](../docs/adr/0001-supabase-publishable-secret-keys.md)
+- 키 체계 ADR: [`../../../docs/adr/0001-supabase-publishable-secret-keys.md`](../../../docs/adr/0001-supabase-publishable-secret-keys.md)
