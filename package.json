@@ -20,6 +20,7 @@
     "test:e2e": "pnpm --filter @withkey/web test:e2e",
     "test:e2e:ui": "pnpm --filter @withkey/web test:e2e:ui",
     "test:a11y": "pnpm --filter @withkey/web test:a11y",
+    "test:watch": "pnpm --filter @withkey/web test:watch",
     "login:link": "pnpm --filter @withkey/web login:link",
     "seed:action-log": "pnpm --filter @withkey/web seed:action-log",
     "icons:pwa": "pnpm --filter @withkey/web icons:pwa",

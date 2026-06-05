@@ -1,9 +1,10 @@
 # with-key pre-commit hook — 저마찰 ergonomics
 #
 # 동작:
-# - lint-staged가 staged 파일에만 prettier --write, eslint --fix 실행
-# - 자동 수정만 — commit 차단 거의 없음 (eslint 오류는 자동 수정 안 되면 실패)
-# - typecheck / test / spec-check은 CI에 위임
+# - lint-staged가 staged 파일에만 prettier --write 실행
+# - ESLint는 모노레포 전환(EVAL-0010) 후 CI `pnpm -r lint`로 일원화 — 루트 eslint config 부재로 pre-commit 제외
+# - 자동 포맷만 — commit 차단 거의 없음
+# - lint / typecheck / test / spec-check은 CI에 위임
 #
 # 우회 (급할 때 또는 hook 자체가 버그일 때):
 #   WITHKEY_HOOKS=skip git commit ...   # with-key 합의된 우회 신호

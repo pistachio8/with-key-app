@@ -34,6 +34,21 @@ normalize 규칙:
 - `docs/pm/acceptance-criteria.md`
 - `docs/pm/risks-assumptions.md`
 
+## 플러그인 출처 · 설치 (부재 시)
+
+Plugin Mode가 쓰는 PM 플러그인은 **선택적 외부 도구**라 설치돼 있지 않을 수 있다. 에이전트가 Plugin Mode를 쓰려는데 `/pm-execution:*` 스킬이 안 보이면 — **임의로 설치하지 말고 사용자에게 설치 여부를 먼저 묻는다.** 미승인이면 Native Mode로 폴백한다. **왜**: 외부 플러그인은 스킬·커맨드에 도구 권한을 부여하므로(되돌리기·신뢰 비용) 설치는 사용자 결정이다.
+
+- **출처**: 마켓플레이스 `pm-skills` ([github.com/lucas-flatwhite/pm-skills-ko](https://github.com/lucas-flatwhite/pm-skills-ko) — Paweł Huryn · productcompass.pm, MIT). 어댑터가 실제로 쓰는 건 그중 **`pm-execution`** 플러그인(`create-prd` · `job-stories` · `test-scenarios` · `pre-mortem` · `prioritization-frameworks` 스킬).
+- **설치** (사용자 승인 후 — 명령 한 줄씩):
+
+```bash
+claude plugin marketplace add lucas-flatwhite/pm-skills-ko
+claude plugin install pm-execution@pm-skills
+```
+
+- **scope = `user` 권장**(설치 기본값). **왜**: 이 플러그인은 optional·교체가능·부재허용이라, repo `.claude/settings.json`(project scope)에 커밋하면 강제 의존처럼 보인다(아래 §절대 금지 D8과 상충).
+- **세션 재시작 필요**. **왜**: 플러그인 스킬·커맨드는 다음 세션부터 로드된다(설치 직후 현재 세션엔 안 보임).
+
 ## Native Mode (플러그인 없음)
 
 `.agents/pm/templates/*`를 직접 채워 같은 5개 출력을 만든다(`pnpm new prd|job-story|...`).
