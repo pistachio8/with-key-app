@@ -45,20 +45,20 @@
 
 > **상태** 범례 — `확정`: 채택 즉시 적용 / `ADR`: `docs/adr/` 기록 필요(되돌리기 비용 큼) / `spec`: `docs/superpowers/specs/` 설계 결정 필요 / ⚠️: 기존 문서·AC와 긴장(아래 §9).
 
-| #   | 영역            | 결정                                                                   | 상태             | 본문  |
-| --- | --------------- | ---------------------------------------------------------------------- | ---------------- | ----- |
-| A1  | Repo 토폴로지   | 전면 restructure → `apps/web` + `apps/mobile` + `packages/domain`      | ⚠️ ADR           | §1    |
-| A2  | domain 소비     | TS source 직접(no build), `@withkey/domain`, transpilePackages + Metro | 확정             | §1    |
-| A3  | task 실행기     | pnpm `-r`(Turborepo 연기)                                              | 확정             | §1    |
-| A4  | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON                         | 확정             | §2    |
-| A5  | 네비게이션 셸   | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필]              | ⚠️ 확정(PO 승인) | §3    |
-| A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | ADR              | §4    |
-| A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ⚠️ 확정(PO)      | §4    |
-| A8  | 쓰기/BFF        | Hybrid: RPC direct + apps/web Next API as BFF(Bearer)                  | 확정             | §5    |
-| A9  | 푸시 테이블     | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지          | ADR              | §7    |
-| A10 | 디자인 토큰     | Mobile-local(hex), 공유 `packages/tokens`는 cutover 후                 | spec             | §6    |
-| A11 | 테스트          | RN Testing Library + jest-expo · Vitest 공유 도메인 · Maestro E2E      | 확정             | §8    |
-| A12 | 앱 variant      | env별 bundle id(APP_VARIANT) ↔ EAS profile                             | 확정             | §2·§8 |
+| #   | 영역            | 결정                                                                   | 상태                                                 | 본문  |
+| --- | --------------- | ---------------------------------------------------------------------- | ---------------------------------------------------- | ----- |
+| A1  | Repo 토폴로지   | 전면 restructure → `apps/web` + `apps/mobile` + `packages/domain`      | ⚠️ [ADR-0033](../adr/0033-rn-target-architecture.md) | §1    |
+| A2  | domain 소비     | TS source 직접(no build), `@withkey/domain`, transpilePackages + Metro | 확정                                                 | §1    |
+| A3  | task 실행기     | pnpm `-r`(Turborepo 연기)                                              | 확정                                                 | §1    |
+| A4  | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON                         | 확정                                                 | §2    |
+| A5  | 네비게이션 셸   | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필]              | ⚠️ 확정(PO 승인)                                     | §3    |
+| A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | ADR                                                  | §4    |
+| A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ⚠️ 확정(PO)                                          | §4    |
+| A8  | 쓰기/BFF        | Hybrid: RPC direct + apps/web Next API as BFF(Bearer)                  | 확정                                                 | §5    |
+| A9  | 푸시 테이블     | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지          | ADR                                                  | §7    |
+| A10 | 디자인 토큰     | Mobile-local(hex), 공유 `packages/tokens`는 cutover 후                 | spec                                                 | §6    |
+| A11 | 테스트          | RN Testing Library + jest-expo · Vitest 공유 도메인 · Maestro E2E      | 확정                                                 | §8    |
+| A12 | 앱 variant      | env별 bundle id(APP_VARIANT) ↔ EAS profile                             | 확정                                                 | §2·§8 |
 
 **묻지 않고 채택한 기본값**(이견 시 조정): SecureStore chunked 세션 adapter(§4) · BFF는 `Authorization: Bearer` 검증(§5) · invite 자동수락 client-side orchestration(§4) · Zustand는 ephemeral UI만, 세션은 Supabase auth listener(§6) · analytics는 `/events` BFF(RLS-safe, §5) · image 파이프라인 size 상수는 domain 공유(§7) · MVP 오프라인 persist 없음(§6) · CI에 mobile lane + EAS 빌드 트리거(§8).
 
