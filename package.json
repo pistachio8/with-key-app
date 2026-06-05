@@ -36,7 +36,8 @@
     "harness:drift": "node scripts/harness-drift.mjs",
     "harness:summarize-diff": "node scripts/harness-summarize-diff.mjs",
     "harness:context": "node scripts/harness-context.mjs",
-    "harness:verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm harness:check",
+    "harness:test": "node --test scripts/harness-lib.spec.mjs",
+    "harness:verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm harness:check && pnpm harness:test",
     "icons:pwa": "node scripts/generate-pwa-icons.mjs",
     "prepare": "husky"
   },
