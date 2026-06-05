@@ -270,3 +270,119 @@ export function describeFile(pathRecordItem) {
   const stats = statSync(pathRecordItem.absolutePath);
   return stats.isDirectory() ? "directory" : `${stats.size} bytes`;
 }
+
+// ════════════════════════════════════════════════════════════════
+// 상류 추적성 게이트 (D7 · 05 §7 Tier 1)
+// "spine 파일(Engineering Story · Agent Task)이 인용한 PRD AC id 가
+//  아직 PRD 에 실재하는가" 를 결정론 검사한다. 사라진 AC 인용 = Traceability drift.
+//
+// 정의 SoT: feature-kebab AC id (`AC-<feature>-<n>`) 는 RN MVP PRD 가 유일 정의처.
+// POC PRD 의 숫자형 `AC-2` 는 형태가 달라(소문자 feature 없음) 본 게이트 범위 밖.
+// ════════════════════════════════════════════════════════════════
+
+// AC 정의처: feature-kebab AC id 가 선언되는 SoT(PRD+stories 클러스터, 05 §2).
+export const acDefinitionFiles = ["docs/migration/01-rn-mvp-prd.md", "docs/PRD.md"];
+export const acDefinitionDirs = ["docs/stories"];
+// 인용처: PRD AC 를 상향 인용하는 spine 파일(README 제외) + Agent Task.
+export const acCitationDirs = ["docs/eng-stories", "docs/pm"];
+
+// 매 호출 새 정규식 — 전역 플래그 lastIndex 공유 방지.
+const acIdRe = () => /AC-[a-z][a-z0-9-]*-\d+/g;
+const acPrefixRe = () => /AC-[a-z][a-z0-9-]*-\*/g;
+
+// content 에서 정의된 AC id 집합과 prefix 집합을 뽑는다.
+export function extractDefinedAcIds(content) {
+  const ids = new Set();
+  const prefixes = new Set();
+  for (const match of content.matchAll(acIdRe())) {
+    ids.add(match[0]);
+    prefixes.add(match[0].replace(/-\d+$/, ""));
+  }
+  for (const match of content.matchAll(acPrefixRe())) {
+    prefixes.add(match[0].replace(/-\*$/, ""));
+  }
+  return { ids, prefixes };
+}
+
+// content 의 AC 인용을 뽑는다. `PRD-AC-…` 도 내부 `AC-…` 토큰으로 추출된다.
+export function extractAcCitations(content) {
+  const refs = [];
+  for (const match of content.matchAll(acPrefixRe())) {
+    refs.push({ raw: match[0], kind: "prefix", prefix: match[0].replace(/-\*$/, "") });
+  }
+  for (const match of content.matchAll(acIdRe())) {
+    refs.push({
+      raw: match[0],
+      kind: "id",
+      id: match[0],
+      prefix: match[0].replace(/-\d+$/, ""),
+    });
+  }
+  return refs;
+}
+
+// 인용 1건이 정의 인덱스로 resolve 되는가.
+// id 인용은 (정확 id) 또는 (prefix 만 선언된 feature) 둘 중 하나면 통과.
+export function resolveAcCitation(ref, index) {
+  if (ref.kind === "prefix") {
+    return index.prefixes.has(ref.prefix);
+  }
+  return index.ids.has(ref.id) || index.prefixes.has(ref.prefix);
+}
+
+export function buildAcIndex(contents) {
+  const ids = new Set();
+  const prefixes = new Set();
+  for (const content of contents) {
+    const defined = extractDefinedAcIds(content);
+    defined.ids.forEach((id) => ids.add(id));
+    defined.prefixes.forEach((prefix) => prefixes.add(prefix));
+  }
+  return { ids, prefixes };
+}
+
+function markdownFilesIn(dir, { skip = [] } = {}) {
+  const absoluteDir = path.join(repoRoot, dir);
+  if (!existsSync(absoluteDir)) {
+    return [];
+  }
+  return readdirSync(absoluteDir)
+    .filter((file) => file.endsWith(".md") && !skip.includes(file))
+    .map((file) => path.join(absoluteDir, file));
+}
+
+export function loadAcIndex({ readFile = (p) => readFileSync(p, "utf8") } = {}) {
+  const files = [
+    ...acDefinitionFiles.map((file) => path.join(repoRoot, file)),
+    ...acDefinitionDirs.flatMap((dir) => markdownFilesIn(dir)),
+  ].filter((file) => existsSync(file));
+  return buildAcIndex(files.map((file) => readFile(file)));
+}
+
+export function loadCitationFiles() {
+  const files = acCitationDirs.flatMap((dir) => markdownFilesIn(dir, { skip: ["README.md"] }));
+  const out = files.map((absolutePath) => ({
+    repoPath: toRepoPath(absolutePath),
+    content: readFileSync(absolutePath, "utf8"),
+  }));
+  // Agent Task(0004+)도 PRD AC 를 상향 인용하므로 함께 검사.
+  for (const task of loadMigrationTasks()) {
+    out.push({ repoPath: task.repoPath, content: task.content });
+  }
+  return out;
+}
+
+export function validateAcTraceability(index, citationFiles) {
+  const errors = [];
+  for (const file of citationFiles) {
+    const seen = new Set();
+    for (const ref of extractAcCitations(file.content)) {
+      if (resolveAcCitation(ref, index) || seen.has(ref.raw)) {
+        continue;
+      }
+      seen.add(ref.raw);
+      errors.push(`${file.repoPath}: AC citation does not resolve to PRD: ${ref.raw}`);
+    }
+  }
+  return errors;
+}
