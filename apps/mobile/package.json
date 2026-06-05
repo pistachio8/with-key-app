@@ -1,0 +1,40 @@
+{
+  "name": "@withkey/mobile",
+  "main": "expo-router/entry",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "EXPO_NO_TELEMETRY=1 APP_VARIANT=dev expo start --dev-client",
+    "android": "EXPO_NO_TELEMETRY=1 APP_VARIANT=dev expo start --dev-client --android",
+    "ios": "EXPO_NO_TELEMETRY=1 APP_VARIANT=dev expo start --dev-client --ios",
+    "web": "EXPO_NO_TELEMETRY=1 APP_VARIANT=dev expo start --web",
+    "expo": "EXPO_NO_TELEMETRY=1 expo",
+    "typecheck": "tsc --noEmit",
+    "lint": "EXPO_NO_TELEMETRY=1 expo lint",
+    "test": "echo \"[@withkey/mobile] no-op test: EVAL-0011 boot shell only\""
+  },
+  "dependencies": {
+    "@withkey/domain": "workspace:*",
+    "expo": "~55.0.26",
+    "expo-constants": "~55.0.16",
+    "expo-dev-client": "~6.0.21",
+    "expo-linking": "~55.0.15",
+    "expo-router": "~55.0.16",
+    "expo-splash-screen": "~55.0.21",
+    "expo-status-bar": "~55.0.6",
+    "expo-system-ui": "~55.0.18",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~55.0.1",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
