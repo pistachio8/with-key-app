@@ -2,7 +2,7 @@
 Task: EVAL-0010
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/adr/0033-rn-target-architecture.md, docs/migration/04-rn-architecture.md, docs/migration/00-rn-conversion-plan.md
 ---
 
