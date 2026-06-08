@@ -21,5 +21,34 @@
       "status": "pending"
     }
   ],
-  "runs": []
+  "runs": [
+    {
+      "taskId": "EVAL-0006",
+      "date": "2026-06-08",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "oneShot": true,
+      "summary": "정산·보증금 SECURITY DEFINER RPC 5종(grant_bundle_points·hold_deposit·deposit_release·settle_challenge[idempotent]·distribute_pool) + 잔액=Σdelta read. 원장 sign 규약 release-full+penalty. 가드 트리거를 definer 경로 허용으로 보강(0042/0043 service_role 단독 검사가 authenticated 그룹장 settle 차단하던 충돌 해소).",
+      "verification": {
+        "local": {
+          "pnpm test -- settlement": "pass (domain 10/10 결정론 불변식 + web settlement 7/7)",
+          "pnpm typecheck": "pass (apps/web · packages/domain; apps/mobile 는 expo deps 로컬 미설치로 사전 실패 — 본 task 무관)",
+          "pnpm lint": "pass (변경 파일)",
+          "pnpm harness:check": "PASS — 0 violations",
+          "pnpm validate:docs": "OK — no broken references"
+        },
+        "ci_only_deferred": "migration apply 후 RPC 권한·역할 테스트(클라 직접 INSERT 42501·그룹장 settle 성공·재트리거 추가 원장 0행) — 로컬 Supabase 부재로 CI 검증."
+      },
+      "artifacts": [
+        "supabase/migrations/0044_settlement_rpcs.sql",
+        "packages/domain/src/settlement.ts",
+        "packages/domain/src/settlement.spec.ts",
+        "apps/web/src/lib/db/reads/point-balance.ts",
+        "docs/superpowers/specs/2026-06-08-settlement-rpc-ledger.md",
+        "docs/BE_SCHEMA.md (§7 가드 노트 · §8.7 정산 RPC)"
+      ],
+      "gate": "결정론 불변식은 게이트 무관(즉시). production migration apply 는 G2(법무) 후 보류(ADR-0032)."
+    }
+  ]
 }
