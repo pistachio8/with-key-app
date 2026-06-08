@@ -1,0 +1,7 @@
+interface:
+  display_name: "with-key Backend Reviewer"
+  short_description: "Review with-key server and domain logic"
+  brand_color: "#059669"
+  default_prompt: "Use $withkey-backend-reviewer to review the server-side changes in my diff."
+policy:
+  allow_implicit_invocation: true

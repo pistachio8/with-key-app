@@ -1,0 +1,7 @@
+interface:
+  display_name: "with-key Frontend Reviewer"
+  short_description: "Review with-key App Router frontend code"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $withkey-frontend-reviewer to review the frontend and RSC boundary changes in my diff."
+policy:
+  allow_implicit_invocation: true

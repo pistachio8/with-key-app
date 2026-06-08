@@ -77,6 +77,8 @@ supabase/.branches/
 !/.claude/agents/
 !/.claude/settings.json
 !/.claude/project-log-policy.md
+# Generated evaluation workspaces under tracked Claude skills are local artifacts.
+/.claude/skills/*-workspace/
 # Personal subtrees under .claude/rules/ (if any) should be re-ignored here.
 .cursor/
 .codex/
@@ -88,9 +90,20 @@ docs/JOURNAL.md
 docs/QA_TRIAGE.md
 
 # Vendored skills (.agents/skills/) are external copies (npm-package-like), not our code.
-# Track only the manifest (skills-lock.json, repo root); keep the skill files local.
+# Track only the manifest (skills-lock.json, repo root); keep external skill files local.
 # Rationale: no in-repo vendoring tool to verify/reinstall, so tracking files just
 # accumulates drift (ECC auto-drops, ghost lock pins). Manifest = source of truth. ADR-0031.
-/.agents/skills/
+/.agents/skills/*
+
+# Repo-owned Codex adapters for with-key review flow. These mirror tracked
+# Claude-specific adapters under .claude/.
+!/.agents/skills/withkey-review/
+!/.agents/skills/withkey-review/**
+!/.agents/skills/withkey-migration-reviewer/
+!/.agents/skills/withkey-migration-reviewer/**
+!/.agents/skills/withkey-backend-reviewer/
+!/.agents/skills/withkey-backend-reviewer/**
+!/.agents/skills/withkey-frontend-reviewer/
+!/.agents/skills/withkey-frontend-reviewer/**
 
 .superpowers/
