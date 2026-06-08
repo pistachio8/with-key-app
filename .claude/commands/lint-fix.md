@@ -1,9 +1,8 @@
 ---
 description: ESLint 자동 수정 (with-key)
-agent: "everything-claude-code:build-error-resolver"
 ---
 
-> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 lint 검증을 Claude/ECC에서 실행하는 어댑터다.
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 lint 검증을 Claude Code에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행한다.
 
 아래 명령을 실행하고 남는 오류를 모두 수정해줘.
