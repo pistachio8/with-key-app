@@ -74,6 +74,7 @@ supabase/.branches/
 !/.claude/rules/
 !/.claude/commands/
 !/.claude/skills/
+!/.claude/agents/
 !/.claude/settings.json
 !/.claude/project-log-policy.md
 # Personal subtrees under .claude/rules/ (if any) should be re-ignored here.

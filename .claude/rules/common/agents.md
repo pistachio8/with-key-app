@@ -7,26 +7,37 @@
 
 Claude Code 기본 제공 서브에이전트를 Task 도구로 호출합니다. 프로젝트 `.claude/agents/` 또는 글로벌 `~/.claude/agents/`에 커스텀 에이전트를 두면 그쪽이 우선 해석됩니다.
 
+### 기본 (built-in)
+
 | 에이전트        | 용도                | 사용 시점                                          |
 | --------------- | ------------------- | -------------------------------------------------- |
 | general-purpose | 다단계 탐색·구현    | 키워드/파일을 여러 번 찾아야 하거나 복합 작업일 때 |
 | Explore         | 읽기 전용 광역 탐색 | 여러 디렉토리·네이밍을 훑어 결론만 필요할 때       |
 | Plan            | 구현 계획 설계      | 복잡한 기능·리팩토링 전략 수립                     |
 
-특화 작업(코드 리뷰·검증·보안·테스트)은 전용 에이전트 대신 아래 어댑터를 사용합니다.
+### with-key 도메인 리뷰어 (`.claude/agents/`)
 
-- 코드 리뷰: 단일 파일은 [`../../commands/review.md`](../../commands/review.md), 브랜치 전체 자가 리뷰는 `withkey-review` 스킬
-- 검증/빌드: [`../../commands/check.md`](../../commands/check.md) · [`../../commands/build-check.md`](../../commands/build-check.md)
-- 보안 점검: [`security.md`](./security.md) 체크리스트 + [`../typescript/security.md`](../typescript/security.md)
-- 테스트: [`testing.md`](./testing.md) (TDD·커버리지)
+ECC(everything-claude-code) 플러그인의 범용 reviewer를 대체하는, with-key 가드레일 기반 **읽기 전용** 리뷰어. 각자 자기 도메인 규칙만 들고 독립 컨텍스트로 깊게 본다. 출력 심각도(Blocker/Major/Minor)는 [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md) §리뷰 기준과 정렬돼 병합이 쉽다.
 
-## 즉시 서브에이전트 사용
+| 에이전트          | 도메인 / 범위                                                                                  | 핵심 가드레일                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| migration-reviewer | `supabase/migrations/**` · `src/lib/supabase/**`                                              | append-only 번호·단방향, 전 테이블 RLS ON, SECURITY DEFINER `search_path`, ledger immutability, ADR/BE_SCHEMA parity |
+| frontend-reviewer  | `apps/web/src/app/**` · `src/components/ui/**` · `src/lib/db/reads/**`                        | route colocation, Server Action 경계, RSC/client, Cache Components(`"use cache: private"`+`cacheTag`), zod SoT |
+| backend-reviewer   | `**/_actions.ts` · `src/lib/{ai,keywords,push,analytics,validators,supabase}/**` · `middleware.ts` | Server Action 계약, analytics parity(PRD §9.1), AI 일기 4.5s/fallback, keyword freeze, env/시크릿, service-role/RLS |
 
-사용자 프롬프트 없이도 판단해서 사용:
+> **로드 시점**: `.claude/agents/`는 Claude Code 시작 시 한 번 로드된다. 방금 추가한 에이전트는 **재시작 후**에야 `subagent_type` 이름으로 호출된다. 재시작 전에는 같은 지침을 `general-purpose`에 인라인해 동등하게 돌릴 수 있다. **왜**: 세션 레지스트리는 시작 시점 스냅샷이라 핫리로드되지 않는다.
+> **추적**: `.claude/agents/`는 `.gitignore` 대상(로컬 전용). 팀·CI 공유가 필요하면 `.gitignore`에 `!/.claude/agents/` 화이트리스트를 추가해 커밋한다. **왜**: 추적 제외 상태에서는 같은 디렉토리를 가진 사용자만 이름 호출이 가능하다.
 
-1. 키워드/파일을 첫 시도에 못 찾을 가능성이 있는 광역 탐색 - **Explore** 또는 **general-purpose**
-2. 복잡한 기능·리팩토링 계획 - **Plan**
-3. 서로 독립적인 분석을 동시에 - 병렬 Task (아래)
+## 리뷰 오케스트레이션 — fan-out → 병합 → 검증
+
+브랜치 자가 리뷰는 `withkey-review` 스킬이 오케스트레이터다. diff가 **크고 여러 도메인에 걸치면** 도메인 리뷰어로 fan-out한다. 작은 POC diff는 단일 컨텍스트 인라인 리뷰가 기본(스킬이 튜닝된 baseline).
+
+1. **분류** — 변경 파일을 도메인별로 가른다(위 표 범위). 닿지 않은 도메인은 건너뛴다.
+2. **병렬 호출** — 닿은 도메인마다 Task 하나씩 동시에. 각 리뷰어는 자기 도메인 가드레일만 격리된 컨텍스트에서 적용한다.
+3. **병합·검증** — 서브에이전트 출력을 **그대로 믿지 않는다**. 리포트를 하나로 합치되, 두 리뷰어가 **사실에서 충돌하면 소스로 검증**한 뒤 보고한다. 서브에이전트는 오독할 수 있다(있는 함수를 없다고 하는 등). 소스로 교정한 발견이 단독 리포트보다 더 정확하다.
+4. **단일 리포트** — 병합·검증된 발견만 최종 출력.
+
+**왜 검증 단계가 핵심인가**: 독립 컨텍스트 리뷰어는 빠르고 깊지만 개별적으로 틀릴 수 있다. 메인(오케스트레이터)이 모순을 소스로 잡는 것이 fan-out이 비용을 지불할 가치를 만드는 지점이다. 이 분류·병렬·병합·검증 절차의 실행 본문은 `withkey-review` 스킬에 있다.
 
 ## 병렬 Task 실행
 
@@ -37,13 +48,13 @@ Claude Code 기본 제공 서브에이전트를 Task 도구로 호출합니다. 
 
 3개 서브에이전트를 병렬로 실행:
 
-1. 에이전트 1: 인증 모듈 보안 분석
-2. 에이전트 2: 캐시 시스템 성능 리뷰
-3. 에이전트 3: 유틸리티 타입 검사
+1. migration-reviewer: 0044 migration RLS/RPC
+2. backend-reviewer: settlement 도메인 로직·테스트
+3. frontend-reviewer: point-balance cache read
 
 # 나쁨: 불필요하게 순차 실행
 
-먼저 에이전트 1, 그다음 에이전트 2, 그다음 에이전트 3
+먼저 1, 그다음 2, 그다음 3
 ```
 
 ## 다중 관점 분석
