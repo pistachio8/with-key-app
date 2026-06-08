@@ -1,0 +1,7 @@
+interface:
+  display_name: "with-key Migration Reviewer"
+  short_description: "Review with-key Supabase migration risk"
+  brand_color: "#DC2626"
+  default_prompt: "Use $withkey-migration-reviewer to review the Supabase migration changes in my diff."
+policy:
+  allow_implicit_invocation: true

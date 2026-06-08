@@ -24,6 +24,8 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 
 - `pm/` — 제품 맥락·템플릿·PM adapter: [pm/PM_PLUGIN_ADAPTER.md](pm/PM_PLUGIN_ADAPTER.md) · [pm/PRODUCT_CONTEXT.md](pm/PRODUCT_CONTEXT.md)
 - 규칙 포인터(본문 복제 금지): [engineering/INDEX.md](engineering/INDEX.md) · [migration/INDEX.md](migration/INDEX.md)
+- `skills/withkey-review/` — Codex용 with-key branch self-review. Claude 전용 `.claude/skills/withkey-review`의 도구 중립 미러
+- `skills/withkey-{migration,backend,frontend}-reviewer/` — Claude 전용 `.claude/agents/*-reviewer.md`의 Codex skill 변환본
 - `backlog/` — Work Package·Agent Task 템플릿·Traceability
 - `qa/` — dogfood QA·release 체크리스트
 - `workflows/` — 도구 중립 절차 SoT(9)
