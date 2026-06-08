@@ -9,19 +9,19 @@ Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-
 
 # EVAL-0013: G4 Invite deep link PoC — installed auto return + uninstalled re-tap path
 
-> 00 §8 G4. 04 A7의 deferred 복구는 "미설치 후 재탭" MVP안이며 PO 확정이 남아 있다. Branch 등 자동 deferred 플랫폼 도입 여부를 이 task에서 임의 결정하지 않는다.
+> 00 §8 G4. 04 A7 "미설치 재탭" MVP는 PO 확정 대기. deferred 플랫폼 임의 결정 금지.
 
 ## Parent Links
 
-- Parent PRD Feature: POC PRD §3 초대 링크/서약 + RN delta [00 §8 G4](../../docs/migration/00-rn-conversion-plan.md).
-- Parent Test Scenario: `TS-rn-invite-1`~`TS-rn-invite-5`는 본 파일 Acceptance Criteria에 흡수(D10) — [docs/migration/05-rn-harness-decisions.md](../../docs/migration/05-rn-harness-decisions.md) §2.
-- Parent Job Story: "초대 링크를 받아 설치/로그인 뒤 같은 초대 맥락으로 돌아와 수락한다" — [docs/PRD.md](../../docs/PRD.md) §3.2.
-- Parent Engineering Story: [04 §4 A7 딥링크](../../docs/migration/04-rn-architecture.md) + [00 §13.4 D-8](../../docs/migration/00-rn-conversion-plan.md).
-- Parent Work Package: `feat/rn-invite-deep-link` (G4).
+- PRD: §3 초대/서약 [00 §8 G4](../../docs/migration/00-rn-conversion-plan.md).
+- Test Scenario: `TS-rn-invite-1`~`5` → AC 흡수(D10) — [05-rn-harness-decisions.md](../../docs/migration/05-rn-harness-decisions.md) §2.
+- Job Story: 초대 → 설치/로그인 → 맥락 복귀 — [docs/PRD.md](../../docs/PRD.md) §3.2.
+- Engineering Story: [04 §4 A7](../../docs/migration/04-rn-architecture.md) + [00 §13.4 D-8](../../docs/migration/00-rn-conversion-plan.md).
+- Work Package: `feat/rn-invite-deep-link`.
 
 ## Goal
 
-초대 URL이 RN 앱 진입과 초대 수락까지 이어지는지 실기기 dev build에서 증명한다. 설치된 앱은 universal/app link 또는 `fromwith://invite/<token>`로 열리고, 미인증 사용자는 token을 안전하게 stash한 뒤 로그인 성공 후 같은 token으로 `accept_invite` RPC를 호출해 자동 복귀한다. 미설치 사용자는 웹 랜딩에서 스토어로 이동하고, 설치 후 같은 링크를 재탭해 수락하는 MVP 경로가 PO 승인 범위 안에서 동작한다.
+초대 URL → RN → 수락 흐름 dev build 증명. 설치: universal link/`fromwith://invite/<token>` 오픈, 미인증 token stash → 로그인 → `accept_invite`. 미설치 MVP는 PO 승인 후 웹 → 스토어 → 재탭 → 수락.
 
 ## Source Files to Inspect
 
@@ -36,39 +36,39 @@ Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-
 
 ## Target Files
 
-- `apps` — implement mobile invite route, deep-link capability, token stash, and post-login accept flow.
-- `apps/web/src/app` — host/adjust well-known app link files or web fallback only as required.
-- `apps/web/src/lib/invite` — reuse URL/token rules without changing token semantics.
+- `apps` — mobile invite route, deep-link, token stash, accept flow.
+- `apps/web/src/app` — well-known/web fallback 필요 시만.
+- `apps/web/src/lib/invite` — URL/token 재사용. semantics 변경 금지.
 
 ## Requirements
 
-- Preserve existing https invite URL format for Kakao share/OG fallback.
-- Installed app path: universal/app link or `fromwith://invite/<token>` opens the RN invite route.
-- If unauthenticated, stash `<token>` in secure local storage, route to login, then call `accept_invite` after session establishment.
-- If authenticated, call `accept_invite` directly and navigate to the accepted challenge/pledge target.
-- Handle expired/full/already-joined invite states using the existing preview/RPC semantics.
-- Uninstalled MVP path follows 04 A7 only after PO acceptance: web landing -> store -> install -> same link re-tap -> app open -> accept. Do not add Branch/Firebase Dynamic Links unless PO decision changes.
-- Emit only existing approved analytics events unless a PRD §9.1/spec update has already approved new ones.
+- https invite URL 보존(Kakao/OG).
+- 설치: universal link/`fromwith://invite/<token>` RN route 오픈.
+- 미인증: token stash → 로그인 → `accept_invite`.
+- 인증: `accept_invite` → pledge 이동.
+- expired/full/already-joined: RPC semantics 준수.
+- 미설치: 04 A7는 PO 수락 후에만. Branch/Firebase DL 금지.
+- PRD §9.1 승인 events만 emit.
 
 ## Non-goals
 
-- Kakao native auth implementation — EVAL-0012.
-- Full route skeleton/tabs beyond invite/login route — EVAL-0014.
-- Changing invite token format, expiry, or `accept_invite` RPC semantics.
-- Implementing automatic deferred deep linking with Branch before PO approval.
-- PWA invite fallback removal.
+- Kakao native auth — EVAL-0012.
+- Full route skeleton — EVAL-0014.
+- token format·expiry·`accept_invite` semantics 변경.
+- Branch deferred linking(PO 승인 전).
+- PWA invite fallback 제거.
 
 ## Acceptance Criteria
 
-| 기준                          | 검증 방법                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| installed deep link opens app | test universal/app link and/or scheme on iOS/Android dev build                               |
-| unauth token stash            | unauth invite open -> login -> same token accepted without manual token entry                |
-| authenticated accept          | authenticated invite open calls `accept_invite` and lands on correct challenge/pledge screen |
-| invalid states preserved      | expired/full/already-joined states match existing web/RPC behavior                           |
-| uninstalled re-tap path       | PO-approved re-tap flow documented and manually smoke-tested, or remains blocked             |
-| no deferred decision drift    | no Branch/Firebase replacement appears without PO decision                                   |
-| harness traceability          | `pnpm harness:check` passes                                                                  |
+| 기준                          | 검증 방법                                   |
+| ----------------------------- | ------------------------------------------- |
+| installed deep link opens app | universal/app link 또는 scheme iOS/Android  |
+| unauth token stash            | 미인증 → 로그인 → 동일 token 수락           |
+| authenticated accept          | `accept_invite` 호출, challenge/pledge 이동 |
+| invalid states preserved      | expired/full/already-joined RPC 준수        |
+| uninstalled re-tap path       | PO 승인 flow 문서화/smoke 또는 blocked      |
+| no deferred decision drift    | Branch/Firebase PO 없이 미추가              |
+| harness traceability          | `pnpm harness:check` passes                 |
 
 ## Verification Commands
 
@@ -85,19 +85,19 @@ pnpm validate:docs
 
 ## Expected Output Summary
 
-완료 보고는 설치 앱 딥링크 결과, token stash와 로그인 후 accept 흐름, 미설치 re-tap PO 결정 상태, 기존 웹 invite fallback 영향, 실패 상태 처리, 남은 앱링크 인증서/도메인 작업을 한국어로 요약한다.
+한국어 요약: 딥링크 결과, token stash/accept, re-tap PO 결정, fallback, 실패 상태, 인증서/도메인.
 
 ## Harness Impact Questions
 
-1. Did this task introduce a new folder structure? Maybe — `capabilities/deep-linking` or invite feature folder.
-2. Did this task introduce a new naming convention? Maybe — deep-link route mapping helpers.
-3. Did this task introduce a new dependency? No unless PO chooses Branch or an app-link helper package.
-4. Did this task change verification commands? Yes if mobile invite tests or Maestro smoke are added.
-5. Did this task reveal that the current harness instructions are outdated? Maybe — if manual app-link verification needs standardization.
-6. Should any `.agents/` document be updated? Only for harness verification mechanics; PO/product decision docs are separate.
+1. New folder structure? Maybe — invite or `capabilities/deep-linking`.
+2. New naming convention? Maybe — deep-link route helpers.
+3. New dependency? No unless PO chooses Branch/app-link helper.
+4. Verification commands changed? Yes if invite tests or Maestro added.
+5. Harness outdated? Maybe — app-link 표준화 시.
+6. `.agents/` update? Only for harness mechanics.
 
 ## Stop Condition
 
-- PO decision on re-tap vs Branch is explicit and reflected in Blocked-by removal.
-- All Acceptance Criteria green on dev build.
-- pass@3 안에 green 못 만들면 installed deep link / unauth stash / uninstalled fallback으로 split.
+- PO re-tap vs Branch 결정이 Blocked-by 해제에 반영.
+- AC 전부 green(dev build).
+- pass@3 실패 시 deep link / unauth stash / uninstalled fallback split.

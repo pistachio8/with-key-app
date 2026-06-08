@@ -9,19 +9,19 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 # EVAL-0007: 보증금 hold·차감 예정액 게이지 UI/read
 
-> Work Package WP3 (`feat/rn-deposit-hold-gauge`). **G2 blocked** — 사용자향 hold/게이지 노출은 법무 게이트 후. 구조·코드 작성은 가능하나 활성 노출은 보류. 데이터·RPC는 EVAL-0005·0006 산출물에 의존.
+> WP3 (`feat/rn-deposit-hold-gauge`). **G2 blocked** — hold/게이지 노출은 법무 게이트 후. 구조·코드는 가능, 활성 노출 보류. 데이터·RPC는 EVAL-0005·0006 의존.
 
 ## Parent Links
 
-- Parent PRD Feature: `AC-deposit-hold-1`~`AC-deposit-hold-4`(서약 시 hold·잔액부족 차단·그랜트·공동풀 균등) · `AC-deposit-gauge-1`~`AC-deposit-gauge-3`(게이지·고지·조회 이벤트) — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
-- Parent Test Scenario: `TS-deposit-hold-1`~`4` · `TS-deposit-gauge-1` — [docs/pm/test-scenarios.md](../../docs/pm/test-scenarios.md)
-- Parent Job Story: `JS-settle-1`(서약 시 잠긴다) · `JS-settle-2`(진행 중 깎일 위기) — [docs/stories/2026-06-05-p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
-- Parent Engineering Story: [2026-06-05-points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP3
-- Parent Work Package: `feat/rn-deposit-hold-gauge` (WP3)
+- PRD: `AC-deposit-hold-1`~`4` · `AC-deposit-gauge-1`~`3` — [01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §5.C
+- TS: `TS-deposit-hold-1`~`4` · `TS-deposit-gauge-1` — [test-scenarios.md](../../docs/pm/test-scenarios.md)
+- JS: `JS-settle-1` · `JS-settle-2` — [p1-settlement-job-stories.md](../../docs/stories/2026-06-05-p1-settlement-job-stories.md)
+- Eng: [points-settlement](../../docs/eng-stories/2026-06-05-points-settlement.md) WP3
+- WP: `feat/rn-deposit-hold-gauge`
 
 ## Goal
 
-서약과 진행 중 화면에 실데이터 보증금을 노출한다. 이 task가 끝나면 서약 시 `hold_deposit`이 호출되어 잔액 부족이면 서약이 차단되고(부족액 고지), 신규 유저는 초기 그랜트(`bundle_grant`)로 첫 서약이 가능하며, 그룹 이월 풀이 있으면 공동 스테이크로 깔고 참가자 N명 균등 차감되고, 진행 중 화면에 "표시만이 아니라 종료 시 실제 이동"을 고지하는 차감 예정액 게이지가 보인다.
+서약·진행 중 화면에 실데이터 보증금 노출. 완료 시: 서약 시 `hold_deposit` 호출 → 잔액 부족 차단(부족액 고지), 신규 유저는 `bundle_grant`로 첫 서약 가능, 그룹 이월 풀 존재 시 참가자 N명 균등 차감, 진행 중 화면에 차감 예정액 게이지 + "실제 이동" 고지.
 
 ## Source Files to Inspect
 
@@ -42,29 +42,29 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 ## Requirements
 
-- 서약 hold = 챌린지 최대 누적 벌금(Σ 전체 주 × penaltyAmount), 적립/번들 잔액에서 차감(현금 충전 아님) — `AC-deposit-hold-1·2`.
-- 잔액 부족 시 서약 차단 + 부족액 고지. 신규 유저 0P면 `bundle_grant`로 첫 서약 가능 — `AC-deposit-hold-4` (`TS-deposit-hold-2·3`).
-- 그룹 이월 풀 존재 시 풀을 공동 스테이크로 깔고 참가자 N명 균등 차감(각자 hold = 1인 최대 벌금 − 풀/N) — `AC-deposit-hold-3` (`TS-deposit-hold-4`).
-- 진행 중 게이지: 잔액 + 차감 예정액(= `confirmedPenalty` 주 단위 누적과 일치) + "표시만 아님" 고지 — `AC-deposit-gauge-1·2`.
-- 잔액 조회 이벤트(`points_balance_view`) 발생 — `AC-deposit-gauge-3` (이벤트 union은 WP5 spec 의존).
+- 서약 hold = 최대 누적 벌금(Σ전체주 × penaltyAmount), 적립/번들 잔액 차감(현금 아님) — `AC-deposit-hold-1·2`.
+- 잔액 부족 시 차단 + 부족액 고지. 0P 신규 유저는 `bundle_grant`로 첫 서약 가능 — `AC-deposit-hold-4` (`TS-deposit-hold-2·3`).
+- 이월 풀 존재 시 N명 균등 차감(각 hold = 1인 최대 벌금 − 풀/N) — `AC-deposit-hold-3` (`TS-deposit-hold-4`).
+- 게이지: 차감 예정액(= `confirmedPenalty` 누적) + "실제 이동" 고지 — `AC-deposit-gauge-1·2`.
+- 잔액 조회 이벤트(`points_balance_view`) — `AC-deposit-gauge-3` (union은 WP5 spec 의존).
 
 ## Non-goals
 
-- 정산 트리거·cron — WP4/EVAL-0008.
-- 정산 RPC 구현 — WP2/EVAL-0006 (본 task는 호출만).
-- AnalyticsEvent union 정의 — WP5/EVAL-0009.
-- **사용자향 활성 노출** — G2 통과 후 flip.
+- 정산 트리거·cron — EVAL-0008.
+- 정산 RPC 구현 — EVAL-0006 (본 task는 호출만).
+- AnalyticsEvent union 정의 — EVAL-0009.
+- **사용자향 활성 노출** — G2 통과 후.
 
 ## Acceptance Criteria
 
-| 기준                                          | 검증 방법                                                                  |
-| --------------------------------------------- | -------------------------------------------------------------------------- |
-| hold = 최대 누적 벌금 (`AC-deposit-hold-1·2`) | `TS-deposit-hold-1`: 5000P·벌금3000P → delta −3000 1행, 가용 2000P         |
-| 잔액 부족 차단 (`AC-deposit-hold-4`)          | `TS-deposit-hold-2`: 1000P·필요3000P → 차단·원장 0행                       |
-| 신규 그랜트 (`AC-deposit-hold-4`)             | `TS-deposit-hold-3`: 0P → `+1000 bundle_grant` → `−1000 deposit_hold`      |
-| 공동풀 균등 (`AC-deposit-hold-3`)             | `TS-deposit-hold-4`: 풀2000·4명·벌금3000 → 각 hold 2500                    |
-| 게이지 정합 (`AC-deposit-gauge-1·2`)          | `TS-deposit-gauge-1`: 차감예정액 = confirmedPenalty, "실제 이동" 고지 노출 |
-| harness traceability                          | `pnpm harness:check` 통과                                                  |
+| 기준                                          | 검증 방법                                                             |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| hold = 최대 누적 벌금 (`AC-deposit-hold-1·2`) | `TS-deposit-hold-1`: 5000P·벌금3000 → delta −3000, 가용 2000P         |
+| 잔액 부족 차단 (`AC-deposit-hold-4`)          | `TS-deposit-hold-2`: 1000P·필요3000 → 차단·원장 0행                   |
+| 신규 그랜트 (`AC-deposit-hold-4`)             | `TS-deposit-hold-3`: 0P → `+1000 bundle_grant` → `−1000 deposit_hold` |
+| 공동풀 균등 (`AC-deposit-hold-3`)             | `TS-deposit-hold-4`: 풀2000·4명·벌금3000 → 각 hold 2500               |
+| 게이지 정합 (`AC-deposit-gauge-1·2`)          | `TS-deposit-gauge-1`: 차감예정액=confirmedPenalty, 고지 노출          |
+| harness traceability                          | `pnpm harness:check` 통과                                             |
 
 ## Verification Commands
 
@@ -78,19 +78,14 @@ pnpm harness:check
 
 ## Expected Output Summary
 
-서약 hold 흐름(차단·그랜트·공동풀), 게이지 표시·고지 위치, `points_balance_view` 이벤트 트리거 지점, G2 전까지 노출이 보류되는 범위를 한국어로 요약한다.
+서약 hold 흐름(차단·그랜트·공동풀), 게이지 위치, `points_balance_view` 트리거 지점, G2 전 보류 범위를 한국어로 요약한다.
 
 ## Harness Impact Questions
 
-1. New folder structure? No — 기존 route colocation.
-2. New naming convention? No.
-3. New dependency? No.
-4. Verification commands changed? No.
-5. Harness instructions outdated? No.
-6. `.agents/` 문서 갱신? No.
+1–6. No — 폴더/네이밍/의존성/커맨드/harness/`.agents/` 모두 기존 유지.
 
 ## Stop Condition
 
-- G2 해제 후 Acceptance Criteria green + 모바일 viewport 수동 확인 + `pnpm harness:check` 통과.
-- blocked 동안: 구조·테스트 작성까지 진행 가능, 활성 노출만 보류.
-- pass@3 안에 green 못 만들면 → 서약 hold / 게이지 read 로 split (프롬프트·컨텍스트 1회 점검 후).
+- G2 해제 후 AC green + 모바일 수동 확인 + `pnpm harness:check` 통과.
+- blocked 동안: 구조·테스트 작성 가능, 활성 노출만 보류.
+- pass@3 실패 → 서약 hold / 게이지 read로 split(컨텍스트 1회 점검 후).
