@@ -1,9 +1,8 @@
 ---
 description: 타입체크 + 린트 + 테스트 실행
-agent: "everything-claude-code:build-error-resolver"
 ---
 
-> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 기본 검증을 Claude/ECC에서 실행하는 어댑터다.
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 기본 검증을 Claude Code에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행한다.
 > 풀 빌드까지 포함한 검증이 필요하면 `./build-check.md`를 사용한다.
 

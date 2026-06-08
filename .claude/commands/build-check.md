@@ -1,9 +1,8 @@
 ---
 description: 프로덕션 빌드까지 포함한 풀 검증 (배포 직전 · 설정 변경 시 필수)
-agent: "everything-claude-code:build-error-resolver"
 ---
 
-> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 build-sensitive 검증을 Claude/ECC에서 실행하는 어댑터다.
+> **역할**: 이 파일은 [`../../docs/QUALITY_GATE.md`](../../docs/QUALITY_GATE.md)의 build-sensitive 검증을 Claude Code에서 실행하는 어댑터다.
 > **전제**: `with-key` 저장소 루트에서 실행.
 > 이 명령은 **`next.config.ts` / `middleware.ts` / `eslint.config.mjs` / `tsconfig.json` / Tailwind·PostCSS 설정 / Supabase migration 추가** 시 사용한다. 일반 변경은 `./check.md`로 충분하다.
 
