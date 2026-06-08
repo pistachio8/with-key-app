@@ -9,19 +9,18 @@ Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-
 
 # EVAL-0018: G9 Challenge lifecycle mutations — create/invite/pledge/start parity
 
-> 00 §8 G9. This task ports the core challenge lifecycle writes and proves PWA/RN DB compatibility.
+> 00 §8 G9. 핵심 챌린지 lifecycle write 포팅, PWA/RN DB 호환성 증명.
 
 ## Parent Links
 
-- Parent PRD Feature: challenge creation, invite, pledge, start — [docs/PRD.md](../../docs/PRD.md) §3.
-- Parent Test Scenario: pledge/invite/create lifecycle scenarios are embedded below per D10, with POC PRD §3 AC as source.
-- Parent Job Story: 그룹장이 챌린지를 만들고 멤버가 서약해 코호트를 시작한다 — [docs/PRD.md](../../docs/PRD.md) §3.1~§3.4.
-- Parent Engineering Story: [00 §9 Server Action 승격 후보](../../docs/migration/00-rn-conversion-plan.md) + [04 §5 A8 Hybrid](../../docs/migration/04-rn-architecture.md).
-- Parent Work Package: `feat/rn-challenge-lifecycle` (G9).
+- PRD Feature: challenge create/invite/pledge/start — [docs/PRD.md](../../docs/PRD.md) §3, §3.1~§3.4.
+- Test Scenario: D10 lifecycle; PRD §3 AC가 소스.
+- Engineering Story: [00 §9](../../docs/migration/00-rn-conversion-plan.md) + [04 §5 A8](../../docs/migration/04-rn-architecture.md).
+- Work Package: `feat/rn-challenge-lifecycle` (G9).
 
 ## Goal
 
-RN에서 챌린지 lifecycle mutation의 핵심 경로가 동작하고, 같은 DB 상태를 기존 PWA가 정상 표시한다. 이 task가 끝나면 RN 사용자는 challenge create, invite accept, pledge sign, signed participants start를 수행할 수 있고, 각 write는 00 §13.2 action matrix의 RPC/BFF/RN-direct 분류를 따른다. RN과 PWA가 같은 Supabase/RPC를 공유해도 상태 전이가 깨지지 않아야 한다.
+RN lifecycle mutation 핵심 경로가 동작하고 PWA가 같은 DB 상태를 표시한다. create/invite accept/pledge sign/signed start가 가능하고, write는 00 §13.2 RPC/BFF/RN-direct를 따른다. 공유 Supabase/RPC 상태 전이가 깨지지 않는다.
 
 ## Source Files to Inspect
 
@@ -38,41 +37,40 @@ RN에서 챌린지 lifecycle mutation의 핵심 경로가 동작하고, 같은 D
 
 ## Target Files
 
-- `apps` — implement mobile create/invite/pledge/start feature mutations and UI flows.
-- `supabase/migrations` — only append RPC changes if the existing contract is insufficient; no reorder.
-- `apps/web/src/app` — PWA compatibility reference/smoke only; preserve web behavior.
-- `packages/domain` — consume validators and challenge rules.
+- `apps` — mobile create/invite/pledge/start mutation·UI.
+- `supabase/migrations` — 계약 부족 시만 RPC 추가; 재정렬 금지.
+- `apps/web/src/app` — PWA smoke 참조; web 동작 보존.
+- `packages/domain` — validators·challenge rules 소비.
 
 ## Requirements
 
-- `createChallenge` path follows 00 §13.2 classification: `create_challenge` RPC for core creation, with invite/push side effects behind approved API/RPC boundaries.
-- `acceptInvite` uses existing `accept_invite` RPC semantics; idempotent already-joined handling preserved.
-- `signPledge` uses `sign_and_maybe_activate` RPC and preserves pending/active participant freeze semantics.
-- `startChallengeWithSignedParticipants` uses its RPC contract and preserves owner-only start rules.
-- Use shared `@withkey/domain` validators for challenge/group/invite inputs.
-- After RN mutation, existing PWA home/challenge/pledge views show the same DB state correctly.
-- RLS role tests cover unauthorized create/accept/sign/start attempts where feasible.
-- Side effects (push/analytics) use approved server/BFF paths; do not place service-role keys in mobile.
+- `createChallenge`: `create_challenge` RPC 코어(00 §13.2); invite/push는 승인된 API/RPC 뒤.
+- `acceptInvite`: `accept_invite` RPC; idempotent already-joined 보존.
+- `signPledge`: `sign_and_maybe_activate` RPC; pending/active freeze 보존.
+- `startChallengeWithSignedParticipants`: RPC 계약; owner-only.
+- 입력 검증: `@withkey/domain` validators.
+- RN write 후 PWA home/challenge/pledge 동일 DB 표시.
+- unauthorized RLS 테스트(가능 범위).
+- push/analytics는 server/BFF; service-role 키 mobile 금지.
 
 ## Non-goals
 
-- Native action log/photo/AI submission — EVAL-0019.
-- Read-only screen construction — EVAL-0017 should already be complete.
-- Account encryption mutations (`updateGroupAccount`, `revealAccountNumber`) unless needed for create flow minimum.
-- Service-role delete/end/leave challenge migration decisions from 00 §13.4 D-5.
-- P1/P2 settlement or auto-verification mutations.
+- Action log/photo/AI 제출(EVAL-0019).
+- `updateGroupAccount`·`revealAccountNumber`(create flow 최소 필요 시 예외만).
+- 00 §13.4 D-5 delete/end/leave.
+- P1/P2 settlement·auto-verification mutation.
 
 ## Acceptance Criteria
 
-| 기준                   | 검증 방법                                                                   |
-| ---------------------- | --------------------------------------------------------------------------- |
-| create challenge       | RN creates a pending challenge through approved RPC/API and PWA displays it |
-| invite accept          | RN accepts invite idempotently and membership appears in PWA/RN reads       |
-| pledge sign            | RN signs pledge and preserves pending/active rules                          |
-| signed start           | owner starts signed participants and challenge becomes active               |
-| RLS unauthorized paths | non-owner/non-member attempts fail without service-role exposure            |
-| PWA compatibility      | same DB state is readable in existing PWA views after RN writes             |
-| harness traceability   | `pnpm harness:check` passes                                                 |
+| 기준                 | 검증 방법                           |
+| -------------------- | ----------------------------------- |
+| create challenge     | RPC/API로 pending 생성, PWA 표시    |
+| invite accept        | idempotent 수락, membership 반영    |
+| pledge sign          | 서약 서명, pending/active 규칙 보존 |
+| signed start         | owner start → active 전환           |
+| RLS unauth paths     | 미인가 시도 service-role 없이 실패  |
+| PWA compatibility    | RN write 후 PWA 동일 DB 읽힘        |
+| harness traceability | `pnpm harness:check` passes         |
 
 ## Verification Commands
 
@@ -89,19 +87,19 @@ pnpm validate:docs
 
 ## Expected Output Summary
 
-완료 보고는 RN mutation별 사용한 RPC/API 계약, PWA 호환 smoke 결과, RLS negative 검증, side-effect 처리 경계, 남은 service-role mutation debt를 한국어로 요약한다.
+mutation별 RPC/API 계약, PWA 호환 smoke, RLS negative, side-effect 경계, service-role debt를 한국어로 요약.
 
 ## Harness Impact Questions
 
-1. Did this task introduce a new folder structure? Maybe — challenge/invite/pledge feature mutation folders.
-2. Did this task introduce a new naming convention? Maybe — mutation hook names.
-3. Did this task introduce a new dependency? No unless accepted by existing architecture/spec.
-4. Did this task change verification commands? Maybe — lifecycle integration tests or Maestro smoke.
-5. Did this task reveal that the current harness instructions are outdated? Maybe — PWA/RN compatibility smoke may need standard form.
-6. Should any `.agents/` document be updated? Only if compatibility smoke becomes harness policy.
+1. New folder structure? Maybe — challenge/invite/pledge mutation folders.
+2. New naming convention? Maybe — mutation hook names.
+3. New dependency? No unless accepted by spec.
+4. Verification commands changed? Maybe — lifecycle tests or Maestro smoke.
+5. Harness outdated? Maybe — PWA/RN smoke may need standard form.
+6. `.agents/` update? Only if smoke becomes harness policy.
 
 ## Stop Condition
 
-- RN create/invite/pledge/start succeeds and PWA shows the same state.
-- Unauthorized paths fail under RLS/BFF checks.
-- pass@3 안에 green 못 만들면 create / invite accept / pledge-start로 split.
+- RN create/invite/pledge/start 성공; PWA 동일 상태 표시.
+- Unauthorized 경로가 RLS/BFF에서 실패.
+- pass@3 green 불가 → create/invite accept/pledge-start split.
