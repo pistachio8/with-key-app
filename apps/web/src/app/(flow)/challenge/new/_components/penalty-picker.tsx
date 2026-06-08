@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, type KeyboardEvent } from "react";
-import { PENALTY_PRESETS, formatKRW, penaltyLabel } from "@/lib/challenge/penalty";
+import { PENALTY_PRESETS, formatKRW, penaltyLabel } from "@withkey/domain";
 import { cn } from "@/lib/utils";
 
 type Props = { value: number; onChange: (amount: number) => void };

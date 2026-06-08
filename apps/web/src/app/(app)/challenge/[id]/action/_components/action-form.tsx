@@ -9,11 +9,17 @@ import { Card } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { Textarea } from "@/components/ui/textarea";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
-import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
-import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
+import {
+  ACTIVITY_TYPES,
+  type ActivityType,
+  initialShuffle,
+  reroll,
+  type ShuffleState,
+  ALLOWED_PHOTO_MIME,
+  MAX_PHOTO_BYTES,
+} from "@withkey/domain";
 import { cn } from "@/lib/utils";
 import { prepareForUpload } from "@/lib/image/prepare-upload";
-import { ALLOWED_PHOTO_MIME, MAX_PHOTO_BYTES } from "@/lib/validators/action-log";
 import { submitActionLog } from "../_actions";
 import { ActionResultDialog, type ActionResultVariant } from "./action-result-dialog";
 import { KeywordChipGroup } from "./keyword-chip-group";

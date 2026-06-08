@@ -5,7 +5,7 @@
 
 import { useLinkStatus } from "next/link";
 import { Loader2 } from "lucide-react";
-import type { ChallengePhase } from "@/lib/challenge/lifecycle";
+import type { ChallengePhase } from "@withkey/domain";
 
 interface Props {
   daysLeft: number;

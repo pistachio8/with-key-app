@@ -3,8 +3,12 @@
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { kudosInputSchema, type KudosInput } from "@/lib/validators/kudos";
-import { isChallengeOver, type ChallengeStatus } from "@/lib/challenge/lifecycle";
+import {
+  kudosInputSchema,
+  type KudosInput,
+  isChallengeOver,
+  type ChallengeStatus,
+} from "@withkey/domain";
 import { decryptAccountNumber } from "@/lib/crypto/account-cipher";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";

@@ -4,7 +4,7 @@
 // B11 결정: "+" 버튼 제거, `👍` (모킹업) → `💪` (PRD) 매핑.
 
 import { cn } from "@/lib/utils";
-import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
+import { KUDOS_EMOJIS, type KudosEmoji } from "@withkey/domain";
 
 interface KudosBarProps {
   counts: Readonly<Partial<Record<KudosEmoji, number>>>;

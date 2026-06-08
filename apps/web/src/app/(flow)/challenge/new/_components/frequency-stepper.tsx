@@ -3,7 +3,7 @@
 import { useId } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { goalCountLabel } from "@/lib/challenge/frequency";
+import { goalCountLabel } from "@withkey/domain";
 
 // 모킹업 §3-A "인증 빈도" — − / 박스 / + stepper. 1..7 범위.
 

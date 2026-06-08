@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
-import { formatSharePeriod } from "@/lib/share/period";
+import { formatSharePeriod } from "@withkey/domain";
 import { makeShareSeed } from "@/lib/share/seed";
 import { track } from "@/lib/analytics/track";
 import { Card } from "@/components/ui/card";

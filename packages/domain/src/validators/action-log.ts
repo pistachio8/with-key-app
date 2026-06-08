@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACTIVITY_TYPES, KEYWORD_POOL } from "@/lib/keywords/pool";
+import { ACTIVITY_TYPES, KEYWORD_POOL } from "../keywords/pool";
 
 const activityType = z.enum(ACTIVITY_TYPES);
 export const ALLOWED_PHOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;

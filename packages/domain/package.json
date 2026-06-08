@@ -8,8 +8,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "echo '[@withkey/domain] shell — lint(eslint)은 G6 도메인 실이동 시 배선'",
+    "lint": "echo '[@withkey/domain] lint(eslint)은 web 루트 config 에 위임 — 순수 TS 게이트는 typecheck/test'",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "typescript": "^5",

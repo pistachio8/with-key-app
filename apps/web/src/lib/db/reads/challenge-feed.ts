@@ -5,7 +5,7 @@ import { getViewerKudosForLog } from "@/lib/db/reads/kudos-viewer";
 import { getActionLogHydrate } from "@/lib/db/reads/action-log-hydrate";
 import { getActionLogPhotoSignedUrl } from "@/lib/db/reads/photo-signed-url";
 import { listVisibleActionLogIds } from "@/lib/db/reads/list-visible-action-log-ids";
-import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
+import { KUDOS_EMOJIS, type KudosEmoji } from "@withkey/domain";
 
 export type FeedItemView = {
   id: string;

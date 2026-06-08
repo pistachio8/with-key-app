@@ -27,7 +27,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 - `docs/adr/0032-settlement-verification-data-model.md` (§게이트)
 - `docs/eng-stories/2026-06-05-photo-verification.md`
-- `apps/web/src/lib/validators/kudos.ts`
+- `packages/domain/src/validators/kudos.ts`
 - `apps/web/src/lib/db/reads/kudos-viewer.ts` · `kudos-counts.ts`
 - `supabase/migrations/0033_notification_prefs_kudos.sql` · `0034_kudos_push_log.sql`
 - `apps/web/src/lib/db/reads/action-log-hydrate.ts` (반려 집계, ADR-0024 Layer1 이후)
@@ -36,7 +36,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 - `docs/superpowers/specs/` — **선행 spec**: reaction 저장 모델 + 익명 집계 경계
 - `supabase/migrations/` — 반려 reaction 저장 + `peer_rejected` 집계
-- `apps/web/src/lib/validators/` · `apps/web/src/app/(app)/challenge/` — 🟨 1탭 UI·집계 read
+- `packages/domain/src/validators/` · `apps/web/src/app/(app)/challenge/` — 🟨 1탭 UI·집계 read
 
 ## Requirements
 

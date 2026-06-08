@@ -1,9 +1,7 @@
 // 모킹업 §3-C 라인 639~646 — primary bg 서약서 카드.
 
 import { Stamp } from "@/components/ui/stamp";
-import { goalCountLabel } from "@/lib/challenge/frequency";
-import { penaltyLabel } from "@/lib/challenge/penalty";
-import { formatPledgeDateRange } from "@/lib/challenge/pledge-date-range";
+import { goalCountLabel, penaltyLabel, formatPledgeDateRange } from "@withkey/domain";
 
 interface PledgePreviewCardProps {
   title: string;

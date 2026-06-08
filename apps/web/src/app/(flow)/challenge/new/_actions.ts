@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
-import { challengeInputSchema } from "@/lib/validators/challenge";
+import { challengeInputSchema } from "@withkey/domain";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
 import { failure, validationFailure, type ActionResult } from "@/lib/actions/response";

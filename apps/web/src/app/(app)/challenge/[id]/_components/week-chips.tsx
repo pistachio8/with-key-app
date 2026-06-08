@@ -1,7 +1,7 @@
 // spec C6 — 주차별 기록 칩(H3 주인공). viewer 개인 주차 상태.
 // 달성(primary-soft) · 미달(warn 틴트) · 현재 주(점선) · 미래 주(중립).
 import { cn } from "@/lib/utils";
-import type { WeekChip } from "@/lib/challenge/weekly";
+import type { WeekChip } from "@withkey/domain";
 
 const STATE_CLASS: Record<WeekChip["state"], string> = {
   achieved: "border-primary/20 bg-primary/10 text-primary",

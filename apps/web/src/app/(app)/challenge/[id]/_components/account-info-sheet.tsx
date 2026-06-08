@@ -10,8 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
-import { maskAccountNumber } from "@/lib/bank/format";
+import { BANK_NAMES, type BankCode, maskAccountNumber } from "@withkey/domain";
 import { useCopyAccountNumber } from "./use-copy-account-number";
 
 type Props = {

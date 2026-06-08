@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { challengePhase, isChallengeOver } from "@/lib/challenge/lifecycle";
+import { challengePhase, isChallengeOver } from "@withkey/domain";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { fetchChallengeFeed } from "@/lib/db/reads/challenge-feed";
 import { getAuthedUser } from "@/lib/supabase/auth";

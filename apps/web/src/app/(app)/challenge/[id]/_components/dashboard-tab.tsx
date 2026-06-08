@@ -5,9 +5,8 @@ import { Card } from "@/components/ui/card";
 import { MemberStrip } from "./member-strip";
 import { WeekChips } from "./week-chips";
 import { WeekRing } from "./week-ring";
-import type { ChallengePhase } from "@/lib/challenge/lifecycle";
+import type { ChallengePhase, WeekChip, CurrentWeekStatus } from "@withkey/domain";
 import type { ChallengeMemberView } from "@/lib/db/reads/challenge-detail";
-import type { WeekChip, CurrentWeekStatus } from "@/lib/challenge/weekly";
 
 interface DashboardTabProps {
   potTotal: number; // 그룹 확정 누적(단조)

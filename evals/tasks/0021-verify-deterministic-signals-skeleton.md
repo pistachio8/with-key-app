@@ -23,7 +23,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 - `docs/adr/0032-settlement-verification-data-model.md` (§4 검증 신호)
 - `docs/eng-stories/2026-06-05-photo-verification.md`
 - `apps/web/src/lib/storage/action-photos.ts`
-- `apps/web/src/lib/validators/action-log.ts`
+- `packages/domain/src/validators/action-log.ts`
 - `apps/web/src/app/(app)/challenge/[id]/action/_actions.ts`
 
 ## Target Files

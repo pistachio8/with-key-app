@@ -24,12 +24,12 @@ const WHITELIST = [
   },
   { pattern: /^apps\/web\/proxy\.ts$/, recommend: "ADR", reason: "Next.js 인증 진입점(proxy)" },
   {
-    pattern: /^apps\/web\/src\/lib\/keywords\/pool\.ts$/,
+    pattern: /^packages\/domain\/src\/keywords\/pool\.ts$/,
     recommend: "ADR",
     reason: "POC freeze 정책 — PO 승인 + VALIDATION 재논의",
   },
   {
-    pattern: /^apps\/web\/src\/lib\/validators\//,
+    pattern: /^packages\/domain\/src\/validators\//,
     recommend: "spec",
     reason: "도메인 zod 스키마 변경",
   },

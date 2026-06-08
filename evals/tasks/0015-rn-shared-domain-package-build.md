@@ -2,7 +2,7 @@
 Task: EVAL-0015
 Track: port
 Kind: migration
-Status: blocked
+Status: done
 Blocked-by: EVAL-0010(RN monorepo foundation) complete.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md
 ---
@@ -30,11 +30,11 @@ Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-
 - `docs/migration/02-rn-migration-harness.md`
 - `docs/migration/03-rn-migration-rules.md`
 - `docs/migration/04-rn-architecture.md`
-- `apps/web/src/lib/validators`
-- `apps/web/src/lib/keywords`
-- `apps/web/src/lib/challenge`
-- `apps/web/src/lib/bank`
-- `apps/web/src/lib/share`
+- `packages/domain/src/validators`
+- `packages/domain/src/keywords`
+- `packages/domain/src/challenge`
+- `packages/domain/src/bank`
+- `packages/domain/src/share`
 
 ## Target Files
 

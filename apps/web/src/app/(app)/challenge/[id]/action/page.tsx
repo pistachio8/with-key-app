@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
-import { toKstDayKey } from "@/lib/challenge/done-days";
+import { toKstDayKey } from "@withkey/domain";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
 import { ActionFormKeyed } from "./_components/action-form-keyed";

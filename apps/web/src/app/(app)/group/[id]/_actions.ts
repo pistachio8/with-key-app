@@ -7,11 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
-import { renameGroupInputSchema, type RenameGroupInput } from "@/lib/validators/group";
+import { renameGroupInputSchema, type RenameGroupInput, BANK_CODES } from "@withkey/domain";
 import { track } from "@/lib/analytics/track";
 import { generateInviteToken } from "@/lib/invite/token";
 import { encryptAccountNumber } from "@/lib/crypto/account-cipher";
-import { BANK_CODES } from "@/lib/bank/codes";
 
 const groupIdSchema = z.string().uuid();
 

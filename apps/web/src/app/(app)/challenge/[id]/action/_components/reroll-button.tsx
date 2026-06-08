@@ -4,7 +4,7 @@
 // 평소엔 카운터 숨김, 5회(REROLL_LIMIT) 도달 시점에만 한 줄 helper "다시 생성은 N회까지".
 
 import { RotateCcw } from "lucide-react";
-import { REROLL_LIMIT } from "@/lib/keywords/shuffle";
+import { REROLL_LIMIT } from "@withkey/domain";
 import { cn } from "@/lib/utils";
 
 type Props = { rerollCount: number; onClick: () => void; disabled?: boolean };

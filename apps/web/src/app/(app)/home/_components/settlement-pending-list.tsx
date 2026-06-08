@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { ChevronRight, Trophy } from "lucide-react";
-import { formatKRW } from "@/lib/challenge/penalty";
+import { formatKRW } from "@withkey/domain";
 import type { GroupChallengeView } from "@/lib/db/reads/current-challenges";
 
 type ChallengeView = NonNullable<GroupChallengeView["challenge"]>;
