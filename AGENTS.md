@@ -56,7 +56,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 ### §타입 & 검증
 
-- `src/lib/validators/*` zod 스키마가 **타입 SoT(Single Source of Truth)**. 도메인 타입은 `z.infer<>`로 도출. **왜**: 런타임 검증과 컴파일 타입을 한 곳에서 동기
+- `packages/domain/src/validators/*`(`@withkey/domain`) zod 스키마가 **타입 SoT(Single Source of Truth)**. 도메인 타입은 `z.infer<>`로 도출. **왜**: 런타임 검증과 컴파일 타입을 한 곳에서 동기
 - `any` 금지. 불가피하면 `unknown` + 좁히기. **왜**: 타입 안전성 우회 누적은 디버깅 비용 ↑
 - DB 타입은 `pnpm db:types` 자동 생성본(`apps/web/src/types/supabase.ts`) — 직접 수정 금지. **왜**: 다음 generate가 변경분을 덮어씀
 

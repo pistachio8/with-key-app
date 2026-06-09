@@ -20,7 +20,8 @@ Review server-side with-key changes. Report findings only.
 Review only:
 
 - `**/_actions.ts`
-- `src/lib/{ai,keywords,push,analytics,validators,supabase}/**`
+- `apps/web/src/lib/{ai,push,analytics,supabase}/**` (server-resident utils)
+- `packages/domain/src/{validators,keywords}/**` (`@withkey/domain` — zod SoT · keyword pool)
 - `middleware.ts` and `src/lib/supabase/middleware.ts`
 - `src/app/api/*` route handlers
 
@@ -46,7 +47,7 @@ Blocker:
   user-facing cache.
 - AI diary logs prompt/response bodies, omits the fixed 4.5s timeout, or removes
   fallback when keyword coverage is below 1.
-- `apps/web/src/lib/keywords/pool.ts` changes without PO approval plus ADR and
+- `packages/domain/src/keywords/pool.ts` changes without PO approval plus ADR and
   validation discussion.
 - The change does not meet its stated goal.
 
@@ -64,7 +65,7 @@ Major:
 Minor:
 
 - `any`, overused `as` / `!`, or hand-rolled domain types where `z.infer<>`
-  should derive from `src/lib/validators/*`.
+  should derive from `packages/domain/src/validators/*` (`@withkey/domain`).
 - Maintainability issues without current runtime impact.
 
 ## Output

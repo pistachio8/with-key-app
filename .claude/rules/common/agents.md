@@ -19,11 +19,11 @@ Claude Code 기본 제공 서브에이전트를 Task 도구로 호출합니다. 
 
 ECC(everything-claude-code) 플러그인의 범용 reviewer를 대체하는, with-key 가드레일 기반 **읽기 전용** 리뷰어. 각자 자기 도메인 규칙만 들고 독립 컨텍스트로 깊게 본다. 출력 심각도(Blocker/Major/Minor)는 [`../../../docs/QUALITY_GATE.md`](../../../docs/QUALITY_GATE.md) §리뷰 기준과 정렬돼 병합이 쉽다.
 
-| 에이전트          | 도메인 / 범위                                                                                  | 핵심 가드레일                                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| migration-reviewer | `supabase/migrations/**` · `src/lib/supabase/**`                                              | append-only 번호·단방향, 전 테이블 RLS ON, SECURITY DEFINER `search_path`, ledger immutability, ADR/BE_SCHEMA parity |
-| frontend-reviewer  | `apps/web/src/app/**` · `src/components/ui/**` · `src/lib/db/reads/**`                        | route colocation, Server Action 경계, RSC/client, Cache Components(`"use cache: private"`+`cacheTag`), zod SoT |
-| backend-reviewer   | `**/_actions.ts` · `src/lib/{ai,keywords,push,analytics,validators,supabase}/**` · `middleware.ts` | Server Action 계약, analytics parity(PRD §9.1), AI 일기 4.5s/fallback, keyword freeze, env/시크릿, service-role/RLS |
+| 에이전트           | 도메인 / 범위                                                                                                                            | 핵심 가드레일                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| migration-reviewer | `supabase/migrations/**` · `src/lib/supabase/**`                                                                                         | append-only 번호·단방향, 전 테이블 RLS ON, SECURITY DEFINER `search_path`, ledger immutability, ADR/BE_SCHEMA parity |
+| frontend-reviewer  | `apps/web/src/app/**` · `src/components/ui/**` · `src/lib/db/reads/**`                                                                   | route colocation, Server Action 경계, RSC/client, Cache Components(`"use cache: private"`+`cacheTag`), zod SoT       |
+| backend-reviewer   | `**/_actions.ts` · `apps/web/src/lib/{ai,push,analytics,supabase}/**` · `packages/domain/src/{validators,keywords}/**` · `middleware.ts` | Server Action 계약, analytics parity(PRD §9.1), AI 일기 4.5s/fallback, keyword freeze, env/시크릿, service-role/RLS  |
 
 > **로드 시점**: `.claude/agents/`는 Claude Code 시작 시 한 번 로드된다. 방금 추가한 에이전트는 **재시작 후**에야 `subagent_type` 이름으로 호출된다. 재시작 전에는 같은 지침을 `general-purpose`에 인라인해 동등하게 돌릴 수 있다. **왜**: 세션 레지스트리는 시작 시점 스냅샷이라 핫리로드되지 않는다.
 > **추적**: `.claude/agents/`는 `.gitignore` 대상(로컬 전용). 팀·CI 공유가 필요하면 `.gitignore`에 `!/.claude/agents/` 화이트리스트를 추가해 커밋한다. **왜**: 추적 제외 상태에서는 같은 디렉토리를 가진 사용자만 이름 호출이 가능하다.

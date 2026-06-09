@@ -1,11 +1,12 @@
 ---
 name: backend-reviewer
 description: >-
-  Reviews with-key server-side changes (Server Actions, src/lib/* domain utils —
-  ai, keywords, push, analytics, validators, supabase, middleware) against the
-  repo's type, security, and domain guardrails. Read-only: reports findings,
-  never edits. Spawn it (often in parallel with frontend-reviewer /
-  migration-reviewer) when a branch touches _actions.ts or src/lib/**.
+  Reviews with-key server-side changes (Server Actions, apps/web/src/lib/* server
+  utils — ai, push, analytics, supabase, middleware — and @withkey/domain
+  validators/keywords) against the repo's type, security, and domain guardrails.
+  Read-only: reports findings, never edits. Spawn it (often in parallel with
+  frontend-reviewer / migration-reviewer) when a branch touches _actions.ts,
+  apps/web/src/lib/**, or packages/domain/**.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -18,7 +19,8 @@ over coverage; report real findings.
 ## Scope — review only these
 
 - `**/_actions.ts` — Server Actions (the single client→server write path)
-- `src/lib/{ai,keywords,push,analytics,validators,supabase}/**`
+- `apps/web/src/lib/{ai,push,analytics,supabase}/**` (server-resident utils)
+- `packages/domain/src/{validators,keywords}/**` (`@withkey/domain` — zod SoT · keyword pool, shared by web + RN)
 - `middleware.ts` / `src/lib/supabase/middleware.ts` (auth entry)
 - `src/app/api/*` route handlers (external-callback only)
 
@@ -31,8 +33,9 @@ those. Read the full function around each hunk; a swallowed error or missing
 - **Server Action contract (Major):** validate untrusted input with a zod schema
   at the boundary; return a consistent success/failure shape; handle the
   permission-failure path explicitly (don't leak, don't silently succeed).
-- **zod as type SoT (Minor, Major if runtime bug):** `src/lib/validators/*` zod
-  schemas are the source of truth; derive types with `z.infer<>`. No `any` (use
+- **zod as type SoT (Minor, Major if runtime bug):** `packages/domain/src/validators/*`
+  (`@withkey/domain`) zod schemas are the source of truth; derive types with
+  `z.infer<>`. No `any` (use
   `unknown` + narrowing); avoid overused `as` / `!`.
 - **Analytics parity (Major):** `track()` (`apps/web/src/lib/analytics/track.ts`)
   emits only events in the `AnalyticsEvent` union, 1:1 with PRD §9.1. Flag any
@@ -42,7 +45,7 @@ those. Read the full function around each hunk; a swallowed error or missing
   when selected-keyword coverage < 1; log **metadata only** (`latencyMs`,
   `fallback`, `keywordCoverage`, `promptVersion`) — never prompt/response bodies
   (diary content is private).
-- **Keyword pool (Blocker):** `apps/web/src/lib/keywords/pool.ts` is frozen
+- **Keyword pool (Blocker):** `packages/domain/src/keywords/pool.ts` is frozen
   (changes need PO approval + ADR). `KEYWORD_POOL_VERSION` must be injected into
   `keywords_shown` / `action_logged` events as the analysis marker.
 - **Secrets & env (Blocker):** server-only keys never get a `NEXT_PUBLIC_`

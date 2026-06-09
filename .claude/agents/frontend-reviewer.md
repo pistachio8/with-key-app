@@ -48,15 +48,15 @@ own those. Read the full surrounding component, not just the hunk.
   arbitrary RSC importing them directly (RLS leak).
 - **Types & zod SoT (Minor, Major if it bugs at runtime):** no `any` (use
   `unknown` + narrowing); avoid overused `as` / `!`; derive domain types via
-  `z.infer<>` from `src/lib/validators/*`; never hand-edit generated
+  `z.infer<>` from `packages/domain/src/validators/*` (`@withkey/domain`); never hand-edit generated
   `apps/web/src/types/supabase.ts`.
 - **Secrets in client (Blocker):** server-only keys (`SUPABASE_SECRET_KEY`,
   `OPENAI_API_KEY`, `VAPID_PRIVATE_KEY`) must never be reachable from a client
   component or carry a `NEXT_PUBLIC_` prefix.
 - **UX states & mobile (Major):** new user-facing flows need loading / empty /
   error states; layout must hold on a mobile portrait viewport (PWA). Reuse
-  `cn` (`src/lib/utils.ts`), `src/components/ui/*`, `src/lib/keywords/*` instead
-  of re-implementing.
+  `cn` (`src/lib/utils.ts`), `src/components/ui/*`, and `@withkey/domain`
+  (keywords · validators · challenge helpers) instead of re-implementing.
 
 ## Output — Korean, keep identifiers/paths in original form
 

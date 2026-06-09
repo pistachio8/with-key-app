@@ -67,8 +67,8 @@ Minor:
 
 - `any`, overused `as` / `!`, or hand-rolled domain types where `z.infer<>`
   should be used.
-- Reimplements `cn`, `src/components/ui/*`, `src/lib/keywords/*`, or local
-  helpers without reuse justification.
+- Reimplements `cn`, `src/components/ui/*`, `@withkey/domain` (keywords ·
+  validators · challenge helpers), or local helpers without reuse justification.
 - Style issues without current runtime impact.
 
 ## Output
