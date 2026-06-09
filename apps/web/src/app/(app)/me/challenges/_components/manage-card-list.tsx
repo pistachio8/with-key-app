@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { endChallenge, deleteChallenge, leaveChallenge } from "@/app/(app)/challenge/[id]/_actions";
-import { challengePhase, type ChallengePhase } from "@/lib/challenge/lifecycle";
+import { challengePhase, type ChallengePhase } from "@withkey/domain";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import type { MyChallengeItem } from "@/lib/db/reads/my-challenges";
 

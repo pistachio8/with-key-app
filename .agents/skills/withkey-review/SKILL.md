@@ -63,8 +63,8 @@ Before findings, pin down:
 - Goal: user request, PRD AC, spec, ADR, or eval task the diff claims to satisfy.
 - Surface: touched files/domains, spec-required paths, and verification state.
 - Spec-required paths: `supabase/migrations/**`, `src/lib/supabase/**`,
-  `middleware.ts`, `apps/web/src/lib/keywords/pool.ts`,
-  `src/lib/validators/**`, `apps/web/src/lib/analytics/track.ts`,
+  `middleware.ts`, `packages/domain/src/keywords/pool.ts`,
+  `packages/domain/src/validators/**`, `apps/web/src/lib/analytics/track.ts`,
   `src/lib/ai/**`.
 
 ## Step 3 - Review axes
@@ -107,8 +107,9 @@ matters, and a concrete fix.
   Actions; no `useEffect` + `fetch` writes; no new SWR/React Query; `src/app/api`
   remains external-callback only; no new `src/features/`.
 - Types: no `any`; prefer `unknown` plus narrowing; zod schemas in
-  `src/lib/validators/*` are the domain type source via `z.infer<>`; generated
-  `apps/web/src/types/supabase.ts` is not hand-edited.
+  `packages/domain/src/validators/*` (`@withkey/domain`) are the domain type
+  source via `z.infer<>`; generated `apps/web/src/types/supabase.ts` is not
+  hand-edited.
 - Supabase/RLS/cache: RLS remains the authorization boundary; `adminClient()` and
   service-role reads do not bypass Layer-1 visibility gates; user-facing cached
   reads do not store cross-viewer service-role results.
@@ -116,7 +117,7 @@ matters, and a concrete fix.
   fallback when keyword coverage is below 1; logs metadata only, never prompt or
   response body.
 - Analytics: events stay 1:1 with PRD §9.1; no ad-hoc event names.
-- Keyword pool: `apps/web/src/lib/keywords/pool.ts` is frozen unless PO approval
+- Keyword pool: `packages/domain/src/keywords/pool.ts` is frozen unless PO approval
   plus ADR/validation update is present.
 - Next.js 16: when a finding depends on framework behavior, verify against
   `node_modules/next/dist/docs/` first.
@@ -142,7 +143,8 @@ For large multi-domain diffs, run scoped passes using these Codex skills:
 - `withkey-migration-reviewer`: `supabase/migrations/**`,
   `src/lib/supabase/**`, DB/RLS/RPC/`BE_SCHEMA.md`
 - `withkey-backend-reviewer`: `_actions.ts`,
-  `src/lib/{ai,keywords,push,analytics,validators,supabase}/**`,
+  `apps/web/src/lib/{ai,push,analytics,supabase}/**`,
+  `packages/domain/src/{validators,keywords}/**`,
   `middleware.ts`, `src/app/api/*`
 - `withkey-frontend-reviewer`: `apps/web/src/app/**`,
   `src/components/ui/**`, `src/lib/db/reads/**`, client/server boundaries

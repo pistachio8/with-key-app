@@ -7,10 +7,7 @@ import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Camera, Home, Users, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  resolveVerifyTarget,
-  type VerifyTargetChallenge,
-} from "@/lib/challenge/resolve-verify-target";
+import { resolveVerifyTarget, type VerifyTargetChallenge } from "@withkey/domain";
 import { GroupSwitcherSheet, type GroupSwitcherItem } from "./group-switcher-sheet";
 import { FabPhotoVerifySheet } from "./fab-photo-verify-sheet";
 

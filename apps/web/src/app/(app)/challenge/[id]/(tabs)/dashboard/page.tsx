@@ -1,13 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { challengePhase, remainingDays } from "@/lib/challenge/lifecycle";
-import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
 import {
+  challengePhase,
+  remainingDays,
+  toKstDayKey,
+  dayIndexOf,
   buildWeekChips,
   currentWeekStatus,
   type CutoffContext,
   type CutoffPhase,
-} from "@/lib/challenge/weekly";
+} from "@withkey/domain";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { DashboardTab } from "../../_components/dashboard-tab";

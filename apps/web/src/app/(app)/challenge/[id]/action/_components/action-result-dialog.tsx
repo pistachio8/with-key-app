@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DaySlider } from "./day-slider";
 import { ConfettiBurst } from "./confetti-burst";
-import type { ActivityType } from "@/lib/keywords/pool";
+import type { ActivityType } from "@withkey/domain";
 import { completedTitle, firstSuccessTitle } from "./action-result-copy";
 
 export type ActionResultVariant = "completed" | "first-success" | "goal-reached";

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
-import { challengePhase, remainingDays, type ChallengePhase } from "@/lib/challenge/lifecycle";
+import { challengePhase, remainingDays, type ChallengePhase } from "@withkey/domain";
 import type { GroupChallengeRow } from "@/lib/db/reads/group-detail";
 
 interface GroupChallengesListProps {

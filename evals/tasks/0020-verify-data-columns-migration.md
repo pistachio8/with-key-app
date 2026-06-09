@@ -24,7 +24,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 - `docs/eng-stories/2026-06-05-photo-verification.md`
 - `supabase/migrations/0002_rls.sql` (`prevent_ai_column_update` 원형)
 - `supabase/migrations/0010_action_logs_photo_path.sql`
-- `apps/web/src/lib/validators/action-log.ts`
+- `packages/domain/src/validators/action-log.ts`
 - `docs/BE_SCHEMA.md`
 
 ## Target Files

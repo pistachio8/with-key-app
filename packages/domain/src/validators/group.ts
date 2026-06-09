@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BANK_CODES } from "@/lib/bank/codes";
+import { BANK_CODES } from "../bank/codes";
 
 // BE_SCHEMA §5.2 · D-016: 그룹 입력은 이름 + (은행·예금주·계좌번호) 묶음 optional.
 // - accountNumber 는 숫자만 8~16자리 (한국 일반 분포). 서버에서 AES-256-GCM 암호화 후 저장.

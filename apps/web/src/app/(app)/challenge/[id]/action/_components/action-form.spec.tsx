@@ -29,7 +29,7 @@ vi.mock("@/lib/image/prepare-upload", () => ({
 vi.mock("canvas-confetti", () => ({ default: vi.fn() }));
 
 import { ActionForm } from "./action-form";
-import { initialShuffle } from "@/lib/keywords/shuffle";
+import { initialShuffle } from "@withkey/domain";
 
 function getHiddenInputs() {
   return Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];

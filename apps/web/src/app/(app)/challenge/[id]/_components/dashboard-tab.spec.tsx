@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DashboardTab } from "./dashboard-tab";
-import type { WeekChip, CurrentWeekStatus } from "@/lib/challenge/weekly";
+import type { WeekChip, CurrentWeekStatus } from "@withkey/domain";
 
 const weeks: WeekChip[] = [
   { week: 1, goal: 3, done: 3, state: "achieved" },

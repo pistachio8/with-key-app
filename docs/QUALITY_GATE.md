@@ -46,7 +46,7 @@ with-key의 AI 에이전트와 사람이 공유하는 코딩 품질 기준. Clau
 
 ## 타입과 데이터 계약
 
-- `src/lib/validators/*` zod 스키마가 타입 Source of Truth. 도메인 타입은 `z.infer<>`로 도출.
+- `packages/domain/src/validators/*`(`@withkey/domain`) zod 스키마가 타입 Source of Truth. 도메인 타입은 `z.infer<>`로 도출.
 - `any` 금지. 불가피하면 `unknown`으로 받고 좁히기.
 - `src/types/supabase.ts` 등 자동 생성 DB 타입 직접 수정 금지.
 - `src/lib/analytics/track.ts` 이벤트 유니온은 PRD §9.1과 1:1.
@@ -72,14 +72,14 @@ with-key의 AI 에이전트와 사람이 공유하는 코딩 품질 기준. Clau
 
 추가 검증이 필요한 변경:
 
-| 변경 유형 | 추가 검증 |
-|---|---|
-| Next.js 설정 · middleware/proxy · env · build 설정 | `pnpm build` |
-| Supabase migration/RLS/RPC | migration 재적용 또는 원격 적용 확인, 역할별 접근 테스트 |
-| 핵심 사용자 플로우 | 모바일 viewport 수동 확인 또는 E2E smoke |
-| Server Action | 성공/실패 응답 shape 테스트, 권한 실패 경로 확인 |
-| AI 일기 | timeout · fallback · keyword coverage 테스트 |
-| Analytics 이벤트 | Zod schema와 TS union parity 테스트 |
+| 변경 유형                                          | 추가 검증                                                |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| Next.js 설정 · middleware/proxy · env · build 설정 | `pnpm build`                                             |
+| Supabase migration/RLS/RPC                         | migration 재적용 또는 원격 적용 확인, 역할별 접근 테스트 |
+| 핵심 사용자 플로우                                 | 모바일 viewport 수동 확인 또는 E2E smoke                 |
+| Server Action                                      | 성공/실패 응답 shape 테스트, 권한 실패 경로 확인         |
+| AI 일기                                            | timeout · fallback · keyword coverage 테스트             |
+| Analytics 이벤트                                   | Zod schema와 TS union parity 테스트                      |
 
 테스트 생략 시 이유와 남은 리스크 보고.
 

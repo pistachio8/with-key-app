@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Activity, Check, Circle, Clock, Users } from "lucide-react";
-import { formatKRW } from "@/lib/challenge/penalty";
+import { formatKRW } from "@withkey/domain";
 import { cn } from "@/lib/utils";
 import type { GroupChallengeView } from "@/lib/db/reads/current-challenges";
 import { RowPendingIndicator } from "./row-pending-indicator";

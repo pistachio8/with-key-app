@@ -9,7 +9,7 @@
 //
 // 과거 버그: 끝을 `오늘 + durationDays`(= 8일째)로 찍어 7일 챌린지가 "6/1~6/8"(8칸)로
 // 보였고, start_at/end_at 을 아예 안 봐서 이미 시작된 챌린지도 "오늘 기준"으로 그렸다.
-import { toKstDayKey } from "@/lib/challenge/done-days";
+import { toKstDayKey } from "./done-days";
 
 export interface PledgeDateRange {
   /** "M/D ~ M/D" 형식의 날짜 범위 (시작일 ~ 마지막 인증일) */

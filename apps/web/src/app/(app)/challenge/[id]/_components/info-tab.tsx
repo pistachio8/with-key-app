@@ -2,8 +2,7 @@
 
 import { PledgePreviewCard } from "@/components/pledge/pledge-preview-card";
 import { Card } from "@/components/ui/card";
-import { goalCountLabel } from "@/lib/challenge/frequency";
-import { penaltyLabel, formatKRW } from "@/lib/challenge/penalty";
+import { goalCountLabel, penaltyLabel, formatKRW } from "@withkey/domain";
 import type { ChallengeDetailView } from "@/lib/db/reads/challenge-detail";
 
 interface InfoTabProps {

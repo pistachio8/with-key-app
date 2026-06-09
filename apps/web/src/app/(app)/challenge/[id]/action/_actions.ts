@@ -3,17 +3,21 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { after } from "next/server";
 import type { ZodError } from "zod";
-import { actionLogInputSchema, type ActionLogInput } from "@/lib/validators/action-log";
+import {
+  actionLogInputSchema,
+  type ActionLogInput,
+  KEYWORD_POOL_VERSION,
+  toKstDayKey,
+  dayIndexOf,
+} from "@withkey/domain";
 import { generateDiary, type DiaryResult } from "@/lib/ai/diary";
 import { inferMealSlot } from "@/lib/ai/meal-time";
-import { KEYWORD_POOL_VERSION } from "@/lib/keywords/pool";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
-import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
 import { dispatchActionCompletedNotification } from "@/lib/push/dispatch";
 
 type SubmitResult = {

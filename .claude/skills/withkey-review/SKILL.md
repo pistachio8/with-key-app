@@ -53,6 +53,7 @@ git --no-pager diff --staged                   # staged but uncommitted
 
 If the branch has no commits ahead of base, the real change lives in the working
 tree (`git diff` / `--staged`) — review that. Variations to honor:
+
 - **"staged만"** / "커밋 전 게이트" → review only `git diff --staged`.
 - **A pasted diff or a `.diff`/`.patch` file** → review that instead of running git.
 - **Specific files named** → restrict to those paths.
@@ -65,12 +66,13 @@ break an invariant just outside the hunk.
 
 Before hunting defects, pin down two things — you can't judge "did it work" or
 "what's missing" without them:
+
 - **The goal.** What is this diff supposed to accomplish? Find the stated intent:
   the referenced PRD AC, spec (`docs/superpowers/specs/*`), ADR, or eval task
   (`evals/tasks/*.md`). If the user gave a task description, use that.
 - **The change surface.** Which files/axes the diff touches, whether any
   spec-required path is in play (`supabase/migrations/**`, `src/lib/supabase/**`,
-  `middleware.ts`, `apps/web/src/lib/keywords/pool.ts`, `src/lib/validators/**`,
+  `middleware.ts`, `packages/domain/src/keywords/pool.ts`, `packages/domain/src/validators/**`,
   `apps/web/src/lib/analytics/track.ts`, `src/lib/ai/**`), and the verification
   state (have `pnpm typecheck` / `lint` / `test` been run?).
 
@@ -81,9 +83,11 @@ one-line **why it matters**, and a concrete fix. Skip an axis the diff doesn't
 touch; don't invent findings to fill it — an empty axis is a good result.
 
 ### A. 목표 적합성 — Goal fit
+
 Does the diff actually achieve its stated goal / the AC it claims? A change that
 is clean and guardrail-compliant but doesn't deliver the goal is the most
 expensive miss — nothing downstream will catch it.
+
 - Trace each claimed AC / acceptance point to the code that satisfies it.
 - Watch for partial implementations: a goal that needs three things where the
   diff does two.
@@ -91,8 +95,10 @@ expensive miss — nothing downstream will catch it.
   problem, or only half of it.
 
 ### B. 변경 누락 — Completeness / missing changes
-What does this change *imply* that isn't here? This is the lens reviewers most
+
+What does this change _imply_ that isn't here? This is the lens reviewers most
 often miss.
+
 - **Cross-artifact mirrors.** When the same rule lives in two places, both must
   move together — a formula in `packages/domain/*.ts` **and** its SQL port in a
   migration; a zod schema **and** the DB CHECK; a validator **and** the generated
@@ -106,17 +112,21 @@ often miss.
 - **Why**: a half-applied change passes typecheck and still ships a latent bug.
 
 ### C. 과잉 변경 — Scope creep & diff hygiene
+
 - Edits unrelated to the stated goal mixed in (surgical-change violation).
 - Leftover `console.log`, debug code, commented-out blocks, stray TODOs.
 - Formatting/whitespace churn that bloats the diff.
 - **Why**: scope creep is what self-review catches best and a human reviewer worst.
 
 ### D. 정확성 — Correctness
+
 - Logic bugs, missed edge cases, null/undefined handling, missing `await`.
 - Errors swallowed silently (no user message, no log); unhandled failure paths.
 
 ### E. 기존 규칙 준수 — with-key guardrail compliance
+
 The repo's hard rules; each violation's severity in parentheses.
+
 - **Security & secrets (Blocker):** hardcoded secrets; server-only keys
   (`SUPABASE_SECRET_KEY`, `OPENAI_API_KEY`, `VAPID_PRIVATE_KEY`) reachable from a
   client component or `NEXT_PUBLIC_`-prefixed; legacy Supabase key names
@@ -130,7 +140,7 @@ The repo's hard rules; each violation's severity in parentheses.
   `_components/` / `_actions.ts`, or a new `src/features/`; unclear `'use server'`
   / `'use client'` boundary; non-serializable Server Action args/returns.
 - **Types & zod SoT:** `any` (use `unknown` + narrowing); overused `as` / `!`;
-  domain types hand-declared instead of `z.infer<>` from `src/lib/validators/*`;
+  domain types hand-declared instead of `z.infer<>` from `packages/domain/src/validators/*` (`@withkey/domain`);
   direct edits to generated `apps/web/src/types/supabase.ts`.
 - **Domain:** AI diary (`src/lib/ai/`) — `AbortController` + 4.5s timeout,
   `templateFallback()` when keyword coverage < 1, log metadata only, never
@@ -138,11 +148,14 @@ The repo's hard rules; each violation's severity in parentheses.
   events (1:1 PRD §9.1); keyword pool frozen (PO approval + ADR;
   `KEYWORD_POOL_VERSION` injected into `keywords_shown` / `action_logged`); cache
   reads (`src/lib/db/reads/`) declare `"use cache: private"` + `cacheTag` inline;
-  reuse `src/lib/utils.ts` (`cn`), `src/lib/keywords/*`, `src/lib/push/*`,
-  `src/components/ui/*` instead of re-implementing.
+  reuse `src/lib/utils.ts` (`cn`), `@withkey/domain` (keywords · validators ·
+  challenge helpers), `src/lib/push/*`, `src/components/ui/*` instead of
+  re-implementing.
 
 ### F. 테스트 신뢰도 — Test reliability
+
 Tests existing isn't enough; ask whether they'd actually catch a regression.
+
 - **Coverage of the change:** is the new/changed behavior tested, including its
   edge and failure paths — not just the happy path?
 - **Meaningful assertions:** tests pin real invariants, not tautologies
@@ -156,10 +169,11 @@ Tests existing isn't enough; ask whether they'd actually catch a regression.
   confidence.
 
 ### 마이그레이션 — Migration rules & risk (conditional)
+
 **Only if the diff touches `supabase/migrations/**`**, read
 [`references/migration.md`](references/migration.md). It covers both the repo's
-migration *rules* (append-only numbering, one-way, RLS ON, SECURITY DEFINER RPC,
-immutable ledgers, ADR) and migration *risk* (re-runnability, backfill of
+migration _rules_ (append-only numbering, one-way, RLS ON, SECURITY DEFINER RPC,
+immutable ledgers, ADR) and migration _risk_ (re-runnability, backfill of
 existing rows, locking, production-apply gating). These are the costliest,
 least-reversible changes in the repo — a merged migration is already in prod with
 no down script — so don't skip it when migrations change.
@@ -175,8 +189,8 @@ read-only domain reviewers in `.claude/agents/`, then merge.
 1. **Classify** the changed files by domain:
    - `supabase/migrations/**`, `src/lib/supabase/**` (RLS/RPC) → `migration-reviewer`
    - `apps/web/src/app/**`, `src/components/ui/**`, `src/lib/db/reads/**` → `frontend-reviewer`
-   - `**/_actions.ts`, `src/lib/{ai,keywords,push,analytics,validators,supabase}/**`, `middleware.ts` → `backend-reviewer`
-2. **Spawn in parallel** — one Task per *touched* domain (skip domains the diff
+   - `**/_actions.ts`, `apps/web/src/lib/{ai,push,analytics,supabase}/**`, `packages/domain/src/{validators,keywords}/**`, `middleware.ts` → `backend-reviewer`
+2. **Spawn in parallel** — one Task per _touched_ domain (skip domains the diff
    doesn't touch), each scoped to its files. Each reviewer carries the same
    guardrails as the axes above, applied per domain in an isolated context.
 3. **Merge & verify — do not trust subagent output verbatim.** Reconcile the
@@ -249,6 +263,7 @@ uncertain so the user can judge.
 ## What this skill does NOT do
 
 Staying in scope is what makes a self-review fast and trusted:
+
 - No large refactoring or architecture-redesign proposals — flag the concern,
   don't redesign.
 - No style nitpicks that ESLint/Prettier already own.

@@ -1,5 +1,5 @@
 // PRD §9.1 이벤트 스키마와 1:1. 임의 추가 금지 (PO 승인).
-import type { ActivityType } from "@/lib/keywords/pool";
+import type { ActivityType } from "@withkey/domain";
 import { adminClient } from "@/lib/supabase/admin";
 import { analyticsEventSchema } from "./schema";
 

@@ -7,10 +7,13 @@ import {
   type PushPayload,
   type PushSubscriptionRow,
 } from "@/lib/push/send";
-import { notificationPrefsSchema, type NotificationPrefs } from "@/lib/validators/push";
-import type { KudosEmoji } from "@/lib/validators/kudos";
-import type { ActivityType } from "@/lib/keywords/pool";
-import { formatKRW } from "@/lib/challenge/penalty";
+import {
+  notificationPrefsSchema,
+  type NotificationPrefs,
+  type KudosEmoji,
+  type ActivityType,
+  formatKRW,
+} from "@withkey/domain";
 
 type NotificationKind = "start" | "deadline";
 type NotificationSentType = "start" | "deadline" | "friend_action";

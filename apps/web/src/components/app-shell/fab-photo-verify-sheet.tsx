@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { VerifyTargetChallenge } from "@/lib/challenge/resolve-verify-target";
+import type { VerifyTargetChallenge } from "@withkey/domain";
 
 interface FabPhotoVerifySheetProps {
   open: boolean;
