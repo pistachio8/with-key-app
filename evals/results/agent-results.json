@@ -49,6 +49,38 @@
         "docs/BE_SCHEMA.md (§7 가드 노트 · §8.7 정산 RPC)"
       ],
       "gate": "결정론 불변식은 게이트 무관(즉시). production migration apply 는 G2(법무) 후 보류(ADR-0032)."
+    },
+    {
+      "taskId": "EVAL-0021",
+      "date": "2026-06-10",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "oneShot": false,
+      "summary": "결정론 부정 신호 골격 — 64비트 DCT pHash(sharp grayscale→DCT, 자체 구현)·EXIF 촬영시각(exif-reader)·스크린샷 휴리스틱을 순수 함수로 계산하고, 그룹/전역 phash 중복 조회(findActionLogPhashDuplicates)를 제공. recordVerifySignals 가 EVAL-0020 컬럼(photo_phash·photo_captured_at·auto_verify_score·auto_verify_model_version)에 service_role 로 적재(본문 미로깅), submitActionLog 가 after() 로 비파괴 호출. status 판정은 하지 않음(θ 의존 → EVAL-0022).",
+      "verification": {
+        "local": {
+          "pnpm test -- verify": "pass (phash 13 · exif 10 · signals 6 · screenshot 6 · record 3 = 38; 전체 629 통과)",
+          "pnpm typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm lint": "pass",
+          "pnpm harness:check": "PASS — 0 violations",
+          "pnpm harness:drift": "PASS — 0 violations"
+        },
+        "ci_only_deferred": "recordVerifySignals/findActionLogPhashDuplicates 의 실DB write·중복 조회는 로컬 Supabase 부재로 미검증(DB 불필요 task). supabase.ts 타입 재생성(db:types --linked)은 머지 후 — adminClient untyped 라 컬럼명 정합은 0045 SoT + 리뷰로 보장."
+      },
+      "artifacts": [
+        "apps/web/src/lib/verify/phash.ts (+ phash.spec.ts)",
+        "apps/web/src/lib/verify/exif.ts (+ exif.spec.ts)",
+        "apps/web/src/lib/verify/screenshot-heuristic.ts (+ screenshot-heuristic.spec.ts)",
+        "apps/web/src/lib/verify/signals.ts (+ signals.spec.ts)",
+        "apps/web/src/lib/verify/record.ts (+ record.spec.ts — user_id 필터 · graceful skip 회귀)",
+        "apps/web/src/lib/verify/index.ts",
+        "apps/web/src/lib/db/reads/phash-duplicates.ts",
+        "apps/web/src/app/(app)/challenge/[id]/action/_actions.ts (after() 신호 기록 배선)",
+        "apps/web/package.json (exif-reader@2.0.3)",
+        "evals/drift-reports/EVAL-0021-verify-signals.md"
+      ],
+      "gate": "WP2a 비게이트 슬라이스 — 결정론 신호 계산·기록만(즉시). status 판정(θ)은 EVAL-0022, production 부정탐지 활성은 G1-θ 실측 PoC 후."
     }
   ]
 }

@@ -18,6 +18,7 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
+import { recordVerifySignals } from "@/lib/verify";
 import { dispatchActionCompletedNotification } from "@/lib/push/dispatch";
 
 type SubmitResult = {
@@ -218,6 +219,20 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
         } else {
           photoAttached = true;
           photoSize = parsed.file.size;
+          // EVAL-0021: 결정론 검증 신호(phash·EXIF·스크린샷)를 EVAL-0020 컬럼에 기록한다.
+          // status 판정은 하지 않는다(θ 의존 → EVAL-0022). 비파괴 — 실패해도 제출은 성공으로 유지하고
+          // after() 로 응답 latency 와 분리한다. phash 는 저장된(리사이즈) 이미지 기준이라 결정론적이다.
+          const photoBuffer = Buffer.from(await parsed.file.arrayBuffer());
+          after(() =>
+            recordVerifySignals({
+              actionLogId: data.id,
+              userId: user.id,
+              photo: photoBuffer,
+              submittedAt: new Date(now),
+            }).catch((e) => {
+              console.error("[submitActionLog] recordVerifySignals failed", e);
+            }),
+          );
         }
       } else {
         console.warn("[submitActionLog] uploadPhoto failed", {
