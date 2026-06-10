@@ -1,0 +1,37 @@
+{
+  "skill_name": "withkey-todo",
+  "note": "with/without skill 비교. baseline 은 항상 no-skill. assertion 은 iteration-2(진화된 repo) 기준. 채점 헬퍼: workspace/grade.mjs.",
+  "shared_assertions": [
+    "우선순위 계층(P0/P1/P2)으로 그룹화",
+    "인용 구체 경로가 모두 실재 (미존재 파일을 실재처럼 인용하지 않음)",
+    "git 출하 vs task status 의 drift 를 정정 항목으로 짚음 (커밋 제목으로 verify)",
+    "done task 를 재제안하지 않고, 다음 선두 작업으로 deps 충족된 READY task 를 제시",
+    "blocked task 를 즉시 착수로 제안하지 않고 해제 조건 명시",
+    "출력이 한국어",
+    "EVAL task 다음 행동으로 pnpm harness:context/goal 포인터",
+    "의존성을 반영한 '추천 착수 순서'(시퀀스) 제시"
+  ],
+  "evals": [
+    {
+      "id": 0,
+      "name": "next-work-general",
+      "prompt": "지금 with-key에서 뭐부터 하면 될까? todo 좀 뽑아줘",
+      "expected_output": "EVAL task 그래프·미커밋 작업·git log 근거로 P0/P1/P2 + 추천 착수 순서. shared_assertions 적용.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "prioritized-backlog",
+      "prompt": "남은 작업 우선순위 매겨서 정리해줘",
+      "expected_output": "남은 작업을 P0/P1/P2 로 정리. blocked 는 해제 조건과 함께. shared_assertions 적용.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "rn-startable-now",
+      "prompt": "RN 마이그레이션에서 지금 바로 착수 가능한 task가 뭐야?",
+      "expected_output": "RN 화면 체인(0012~0019)은 Kakao auth ADR·선행 task로 blocked, verify 계열(0022 READY, 0023/0024)이 실제 착수 가능임을 의존성 추론으로 구분. shared_assertions + 'RN 체인 blocked 정확 파악'.",
+      "files": []
+    }
+  ]
+}
