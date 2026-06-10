@@ -112,6 +112,35 @@ export function validateTask(task, { exists = existsSync } = {}) {
   return errors;
 }
 
+// Work Package 브랜치명을 task 본문에서 추출한다 — 템플릿이 `> WPn (`feat/<slug>`)` 형태로 적는다.
+// frontmatter 필드가 아니라 prose 라서 첫 백틱 `feat/...` 토큰을 신호로 쓴다.
+// renamed 브랜치(예: 본문 feat/rn-verify-replace ↔ 머지 feat/rn-verify-photo-replace)는 놓칠 수 있다 — warn 전용이라 허용.
+export function extractWorkPackageBranch(task) {
+  const match = (task.content || "").match(/`(feat\/[a-z0-9][a-z0-9-]*)`/);
+  return match ? match[1] : null;
+}
+
+// stale status 휴리스틱: todo·in_progress 인데 WP 브랜치가 이미 머지됨 → status 갱신 누락 의심.
+// blocker 아닌 warn — Target Files 가 디렉토리 단위라 파일 존재로는 done 을 가릴 수 없어 머지 신호를 쓴다.
+// mergedBranches(Set)·branchOf 를 주입받아 git·본문 비의존으로 테스트한다(validateTask 의 exists 주입과 동형).
+export function detectStaleStatus(
+  task,
+  mergedBranches,
+  { branchOf = extractWorkPackageBranch } = {},
+) {
+  const status = task.frontmatter.Status;
+  if (status !== "todo" && status !== "in_progress") {
+    return [];
+  }
+  const branch = branchOf(task);
+  if (!branch || !mergedBranches.has(branch)) {
+    return [];
+  }
+  return [
+    `${task.repoPath}: Status '${status}' but Work Package branch '${branch}' is merged — flip to done?`,
+  ];
+}
+
 export function formatPathList(paths) {
   return paths
     .map((item) => {

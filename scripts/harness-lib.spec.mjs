@@ -12,6 +12,8 @@ import {
   normalizeRepoPath,
   normalizeLinkedPath,
   validateTask,
+  detectStaleStatus,
+  extractWorkPackageBranch,
   loadMigrationTasks,
   extractDefinedAcIds,
   extractAcCitations,
@@ -160,6 +162,66 @@ test("validateTask: hallucinated 경로(존재 안 함) → 위반", () => {
 test("validateTask: 경로 그룹이 비면 'must list at least one' 위반 (#164 고유 — Source/Target)", () => {
   const errs = validateTask(makeTask(VALID_FM, { source: [] }), { exists: fakeExists });
   assert.ok(errs.some((e) => /Source Files must list at least one/.test(e)));
+});
+
+// ─────────────── detectStaleStatus (mergedBranches·branchOf 주입) ───────────────
+
+const merged = new Set(["feat/rn-verify-data"]);
+
+test("detectStaleStatus: todo 인데 WP 브랜치 머지됨 → 경고", () => {
+  const warns = detectStaleStatus(makeTask({ ...VALID_FM, Status: "todo" }), merged, {
+    branchOf: () => "feat/rn-verify-data",
+  });
+  assert.equal(warns.length, 1);
+  assert.ok(/Work Package branch 'feat\/rn-verify-data' is merged/.test(warns[0]));
+});
+
+test("detectStaleStatus: in_progress 인데 브랜치 머지됨 → 경고", () => {
+  const warns = detectStaleStatus(makeTask({ ...VALID_FM, Status: "in_progress" }), merged, {
+    branchOf: () => "feat/rn-verify-data",
+  });
+  assert.equal(warns.length, 1);
+});
+
+test("detectStaleStatus: done 은 검사 대상 아님 → 경고 0", () => {
+  const warns = detectStaleStatus(makeTask({ ...VALID_FM, Status: "done" }), merged, {
+    branchOf: () => "feat/rn-verify-data",
+  });
+  assert.deepEqual(warns, []);
+});
+
+test("detectStaleStatus: blocked 은 검사 대상 아님 → 경고 0", () => {
+  const warns = detectStaleStatus(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "EVAL-0010" }),
+    merged,
+    { branchOf: () => "feat/rn-verify-data" },
+  );
+  assert.deepEqual(warns, []);
+});
+
+test("detectStaleStatus: todo 지만 브랜치 미머지 → 경고 0", () => {
+  const warns = detectStaleStatus(makeTask({ ...VALID_FM, Status: "todo" }), merged, {
+    branchOf: () => "feat/rn-not-merged",
+  });
+  assert.deepEqual(warns, []);
+});
+
+test("detectStaleStatus: 브랜치 추출 실패(null) → 경고 0", () => {
+  const warns = detectStaleStatus(makeTask({ ...VALID_FM, Status: "todo" }), merged, {
+    branchOf: () => null,
+  });
+  assert.deepEqual(warns, []);
+});
+
+test("extractWorkPackageBranch: 본문 첫 백틱 feat/<slug> 추출", () => {
+  const branch = extractWorkPackageBranch({
+    content: "> WP1 (`feat/rn-verify-data`). 게이트 무관 — `feat/other` 는 뒤.",
+  });
+  assert.equal(branch, "feat/rn-verify-data");
+});
+
+test("extractWorkPackageBranch: 본문에 브랜치 없으면 null", () => {
+  assert.equal(extractWorkPackageBranch({ content: "브랜치 언급 없음" }), null);
 });
 
 // ─────────────── 통합 스모크 (실제 repo) ───────────────
