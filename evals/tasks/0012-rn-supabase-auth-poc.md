@@ -2,14 +2,13 @@
 Task: EVAL-0012
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: EVAL-0011(Expo boot) complete + ADR — RN Kakao native auth(04 A6, 04 §9) accepted.
-Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/adr/0033-rn-target-architecture.md
+Status: todo
+Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/adr/0033-rn-target-architecture.md, docs/adr/0034-rn-kakao-native-auth.md
 ---
 
 # EVAL-0012: G3 Supabase RN auth PoC — Kakao/magic link + session restore + logout
 
-> 00 §8 G3. Kakao native auth ADR 부재로 blocked. ADR 없이 SDK·Supabase provider 임의 확정 금지.
+> 00 §8 G3. 차단 해제(2026-06-10): EVAL-0011 done + [ADR-0034](../../docs/adr/0034-rn-kakao-native-auth.md) accepted — 네이티브 Kakao SDK + `signInWithIdToken` + SecureStore 세션 결정 박제.
 
 ## Parent Links
 

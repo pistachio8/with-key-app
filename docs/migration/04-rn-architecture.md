@@ -52,7 +52,7 @@
 | A3  | task 실행기     | pnpm `-r`(Turborepo 연기)                                              | 확정                                                 | §1    |
 | A4  | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON                         | 확정                                                 | §2    |
 | A5  | 네비게이션 셸   | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필]              | ⚠️ 확정(PO 승인)                                     | §3    |
-| A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | ADR                                                  | §4    |
+| A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | [ADR-0034](../adr/0034-rn-kakao-native-auth.md)      | §4    |
 | A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ⚠️ 확정(PO)                                          | §4    |
 | A8  | 쓰기/BFF        | Hybrid: RPC direct + apps/web Next API as BFF(Bearer)                  | 확정                                                 | §5    |
 | A9  | 푸시 테이블     | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지          | ADR                                                  | §7    |
@@ -287,14 +287,14 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 ### 작성할 ADR/spec
 
-| 산출물                                                                                                                            | 대상 결정                         | 트리거 경로                      |
-| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------- |
-| ADR — 모노레포 전면 restructure                                                                                                   | A1                                | `src/lib/supabase/**` 이동 → ADR |
-| [ADR-0034](../adr/0034-rn-kakao-native-auth.md) (draft) — RN Kakao 네이티브 인증 + SecureStore 세션 + invite client orchestration | A6                                | `src/lib/supabase/**` 인증 백본  |
-| ADR — `device_push_tokens` 신설                                                                                                   | A9                                | `supabase/migrations/**`         |
-| spec — server/client 상태 라이브러리(TanStack Query·Zustand)                                                                      | A8·§6                             | 아키텍처 결정                    |
-| spec — mobile 디자인 토큰                                                                                                         | A10                               | `apps/mobile/theme`              |
-| [ADR-0032](../adr/0032-settlement-verification-data-model.md) (draft) — `point_ledger`·`settlements`·immutability 예외            | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**`         |
+| 산출물                                                                                                                                          | 대상 결정                         | 트리거 경로                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------- |
+| ADR — 모노레포 전면 restructure                                                                                                                 | A1                                | `src/lib/supabase/**` 이동 → ADR |
+| [ADR-0034](../adr/0034-rn-kakao-native-auth.md) (accepted 2026-06-10) — RN Kakao 네이티브 인증 + SecureStore 세션 + invite client orchestration | A6                                | `src/lib/supabase/**` 인증 백본  |
+| ADR — `device_push_tokens` 신설                                                                                                                 | A9                                | `supabase/migrations/**`         |
+| spec — server/client 상태 라이브러리(TanStack Query·Zustand)                                                                                    | A8·§6                             | 아키텍처 결정                    |
+| spec — mobile 디자인 토큰                                                                                                                       | A10                               | `apps/mobile/theme`              |
+| [ADR-0032](../adr/0032-settlement-verification-data-model.md) (draft) — `point_ledger`·`settlements`·immutability 예외                          | [PRD §6.2·Q9](./01-rn-mvp-prd.md) | `supabase/migrations/**`         |
 
 ### 기존 문서 정합 (2026-06-04 반영 완료)
 
