@@ -3,6 +3,7 @@
 > **문서 상태**: Draft v0.1 · **작성자**: Ian (Product Owner) · **작성일**: 2026-04-24
 > **대상 독자**: FE / BE 개발자 (POC 참여자 전원)
 > **Pre-read**:
+>
 > - [IDEATION.md](./IDEATION.md) v0.8 — **왜** 만드는가
 > - [PRD.md](./PRD.md) v0.1 — **무엇을** 만드는가 (§8 데이터 모델 · §9 이벤트 필수)
 > - [QUALITY_GATE.md](./QUALITY_GATE.md) — 코딩 품질 · 검증 기준 · 금지 사항의 공통 원본
@@ -16,32 +17,32 @@
 
 이 문서는 아래 **기술 스택 가정** 하에 작성되었습니다. 킥오프에서 달라지면 **§0 체크리스트** 기준으로 본문을 수정합니다.
 
-| 영역 | 가정 | 대안 | 변경 시 수정 섹션 |
-|---|---|---|---|
-| 프레임워크 | **Next.js 16 (App Router) + TypeScript** | Remix / Vite+React | §2, §4, §5 |
-| DB & Auth | **Supabase (Postgres + Auth + Storage)** | Firebase / PlanetScale + NextAuth | §4, §6, §7 |
-| 스타일 | **Tailwind CSS v4** | CSS Modules / styled-components | §2, §9 |
-| 호스팅 | **Vercel** | Cloudflare Pages / Netlify | §8 |
-| AI | **OpenAI 4o-mini** | Anthropic / Google | §4, §6 |
-| 푸시 | **Web Push (VAPID)** + 옵션으로 알림톡 | OneSignal | §6 |
-| 모니터링 | **Vercel Analytics + Logs** | Sentry 무료 플랜 | §10 |
-| 패키지 매니저 | **pnpm** | npm / yarn | §3 |
-| Node 버전 | **20 LTS** | - | §3 |
+| 영역          | 가정                                     | 대안                              | 변경 시 수정 섹션 |
+| ------------- | ---------------------------------------- | --------------------------------- | ----------------- |
+| 프레임워크    | **Next.js 16 (App Router) + TypeScript** | Remix / Vite+React                | §2, §4, §5        |
+| DB & Auth     | **Supabase (Postgres + Auth + Storage)** | Firebase / PlanetScale + NextAuth | §4, §6, §7        |
+| 스타일        | **Tailwind CSS v4**                      | CSS Modules / styled-components   | §2, §9            |
+| 호스팅        | **Vercel**                               | Cloudflare Pages / Netlify        | §8                |
+| AI            | **OpenAI 4o-mini**                       | Anthropic / Google                | §4, §6            |
+| 푸시          | **Web Push (VAPID)** + 옵션으로 알림톡   | OneSignal                         | §6                |
+| 모니터링      | **Vercel Analytics + Logs**              | Sentry 무료 플랜                  | §10               |
+| 패키지 매니저 | **pnpm**                                 | npm / yarn                        | §3                |
+| Node 버전     | **20 LTS**                               | -                                 | §3                |
 
 ---
 
 ## 1. 프로젝트 한 눈에 보기
 
-| 항목 | 값 |
-|---|---|
-| 프로젝트 | [Codename: with-key] (윗키) — 그룹 운동 서약서 앱 |
-| 기간 | POC 2주 |
-| 배포 대상 | 모바일 웹 (PWA) |
-| 팀 규모 | FE/BE 2 (쟁·뜌 겸임) · 디자이너 1 (뜌) · PO 1 (쟁) · 법무 1 (샤쌤) · 리서치 1 (순진) |
-| 저장소 | `github.com/<org>/with-key` — **킥오프 후 확정 (URL 미정)** |
-| 코드 리뷰 | PR 1명 이상 approve 필요. PO는 리뷰 옵션. |
-| 기본 브랜치 | `main` (보호됨) |
-| 스프린트 단위 | 1주 |
+| 항목          | 값                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------ |
+| 프로젝트      | [Codename: with-key] (윗키) — 그룹 운동 서약서 앱                                    |
+| 기간          | POC 2주                                                                              |
+| 배포 대상     | 모바일 웹 (PWA)                                                                      |
+| 팀 규모       | FE/BE 2 (쟁·뜌 겸임) · 디자이너 1 (뜌) · PO 1 (쟁) · 법무 1 (샤쌤) · 리서치 1 (순진) |
+| 저장소        | `github.com/<org>/with-key` — **킥오프 후 확정 (URL 미정)**                          |
+| 코드 리뷰     | PR 1명 이상 approve 필요. PO는 리뷰 옵션.                                            |
+| 기본 브랜치   | `main` (보호됨)                                                                      |
+| 스프린트 단위 | 1주                                                                                  |
 
 ---
 
@@ -206,16 +207,16 @@ pnpm dev
 
 ### 4.2 자주 쓰는 명령
 
-| 명령 | 용도 |
-|---|---|
-| `pnpm dev` | 개발 서버 |
-| `pnpm build && pnpm start` | 프로덕션 빌드 로컬 확인 |
-| `pnpm lint` | ESLint |
-| `pnpm typecheck` | TSC no-emit |
-| `pnpm test` | Vitest (있다면) |
-| `pnpm supabase db reset` | DB 초기화 + 마이그레이션 + 시드 |
-| `pnpm supabase migration new <name>` | 새 마이그레이션 파일 |
-| `pnpm supabase db diff` | 로컬 DB 변경사항 SQL 추출 |
+| 명령                                 | 용도                            |
+| ------------------------------------ | ------------------------------- |
+| `pnpm dev`                           | 개발 서버                       |
+| `pnpm build && pnpm start`           | 프로덕션 빌드 로컬 확인         |
+| `pnpm lint`                          | ESLint                          |
+| `pnpm typecheck`                     | TSC no-emit                     |
+| `pnpm test`                          | Vitest (있다면)                 |
+| `pnpm supabase db reset`             | DB 초기화 + 마이그레이션 + 시드 |
+| `pnpm supabase migration new <name>` | 새 마이그레이션 파일            |
+| `pnpm supabase db diff`              | 로컬 DB 변경사항 SQL 추출       |
 
 ### 4.3 DB 마이그레이션 원칙
 
@@ -244,13 +245,13 @@ pnpm dev
 
 ### 5.2 "그 로직, 어디에?"
 
-| 로직 | 위치 |
-|---|---|
-| UI 상태, 인터랙션 | Client Component (`use*`) |
-| 인증 필요한 데이터 조회 | Server Component (기본) |
-| 쓰기 / 부수효과 | **Route Handler** 또는 **Server Action** (둘 중 1개로 통일 — PO 추천: **Server Action**) |
-| 외부 API 호출 (OpenAI 등) | 서버 전용 (`lib/ai/`) — 클라이언트 노출 절대 금지 |
-| 권한 체크 | Supabase **RLS 우선** + Server 레이어 2차 방어 |
+| 로직                      | 위치                                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| UI 상태, 인터랙션         | Client Component (`use*`)                                                                |
+| 인증 필요한 데이터 조회   | Server Component (기본)                                                                  |
+| 쓰기 / 부수효과           | **Route Handler** 또는 **Server Action** (둘 중 1개로 통일 — PO 추천: **Server Action**) |
+| 외부 API 호출 (OpenAI 등) | 서버 전용 (`lib/ai/`) — 클라이언트 노출 절대 금지                                        |
+| 권한 체크                 | Supabase **RLS 우선** + Server 레이어 2차 방어                                           |
 
 ### 5.3 데이터 페칭 규칙
 
@@ -303,9 +304,9 @@ pnpm dev
 - **입력 구조 (PRD §5.2, §5.6)**
   ```ts
   type DiaryPromptInput = {
-    activityType: 'running' | 'gym' | 'yoga' | 'other';
-    keywords: string[];   // 1~3, 필수
-    memo?: string;        // 선택 (escape hatch)
+    activityType: "running" | "gym" | "yoga" | "other";
+    keywords: string[]; // 1~3, 필수
+    memo?: string; // 선택 (escape hatch)
     photoCaption?: string; // 선택
   };
   ```
@@ -416,7 +417,7 @@ chore/<desc>
 ```
 
 - **PR 베이스는 `develop`**. 모든 feat/fix/chore PR이 `develop` 으로 머지된다.
-- `develop` 직접 커밋은 트리비얼 docs/chore(오타 · 룰 인덱스 · 의존 버전 bump)에 한정. 그 외는 새 브랜치 + PR 필수.
+- `develop` 직접 커밋·푸시는 **불가** — 트리비얼 docs/chore 포함 모든 변경은 새 브랜치 + PR 필수. **왜**: GitHub 보호 브랜치 규칙이 직접 push 를 거부하며(2026-06-10 실측), CI 게이트(8.4)를 우회하는 경로를 남기지 않는다.
 - `main` 은 v1 컷오버 시 Production이 될 장기 안정 브랜치 — POC 기간 정기 머지 없음 (필요 시 release PR).
 - 브랜치 수명: **최대 2일**. 길어지면 분할.
 - PR은 **작게 자주**. 300줄 초과 시 분할 요청 가능.
@@ -437,21 +438,26 @@ docs: ONBOARDING에 env 변수 추가
 
 ```md
 ## 무엇을 바꿨나
+
 - (요약)
 
 ## 왜
+
 - IDEATION/PRD/Issue 링크
 
 ## 어떻게 테스트했나
+
 - [ ] 로컬에서 확인
 - [ ] AC(PRD §X.Y) 만족
 
 ## 영향 범위
+
 - [ ] DB 마이그레이션 있음 → rollback 계획 기재
 - [ ] 환경변수 추가 → `.env.example` 업데이트
 - [ ] 새 이벤트 추적 → PRD §9 업데이트
 
 ## 스크린샷 / 영상
+
 (모바일 스크린샷 필수)
 ```
 
@@ -479,7 +485,7 @@ feat/* → PR → review + CI green → squash merge → develop
 - POC 기간 `develop` 머지 = 테스트/dogfood 환경 갱신. Production 배포는 v1 컷오버 시점에 `main` 으로 승격.
 - Production 컷오버 절차는 [`DEPLOY.md`](./DEPLOY.md) "Production 컷오버 체크리스트" 참조.
 
-*Supabase migration은 수동 apply (CI에서 자동화는 POC 이후).
+\*Supabase migration은 수동 apply (CI에서 자동화는 POC 이후).
 
 ### 8.6 롤백
 
@@ -523,12 +529,12 @@ feat/* → PR → review + CI green → squash merge → develop
 
 ### 10.1 로깅 레벨
 
-| 레벨 | 용도 | 예 |
-|---|---|---|
-| `error` | 처리 실패, 재시도 불가 | AI API 타임아웃 |
-| `warn` | 비정상이나 폴백 동작 | AI 폴백 적용, quiet hour 큐잉 |
-| `info` | 주요 도메인 이벤트 | challenge_activated |
-| `debug` | 개발 중 (프로덕션 꺼짐) | - |
+| 레벨    | 용도                    | 예                            |
+| ------- | ----------------------- | ----------------------------- |
+| `error` | 처리 실패, 재시도 불가  | AI API 타임아웃               |
+| `warn`  | 비정상이나 폴백 동작    | AI 폴백 적용, quiet hour 큐잉 |
+| `info`  | 주요 도메인 이벤트      | challenge_activated           |
+| `debug` | 개발 중 (프로덕션 꺼짐) | -                             |
 
 - `console.log` **금지**. `lib/logger.ts` 사용 (환경별 포맷/레벨 분기 + 추후 Sentry breadcrumb 연동 여지).
 - 사용자 PII (이메일/이름) 로그 **포함 금지**. userId만.
@@ -559,12 +565,12 @@ feat/* → PR → review + CI green → squash merge → develop
 
 > POC는 **"사용자 인터뷰로 검증"** 이 주. 자동 테스트는 **핵심 리스크만**.
 
-| 레벨 | 대상 | 툴 | POC 범위 |
-|---|---|---|---|
-| **유닛** | `lib/ai/diary.ts` 폴백 · `lib/keywords/shuffle.ts` (비복원/재추첨 정확성) · `lib/validators/*` | Vitest | **권장** |
-| **통합** | Route Handler × DB | Vitest + Supabase local | 선택 |
-| **E2E** | 주요 flow | Playwright | **POC 제외** |
-| **수동 QA** | 모든 화면 × 상태 | 체크리스트 (PRD §7 상태변이) | **필수** |
+| 레벨        | 대상                                                                                           | 툴                           | POC 범위     |
+| ----------- | ---------------------------------------------------------------------------------------------- | ---------------------------- | ------------ |
+| **유닛**    | `lib/ai/diary.ts` 폴백 · `lib/keywords/shuffle.ts` (비복원/재추첨 정확성) · `lib/validators/*` | Vitest                       | **권장**     |
+| **통합**    | Route Handler × DB                                                                             | Vitest + Supabase local      | 선택         |
+| **E2E**     | 주요 flow                                                                                      | Playwright                   | **POC 제외** |
+| **수동 QA** | 모든 화면 × 상태                                                                               | 체크리스트 (PRD §7 상태변이) | **필수**     |
 
 ### 11.1 수동 QA 체크리스트 (Day 10 Dogfooding 직전)
 
@@ -593,15 +599,15 @@ feat/* → PR → review + CI green → squash merge → develop
 
 ## 13. 흔한 문제 & 해결 (Troubleshooting)
 
-| 증상 | 원인 | 해결 |
-|---|---|---|
-| `pnpm dev` 에서 Supabase 연결 실패 | `supabase start` 미실행 or Docker 꺼짐 | Docker 실행 → `pnpm supabase start` |
-| 로그인 후 쿠키 안 잡힘 | `middleware.ts` 누락/오류 | 세션 리프레시 미들웨어 확인 |
-| RSC에서 `supabase` 가 `undefined` | client용을 서버에서 import | `lib/supabase/server.ts` 로 교체 |
-| OpenAI 429 | 개인 키 rate limit | 조직 키로 교체 or 지수 백오프 |
-| PWA 아이콘 깨짐 | `manifest.json` 경로 오류 or 캐시 | Service Worker unregister → 새로고침 |
-| Vercel 빌드 OOM | Next.js 이미지 처리 | `next.config` `images.unoptimized` 점검 |
-| 푸시 권한은 허용인데 안 옴 | VAPID 키 불일치 / 구독 만료 | DB의 구독 삭제 → 재구독 유도 |
+| 증상                               | 원인                                   | 해결                                    |
+| ---------------------------------- | -------------------------------------- | --------------------------------------- |
+| `pnpm dev` 에서 Supabase 연결 실패 | `supabase start` 미실행 or Docker 꺼짐 | Docker 실행 → `pnpm supabase start`     |
+| 로그인 후 쿠키 안 잡힘             | `middleware.ts` 누락/오류              | 세션 리프레시 미들웨어 확인             |
+| RSC에서 `supabase` 가 `undefined`  | client용을 서버에서 import             | `lib/supabase/server.ts` 로 교체        |
+| OpenAI 429                         | 개인 키 rate limit                     | 조직 키로 교체 or 지수 백오프           |
+| PWA 아이콘 깨짐                    | `manifest.json` 경로 오류 or 캐시      | Service Worker unregister → 새로고침    |
+| Vercel 빌드 OOM                    | Next.js 이미지 처리                    | `next.config` `images.unoptimized` 점검 |
+| 푸시 권한은 허용인데 안 옴         | VAPID 키 불일치 / 구독 만료            | DB의 구독 삭제 → 재구독 유도            |
 
 ---
 
@@ -611,23 +617,23 @@ feat/* → PR → review + CI green → squash merge → develop
 
 ### Week 1
 
-| Day | FE/BE (쟁뜌) — 프론트 트랙 | FE/BE (쟁뜌) — 백엔드 트랙 | 디자인 (뜌) | PO (쟁) |
-|---|---|---|---|---|
-| 1 | 저장소 세팅 · 토큰 · 라우팅 | Supabase schema · RLS · Auth | 토큰 · 컴포넌트 12개 | 킥오프 후속 · PRD 최종화 |
-| 2 | 화면 1·2·3 뼈대 | 초대 링크 · 그룹 생성 API | 화면 1~3 high-fi | 테스트 그룹 커뮤니케이션 (순진 협업) |
-| 3 | 화면 4·5 뼈대 | 인증 API · 사진 업로드 | 화면 4~6 high-fi | 이벤트 스키마 검토 |
-| 4 | 화면 6 피드 · Kudos | AI 일기 (키워드 프롬프트) · 키워드 활용 폴백 · 키워드 풀 하드코딩 | 상태 변이 · 키워드 칩 컴포넌트 | 리스크 점검 · 키워드 풀 v1 확정 |
-| 5 | 알림 구독 · Quiet Hours | 푸시 발송 엔진 | 화면 7~9 high-fi | 내부 시연 |
+| Day | FE/BE (쟁뜌) — 프론트 트랙  | FE/BE (쟁뜌) — 백엔드 트랙                                        | 디자인 (뜌)                    | PO (쟁)                              |
+| --- | --------------------------- | ----------------------------------------------------------------- | ------------------------------ | ------------------------------------ |
+| 1   | 저장소 세팅 · 토큰 · 라우팅 | Supabase schema · RLS · Auth                                      | 토큰 · 컴포넌트 12개           | 킥오프 후속 · PRD 최종화             |
+| 2   | 화면 1·2·3 뼈대             | 초대 링크 · 그룹 생성 API                                         | 화면 1~3 high-fi               | 테스트 그룹 커뮤니케이션 (순진 협업) |
+| 3   | 화면 4·5 뼈대               | 인증 API · 사진 업로드                                            | 화면 4~6 high-fi               | 이벤트 스키마 검토                   |
+| 4   | 화면 6 피드 · Kudos         | AI 일기 (키워드 프롬프트) · 키워드 활용 폴백 · 키워드 풀 하드코딩 | 상태 변이 · 키워드 칩 컴포넌트 | 리스크 점검 · 키워드 풀 v1 확정      |
+| 5   | 알림 구독 · Quiet Hours     | 푸시 발송 엔진                                                    | 화면 7~9 high-fi               | 내부 시연                            |
 
 ### Week 2
 
-| Day | 모두 |
-|---|---|
-| 6 | Week 1 빚 갚기 + 내부 dogfood 시작 |
-| 7 | 테스트 그룹 온보딩 세션 · 알림 플로우 실전 검증 |
-| 8 | 버그 수정 · UX 핫픽스 |
-| 9 | 데이터 확인 · 이벤트 분석 |
-| 10 | 사용자 인터뷰 · 회고 · Week 3 결정 (GO/NO-GO) |
+| Day | 모두                                            |
+| --- | ----------------------------------------------- |
+| 6   | Week 1 빚 갚기 + 내부 dogfood 시작              |
+| 7   | 테스트 그룹 온보딩 세션 · 알림 플로우 실전 검증 |
+| 8   | 버그 수정 · UX 핫픽스                           |
+| 9   | 데이터 확인 · 이벤트 분석                       |
+| 10  | 사용자 인터뷰 · 회고 · Week 3 결정 (GO/NO-GO)   |
 
 ---
 
