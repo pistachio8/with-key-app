@@ -2,7 +2,7 @@
 Task: EVAL-0022
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: EVAL-0020(컬럼)·EVAL-0021(신호 골격) 구현 — intra-feature 순서(게이트 아님, EVAL-0006 선례). G1-θ는 잠정확정·주입됨(2026-06-05, 실측 PoC open).
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
