@@ -25,6 +25,12 @@ ECC(everything-claude-code) 플러그인의 범용 reviewer를 대체하는, wit
 | frontend-reviewer  | `apps/web/src/app/**` · `src/components/ui/**` · `src/lib/db/reads/**`                                                                   | route colocation, Server Action 경계, RSC/client, Cache Components(`"use cache: private"`+`cacheTag`), zod SoT       |
 | backend-reviewer   | `**/_actions.ts` · `apps/web/src/lib/{ai,push,analytics,supabase}/**` · `packages/domain/src/{validators,keywords}/**` · `middleware.ts` | Server Action 계약, analytics parity(PRD §9.1), AI 일기 4.5s/fallback, keyword freeze, env/시크릿, service-role/RLS  |
 
+### with-key 운영 에이전트 (`.claude/agents/`)
+
+| 에이전트         | 역할 / 범위                                                                                                              | 하드 제약                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| harness-engineer | spec/plan → WP 분해 → `evals/tasks/NNNN-*.md` Agent Task 생성·Status 갱신, `pnpm harness:check` PASS 까지 자체 루프 | 컨벤션 비복사(매 실행 `.agents/workflows/*` fresh 읽기) · `.agents/**` 수정 금지 · PRD/AC 신설 금지 · evals append-only · 푸시 금지 |
+
 > **로드 시점**: `.claude/agents/`는 Claude Code 시작 시 한 번 로드된다. 방금 추가한 에이전트는 **재시작 후**에야 `subagent_type` 이름으로 호출된다. 재시작 전에는 같은 지침을 `general-purpose`에 인라인해 동등하게 돌릴 수 있다. **왜**: 세션 레지스트리는 시작 시점 스냅샷이라 핫리로드되지 않는다.
 > **추적**: `.claude/agents/`는 `.gitignore` 대상(로컬 전용). 팀·CI 공유가 필요하면 `.gitignore`에 `!/.claude/agents/` 화이트리스트를 추가해 커밋한다. **왜**: 추적 제외 상태에서는 같은 디렉토리를 가진 사용자만 이름 호출이 가능하다.
 
