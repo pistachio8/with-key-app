@@ -20,7 +20,24 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 
 ## Goal
 
-건의 제출의 서버 경로가 닫힌다. 완료 시 ① `feedback-photos` 업로드·signed URL(TTL 72h)·삭제 헬퍼(2-segment path, traversal 거부) ② Slack #qa webhook 알림(`AbortController` 2.5s 타임아웃, env 미설정 시 silent skip, **never-throw**) ③ `submitFeedback` Server Action(`withUser` + `ActionResult` 계약: zod 검증 → id 선생성 → 사진 업로드 선행(실패 시 비파괴 폴백) → insert(실패 시 orphan object best-effort remove) → `after()` Slack)이 단위 테스트와 함께 존재한다. UI는 없다(EVAL-0029).
+건의 제출의 서버 경로가 닫힌다. 세 하위 목표로 구성된다(plan Task 4·5·6 대응):
+
+**G1 — storage 헬퍼 (plan Task 4)**
+`feedback-photos` 업로드·signed URL(TTL 72h)·삭제 헬퍼(2-segment path, traversal 거부)가 단위 테스트와 함께 존재한다.
+
+- done 기준: `cd apps/web && pnpm vitest run --project unit src/lib/storage/feedback-photos.spec.ts` 6개 green + path 정규식·traversal throw·TTL 72h 커버.
+
+**G2 — Slack notify (plan Task 5)**
+Slack #qa webhook 알림(`AbortController` 2.5s 타임아웃, env 미설정 시 silent skip, **never-throw**)이 단위 테스트와 함께 존재한다.
+
+- done 기준: `cd apps/web && pnpm vitest run --project unit src/lib/slack/notify.spec.ts` 5개 green + `SLACK_FEEDBACK_WEBHOOK_URL`에 `NEXT_PUBLIC_` 접두 없음 grep 확인.
+
+**G3 — submitFeedback Server Action (plan Task 6)**
+`submitFeedback` Server Action(`withUser` + `ActionResult` 계약: zod 검증 → id 선생성 → 사진 업로드 선행(실패 시 비파괴 폴백) → insert(실패 시 orphan object best-effort remove) → `after()` Slack)이 단위 테스트와 함께 존재한다.
+
+- done 기준: `cd apps/web && pnpm vitest run --project unit "src/app/(app)/me/feedback/_actions.spec.ts"` 6개 green + `submitFeedback`이 `withUser` 경유 확인.
+
+UI는 없다(EVAL-0029). EVAL-0027 산출물(`feedbackSchema`·migration 0047)이 develop에 머지돼 있어야 착수 가능.
 
 ## Source Files to Inspect
 
@@ -58,14 +75,14 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 
 ## Acceptance Criteria
 
-| 기준                                                                  | 검증 방법                                                                              |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| storage 헬퍼 테스트 6개 green (2-segment path·traversal 거부·TTL 72h) | `cd apps/web && pnpm vitest run --project unit src/lib/storage/feedback-photos.spec.ts` |
-| Slack notify 테스트 5개 green (env skip·POST·never-throw)             | `cd apps/web && pnpm vitest run --project unit src/lib/slack/notify.spec.ts`            |
+| 기준                                                                                    | 검증 방법                                                                                    |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| storage 헬퍼 테스트 6개 green (2-segment path·traversal 거부·TTL 72h)                   | `cd apps/web && pnpm vitest run --project unit src/lib/storage/feedback-photos.spec.ts`      |
+| Slack notify 테스트 5개 green (env skip·POST·never-throw)                               | `cd apps/web && pnpm vitest run --project unit src/lib/slack/notify.spec.ts`                 |
 | submitFeedback 테스트 6개 green (성공·invalid_input·폴백·orphan 정리·Slack 실패 무영향) | `cd apps/web && pnpm vitest run --project unit "src/app/(app)/me/feedback/_actions.spec.ts"` |
-| 쓰기 경로 Server Action 일원화                                        | `submitFeedback`이 `_actions.ts` + `withUser` 경유 코드 대조                            |
-| 서버 전용 env — 클라이언트 번들 미포함                                | `SLACK_FEEDBACK_WEBHOOK_URL`에 `NEXT_PUBLIC_` 접두 없음 grep 확인                       |
-| harness traceability                                                  | `pnpm harness:check` 통과                                                                |
+| 쓰기 경로 Server Action 일원화                                                          | `submitFeedback`이 `_actions.ts` + `withUser` 경유 코드 대조                                 |
+| 서버 전용 env — 클라이언트 번들 미포함                                                  | `SLACK_FEEDBACK_WEBHOOK_URL`에 `NEXT_PUBLIC_` 접두 없음 grep 확인                            |
+| harness traceability                                                                    | `pnpm harness:check` 통과                                                                    |
 
 ## Verification Commands
 
@@ -94,5 +111,13 @@ pnpm harness:check
 
 ## Stop Condition
 
-- 모든 Acceptance Criteria green + Verification 통과 + Harness Impact Questions 답변 완료.
-- pass@3 안에 green 못 만들면 → storage 헬퍼 / Slack notify / Server Action으로 split(05 §9.4).
+**정상 종료(done)**: G1·G2·G3 모두 done 기준 충족 + Verification Commands 전부 green + Harness Impact Questions 답변 완료.
+
+**중단·에스컬레이션**:
+
+- EVAL-0027 산출물(`feedbackSchema` export·migration 0047)이 develop에 없으면 → 착수 불가, 즉시 중단·보고(Depends-on 의존 미충족).
+- spec §C4 Action 순서(`id 선생성 → 업로드 선행 → insert → after() Slack`)와 기존 `withUser`/`ActionResult` 계약이 충돌하면 → 구현 강행 금지, 중단·보고.
+- `apps/web/src/lib/storage/action-photos.ts`의 `extFromFile` 함수 시그니처가 Task 4 코드와 불일치하면 → 재사용 방식 재검토 후 중단·보고(임의 복제 금지).
+- `SLACK_FEEDBACK_WEBHOOK_URL`에 `NEXT_PUBLIC_` 접두가 붙는 경우 → 즉시 중단, 보안 위반으로 보고.
+
+**split 기준(05 §9.4)**: pass@3 미달 시 G1(storage 헬퍼) / G2(Slack notify) / G3(Server Action) 단위로 분할.
