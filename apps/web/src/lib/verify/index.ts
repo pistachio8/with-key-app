@@ -23,3 +23,14 @@ export {
   type VerifySignals,
 } from "./signals";
 export { recordVerifySignals } from "./record";
+export {
+  precheckPhotoFile,
+  judgePhotoPrecheck,
+  computeLaplacianVariance,
+  PHOTO_PRECHECK_MODEL_VERSION,
+  BLUR_LAPLACIAN_VARIANCE_THRESHOLD,
+  type PhotoPrecheckReason,
+  type PhotoPrecheckResult,
+  type PhotoPrecheckInput,
+  type BlurSignal,
+} from "./precheck";
