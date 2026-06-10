@@ -37,7 +37,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 1. **Fact 요약** — 사용자 요청, 진행 중인 계획, 저장소 파일, 이전 커밋에서 이미 알려진 사실. 사실과 가정을 분리해서 기술
 2. **작업 범위** — 변경될 가능성이 높은 정확한 경로
-3. **브랜치** — `develop`/`main` 위에서 사소하지 않은 변경(feat/fix/refactor)을 시작하려면 **먼저 `feat/<scope>-<desc>` · `fix/<scope>-<desc>` · `chore/<desc>` 브랜치를 끊는다**. PR 베이스는 `develop`. `develop` 직접 커밋은 트리비얼 docs/chore(오타 · 룰 인덱스 · 의존 버전 bump)에 한함. 정책 전문은 [`docs/ONBOARDING.md §8`](docs/ONBOARDING.md)
+3. **브랜치** — 모든 변경(트리비얼 docs/chore 포함)은 **먼저 `feat/<scope>-<desc>` · `fix/<scope>-<desc>` · `chore/<desc>` 브랜치를 끊는다**. PR 베이스는 `develop`. `develop` 직접 커밋·푸시는 불가 — 보호 브랜치 규칙이 직접 push 를 거부한다. 정책 전문은 [`docs/ONBOARDING.md §8`](docs/ONBOARDING.md)
 4. **데이터/RLS 영향** — Supabase 테이블, RLS 정책, 마이그레이션, 또는 "없음"
 5. **검증 계획** — 작업이 완료되었음을 증명할 커맨드/테스트
 
