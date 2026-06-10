@@ -1,4 +1,4 @@
-// 결정론 사진 검증 신호(phash·EXIF·스크린샷). status 판정은 없다(θ 의존, EVAL-0022).
+// 결정론 사진 검증 신호(phash·EXIF·스크린샷) + θ 임계 status 판정(EVAL-0022).
 export {
   computePhash,
   dctPhash,
@@ -23,6 +23,18 @@ export {
   type VerifySignals,
 } from "./signals";
 export { recordVerifySignals } from "./record";
+export { loadVerifyConfig, type VerifyConfig } from "./config";
+export {
+  judgeVerifyStatus,
+  countsTowardDone,
+  classifyPhashMatches,
+  judgeAndRecordVerifyStatus,
+  JUDGE_MODEL_VERSION,
+  type AutoVerifyStatus,
+  type AutoVerifyDbStatus,
+  type ScopedPhashMatches,
+  type JudgeDecision,
+} from "./judge";
 export {
   precheckPhotoFile,
   judgePhotoPrecheck,

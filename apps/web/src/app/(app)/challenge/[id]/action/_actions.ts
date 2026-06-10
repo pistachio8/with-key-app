@@ -18,7 +18,7 @@ import { success, failure, validationFailure, type ActionResult } from "@/lib/ac
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
-import { recordVerifySignals } from "@/lib/verify";
+import { judgeAndRecordVerifyStatus, recordVerifySignals } from "@/lib/verify";
 import { dispatchActionCompletedNotification } from "@/lib/push/dispatch";
 
 type SubmitResult = {
@@ -82,7 +82,9 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
     // Ownership/active 이중 방어: RLS 가 최종 차단하지만 UX 메시지 분기 위해 선제 체크.
     const { data: membership, error: mErr } = await supabase
       .from("challenge_participants")
-      .select("user_id, challenges!inner(status, start_at, end_at, duration_days, goal_count)")
+      .select(
+        "user_id, challenges!inner(status, start_at, end_at, duration_days, goal_count, group_id)",
+      )
       .eq("challenge_id", parsed.input.challengeId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -219,20 +221,28 @@ export const submitActionLog = withUser<FormData, SubmitResult>(
         } else {
           photoAttached = true;
           photoSize = parsed.file.size;
-          // EVAL-0021: 결정론 검증 신호(phash·EXIF·스크린샷)를 EVAL-0020 컬럼에 기록한다.
-          // status 판정은 하지 않는다(θ 의존 → EVAL-0022). 비파괴 — 실패해도 제출은 성공으로 유지하고
-          // after() 로 응답 latency 와 분리한다. phash 는 저장된(리사이즈) 이미지 기준이라 결정론적이다.
+          // EVAL-0021 신호 기록 → EVAL-0022 θ 판정(status·model_version write) 파이프라인.
+          // 비파괴 — 실패해도 제출은 성공으로 유지하고 after() 로 응답 latency 와 분리한다.
+          // 신호 계산 실패(signals=null)는 판정기가 manual_review 로 graceful 처리한다.
           const photoBuffer = Buffer.from(await parsed.file.arrayBuffer());
-          after(() =>
-            recordVerifySignals({
-              actionLogId: data.id,
-              userId: user.id,
-              photo: photoBuffer,
-              submittedAt: new Date(now),
-            }).catch((e) => {
-              console.error("[submitActionLog] recordVerifySignals failed", e);
-            }),
-          );
+          after(async () => {
+            try {
+              const signals = await recordVerifySignals({
+                actionLogId: data.id,
+                userId: user.id,
+                photo: photoBuffer,
+                submittedAt: new Date(now),
+              });
+              await judgeAndRecordVerifyStatus({
+                actionLogId: data.id,
+                userId: user.id,
+                groupId: ch.group_id,
+                signals,
+              });
+            } catch (e) {
+              console.error("[submitActionLog] auto verification failed", e);
+            }
+          });
         }
       } else {
         console.warn("[submitActionLog] uploadPhoto failed", {
