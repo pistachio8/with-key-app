@@ -20,7 +20,24 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 
 ## Goal
 
-사용자가 실제로 건의를 보낼 수 있게 되고 WP가 닫힌다. 완료 시 ① `/me/feedback` 페이지(RSC `requireUser` 게이트)와 클라이언트 폼(카테고리 Select·본문 Textarea 글자 카운터·사진 첨부 `prepareForUpload` 전처리/미리보기/제거·제출 중 비활성·인라인 성공 상태)이 EVAL-0028의 `submitFeedback`을 호출하고 ② `/me`에 진입 행이 추가되며 ③ 전체 게이트(typecheck·lint·test·validate:docs·build) + 모바일 viewport 수동 시나리오 + RLS 실측(anon/타인 INSERT 거부·authenticated SELECT 0 rows)이 spec §Verification 대로 통과한다.
+사용자가 실제로 건의를 보낼 수 있게 되고 WP가 닫힌다. 세 하위 목표로 구성된다(plan Task 7·8·9 대응):
+
+**G1 — /me/feedback 페이지 + 폼 (plan Task 7)**
+`/me/feedback` 페이지(RSC `requireUser` 게이트)와 클라이언트 폼(카테고리 Select·본문 Textarea 글자 카운터·사진 첨부 `prepareForUpload` 전처리/미리보기/제거·제출 중 비활성·인라인 성공 상태)이 EVAL-0028의 `submitFeedback`을 호출한다.
+
+- done 기준: `pnpm typecheck && pnpm lint` PASS + `pnpm build`에서 `/me/feedback` route 출력 확인.
+
+**G2 — /me 진입 행 추가 (plan Task 8)**
+`/me`에 건의하기 진입 행(`<FeedbackLink />`)이 `<LegalLinks />` 바로 위에 추가된다.
+
+- done 기준: 모바일 viewport 수동 확인 — `/me` 진입 행 → `/me/feedback` 이동 성공.
+
+**G3 — WP 종결 검증 (plan Task 9)**
+전체 게이트(typecheck·lint·test·validate:docs·build) + 모바일 viewport 수동 시나리오 + RLS 실측(anon/타인 INSERT 거부·authenticated SELECT 0 rows)이 spec §Verification 대로 통과한다.
+
+- done 기준: 모든 게이트 green(수동 항목은 실측 결과 보고) + `pnpm harness:check` 통과.
+
+EVAL-0028의 `submitFeedback` 계약이 확정돼 있어야 착수 가능.
 
 ## Source Files to Inspect
 
@@ -57,15 +74,15 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 
 ## Acceptance Criteria
 
-| 기준                                                                | 검증 방법                                                                     |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `/me` 진입 행 → `/me/feedback` 이동                                 | 모바일 viewport 수동 (spec §Verification)                                      |
-| 폼 동작 — 빈 본문 비활성·카운터·사진 미리보기/제거·제출 중 비활성·성공 상태 | 모바일 viewport 수동 시나리오 전체 통과                                  |
-| 제출 → feedback row 생성 (사진 시 `photo_path` + Storage 객체)      | Supabase Studio 실측                                                            |
-| 전체 게이트 green                                                   | `pnpm typecheck && pnpm lint && pnpm test && pnpm validate:docs` 전부 PASS     |
-| 빌드 + 신규 route                                                   | `pnpm build` 성공, `/me/feedback` route 출력 확인                              |
-| RLS 실측 — anon INSERT 거부·타인 user_id INSERT 거부·SELECT 0 rows  | SQL Editor 역할별 실측 (spec §Verification)                                    |
-| harness traceability                                                | `pnpm harness:check` 통과                                                       |
+| 기준                                                                        | 검증 방법                                                                  |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `/me` 진입 행 → `/me/feedback` 이동                                         | 모바일 viewport 수동 (spec §Verification)                                  |
+| 폼 동작 — 빈 본문 비활성·카운터·사진 미리보기/제거·제출 중 비활성·성공 상태 | 모바일 viewport 수동 시나리오 전체 통과                                    |
+| 제출 → feedback row 생성 (사진 시 `photo_path` + Storage 객체)              | Supabase Studio 실측                                                       |
+| 전체 게이트 green                                                           | `pnpm typecheck && pnpm lint && pnpm test && pnpm validate:docs` 전부 PASS |
+| 빌드 + 신규 route                                                           | `pnpm build` 성공, `/me/feedback` route 출력 확인                          |
+| RLS 실측 — anon INSERT 거부·타인 user_id INSERT 거부·SELECT 0 rows          | SQL Editor 역할별 실측 (spec §Verification)                                |
+| harness traceability                                                        | `pnpm harness:check` 통과                                                  |
 
 ## Verification Commands
 
@@ -97,5 +114,13 @@ pnpm harness:check
 
 ## Stop Condition
 
-- 모든 Acceptance Criteria green(수동 항목은 실측 보고) + Verification 통과 + Harness Impact Questions 답변 완료.
-- pass@3 안에 green 못 만들면 → 폼 UI / 진입점 / 종결 검증으로 split(05 §9.4).
+**정상 종료(done)**: G1·G2·G3 모두 done 기준 충족 + Verification Commands 전부 green(수동 항목은 실측 결과 보고) + Harness Impact Questions 답변 완료.
+
+**중단·에스컬레이션**:
+
+- `submitFeedback` 함수 시그니처·반환 타입이 EVAL-0028 명세(`withUser` + `ActionResult` 계약)와 다르면 → 폼 구현 중단, EVAL-0028 재확인 후 보고(임의 적응 금지).
+- RLS 실측(anon INSERT 거부·타인 user_id INSERT 거부·authenticated SELECT 0 rows) 실패 시 → UI 수정으로 우회하지 말고 즉시 중단·보고(EVAL-0027 migration 재확인 필요).
+- `pnpm build` 실패가 신규 파일(`feedback/page.tsx`·`feedback-form.tsx`·`feedback-link.tsx`) 외 기존 파일 영향이면 → 범위 초과, 중단·보고.
+- `requireUser` 게이트 누락(RSC 인증 없는 직접 접근 가능 상태)이면 → 보안 위반으로 즉시 중단·보고.
+
+**split 기준(05 §9.4)**: pass@3 미달 시 G1(폼 UI) / G2(진입점) / G3(종결 검증) 단위로 분할.
