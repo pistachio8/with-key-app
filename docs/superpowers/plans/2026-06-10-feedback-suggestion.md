@@ -10,6 +10,8 @@
 
 **테스트 실행 위치:** `packages/domain`은 `pnpm --filter @withkey/domain test`, `apps/web`은 `cd apps/web && pnpm vitest run --project unit <파일경로>` (전체는 루트 `pnpm test`).
 
+**RED 단계 에러 문구 주의:** "실패 확인" 단계의 Expected 문구 `Cannot find module ...`는 vitest(vite) 환경에서 `Failed to resolve import "./..."`로 출력될 수 있다. 모듈 부재로 실패한다는 사실이 검증 대상이며 문구는 환경에 따라 다를 수 있다.
+
 ---
 
 ### Task 1: 도메인 validator — `feedbackSchema`
@@ -980,7 +982,7 @@ import {
   MAX_PHOTO_BYTES,
   type FeedbackCategory,
 } from "@withkey/domain";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -989,6 +991,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { prepareForUpload } from "@/lib/image/prepare-upload";
 import { submitFeedback } from "../_actions";
 
@@ -1075,9 +1078,10 @@ export function FeedbackForm() {
         <CheckCircle2 className="text-primary size-10" aria-hidden="true" />
         <p className="t-h2">전달됐어요</p>
         <p className="t-body text-muted-foreground">소중한 의견 감사합니다. 꼼꼼히 읽어볼게요.</p>
-        <Button asChild variant="outline" className="mt-2">
-          <Link href="/me">마이페이지로 돌아가기</Link>
-        </Button>
+        {/* base-ui Button 은 asChild 미지원 — link-as-button 은 buttonVariants 패턴 (not-found.tsx 동형) */}
+        <Link href="/me" className={cn(buttonVariants({ variant: "outline" }), "mt-2")}>
+          마이페이지로 돌아가기
+        </Link>
       </div>
     );
   }
@@ -1273,7 +1277,11 @@ Expected: 빌드 성공, `/me/feedback` route 출력 확인
 - 카테고리+본문 제출 → 성공 상태("전달됐어요") → Supabase Studio에서 feedback row 확인
 - 사진 첨부(미리보기·제거 버튼) → 제출 → Storage `feedback-photos`에 객체 + row의 `photo_path` 확인
 - `.env.local`에 `SLACK_FEEDBACK_WEBHOOK_URL` 설정 시 #qa 메시지 도착 + 사진 링크 열람 확인 (미설정이면 제출만 확인하고 skip 사유 보고)
-- RLS 실측: SQL Editor에서 `set role anon; insert into feedback ...` 거부 확인, authenticated로 타인 user_id insert 거부 확인
+- RLS 실측: SQL Editor에서 `set role anon; insert into feedback ...` 거부 확인, authenticated로 타인 user_id insert 거부 확인, **authenticated로 `select * from feedback` 0 rows(SELECT 정책 부재) 확인**
+
+- [ ] **Step 3.5: Rollout 운영 단계 (머지 후, 종료 보고에 명시)**
+
+spec Rollout 2단계 — #qa 채널 Incoming Webhook 발급 후 Vercel Environment Variables에 `SLACK_FEEDBACK_WEBHOOK_URL` 설정. 코드 머지와 별개의 수동 운영 작업이므로 종료 보고의 "미해결/후속 액션"에 반드시 기재한다.
 
 - [ ] **Step 4: 최종 커밋 (수정분 있으면)**
 
@@ -1288,3 +1296,4 @@ git add -A && git commit -m "fix(feedback): 검증 중 발견 수정"
 - **Spec coverage**: C1→Task 2 · C2→Task 2,4 · C3→Task 1 · C4→Task 6 · C5→Task 5,6 · C6→Task 7,8 · env→Task 3 · ADR/BE_SCHEMA→Task 3 · Verification→Task 9. 갭 없음.
 - **타입 일관성**: `FeedbackCategory`/`FeedbackInput`(Task 1) ← Task 5,6,7에서 동일 명칭 사용. `uploadFeedbackPhoto` 시그니처(Task 4) ← Task 6 호출과 일치. `UploadFeedbackPhotoResult`의 `{ ok, path | reason }` ← Task 6 분기와 일치.
 - **주의점**: Task 7의 base-ui `Select` `items` prop은 실제 컴파일 시 제네릭 추론이 까다로울 수 있음 — Step 3에서 `account-input-sheet.tsx`(검증된 사용례)와 대조하라고 명시함.
+- **계획 리뷰(Fable 서브에이전트, 2026-06-10) 반영**: ① base-ui `Button`은 `asChild` 미지원 — 성공 상태의 link-as-button을 `Link` + `buttonVariants` 패턴(not-found.tsx 동형)으로 교체 ② Task 9에 authenticated SELECT 거부 실측 추가 ③ Rollout 운영 단계(Vercel env) Step 3.5 명시 ④ RED 단계 에러 문구 주의 메모. 리뷰가 정합 확인한 핵심: Task 6 auth mock 경로(`getAuthedUser` → `createClient().auth.getClaims()`) 유효, Task 2 SQL의 0012 전문 1:1 보존, 테스트 카운트(6/6/5/6) 전부 일치.
