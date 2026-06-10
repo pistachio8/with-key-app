@@ -1,7 +1,7 @@
 # ADR-0034: RN 인증 백본 — 네이티브 Kakao SDK + SecureStore 세션 + invite client orchestration
 
 **Date**: 2026-06-10
-**Status**: proposed <!-- accepted / superseded / deprecated -->
+**Status**: accepted <!-- accepted / superseded / deprecated -->
 **Deciders**: pistachio8 (PO)
 **관련**: [04-rn-architecture §4 A6·A7](../migration/04-rn-architecture.md) · [00-rn-conversion-plan §13.4 D-8](../migration/00-rn-conversion-plan.md) · [ADR-0007 token_hash flow](./0007-supabase-env-fail-fast.md) · [ADR-0008 Kakao OAuth 도입](./0008-kakao-oauth-introduction.md) · [ADR-0033 RN target architecture](./0033-rn-target-architecture.md)
 
