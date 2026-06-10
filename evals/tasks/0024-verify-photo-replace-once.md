@@ -2,7 +2,7 @@
 Task: EVAL-0024
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
