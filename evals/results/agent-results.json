@@ -81,6 +81,36 @@
         "evals/drift-reports/EVAL-0021-verify-signals.md"
       ],
       "gate": "WP2a 비게이트 슬라이스 — 결정론 신호 계산·기록만(즉시). status 판정(θ)은 EVAL-0022, production 부정탐지 활성은 G1-θ 실측 PoC 후."
+    },
+    {
+      "taskId": "EVAL-0022",
+      "date": "2026-06-10",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "oneShot": true,
+      "summary": "θ 임계 자동검증 판정 — EVAL-0021 신호 + 주입 θ → passed/failed/manual_review 매핑(judge.ts 순수 함수). 동일-user/group phash 재탕 d≤failMax → failed, 경계(failMax<d≤reviewMax) → manual_review, 전역 cross-user → 최대 manual_review(auto-failed 금지), EXIF·스크린샷은 advisory, 신호 계산 오류 → manual_review graceful, 기본 passed(친구 신뢰). θ는 config.ts 가 server env(VERIFY_PHASH_FAIL_MAX·VERIFY_PHASH_REVIEW_MAX·VERIFY_ENFORCE)를 zod 검증+기본값으로 주입(하드코딩·NEXT_PUBLIC_ 부재). status·model_version 은 judgeAndRecordVerifyStatus 가 service_role(adminClient)로 0045 컬럼 write(id+user_id AND 필터, 본문 미로깅). shadow: status 는 enforce 무관 would-be 기록, countsTowardDone 이 enforce=true 에서만 failed 를 doneCount 제외(manual_review·pending 인정, peer_rejected 는 enforce 무관 제외). submitActionLog after() 파이프라인에 신호 기록→판정 연결.",
+      "verification": {
+        "local": {
+          "pnpm vitest run src/lib/verify": "pass (judge 18 · config 5 포함 7 files 61 tests)",
+          "pnpm test": "pass (108 files 652 tests)",
+          "pnpm typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm lint": "pass",
+          "pnpm harness:check": "PASS — 0 violations",
+          "pnpm harness:context EVAL-0022": "PASS — no Tier 1 drift",
+          "pnpm harness:drift": "PASS"
+        },
+        "ci_only_deferred": "실DB service_role status UPDATE(0045 가드 통과)·실측 G1 PoC 는 후속 — shadow(VERIFY_ENFORCE=false) 기본. doneCount read 경로의 countsTowardDone 적용은 enforce flip 시점(후속) 배선."
+      },
+      "artifacts": [
+        "apps/web/src/lib/verify/config.ts (+ config.spec.ts)",
+        "apps/web/src/lib/verify/judge.ts (+ judge.spec.ts)",
+        "apps/web/src/lib/verify/record.ts (신호 반환 — record.spec.ts 갱신)",
+        "apps/web/src/lib/verify/index.ts",
+        "apps/web/src/app/(app)/challenge/[id]/action/_actions.ts (after() 판정 배선·group_id 조회)",
+        "apps/web/.env.example (VERIFY_* 주석 동기)",
+        "evals/tasks/0022-verify-judgment-theta-gated.md (Status: done)"
+      ]
     }
   ]
 }

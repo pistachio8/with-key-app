@@ -14,9 +14,10 @@ export async function recordVerifySignals(args: {
   userId: string;
   photo: Buffer | Uint8Array;
   submittedAt?: Date;
-}): Promise<void> {
+}): Promise<VerifySignals | null> {
   // 신호 계산(sharp 디코딩·EXIF 파싱)은 외부 입력이라 손상·미지원 이미지에 throw 할 수 있다.
-  // 그 경우 기록을 비파괴 skip 한다 — 본문은 남기지 않고 errorType·actionLogId 메타만 로깅한다.
+  // 그 경우 기록을 비파괴 skip 하고 null 을 돌려준다(판정 단계가 manual_review graceful 처리,
+  // EVAL-0022) — 본문은 남기지 않고 errorType·actionLogId 메타만 로깅한다.
   let signals: VerifySignals;
   try {
     signals = await computeVerifySignals(args.photo, { submittedAt: args.submittedAt });
@@ -25,7 +26,7 @@ export async function recordVerifySignals(args: {
       actionLogId: args.actionLogId,
       errorType: e instanceof Error ? e.name : "unknown",
     });
-    return;
+    return null;
   }
 
   // user_id 를 AND 조건으로 고정 — actionLogId 가 신뢰 입력이라도 service_role write 가
@@ -43,4 +44,5 @@ export async function recordVerifySignals(args: {
     .eq("user_id", args.userId);
 
   if (error) throw error;
+  return signals;
 }

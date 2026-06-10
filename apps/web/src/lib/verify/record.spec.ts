@@ -66,17 +66,22 @@ describe("recordVerifySignals", () => {
 
     await expect(
       recordVerifySignals({ actionLogId: "log-1", userId: "u-1", photo: Buffer.from([]) }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBeNull();
 
     expect(updateArgs).toHaveLength(0);
     expect(from).not.toHaveBeenCalled();
   });
 
-  it("정상 신호 → id 와 user_id AND 필터로 UPDATE", async () => {
+  it("정상 신호 → id 와 user_id AND 필터로 UPDATE 후 신호 반환(판정 단계 재사용)", async () => {
     vi.mocked(computeVerifySignals).mockResolvedValue(cleanSignals);
 
-    await recordVerifySignals({ actionLogId: "log-1", userId: "u-1", photo: Buffer.from([1]) });
+    const signals = await recordVerifySignals({
+      actionLogId: "log-1",
+      userId: "u-1",
+      photo: Buffer.from([1]),
+    });
 
+    expect(signals).toEqual(cleanSignals);
     expect(updateArgs).toHaveLength(1);
     expect(eqCalls).toContainEqual(["id", "log-1"]);
     expect(eqCalls).toContainEqual(["user_id", "u-1"]);
