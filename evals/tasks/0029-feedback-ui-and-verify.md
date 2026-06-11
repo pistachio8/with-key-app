@@ -59,30 +59,31 @@ EVAL-0028의 `submitFeedback` 계약이 확정돼 있어야 착수 가능.
 
 ## Requirements
 
-- `page.tsx`·`feedback-form.tsx`·`feedback-link.tsx` = plan Task 7·8 코드 그대로: 카테고리 기본 `bug`, 본문 1000자 `maxLength` + 잔여 카운터, 사진 1장(5MB/형식 클라 검증 → `prepareForUpload` → `URL.createObjectURL` 미리보기 + 제거 버튼), 본문 공백이면 보내기 비활성, 제출 중 비활성(더블 제출 방지), 실패 toast 분기(`invalid_input` vs 일반), 성공 시 인라인 "전달됐어요" + 마이페이지 복귀 링크.
-- 클라이언트 컴포넌트 단위 테스트는 작성하지 않는다 — 모바일 viewport 수동 검증으로 커버(레포 관행, `action-form.tsx` 동형).
-- WP 종결 검증 = plan Task 9: 전체 게이트 + `pnpm build`(`/me/feedback` route 출력) + 수동 시나리오 + RLS 실측. Slack 도착 확인은 `.env.local` 설정 시에만(미설정이면 skip 사유 보고).
-- Rollout 운영 단계(Vercel env `SLACK_FEEDBACK_WEBHOOK_URL` 설정 — #qa Incoming Webhook 발급)는 머지 후 수동 작업 — 종료 보고 "미해결/후속 액션"에 반드시 기재.
+구현 상세는 plan Task 7·8·9(SoT)을 따른다. 핵심 결정만 기록:
+
+- G1: 카테고리 기본 `bug`, 본문 1000자 카운터, 사진 1장(클라 검증 → `prepareForUpload` → 미리보기), 공백 비활성, 제출 중 비활성, 성공 시 인라인 "전달됐어요". 클라이언트 컴포넌트 단위 테스트 없음 — 수동 검증 커버.
+- G2: `<FeedbackLink />` → `<LegalLinks />` 바로 위 배치.
+- G3: 전체 게이트 + `pnpm build` + 수동 시나리오 + RLS 실측. Slack 확인은 `.env.local` 설정 시에만. Rollout(Vercel env 설정)은 머지 후 수동 — "미해결/후속"에 기재.
 
 ## Non-goals
 
-- 다중 사진 첨부(1장 고정) · 개발자 답변/2-way 스레드 · 앱 내 제출 이력 화면(spec §Out of scope).
-- 서버 rate limit — 제출 중 버튼 비활성만.
-- 분석 이벤트 추가 없음 — `AnalyticsEvent` union 불변.
-- storage 헬퍼·Slack notify·Server Action 수정 — EVAL-0028 산출물 소비만.
-- Vercel env 실값 설정 — 운영 후속(보고에만 기재).
+- 다중 사진·2-way 스레드·이력 화면(spec §Out of scope).
+- 서버 rate limit(버튼 비활성으로 충분).
+- `AnalyticsEvent` 추가 없음.
+- storage·Slack·Server Action 수정 — EVAL-0028 소비만.
+- Vercel env 설정 — 운영 후속.
 
 ## Acceptance Criteria
 
-| 기준                                                                        | 검증 방법                                                                  |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `/me` 진입 행 → `/me/feedback` 이동                                         | 모바일 viewport 수동 (spec §Verification)                                  |
-| 폼 동작 — 빈 본문 비활성·카운터·사진 미리보기/제거·제출 중 비활성·성공 상태 | 모바일 viewport 수동 시나리오 전체 통과                                    |
-| 제출 → feedback row 생성 (사진 시 `photo_path` + Storage 객체)              | Supabase Studio 실측                                                       |
-| 전체 게이트 green                                                           | `pnpm typecheck && pnpm lint && pnpm test && pnpm validate:docs` 전부 PASS |
-| 빌드 + 신규 route                                                           | `pnpm build` 성공, `/me/feedback` route 출력 확인                          |
-| RLS 실측 — anon INSERT 거부·타인 user_id INSERT 거부·SELECT 0 rows          | SQL Editor 역할별 실측 (spec §Verification)                                |
-| harness traceability                                                        | `pnpm harness:check` 통과                                                  |
+| 기준                                            | 검증                                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| `/me` 진입 행 → `/me/feedback` 이동             | 모바일 수동                                                      |
+| 폼 동작 전체 (비활성·카운터·사진·성공 상태)     | 모바일 수동 시나리오                                             |
+| 제출 → feedback row + photo_path                | Supabase Studio 실측                                             |
+| 전체 게이트 green                               | `pnpm typecheck && pnpm lint && pnpm test && pnpm validate:docs` |
+| `pnpm build` + `/me/feedback` route 출력        | `pnpm build`                                                     |
+| RLS 실측 (anon·타인 INSERT 거부, SELECT 0 rows) | SQL Editor 역할별                                                |
+| harness traceability                            | `pnpm harness:check`                                             |
 
 ## Verification Commands
 
@@ -104,23 +105,23 @@ pnpm harness:check
 
 ## Harness Impact Questions (완료 시 반드시 답 — drift 루프 입력)
 
-1. Did this task introduce a new folder structure? (답은 구현 시 작성)
-2. Did this task introduce a new naming convention? (답은 구현 시 작성)
-3. Did this task introduce a new dependency? (답은 구현 시 작성)
-4. Did this task change verification commands? (답은 구현 시 작성)
-5. Did this task reveal that the current harness instructions are outdated? (답은 구현 시 작성)
-6. Should any `.agents/` document be updated? (답은 구현 시 작성)
-   → 하나라도 yes면 `evals/drift-reports/`에 노트 + check-harness-drift 트리거.
+1. New folder structure?
+2. New naming convention?
+3. New dependency?
+4. Verification commands changed?
+5. Harness instructions outdated?
+6. `.agents/` update needed?
+   → yes 있으면 `evals/drift-reports/`에 노트 + check-harness-drift 트리거.
 
 ## Stop Condition
 
-**정상 종료(done)**: G1·G2·G3 모두 done 기준 충족 + Verification Commands 전부 green(수동 항목은 실측 결과 보고) + Harness Impact Questions 답변 완료.
+**정상 종료(done)**: G1·G2·G3 done 기준 충족 + Verification Commands green(수동 항목은 실측 보고) + Harness Impact 답변 완료.
 
 **중단·에스컬레이션**:
 
-- `submitFeedback` 함수 시그니처·반환 타입이 EVAL-0028 명세(`withUser` + `ActionResult` 계약)와 다르면 → 폼 구현 중단, EVAL-0028 재확인 후 보고(임의 적응 금지).
-- RLS 실측(anon INSERT 거부·타인 user_id INSERT 거부·authenticated SELECT 0 rows) 실패 시 → UI 수정으로 우회하지 말고 즉시 중단·보고(EVAL-0027 migration 재확인 필요).
-- `pnpm build` 실패가 신규 파일(`feedback/page.tsx`·`feedback-form.tsx`·`feedback-link.tsx`) 외 기존 파일 영향이면 → 범위 초과, 중단·보고.
-- `requireUser` 게이트 누락(RSC 인증 없는 직접 접근 가능 상태)이면 → 보안 위반으로 즉시 중단·보고.
+- `submitFeedback` 시그니처가 EVAL-0028 명세와 다르면 → 폼 구현 중단, 재확인 후 보고.
+- RLS 실측 실패 시 → UI 우회 금지, 즉시 중단·보고(EVAL-0027 migration 재확인).
+- `pnpm build` 실패가 기존 파일 영향이면 → 범위 초과, 중단·보고.
+- `requireUser` 게이트 누락 시 → 보안 위반, 즉시 중단·보고.
 
-**split 기준(05 §9.4)**: pass@3 미달 시 G1(폼 UI) / G2(진입점) / G3(종결 검증) 단위로 분할.
+**split 기준**: pass@3 미달 시 G1/G2/G3 단위 분할.

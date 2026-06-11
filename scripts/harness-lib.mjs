@@ -560,5 +560,39 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   out.push("## Stop Condition");
   out.push(stop || "(task Stop Condition 참조)");
   out.push("");
-  return out.join("\n");
+  return compactTableRows(out.join("\n"));
+}
+
+// prettier(pre-commit lint-staged)가 markdown 표를 열 정렬 padding 으로 재포맷해 커밋 때마다
+// 렌더 길이를 부풀린다(task 1개당 수백 자). /goal 프롬프트는 정렬이 불필요하므로 표 행(| 시작)의
+// 연속 공백과 separator 대시 런만 압축해 4000자 예산을 padding 과 무관하게 만든다.
+function compactTableRows(text) {
+  return text
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("|")) {
+        return line;
+      }
+      return trimmed.replace(/ {2,}/g, " ").replace(/-{4,}/g, "---");
+    })
+    .join("\n");
+}
+
+// /goal 명령의 goal condition 은 4000자 하드 리밋 — 초과 프롬프트는 실행 자체가 거부된다.
+export const GOAL_PROMPT_CHAR_LIMIT = 4000;
+
+// 렌더된 /goal 프롬프트가 리밋을 넘는 task 를 잡는다. done task 는 /goal 재실행 대상이
+// 아니므로 open(todo·blocked·in_progress) task 만 검사한다 — 과거 done 초과분은 소급하지 않는다.
+export function validateGoalPromptLength(task, { render = renderGoalPrompt } = {}) {
+  if (task.frontmatter.Status === "done") {
+    return [];
+  }
+  const length = render(task).length;
+  if (length <= GOAL_PROMPT_CHAR_LIMIT) {
+    return [];
+  }
+  return [
+    `${task.repoPath}: rendered /goal prompt is ${length} chars > ${GOAL_PROMPT_CHAR_LIMIT} (/goal 하드 리밋) — task 를 분할하거나 본문을 줄여라 (05 §9.4)`,
+  ];
 }
