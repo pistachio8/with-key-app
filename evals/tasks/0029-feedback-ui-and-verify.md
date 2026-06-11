@@ -8,7 +8,7 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 
 # EVAL-0029: 건의 UI + 전체 검증 — /me/feedback 폼·진입점 + 빌드·모바일 수동·RLS 실측
 
-> WP-feedback (`feat/feedback-suggestion`). 외부 게이트 없음 → `todo`. **Depends-on: EVAL-0028**(`submitFeedback` 계약 — 같은 WP 내 순서 의존, blocked 아님). plan Task 7·8·9 묶음(UI 레이어 + WP 종결 검증).
+> WP-feedback (`feat/feedback-submit`). 외부 게이트 없음 → `todo`. **Depends-on: EVAL-0028**(`submitFeedback` 계약 — 같은 WP 내 순서 의존, blocked 아님). plan Task 7·8·9 묶음(UI 레이어 + WP 종결 검증).
 
 ## Parent Links
 
@@ -16,7 +16,7 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 - Parent Test Scenario: TS SoT 없음 — AT eval 수용기준 흡수(05 §2 D10)
 - Parent Job Story: JS 인스턴스 없음(스코프 밖) — 의도는 spec §Why 참조: [2026-06-10-feedback-suggestion-design.md](../../docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md)
 - Parent Engineering Story: ES 인스턴스 없음(스코프 밖) — 구현 계획이 대행: [2026-06-10-feedback-suggestion.md](../../docs/superpowers/plans/2026-06-10-feedback-suggestion.md) Task 7·8·9
-- Parent Work Package: `feat/feedback-suggestion` (WP-feedback)
+- Parent Work Package: `feat/feedback-submit` (WP-feedback)
 
 ## Goal
 
