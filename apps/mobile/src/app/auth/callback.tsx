@@ -21,7 +21,7 @@ export default function AuthCallbackScreen() {
     verifyMagicLinkToken(tokenHash).then((result) => {
       if (!active) return;
       if (result.ok) {
-        router.replace("/");
+        router.replace("/home");
       } else {
         setFailed(true);
       }
