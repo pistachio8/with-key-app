@@ -17,8 +17,8 @@ export function PlaceholderScreen({ title, lines = [] }: PlaceholderScreenProps)
       <SafeAreaView style={styles.container}>
         <Text style={styles.kicker}>fromwith</Text>
         <Text style={styles.title}>{title}</Text>
-        {lines.map((line) => (
-          <Text key={line} style={styles.meta}>
+        {lines.map((line, index) => (
+          <Text key={index} style={styles.meta}>
             {line}
           </Text>
         ))}

@@ -77,6 +77,12 @@ describe("auth gate", () => {
     renderAppRouter("/home");
     expect(screen).toHavePathname("/home");
   });
+
+  it("세션 복원 중(isLoading)에는 게이트 판정을 보류한다 — flash 금지 (EVAL-0012)", () => {
+    mockUseSession.mockReturnValue({ session: null, isLoading: true });
+    renderAppRouter("/home");
+    expect(screen).toHavePathname("/home");
+  });
 });
 
 describe("route params", () => {
@@ -100,6 +106,8 @@ describe("route params", () => {
     mockUseSession.mockReturnValue(UNAUTHED);
     renderAppRouter("/invite/sample-invite-token");
     expect(screen).toHavePathname("/invite/sample-invite-token");
+    // pathname 만으로는 화면 분기를 못 가르므로 valid preview 콘텐츠까지 단언
+    expect(screen.getByText("초대장")).toBeTruthy();
   });
 });
 
@@ -136,6 +144,19 @@ describe("G5 route map coverage (00 §8/§10)", () => {
 
   it.each(G5_ROUTE_FILES)("route file 존재: %s", (routeFile) => {
     expect(existsSync(join(__dirname, "app", routeFile))).toBe(true);
+  });
+
+  // alias 삭제 시 +not-found 가 같은 종착지로 수렴해 pathname 단언으론 회귀를
+  // 못 잡는다 — 파일 존재로 deep link 호환(00 §1.2)을 결정론 검증
+  const LEGACY_ALIAS_FILES = [
+    "(app)/action.tsx",
+    "(app)/feed.tsx",
+    "(app)/pledge.tsx",
+    "(app)/recap.tsx",
+  ];
+
+  it.each(LEGACY_ALIAS_FILES)("legacy alias route file 존재: %s", (aliasFile) => {
+    expect(existsSync(join(__dirname, "app", aliasFile))).toBe(true);
   });
 
   it("navigation/ 디렉토리를 두지 않는다 — app/ 이 네비게이션 SoT (04 §5.1)", () => {

@@ -1,7 +1,5 @@
 // /home — 00 §10 initial route. EVAL-0012 로그인 확인 화면을 tabs 로 이전한 placeholder.
 // 실데이터(진행 챌린지·미서명 배너·통계) 렌더링은 EVAL-0017.
-import "@withkey/domain";
-
 import Constants from "expo-constants";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";

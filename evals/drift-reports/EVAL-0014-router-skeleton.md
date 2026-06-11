@@ -12,7 +12,7 @@
 3. **New dependency? YES (devDependency 1개)** — `@testing-library/react-native@^13.2.0`. `expo-router/testing-library`(renderRouter 로 실제 route tree 를 렌더하는 router/gate 테스트)의 optional peer 라 테스트 전용으로 추가. 런타임 dependency 는 EVAL-0011 범위에서 추가 없음(AT 예상 "No beyond EVAL-0011"에서의 유일한 이탈).
 4. **Verification commands changed? NO** — `pnpm --filter @withkey/mobile test -- router` 가 AT 에 이미 명시돼 있었고 `src/router-skeleton.spec.tsx` 가 그 패턴에 매칭된다. 신규 스크립트/게이트 없음.
 5. **Harness outdated? NO** — route map coverage 결정론 체크는 별도 harness check 대신 mobile jest spec(`G5 route map coverage` describe — G5 route file 존재 + `navigation/` 부재를 fs 로 검증)으로 흡수했다. `.agents/` 체크 추가 불요.
-6. **`.agents/` update? NO(불요)** — `.agents/` 경로/워크플로 변경 없음.
+6. **`.agents/` update? NO(불요)** — 본 task 가 요구하는 `.agents/` 변경 없음. (같은 브랜치의 별개 chore 커밋이 `implement-agent-task.md` step 6 을 반영했으나 이는 세션 외부 편집의 분리 커밋 — 아래 "관찰된 별개 항목" 참조.)
 
 ## 구현 무결성
 

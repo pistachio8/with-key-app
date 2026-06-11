@@ -118,22 +118,25 @@ const ids = {
 PWA에는 하단 탭이 없다(AppHeader + push stack). RN은 **Root Stack + 인증 후 Bottom Tabs**를 새 IA로 도입한다(⚠️ 새 IA → [PRD](./01-rn-mvp-prd.md) PO 승인). 라우트 인벤토리·대응표는 [00 plan §10](./00-rn-conversion-plan.md)을 따른다.
 
 ```text
-apps/mobile/app/
-├─ _layout.tsx              # Root Stack + auth gate (세션 없으면 (auth)로)
-├─ (auth)/
-│  ├─ login/index           # 카카오 SSO + magic link fallback
+apps/mobile/src/app/        # (EVAL-0014 as-built — gate 는 root 가 아닌 (app)/_layout)
+├─ _layout.tsx              # Root Stack (SessionProvider · Kakao init)
+├─ index.tsx                # 진입점: 세션 복원 후 인증→/home, 미인증→/login
+├─ (auth)/                  # 공개 그룹 — gate 없음 (invite 는 미인증도 진입)
+│  ├─ login                 # 카카오 SSO + magic link fallback (세션 있으면 /home)
 │  └─ invite/[token]        # 초대 진입(미인증 시 stash → 로그인 후 복귀)
-├─ (tabs)/
-│  ├─ _layout.tsx           # Bottom Tabs
-│  ├─ home/index            # 초기 route
-│  ├─ challenges/index      # 내 챌린지
-│  ├─ notifications/index
-│  └─ me/index              # 프로필/설정
-├─ challenge/[id]/          # 탭 위로 push. feed/dashboard/info = 화면 내 상단탭
-│  ├─ index · dashboard · info · pledge
-│  └─ action                # 인증 제출
-├─ group/[id]               # 탭 위로 push
-└─ (flow)/challenge/new     # presentation: 'modal' (풀스크린 생성 플로우)
+├─ (app)/                   # 보호 그룹 — _layout.tsx 가 auth gate (세션 없으면 /login)
+│  ├─ (tabs)/
+│  │  ├─ _layout.tsx        # Bottom Tabs
+│  │  ├─ home               # 초기 route
+│  │  ├─ challenges         # 내 챌린지 (후속 lazy 추가)
+│  │  ├─ notifications      # (후속 lazy 추가)
+│  │  └─ me                 # 프로필/설정
+│  ├─ challenge/[id]/       # 탭 위로 push. feed/dashboard/info = 화면 내 상단탭
+│  │  ├─ index · dashboard · info · pledge
+│  │  └─ action             # 인증 제출
+│  ├─ group/[id]            # 탭 위로 push (후속)
+│  └─ (flow)/challenge/new  # presentation: 'modal' (풀스크린 생성 플로우)
+└─ auth/callback            # magic link universal link 착지점
 ```
 
 ### 규칙
