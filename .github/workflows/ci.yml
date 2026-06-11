@@ -45,6 +45,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm validate:docs
+      # 하네스 Tier 1 게이트 — frontmatter·추적성·done↔runs 정합. docs-only PR(evals/tasks 변경)도
+      # quick 은 항상 실행되므로 task-only 변경 역시 여기서 걸린다. harness:test 는 checker 자체 회귀 방지.
+      - run: pnpm harness:check
+      - run: pnpm harness:test
       - name: Check spec-required (soft — stderr 경고만, exit 0)
         if: github.event_name == 'pull_request'
         run: pnpm check:spec-required --base origin/${{ github.base_ref }}

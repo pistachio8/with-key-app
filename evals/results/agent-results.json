@@ -5,20 +5,23 @@
     {
       "id": "EVAL-0001",
       "title": "Server Action — kudos 생성",
-      "spec": "../tasks/0001-server-action-create-kudos.md",
-      "status": "pending"
+      "spec": "../tasks/archive/0001-server-action-create-kudos.md",
+      "status": "archived",
+      "note": "2026-06-11 archive — PWA baseline 미실행 + RN 전환으로 효용 소멸 (tasks/archive/README.md)"
     },
     {
       "id": "EVAL-0002",
       "title": "AI 일기 — 타임아웃 폴백 동작",
-      "spec": "../tasks/0002-ai-diary-fallback.md",
-      "status": "pending"
+      "spec": "../tasks/archive/0002-ai-diary-fallback.md",
+      "status": "archived",
+      "note": "2026-06-11 archive — PWA baseline 미실행 + RN 전환으로 효용 소멸 (tasks/archive/README.md)"
     },
     {
       "id": "EVAL-0003",
       "title": "Supabase migration — RLS 정책 추가",
-      "spec": "../tasks/0003-rls-migration.md",
-      "status": "pending"
+      "spec": "../tasks/archive/0003-rls-migration.md",
+      "status": "archived",
+      "note": "2026-06-11 archive — PWA baseline 미실행 + RN 전환으로 효용 소멸 (tasks/archive/README.md)"
     }
   ],
   "runs": [

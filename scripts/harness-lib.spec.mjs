@@ -25,6 +25,8 @@ import {
   renderGoalPrompt,
   validateGoalPromptLength,
   GOAL_PROMPT_CHAR_LIMIT,
+  validateDoneRunParity,
+  GRANDFATHERED_DONE,
 } from "./harness-lib.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
@@ -164,6 +166,61 @@ test("validateTask: hallucinated 경로(존재 안 함) → 위반", () => {
 test("validateTask: 경로 그룹이 비면 'must list at least one' 위반 (#164 고유 — Source/Target)", () => {
   const errs = validateTask(makeTask(VALID_FM, { source: [] }), { exists: fakeExists });
   assert.ok(errs.some((e) => /Source Files must list at least one/.test(e)));
+});
+
+// ─────────────── validateDoneRunParity (results 주입 → 파일시스템 비의존) ───────────────
+
+test("validateDoneRunParity: done 인데 runs[] 기록 없음 → 위반", () => {
+  const errs = validateDoneRunParity(
+    [makeTask({ ...VALID_FM, Task: "EVAL-0099", Status: "done" })],
+    { runs: [] },
+  );
+  assert.equal(errs.length, 1);
+  assert.ok(/no runs\[\] record for EVAL-0099/.test(errs[0]));
+});
+
+test("validateDoneRunParity: done + runs[] 기록 있음 → 위반 0 (대소문자 무시)", () => {
+  const errs = validateDoneRunParity(
+    [makeTask({ ...VALID_FM, Task: "EVAL-0099", Status: "done" })],
+    { runs: [{ taskId: "eval-0099" }] },
+  );
+  assert.deepEqual(errs, []);
+});
+
+test("validateDoneRunParity: grandfathered done 은 면제", () => {
+  const errs = validateDoneRunParity(
+    [makeTask({ ...VALID_FM, Task: "EVAL-0098", Status: "done" })],
+    { runs: [] },
+    { grandfathered: new Set(["EVAL-0098"]) },
+  );
+  assert.deepEqual(errs, []);
+});
+
+test("validateDoneRunParity: done 아닌 status 는 검사 대상 아님", () => {
+  const errs = validateDoneRunParity(
+    [
+      makeTask({ ...VALID_FM, Task: "EVAL-0097", Status: "todo" }),
+      makeTask({ ...VALID_FM, Task: "EVAL-0096", Status: "in_progress" }),
+    ],
+    { runs: [] },
+  );
+  assert.deepEqual(errs, []);
+});
+
+test("validateDoneRunParity: runs 필드 부재(빈 results)에도 안전", () => {
+  const errs = validateDoneRunParity(
+    [makeTask({ ...VALID_FM, Task: "EVAL-0099", Status: "done" })],
+    {},
+  );
+  assert.equal(errs.length, 1);
+});
+
+test("GRANDFATHERED_DONE: 게이트 도입 시점(2026-06-11) 무기록 done 11건 고정", () => {
+  assert.equal(GRANDFATHERED_DONE.size, 11);
+  assert.ok(GRANDFATHERED_DONE.has("EVAL-0004"));
+  assert.ok(GRANDFATHERED_DONE.has("EVAL-0029"));
+  // 기록이 있는 done(예: EVAL-0006)은 면제 리스트에 들어가지 않는다.
+  assert.ok(!GRANDFATHERED_DONE.has("EVAL-0006"));
 });
 
 // ─────────────── detectStaleStatus (mergedBranches·branchOf 주입) ───────────────

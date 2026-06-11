@@ -9,13 +9,13 @@
 
 ## Pass criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| 타임아웃 4.5s 시 폴백 호출 | `vi.useFakeTimers` + `AbortController` mock |
-| 키워드 커버리지 < 1 → 폴백 | mock 응답에 키워드 누락 케이스 |
-| 프롬프트/응답 본문 미로그 | `console.*` spy → 본문 문자열 매칭 0건 |
-| 메타만 로그 (`latencyMs · fallback · keywordCoverage · promptVersion`) | spy 인자 검증 |
-| `pnpm test` pass | (자동) |
+| 기준                                                                   | 검증 방법                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------- |
+| 타임아웃 4.5s 시 폴백 호출                                             | `vi.useFakeTimers` + `AbortController` mock |
+| 키워드 커버리지 < 1 → 폴백                                             | mock 응답에 키워드 누락 케이스              |
+| 프롬프트/응답 본문 미로그                                              | `console.*` spy → 본문 문자열 매칭 0건      |
+| 메타만 로그 (`latencyMs · fallback · keywordCoverage · promptVersion`) | spy 인자 검증                               |
+| `pnpm test` pass                                                       | (자동)                                      |
 
 ## One-shot 정의
 

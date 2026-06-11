@@ -141,6 +141,54 @@ export function detectStaleStatus(
   ];
 }
 
+export const agentResultsPath = path.join(repoRoot, "evals/results/agent-results.json");
+
+// done↔runs 정합 게이트(2026-06-11) 도입 이전에 runs[] 기록 없이 done 전환된 task.
+// 소급 기록을 만들지 않기 위한 명시 예외 — 이후의 done 전환은 runs[] append 가 같은 PR 에 필수.
+export const GRANDFATHERED_DONE = new Set([
+  "EVAL-0004",
+  "EVAL-0005",
+  "EVAL-0010",
+  "EVAL-0011",
+  "EVAL-0015",
+  "EVAL-0020",
+  "EVAL-0023",
+  "EVAL-0024",
+  "EVAL-0027",
+  "EVAL-0028",
+  "EVAL-0029",
+]);
+
+export function loadAgentResults({ readFile = (p) => readFileSync(p, "utf8") } = {}) {
+  if (!existsSync(agentResultsPath)) {
+    return { runs: [] };
+  }
+  return JSON.parse(readFile(agentResultsPath));
+}
+
+// done↔runs 정합: Status done 인 task 는 agent-results.json runs[] 에 동일 taskId 기록 ≥1건.
+// run 내용 품질은 검증하지 않는다 — "done 인데 실행 이력 0건" 인 무기록 done 만 차단한다.
+export function validateDoneRunParity(tasks, results, { grandfathered = GRANDFATHERED_DONE } = {}) {
+  const recorded = new Set(
+    (results.runs ?? [])
+      .map((run) => (typeof run.taskId === "string" ? run.taskId.toUpperCase() : null))
+      .filter(Boolean),
+  );
+
+  return tasks.flatMap((task) => {
+    if (task.frontmatter.Status !== "done") {
+      return [];
+    }
+    const id = task.frontmatter.Task?.toUpperCase();
+    if (!id || grandfathered.has(id) || recorded.has(id)) {
+      return [];
+    }
+    return [
+      `${task.repoPath}: Status 'done' but no runs[] record for ${id} in evals/results/agent-results.json — append a run entry in the same PR`,
+    ];
+  });
+}
+
 export function formatPathList(paths) {
   return paths
     .map((item) => {
