@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -32,12 +37,17 @@ export type Database = {
         Row: {
           activity_type: string;
           ai_summary: string;
+          auto_verify_model_version: string | null;
+          auto_verify_score: number | null;
+          auto_verify_status: string;
           challenge_id: string;
           created_at: string;
           edited_at: string | null;
           id: string;
           memo: string | null;
+          photo_captured_at: string | null;
           photo_path: string | null;
+          photo_phash: string | null;
           prompt_version: string;
           regenerate_count: number;
           reroll_count: number;
@@ -49,12 +59,17 @@ export type Database = {
         Insert: {
           activity_type: string;
           ai_summary: string;
+          auto_verify_model_version?: string | null;
+          auto_verify_score?: number | null;
+          auto_verify_status?: string;
           challenge_id: string;
           created_at?: string;
           edited_at?: string | null;
           id?: string;
           memo?: string | null;
+          photo_captured_at?: string | null;
           photo_path?: string | null;
+          photo_phash?: string | null;
           prompt_version: string;
           regenerate_count?: number;
           reroll_count?: number;
@@ -66,12 +81,17 @@ export type Database = {
         Update: {
           activity_type?: string;
           ai_summary?: string;
+          auto_verify_model_version?: string | null;
+          auto_verify_score?: number | null;
+          auto_verify_status?: string;
           challenge_id?: string;
           created_at?: string;
           edited_at?: string | null;
           id?: string;
           memo?: string | null;
+          photo_captured_at?: string | null;
           photo_path?: string | null;
+          photo_phash?: string | null;
           prompt_version?: string;
           regenerate_count?: number;
           reroll_count?: number;
@@ -121,18 +141,21 @@ export type Database = {
       challenge_participants: {
         Row: {
           challenge_id: string;
+          deposit_points: number;
           joined_at: string;
           signed_at: string | null;
           user_id: string;
         };
         Insert: {
           challenge_id: string;
+          deposit_points?: number;
           joined_at?: string;
           signed_at?: string | null;
           user_id: string;
         };
         Update: {
           challenge_id?: string;
+          deposit_points?: number;
           joined_at?: string;
           signed_at?: string | null;
           user_id?: string;
@@ -156,6 +179,7 @@ export type Database = {
       };
       challenges: {
         Row: {
+          closed_at: string | null;
           created_at: string;
           duration_days: number;
           end_at: string | null;
@@ -164,12 +188,14 @@ export type Database = {
           id: string;
           penalty_amount: number;
           start_at: string | null;
+          start_nudge_sent_at: string | null;
           status: string;
           title: string;
           type: string;
           visibility_version: number;
         };
         Insert: {
+          closed_at?: string | null;
           created_at?: string;
           duration_days?: number;
           end_at?: string | null;
@@ -178,12 +204,14 @@ export type Database = {
           id?: string;
           penalty_amount: number;
           start_at?: string | null;
+          start_nudge_sent_at?: string | null;
           status?: string;
           title: string;
           type?: string;
           visibility_version?: number;
         };
         Update: {
+          closed_at?: string | null;
           created_at?: string;
           duration_days?: number;
           end_at?: string | null;
@@ -192,6 +220,7 @@ export type Database = {
           id?: string;
           penalty_amount?: number;
           start_at?: string | null;
+          start_nudge_sent_at?: string | null;
           status?: string;
           title?: string;
           type?: string;
@@ -446,6 +475,61 @@ export type Database = {
           },
         ];
       };
+      point_ledger: {
+        Row: {
+          challenge_id: string | null;
+          created_at: string;
+          delta: number;
+          group_id: string;
+          id: string;
+          reason: string;
+          ref_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          challenge_id?: string | null;
+          created_at?: string;
+          delta: number;
+          group_id: string;
+          id?: string;
+          reason: string;
+          ref_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          challenge_id?: string | null;
+          created_at?: string;
+          delta?: number;
+          group_id?: string;
+          id?: string;
+          reason?: string;
+          ref_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "point_ledger_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: false;
+            referencedRelation: "challenges";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "point_ledger_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "point_ledger_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       push_subscriptions: {
         Row: {
           auth: string;
@@ -477,6 +561,38 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      settlements: {
+        Row: {
+          challenge_id: string;
+          distribution: Json;
+          pool_points: number;
+          settled_at: string;
+          settled_by: string;
+        };
+        Insert: {
+          challenge_id: string;
+          distribution?: Json;
+          pool_points: number;
+          settled_at?: string;
+          settled_by: string;
+        };
+        Update: {
+          challenge_id?: string;
+          distribution?: Json;
+          pool_points?: number;
+          settled_at?: string;
+          settled_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "settlements_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: true;
+            referencedRelation: "challenges";
             referencedColumns: ["id"];
           },
         ];
@@ -516,6 +632,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      _settlement_confirmed_penalties: {
+        Args: { p_challenge_id: string };
+        Returns: {
+          confirmed_penalty: number;
+          user_id: string;
+        }[];
+      };
       accept_invite: { Args: { p_token: string }; Returns: string };
       add_ai_cost: {
         Args: { p_micros: number; p_scope: string };
@@ -552,14 +675,41 @@ export type Database = {
         };
         Returns: string;
       };
+      deposit_release: {
+        Args: { p_challenge_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      distribute_pool: { Args: { p_challenge_id: string }; Returns: number };
+      grant_bundle_points: {
+        Args: {
+          p_amount: number;
+          p_group_id: string;
+          p_ref_id: string;
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
+      hold_deposit: {
+        Args: { p_amount: number; p_challenge_id: string };
+        Returns: undefined;
+      };
       is_group_member: { Args: { gid: string }; Returns: boolean };
       is_group_owner: { Args: { gid: string }; Returns: boolean };
+      point_balance: {
+        Args: { p_group_id: string; p_user_id: string };
+        Returns: number;
+      };
+      reenable_on_auth_user_created: { Args: never; Returns: undefined };
+      settle_challenge: { Args: { p_challenge_id: string }; Returns: undefined };
       sign_and_maybe_activate: {
         Args: { p_challenge_id: string };
         Returns: {
           challenge_created_at: string;
           end_at: string;
+          owner_user_id: string;
           participant_count: number;
+          should_nudge_owner: boolean;
+          signed_count: number;
           start_at: string;
           status: string;
         }[];

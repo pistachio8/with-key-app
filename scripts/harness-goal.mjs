@@ -11,6 +11,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   findTask,
+  GOAL_PROMPT_CHAR_LIMIT,
   loadMigrationTasks,
   renderGoalPrompt,
   repoRoot,
@@ -36,6 +37,13 @@ function emitGoal(task, { toFile }) {
     return false;
   }
   const prompt = renderGoalPrompt(task);
+  // /goal 의 goal condition 하드 리밋 — 초과 프롬프트는 어차피 실행이 거부되므로 emit 하지 않는다.
+  if (prompt.length > GOAL_PROMPT_CHAR_LIMIT) {
+    console.error(
+      `[harness:goal] ${task.frontmatter.Task}: prompt ${prompt.length} chars > ${GOAL_PROMPT_CHAR_LIMIT} (/goal 하드 리밋) — task 를 분할하거나 본문을 줄여라 (05 §9.4)`,
+    );
+    return false;
+  }
   if (toFile) {
     const outPath = goalPath(task);
     writeFileSync(outPath, `${prompt}\n`);

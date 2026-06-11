@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { challengePhase, isChallengeOver, remainingDays } from "@/lib/challenge/lifecycle";
+import { challengePhase, isChallengeOver, remainingDays } from "@withkey/domain";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { ChallengeEndedBanner } from "../_components/challenge-ended-banner";

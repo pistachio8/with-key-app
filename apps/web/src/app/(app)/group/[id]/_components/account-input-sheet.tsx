@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BANK_CODES, BANK_NAMES, type BankCode } from "@/lib/bank/codes";
+import { BANK_CODES, BANK_NAMES, type BankCode } from "@withkey/domain";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 import { updateGroupAccount } from "../_actions";
 

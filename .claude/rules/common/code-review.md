@@ -14,27 +14,28 @@
 
 ## 심각도 / 머지 결정
 
-| Level | 의미 | 조치 |
-|-------|------|------|
-| CRITICAL | 보안 취약점/데이터 손실 | BLOCK — 머지 전 수정 |
-| HIGH | 버그 또는 중대한 품질 이슈 | WARN — 머지 전 수정 권장 |
-| MEDIUM | 유지보수 우려 | INFO — 가능하면 수정 |
-| LOW | 스타일/사소한 제안 | NOTE — 선택 |
+| Level    | 의미                       | 조치                     |
+| -------- | -------------------------- | ------------------------ |
+| CRITICAL | 보안 취약점/데이터 손실    | BLOCK — 머지 전 수정     |
+| HIGH     | 버그 또는 중대한 품질 이슈 | WARN — 머지 전 수정 권장 |
+| MEDIUM   | 유지보수 우려              | INFO — 가능하면 수정     |
+| LOW      | 스타일/사소한 제안         | NOTE — 선택              |
 
 승인: CRITICAL/HIGH 없으면 Approve. CRITICAL이면 Block.
 
-## 보안 트리거 → 즉시 `everything-claude-code:security-reviewer`
+## 보안 트리거 → 즉시 보안 점검 강화
+
+아래 변경은 [`security.md`](./security.md) 체크리스트 + [`../typescript/security.md`](../typescript/security.md)를 우선 적용한다.
 
 - 인증/인가, 사용자 입력, DB 쿼리, 파일 시스템, 외부 API, 암호화, 결제
 
-## 리뷰 에이전트
+## 리뷰 어댑터
 
-| Agent | 용도 |
-|-------|------|
-| `everything-claude-code:code-reviewer` | 일반 품질·패턴 |
-| `everything-claude-code:security-reviewer` | OWASP Top 10·취약점 |
-| `everything-claude-code:typescript-reviewer` | TS/JS 특화 |
-| `everything-claude-code:database-reviewer` | 스키마/쿼리 |
+| 상황                  | 어댑터                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| 단일 파일 리뷰        | [`../../commands/review.md`](../../commands/review.md)                                    |
+| 브랜치 전체 자가 리뷰 | `withkey-review` 스킬                                                                     |
+| 보안 집중 점검        | [`security.md`](./security.md) · [`../typescript/security.md`](../typescript/security.md) |
 
 ## 자주 잡히는 이슈
 

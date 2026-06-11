@@ -2,13 +2,13 @@
 Task: EVAL-0023
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
 # EVAL-0023: 온디바이스 사전검증 — 흐림·스크린샷 업로드 전 1차 거름 ("다시 찍기" 권고)
 
-> Work Package WP3 (`feat/rn-verify-precheck`). **게이트 무관**(ES: UX 휴리스틱 — `AC-cheat-detect-3`만 G1 carve-out). WP1/WP2/WP5와 독립. 차단이 아닌 권고(빠른 응답) — 서버 판정(WP2)과 별개의 클라 1차 거름.
+> WP3 (`feat/rn-verify-precheck`). 게이트 무관(`AC-cheat-detect-3`만 G1 carve-out). WP1/WP2/WP5와 독립. 차단 아닌 권고 — 서버 판정(WP2)과 별개의 클라 1차 거름.
 
 ## Parent Links
 
@@ -20,7 +20,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 ## Goal
 
-업로드 전에 명백히 안 될 사진을 즉시 걸러 헛수고를 줄인다. 이 task가 끝나면 사진 선택/촬영 직후 클라(현 PWA `fab-photo-verify-sheet`, RN 카메라 parity는 EVAL-0019 capture 경로 후속)에서 흐림·스크린샷 같은 명백 결함을 빠르게 휴리스틱 판정해, **차단이 아니라 "다시 찍기" 권고**를 노출하고 사용자가 그대로 올릴 선택지도 남긴다. 서버 판정(WP2)을 대체하지 않는 1차 거름이다.
+업로드 전 명백히 안 될 사진을 즉시 걸러 헛수고를 줄인다. 사진 선택/촬영 직후 클라(현 PWA `fab-photo-verify-sheet`, RN parity는 EVAL-0019 후속)에서 흐림·스크린샷을 휴리스틱 판정해 **"다시 찍기" 권고**(비차단)를 노출한다. 그대로 올릴 선택지도 유지. 서버 판정(WP2) 대체 아닌 1차 거름.
 
 ## Source Files to Inspect
 
@@ -36,16 +36,16 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 ## Requirements
 
-- 업로드 전 흐림·스크린샷 휴리스틱 1차 판정 — 빠른 응답(차단 아님).
-- 결과는 **권고**("다시 찍기") + 그대로 진행 선택지. 거름이 hard block이 되지 않음(`AC-cheat-detect-3` — false-reject 비용).
-- 가능하면 EVAL-0021 스크린샷/품질 휴리스틱을 클라에서 재사용(중복 로직 금지).
-- 모바일 viewport에서 권고 노출·진행 흐름 동작.
+- 업로드 전 흐림·스크린샷 휴리스틱 판정 — 빠른 응답, hard block 금지(`AC-cheat-detect-3`).
+- 결과는 권고("다시 찍기") + 그대로 진행 선택지.
+- EVAL-0021 휴리스틱 클라 재사용(중복 로직 금지).
+- 모바일 viewport 동작.
 
 ## Non-goals
 
-- 서버 status 판정 — WP2/EVAL-0022 (본 task는 클라 1차 거름, 서버 판정 대체 아님).
-- phash·EXIF 신호 계산 골격 — WP2a/EVAL-0021 (본 task는 그 휴리스틱을 UX에 노출).
-- RN 카메라 네이티브 capture 구현 — RN action-log MVP(EVAL-0019) 경로 후속(본 task는 현 PWA capture 기준, RN parity는 그 위에 얹음).
+- 서버 status 판정 — WP2/EVAL-0022.
+- phash·EXIF 신호 골격 — WP2a/EVAL-0021(본 task는 그 휴리스틱을 UX에 노출).
+- RN 카메라 네이티브 capture — EVAL-0019 후속(본 task는 현 PWA 기준, RN parity는 그 위).
 
 ## Acceptance Criteria
 
@@ -69,18 +69,18 @@ pnpm harness:check
 
 ## Expected Output Summary
 
-업로드 전 사전검증 hook 위치, 권고(비차단) UX, EVAL-0021 휴리스틱 재사용 지점, RN capture parity가 EVAL-0019 후속임을 한국어로 요약한다.
+사전검증 hook 위치, 권고(비차단) UX, EVAL-0021 재사용 지점, RN parity가 EVAL-0019 후속임을 한국어로 요약한다.
 
 ## Harness Impact Questions
 
 1. New folder structure? No — 기존 `components/app-shell/`·`lib/verify/` 재사용.
 2. New naming convention? No.
-3. New dependency? 클라 흐림 검출 라이브러리 도입 가능 — yes일 수 있음(registry 우선). → drift 노트.
-4. Verification commands changed? No — `pnpm test -- precheck` 스코프뿐.
+3. New dependency? 흐림 검출 라이브러리 도입 가능(yes 가능, registry 우선) → drift 노트.
+4. Verification commands changed? No.
 5. Harness instructions outdated? No.
-6. `.agents/` 문서 갱신? 신규 의존 발생 시 yes → `evals/drift-reports/` 노트.
+6. `.agents/` 갱신? 신규 의존 발생 시 yes → `evals/drift-reports/` 노트.
 
 ## Stop Condition
 
-- 권고 노출·비차단·재사용 Acceptance Criteria green + 모바일 viewport 확인 + `pnpm harness:check` 통과.
-- pass@3 안에 green 못 만들면 → 휴리스틱 / UX 권고로 split (프롬프트·컨텍스트 1회 점검 후, 05 §9.4).
+- 권고·비차단·재사용 AC green + 모바일 viewport 확인 + `pnpm harness:check` 통과.
+- pass@3 안에 green 못 만들면 → 휴리스틱 / UX 권고로 split(05 §9.4).

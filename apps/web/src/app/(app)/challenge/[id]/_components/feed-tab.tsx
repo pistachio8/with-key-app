@@ -5,8 +5,7 @@
 import { ChallengeFeed } from "./challenge-feed";
 import { NextStepCta } from "./next-step-cta";
 import { TodayBanner } from "./today-banner";
-import { formatFeedTimestamp } from "@/lib/challenge/feed-time";
-import type { ChallengePhase } from "@/lib/challenge/lifecycle";
+import { formatFeedTimestamp, type ChallengePhase } from "@withkey/domain";
 import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
 
 interface FeedTabProps {

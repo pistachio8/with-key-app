@@ -1,9 +1,8 @@
-import { countDoneDaysByUser } from "@/lib/challenge/done-days";
-import { remainingDays, type ChallengeStatus } from "@/lib/challenge/lifecycle";
+import { countDoneDaysByUser, remainingDays, type ChallengeStatus } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "./current-challenges";
 
-// ChallengeStatus 의 SoT 는 @/lib/challenge/lifecycle. 기존 import 경로 호환을 위해 re-export.
+// ChallengeStatus 의 SoT 는 @withkey/domain(challenge/lifecycle). 기존 import 경로 호환을 위해 re-export.
 export type { ChallengeStatus };
 
 export type ActiveChallengeView = {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
-import { groupInputSchema } from "@/lib/validators/group";
+import { groupInputSchema } from "@withkey/domain";
 import { encryptAccountNumber } from "@/lib/crypto/account-cipher";
 import { track } from "@/lib/analytics/track";
 import { withUser } from "@/lib/auth/with-user";

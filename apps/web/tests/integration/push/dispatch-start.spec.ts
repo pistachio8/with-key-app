@@ -7,7 +7,7 @@ import { addMember, createGroup, createPendingChallenge, createUser } from "../f
 const sendPush = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/push/send", async (orig) => {
   const actual = await orig<typeof import("@/lib/push/send")>();
-  return { ...actual, sendPush };
+  return { ...actual, sendPush, isQuietHoursKST: () => false };
 });
 
 describe("dispatchStartNotification (integration)", () => {

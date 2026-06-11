@@ -11,7 +11,7 @@ import {
   syncBrowserSubscription,
   unsubscribeFromPush,
 } from "@/lib/push/subscribe";
-import type { NotificationPrefs } from "@/lib/validators/push";
+import type { NotificationPrefs } from "@withkey/domain";
 
 type Props = {
   initialPrefs: NotificationPrefs;

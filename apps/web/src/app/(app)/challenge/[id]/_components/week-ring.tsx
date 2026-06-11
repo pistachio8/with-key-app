@@ -2,8 +2,7 @@
 // 평소: "{shortfall}번 더 채우면 추가 벌금 0원"(긍정). imminent: "이대로면 +N원" 추가.
 // unreachable(회복 불가): "이번 주 목표 달성 불가" + "종료 시 +N 확정" — 회복 가능한 척하지 않는다.
 // 카피는 동적 — literal "3번" 금지(goalCount 1~7·자투리에 따라 가변).
-import { formatKRW } from "@/lib/challenge/penalty";
-import type { CurrentWeekStatus } from "@/lib/challenge/weekly";
+import { formatKRW, type CurrentWeekStatus } from "@withkey/domain";
 
 const RADIUS = 26;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;

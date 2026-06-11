@@ -4,9 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { duotoneDataUrl } from "@/lib/share/hero-image";
-import { pickOne } from "@/lib/share/seeded-pick";
+import { pickOne, formatSharePeriod } from "@withkey/domain";
 import { loadCardFonts } from "@/lib/share/og-fonts";
-import { formatSharePeriod } from "@/lib/share/period";
 import { renderPhotoCard, renderTicketCard, type CardData } from "./templates";
 
 export async function GET(req: Request): Promise<Response> {

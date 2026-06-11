@@ -1,0 +1,7 @@
+interface:
+  display_name: "with-key Review"
+  short_description: "Review with-key branch diffs before PRs"
+  brand_color: "#2563EB"
+  default_prompt: "Use $withkey-review to review my current with-key branch diff before a PR."
+policy:
+  allow_implicit_invocation: true

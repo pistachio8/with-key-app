@@ -2,26 +2,26 @@
 Task: EVAL-0011
 Track: port
 Kind: migration
-Status: blocked
+Status: done
 Blocked-by: EVAL-0010(RN monorepo foundation) complete.
 Parent: docs/adr/0033-rn-target-architecture.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/migration/05-rn-harness-decisions.md
 ---
 
 # EVAL-0011: Expo boot — Managed+CNG dev build + APP_VARIANT/EAS profile
 
-> 00 §8의 G3~G5가 올라갈 `apps/mobile` 실행 표면을 만든다. EVAL-0010이 `apps/web`+`packages/domain` workspace 토대를 깐 뒤에만 착수한다.
+> 00 §8 G3~G5 표면 `apps/mobile` 생성. EVAL-0010 완료 후 착수.
 
 ## Parent Links
 
-- Parent PRD Feature: RN MVP M1 "포팅 기반" — [docs/migration/01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §8.
-- Parent Test Scenario: `TS-expo-boot-*`는 본 파일 Acceptance Criteria에 흡수(D10) — [docs/migration/05-rn-harness-decisions.md](../../docs/migration/05-rn-harness-decisions.md) §2.
-- Parent Job Story: "RN dev build가 실기기에서 auth/photo/push native module을 실을 수 있어야 한다" — [docs/migration/04-rn-architecture.md](../../docs/migration/04-rn-architecture.md) §2.
-- Parent Engineering Story: [04 §2 Expo Foundation A4·A12](../../docs/migration/04-rn-architecture.md) + [ADR-0033](../../docs/adr/0033-rn-target-architecture.md) 결정 1.
-- Parent Work Package: `feat/rn-expo-boot` (EVAL-0011).
+- PRD: [01-rn-mvp-prd.md](../../docs/migration/01-rn-mvp-prd.md) §8.
+- Test Scenario: `TS-expo-boot-*` → AC 흡수(D10) — [05-rn-harness-decisions.md](../../docs/migration/05-rn-harness-decisions.md) §2.
+- Job Story: dev build 실기기 native module — [04-rn-architecture.md](../../docs/migration/04-rn-architecture.md) §2.
+- Engineering Story: [04 §2 A4·A12](../../docs/migration/04-rn-architecture.md) + [ADR-0033](../../docs/adr/0033-rn-target-architecture.md).
+- Work Package: `feat/rn-expo-boot`.
 
 ## Goal
 
-`apps/mobile`에 Expo Managed+CNG 기반 RN 앱 shell을 만들고 dev build가 가능한 최소 구성을 고정한다. 이 task가 끝나면 `ios/`·`android/`는 커밋하지 않는 CNG 원칙을 지키면서 New Architecture가 켜져 있고, `APP_VARIANT=dev|staging|prod`가 bundle id·앱 이름·scheme·연결 도메인을 분기하며, EAS `development`·`preview`·`production` profile이 같은 variant 모델을 따른다. 앱 코드는 아직 auth/route 기능을 완성하지 않고, 후속 G3/G5가 붙을 실행 가능한 Expo 표면만 만든다.
+`apps/mobile`에 Expo Managed+CNG shell, dev build 최소 구성 고정. `ios/`·`android/` 미커밋, New Architecture 활성화, `APP_VARIANT` variant 분기, EAS profile 매핑. auth/route는 후속 task.
 
 ## Source Files to Inspect
 
@@ -36,40 +36,40 @@ Parent: docs/adr/0033-rn-target-architecture.md, docs/migration/00-rn-conversion
 
 ## Target Files
 
-- `apps` — create `apps/mobile/...` Expo app shell.
-- `package.json` — root orchestration keeps `pnpm -r` scripts working.
-- `pnpm-workspace.yaml` — mobile workspace package remains under `apps/*`.
-- `.github/workflows` — add/adjust mobile lane only if CI already owns that check.
+- `apps` — `apps/mobile/...` shell 생성.
+- `package.json` — `pnpm -r` scripts 유지.
+- `pnpm-workspace.yaml` — mobile은 `apps/*`.
+- `.github/workflows` — 기존 CI 있는 경우만 mobile lane 추가.
 
 ## Requirements
 
-- Create an Expo app at `apps/mobile` using Managed workflow + CNG. Do not commit generated `ios/` or `android/`.
-- Enable New Architecture in Expo config, matching 04 A4.
-- Add `app.config.ts` with `APP_VARIANT` handling for dev/staging/prod bundle id, display name, scheme, and app/universal link domains. Do not hard-code prod values into every variant.
-- Add EAS profiles mapping `development`/`preview`/`production` to the same variant model.
-- Keep env exposure limited to `EXPO_PUBLIC_*` for mobile. Server secrets remain in `apps/web`/Vercel only.
-- Wire TypeScript, lint, and test scripts so `pnpm -r typecheck`, `pnpm -r lint`, and `pnpm -r test` include mobile without breaking web/domain.
-- Add only the minimum placeholder screen needed for Expo boot validation; full route skeleton is EVAL-0014.
+- `apps/mobile` Managed+CNG 생성. `ios/`·`android/` 커밋 금지.
+- New Architecture 활성화(04 A4).
+- `app.config.ts`: `APP_VARIANT`=dev|staging|prod 분기(bundle id·name·scheme). prod 하드코딩 금지.
+- EAS profile → variant 매핑.
+- mobile env `EXPO_PUBLIC_*`만. 서버 시크릿은 web/Vercel 전용.
+- `pnpm -r typecheck|lint|test` mobile 포함.
+- boot 최소 placeholder만. skeleton은 EVAL-0014.
 
 ## Non-goals
 
-- Kakao OAuth, magic link, SecureStore session restore, or logout — EVAL-0012.
-- Invite deep link orchestration — EVAL-0013.
-- Full Expo Router route inventory — EVAL-0014.
-- Moving domain modules into `packages/domain` — EVAL-0015.
-- Native photo upload, push registration, or production store release.
+- Kakao OAuth, magic link, SecureStore, logout — EVAL-0012.
+- Invite deep link — EVAL-0013.
+- Full route inventory — EVAL-0014.
+- `packages/domain` 이동 — EVAL-0015.
+- Native photo, push 등록, store 배포.
 
 ## Acceptance Criteria
 
-| 기준                   | 검증 방법                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------ | ------- | ----------------------------------------------------- |
-| Expo app shell exists  | `apps/mobile` package exists and is listed by `pnpm -r exec pwd`                                 |
-| CNG boundary preserved | generated `ios/` and `android/` directories are absent from git                                  |
-| A4 dev build config    | Expo config has Managed+CNG, New Architecture, and dev build-ready plugins only as required      |
-| A12 variant config     | `APP_VARIANT=dev                                                                                 | staging | prod` changes bundle id/name/scheme deterministically |
-| EAS profile parity     | EAS profiles map to variant values without duplicating secrets                                   |
-| workspace verification | `pnpm -r typecheck`, `pnpm -r lint`, and `pnpm -r test` pass or have explicit mobile no-op tests |
-| harness traceability   | `pnpm harness:check` passes with EVAL-0011 present                                               |
+| 기준                   | 검증 방법                                                |
+| ---------------------- | -------------------------------------------------------- |
+| Expo app shell exists  | `apps/mobile` listed by `pnpm -r exec pwd`               |
+| CNG boundary preserved | `ios/` and `android/` absent from git                    |
+| A4 dev build config    | Managed+CNG, New Architecture, dev build plugins         |
+| A12 variant config     | `APP_VARIANT=dev\|staging\|prod` → bundle id/name/scheme |
+| EAS profile parity     | EAS profiles map to variants, no duplicate secrets       |
+| workspace verification | `pnpm -r typecheck/lint/test` pass or mobile no-op       |
+| harness traceability   | `pnpm harness:check` passes                              |
 
 ## Verification Commands
 
@@ -85,19 +85,19 @@ pnpm validate:docs
 
 ## Expected Output Summary
 
-완료 보고는 `apps/mobile` 부트스트랩 위치, CNG 경계(`ios/`·`android/` 미커밋), `APP_VARIANT`/EAS profile 매핑, workspace 검증 결과, 그리고 G3/G5를 unblock한 지점을 한국어로 요약한다.
+한국어 요약: `apps/mobile` 위치, CNG 경계, `APP_VARIANT`/EAS 매핑, workspace 검증 결과, G3/G5 unblock.
 
 ## Harness Impact Questions
 
-1. Did this task introduce a new folder structure? Yes — `apps/mobile`; implementation PR must add drift note if harness docs assume only web/domain.
-2. Did this task introduce a new naming convention? Yes — mobile package name and `APP_VARIANT` profile naming.
-3. Did this task introduce a new dependency? Yes — Expo/RN/EAS dependencies inside `apps/mobile`.
-4. Did this task change verification commands? Yes — mobile joins `pnpm -r` checks.
-5. Did this task reveal that the current harness instructions are outdated? Maybe — any hard-coded web-only script path must be reported.
-6. Should any `.agents/` document be updated? Only if implementation finds stale path assumptions; otherwise no.
+1. New folder structure? Yes — `apps/mobile`; harness web-only 가정 PR drift note.
+2. New naming convention? Yes — mobile package, `APP_VARIANT` profile.
+3. New dependency? Yes — Expo/RN/EAS.
+4. Verification commands changed? Yes — `pnpm -r` 합류.
+5. Harness outdated? Maybe — web-only path 발견 시 보고.
+6. `.agents/` update? Only if stale paths found.
 
 ## Stop Condition
 
-- All Acceptance Criteria green + verification commands pass.
-- `pnpm harness:context EVAL-0011` prints Parent, Source, Target, and Verify sections.
-- pass@3 안에 green 못 만들면 app shell / variant config / CI lane으로 split.
+- AC 전부 green + verification commands pass.
+- `pnpm harness:context EVAL-0011` prints Parent/Source/Target/Verify.
+- pass@3 실패 시 app shell / variant config / CI lane으로 split.

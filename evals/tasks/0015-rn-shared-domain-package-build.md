@@ -2,26 +2,26 @@
 Task: EVAL-0015
 Track: port
 Kind: migration
-Status: blocked
+Status: done
 Blocked-by: EVAL-0010(RN monorepo foundation) complete.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md
 ---
 
 # EVAL-0015: G6 Shared domain package build — validators/keywords/challenge/bank/share
 
-> 00 §8 G6. EVAL-0010 creates the empty `@withkey/domain` shell; this task fills it with pure modules and shared tests.
+> 00 §8 G6. EVAL-0010이 빈 `@withkey/domain` 셸 생성; 이 task가 순수 모듈·공유 테스트로 채운다.
 
 ## Parent Links
 
-- Parent PRD Feature: POC domain rules for challenge/action/keywords/Kudos/share — [docs/PRD.md](../../docs/PRD.md) §3~§7.
-- Parent Test Scenario: existing unit tests become deterministic preservation evals per [02 §5.2](../../docs/migration/02-rn-migration-harness.md).
-- Parent Job Story: 인증/피드/정산 표시의 도메인 규칙이 web과 RN에서 같아야 한다 — [docs/stories/2026-06-02-photo-verification-job-stories.md](../../docs/stories/2026-06-02-photo-verification-job-stories.md) S1~S4.
-- Parent Engineering Story: [02 §3.2 packages/domain](../../docs/migration/02-rn-migration-harness.md) + [04 §1 A2](../../docs/migration/04-rn-architecture.md).
-- Parent Work Package: `feat/rn-shared-domain` (G6).
+- PRD Feature: [docs/PRD.md](../../docs/PRD.md) §3~§7 (challenge/action/keywords/Kudos/share 도메인).
+- Test Scenario: [02 §5.2](../../docs/migration/02-rn-migration-harness.md) preservation evals.
+- Job Story: [docs/stories/2026-06-02-photo-verification-job-stories.md](../../docs/stories/2026-06-02-photo-verification-job-stories.md) S1~S4.
+- Engineering Story: [02 §3.2](../../docs/migration/02-rn-migration-harness.md) + [04 §1 A2](../../docs/migration/04-rn-architecture.md).
+- Work Package: `feat/rn-shared-domain` (G6).
 
 ## Goal
 
-web과 RN이 같은 순수 도메인 코드를 import하도록 `packages/domain`을 채운다. 이 task가 끝나면 validators, keywords, challenge, bank, share 순수 모듈과 해당 unit tests가 `@withkey/domain`에서 export되고, `apps/web`은 상대 경로나 app-local alias가 아니라 workspace package를 통해 이 모듈을 소비할 수 있으며, mobile도 동일 source/test를 소비할 준비가 된다. 결과적으로 RN 포팅 중 도메인 규칙 재구현으로 생기는 drift를 차단한다.
+`packages/domain`을 순수 도메인 코드로 채워 web·RN이 공유 import한다. validators/keywords/challenge/bank/share 모듈·테스트가 `@withkey/domain`에서 export되고, web·mobile이 동일 source를 소비한다. drift를 차단한다.
 
 ## Source Files to Inspect
 
@@ -30,47 +30,45 @@ web과 RN이 같은 순수 도메인 코드를 import하도록 `packages/domain`
 - `docs/migration/02-rn-migration-harness.md`
 - `docs/migration/03-rn-migration-rules.md`
 - `docs/migration/04-rn-architecture.md`
-- `apps/web/src/lib/validators`
-- `apps/web/src/lib/keywords`
-- `apps/web/src/lib/challenge`
-- `apps/web/src/lib/bank`
-- `apps/web/src/lib/share`
+- `packages/domain/src/validators`
+- `packages/domain/src/keywords`
+- `packages/domain/src/challenge`
+- `packages/domain/src/bank`
+- `packages/domain/src/share`
 
 ## Target Files
 
-- `packages/domain` — move pure modules/tests and export from `src/index.ts`.
-- `apps/web/src/lib` — replace local pure-domain imports with `@withkey/domain` where scoped.
-- `apps` — mobile consumes `@withkey/domain`; do not duplicate domain code.
+- `packages/domain` — 순수 모듈·테스트, `src/index.ts` export.
+- `apps/web/src/lib` — 로컬 pure-domain import → `@withkey/domain` 교체.
+- `apps` — mobile은 `@withkey/domain` 소비; 중복 금지.
 
 ## Requirements
 
-- Move only pure TypeScript modules: validators, keywords, challenge, bank, share. Server-only modules, DB clients, React components, Next cache, and RN capability code stay out.
-- Preserve zod schemas as type SoT; exported domain types use `z.infer<>`.
-- Preserve keyword pool freeze and `KEYWORD_POOL_VERSION`; do not edit pool contents.
-- Keep `@withkey/domain` source-direct export (`./src/index.ts`) without `dist` build output.
-- Existing unit tests for moved modules must move with the modules and pass in `packages/domain`.
-- `apps/web` imports moved domain modules via `@withkey/domain`; relative cross-package imports are forbidden.
-- Mobile code must not reimplement done-day, penalty, keyword, bank, share, or validator logic inside features.
+- 순수 TS 모듈만 이동: validators/keywords/challenge/bank/share. Server-only/DB client/React/Next cache/RN capability 제외.
+- zod 타입 SoT 보존; 도메인 타입은 `z.infer<>` 도출.
+- `KEYWORD_POOL_VERSION`·pool 내용 수정 금지(freeze).
+- `./src/index.ts` source-direct export; `dist` 불필요.
+- unit tests도 함께 이동; `packages/domain`에서 통과.
+- `apps/web`은 `@withkey/domain`으로 import; cross-package 상대 import 금지.
+- mobile에서 domain 로직 재구현 금지.
 
 ## Non-goals
 
-- Moving DB reads, Supabase clients, Server Actions, analytics server emitter, AI, push, storage, or React UI.
-- Designing read model contracts — EVAL-0016.
-- Changing domain behavior or keyword pool.
-- Adding new greenfield P1/P2 settlement or auto-verification domain rules.
-- Publishing a package to a registry.
+- DB reads/Supabase/Server Actions/analytics/AI/push/React UI 이동.
+- Read model 계약(EVAL-0016), keyword pool 변경, 레지스트리 배포.
+- P1/P2 settlement/auto-verification 규칙.
 
 ## Acceptance Criteria
 
-| 기준                     | 검증 방법                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------- |
-| pure module coverage     | validators/keywords/challenge/bank/share are exported from `@withkey/domain`            |
-| tests moved and green    | package-level unit tests pass and cover moved behavior                                  |
-| web consumes package     | web imports moved modules from `@withkey/domain` where migrated                         |
-| no server leakage        | `packages/domain` has no Next, Supabase client, React, fs, or native capability imports |
-| keyword freeze preserved | `KEYWORD_POOL_VERSION` and pool contents are unchanged                                  |
-| workspace verification   | `pnpm -r typecheck`, `pnpm -r lint`, `pnpm -r test` pass                                |
-| harness traceability     | `pnpm harness:check` passes                                                             |
+| 기준                     | 검증 방법                                          |
+| ------------------------ | -------------------------------------------------- |
+| pure module coverage     | 5모듈이 `@withkey/domain` export                   |
+| tests moved and green    | 이동된 unit tests가 package-level pass             |
+| web consumes package     | web imports via `@withkey/domain`                  |
+| no server leakage        | domain에 Next/Supabase/React/fs/native import 없음 |
+| keyword freeze preserved | `KEYWORD_POOL_VERSION`·pool 내용 불변              |
+| workspace verification   | `pnpm -r typecheck/lint/test` pass                 |
+| harness traceability     | `pnpm harness:check` passes                        |
 
 ## Verification Commands
 
@@ -86,19 +84,19 @@ pnpm validate:docs
 
 ## Expected Output Summary
 
-완료 보고는 `@withkey/domain`으로 이동한 모듈과 제외한 서버/UI 모듈, web import 전환 범위, 공유 unit test 결과, keyword pool 무변경 증거, 후속 G7/G8 unblock 상태를 한국어로 요약한다.
+이동·제외 모듈, web import 전환, keyword pool 무변경, G7/G8 unblock 상태를 한국어로 요약.
 
 ## Harness Impact Questions
 
-1. Did this task introduce a new folder structure? Yes if domain subfolders mirror old `src/lib` structure.
-2. Did this task introduce a new naming convention? Maybe — public exports from `@withkey/domain`.
-3. Did this task introduce a new dependency? No; package should stay pure and dependency-light.
-4. Did this task change verification commands? Yes — `@withkey/domain` tests become part of `pnpm -r test`.
-5. Did this task reveal that the current harness instructions are outdated? Maybe — if old `src/lib` paths remain in docs.
-6. Should any `.agents/` document be updated? Only if harness context paths assume domain modules live under web.
+1. New folder structure? Yes — domain subfolders mirror `src/lib`.
+2. New naming convention? Maybe — `@withkey/domain` exports.
+3. New dependency? No.
+4. Verification commands changed? Yes — domain tests join `pnpm -r test`.
+5. Harness outdated? Maybe — old `src/lib` paths in docs.
+6. `.agents/` update? Only if domain paths become harness inputs.
 
 ## Stop Condition
 
-- All listed module families are shared or explicitly excluded with rationale.
-- web/domain/mobile type boundaries pass.
-- pass@3 안에 green 못 만들면 validators / keywords+challenge / bank+share로 split.
+- 모든 모듈 패밀리 공유 또는 명시적 제외(근거 필수).
+- web/domain/mobile 타입 경계 통과.
+- pass@3 실패 시 validators / keywords+challenge / bank+share로 split.

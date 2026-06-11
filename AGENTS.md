@@ -37,7 +37,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 1. **Fact 요약** — 사용자 요청, 진행 중인 계획, 저장소 파일, 이전 커밋에서 이미 알려진 사실. 사실과 가정을 분리해서 기술
 2. **작업 범위** — 변경될 가능성이 높은 정확한 경로
-3. **브랜치** — `develop`/`main` 위에서 사소하지 않은 변경(feat/fix/refactor)을 시작하려면 **먼저 `feat/<scope>-<desc>` · `fix/<scope>-<desc>` · `chore/<desc>` 브랜치를 끊는다**. PR 베이스는 `develop`. `develop` 직접 커밋은 트리비얼 docs/chore(오타 · 룰 인덱스 · 의존 버전 bump)에 한함. 정책 전문은 [`docs/ONBOARDING.md §8`](docs/ONBOARDING.md)
+3. **브랜치** — 모든 변경(트리비얼 docs/chore 포함)은 **먼저 `feat/<scope>-<desc>` · `fix/<scope>-<desc>` · `chore/<desc>` 브랜치를 끊는다**. PR 베이스는 `develop`. `develop` 직접 커밋·푸시는 불가 — 보호 브랜치 규칙이 직접 push 를 거부한다. 정책 전문은 [`docs/ONBOARDING.md §8`](docs/ONBOARDING.md)
 4. **데이터/RLS 영향** — Supabase 테이블, RLS 정책, 마이그레이션, 또는 "없음"
 5. **검증 계획** — 작업이 완료되었음을 증명할 커맨드/테스트
 
@@ -56,7 +56,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 ### §타입 & 검증
 
-- `src/lib/validators/*` zod 스키마가 **타입 SoT(Single Source of Truth)**. 도메인 타입은 `z.infer<>`로 도출. **왜**: 런타임 검증과 컴파일 타입을 한 곳에서 동기
+- `packages/domain/src/validators/*`(`@withkey/domain`) zod 스키마가 **타입 SoT(Single Source of Truth)**. 도메인 타입은 `z.infer<>`로 도출. **왜**: 런타임 검증과 컴파일 타입을 한 곳에서 동기
 - `any` 금지. 불가피하면 `unknown` + 좁히기. **왜**: 타입 안전성 우회 누적은 디버깅 비용 ↑
 - DB 타입은 `pnpm db:types` 자동 생성본(`apps/web/src/types/supabase.ts`) — 직접 수정 금지. **왜**: 다음 generate가 변경분을 덮어씀
 
@@ -67,7 +67,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 - migration 파일명: `000X_<snake_case>.sql`. 번호 맨 뒤에만 추가, 재정렬 금지. down 스크립트 없음(POC 단방향). **왜**: 머지된 migration은 production에서 이미 적용됨, 재정렬은 데이터 무결성 깨짐
 - Supabase Studio에서 DDL 직접 수정 금지. 모든 스키마 변경은 migration 파일로. **왜**: 재현 가능성
 
-### §키워드 풀 (`apps/web/src/lib/keywords/pool.ts`)
+### §키워드 풀 (`packages/domain/src/keywords/pool.ts`)
 
 - **버전 정책**: v1.0 freeze (POC 시작) · v1.1 release 2026-05-22 (meal 추가, [ADR-0015](docs/adr/0015-meal-activity-type.md)) · **이후 추가 변경 금지**. 변경 시 PO 승인 + [`docs/VALIDATION.md`](docs/VALIDATION.md) 재논의 필요. **왜**: PRD §4.6 — 분석 편향 방지(데이터 일관성 보존)
 - `KEYWORD_POOL_VERSION` 상수를 `keywords_shown` · `action_logged` 이벤트에 명시 inject — 분석 분기점 marker. **왜**: 릴리스 timestamp 가 deploy 지연·cache·환경차로 부정확하므로 명시 marker 가 robust
@@ -104,15 +104,15 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 
 아래 7개 경로 변경 시 같은 PR에 **spec 또는 ADR**(Architecture Decision Record)을 함께 추가합니다. CI(`scripts/check-spec-required.mjs`)가 부재를 감지하면 stderr 경고를 출력합니다(soft — 차단 없음).
 
-| 트리거 경로                           | 권장 산출물 | 이유                                               |
-| ------------------------------------- | ----------- | -------------------------------------------------- |
-| `supabase/migrations/**`              | **ADR**     | 단방향(POC 정책), 데이터 손실 가능                 |
-| `src/lib/supabase/**`                 | **ADR**     | admin/client/server/middleware 전부 인증 백본      |
-| `middleware.ts`                       | **ADR**     | Next.js 인증 진입점                                |
-| `apps/web/src/lib/keywords/pool.ts`   | **ADR**     | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
-| `src/lib/validators/**`               | **spec**    | 도메인 7개가 기능 진화 따라 빈번히 변경            |
-| `apps/web/src/lib/analytics/track.ts` | **spec**    | PRD §9.1과 1:1 동기화                              |
-| `src/lib/ai/**` (PROMPT_VERSION bump) | **spec**    | 프롬프트 가역 · A/B 비교 가능                      |
+| 트리거 경로                            | 권장 산출물 | 이유                                               |
+| -------------------------------------- | ----------- | -------------------------------------------------- |
+| `supabase/migrations/**`               | **ADR**     | 단방향(POC 정책), 데이터 손실 가능                 |
+| `src/lib/supabase/**`                  | **ADR**     | admin/client/server/middleware 전부 인증 백본      |
+| `middleware.ts`                        | **ADR**     | Next.js 인증 진입점                                |
+| `packages/domain/src/keywords/pool.ts` | **ADR**     | POC freeze 정책 — PO 승인 + VALIDATION 재논의 필요 |
+| `packages/domain/src/validators/**`    | **spec**    | 도메인 7개가 기능 진화 따라 빈번히 변경            |
+| `apps/web/src/lib/analytics/track.ts`  | **spec**    | PRD §9.1과 1:1 동기화                              |
+| `src/lib/ai/**` (PROMPT_VERSION bump)  | **spec**    | 프롬프트 가역 · A/B 비교 가능                      |
 
 ADR과 spec의 구분은 [`docs/adr/README.md`](docs/adr/README.md), [`docs/superpowers/specs/README.md`](docs/superpowers/specs/README.md)를 참조. 작성자가 권장과 다른 산출물을 골라도 무방하며, 리뷰어가 적정성을 판단합니다.
 
@@ -163,6 +163,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 - **PR 본문 · 커밋 메시지 주제는 한국어**(2026-05-21 합의). 섹션 헤더(`## Summary` 등)는 영어 유지 가능. 기술 용어 · 코드 식별자 · 라이브러리/API 이름은 원문(영어) 유지(예: `feat(ui): Textarea + Select primitives 추가`). conventional commits `타입(스코프):` 접두는 영문. 상세는 [`.claude/rules/common/git-workflow.md`](.claude/rules/common/git-workflow.md) §PR 본문 · 커밋 메시지 언어
 - [`.github/pull_request_template.md`](.github/pull_request_template.md)가 PR 본문에 자동 prefill — Summary / Spec or ADR / 가드레일 4 체크박스 / Verification / Rollback 골격 제공
 - PR 베이스는 `develop`. main 직접 PR은 release 시점에만
+- PR 생성 후에는 CI/checks 상태를 성공 또는 실패 결론까지 모니터링하고 결과를 보고한다. 실패 시 원인 로그를 확인해 가능한 범위에서 수정·재푸시 후 다시 모니터링한다.
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만
 
 ### pre-commit hook (저마찰)

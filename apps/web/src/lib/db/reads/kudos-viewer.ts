@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { adminClient } from "@/lib/supabase/admin";
-import { KUDOS_EMOJIS, type KudosEmoji } from "@/lib/validators/kudos";
+import { KUDOS_EMOJIS, type KudosEmoji } from "@withkey/domain";
 
 // Phase 3 (SNS cache plan v4) — viewer-specific kudos state. ADR-0024.
 // tag: user-${viewerId}-kudos-${actionLogId}. toggleKudos 가 본인 mutate 시

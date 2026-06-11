@@ -1,7 +1,23 @@
-// @withkey/domain — 공유 순수 도메인 패키지 (EVAL-0010 shell).
-//
-// 이 패키지는 web(apps/web)과 후속 RN(apps/mobile)이 공유할 순수 도메인 로직
-// (validators · keywords · challenge · bank · share)의 자리만 잡아 둔 빈 shell이다.
-// 도메인 모듈 실이동은 G6(후속 EVAL)에서 수행한다 — 본 task(EVAL-0010)는 경계·소비
-// 배선만 깐다(ADR-0033 결정 2, 00 §13.4 D-1).
-export {};
+// @withkey/domain — web(apps/web)과 후속 RN(apps/mobile)이 공유하는 순수 도메인 로직.
+// 단일 진입점(barrel): 소비처는 `@withkey/domain` 루트로만 import 한다(상대·subpath import 금지, 04 A2/§1).
+export * from "./validators";
+export * from "./keywords";
+export * from "./challenge";
+export * from "./bank";
+export * from "./share";
+
+// validators/challenge 와 challenge/lifecycle 이 동일한 4-status union `ChallengeStatus` 를
+// 각각 export 해 두 패밀리 barrel 의 `export *` 가 충돌(TS2308)한다. zod SoT(validators) 쪽을
+// 명시 재export 해 모호성을 제거한다 — 두 타입은 구조적으로 동일.
+export type { ChallengeStatus } from "./validators/challenge";
+
+export { pointBalanceFor, type PointBalanceScope, type PointLedgerEntry } from "./point-ledger";
+export {
+  computeSettlement,
+  settleOnce,
+  type SettlementInput,
+  type SettlementLedgerEntry,
+  type SettlementReason,
+  type SettlementResult,
+  type SettlementShare,
+} from "./settlement";

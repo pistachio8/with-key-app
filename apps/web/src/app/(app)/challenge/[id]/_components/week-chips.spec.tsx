@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WeekChips } from "./week-chips";
-import type { WeekChip } from "@/lib/challenge/weekly";
+import type { WeekChip } from "@withkey/domain";
 
 const chips: WeekChip[] = [
   { week: 1, goal: 3, done: 3, state: "achieved" },

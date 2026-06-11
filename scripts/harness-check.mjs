@@ -2,6 +2,7 @@
 import {
   loadMigrationTasks,
   validateTask,
+  validateGoalPromptLength,
   loadAcIndex,
   loadCitationFiles,
   validateAcTraceability,
@@ -16,7 +17,12 @@ const acIndex = loadAcIndex();
 const citationFiles = loadCitationFiles();
 const acErrors = validateAcTraceability(acIndex, citationFiles);
 
-const errors = [...taskErrors, ...acErrors];
+// Tier 1-C: open task 의 /goal 프롬프트 길이 — 4000자 초과는 /goal 이 실행을 거부한다.
+// frontmatter·경로가 깨진 task 는 렌더 자체가 무의미하므로 Tier 1-A 통과분만 잰다.
+const goalErrors =
+  taskErrors.length > 0 ? [] : tasks.flatMap((task) => validateGoalPromptLength(task));
+
+const errors = [...taskErrors, ...acErrors, ...goalErrors];
 
 if (errors.length > 0) {
   console.error(`[harness:check] FAIL — ${errors.length} violation(s).`);

@@ -30,6 +30,7 @@ spec-required 경로 매핑은 AGENTS.md §4 참조 (supabase/migrations · src/
 - [ ] `pnpm test`
 - [ ] (해당 시) `pnpm test:integration` · `pnpm test:e2e`
 - [ ] (UI 변경 시) 모바일 viewport 수동 확인
+- [ ] (EVAL task 완료 시) 해당 `evals/tasks/NNNN-*.md` `Status: done` 갱신을 **이 PR 에 포함** — 머지 후 별도 편집 금지(status drift 원천 차단). 누락 시 `pnpm harness:drift` 가 경고
 
 ## Rollback
 

@@ -1,9 +1,7 @@
 // 모킹업 §6 상단 — primary bg 상태 카드.
 // socialProof 는 status × isSolo × isOwner 3축으로 분기 (spec C4).
 
-import { goalCountLabel } from "@/lib/challenge/frequency";
-import { penaltyLabel } from "@/lib/challenge/penalty";
-import type { ChallengePhase } from "@/lib/challenge/lifecycle";
+import { goalCountLabel, penaltyLabel, type ChallengePhase } from "@withkey/domain";
 
 interface StatusCardProps {
   title: string;

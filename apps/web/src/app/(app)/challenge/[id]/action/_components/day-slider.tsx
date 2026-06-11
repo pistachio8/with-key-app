@@ -7,7 +7,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { streakTiers } from "@/lib/challenge/streak-tiers";
+import { streakTiers } from "@withkey/domain";
 
 interface DaySliderProps {
   totalDays: number;

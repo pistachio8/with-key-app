@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Image as ImageIcon, Loader2, X } from "lucide-react";
+import { AlertTriangle, Camera, Check, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -9,11 +9,22 @@ import { Card } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { Textarea } from "@/components/ui/textarea";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
-import { ACTIVITY_TYPES, type ActivityType } from "@/lib/keywords/pool";
-import { initialShuffle, reroll, type ShuffleState } from "@/lib/keywords/shuffle";
+import {
+  ACTIVITY_TYPES,
+  type ActivityType,
+  initialShuffle,
+  reroll,
+  type ShuffleState,
+  ALLOWED_PHOTO_MIME,
+  MAX_PHOTO_BYTES,
+} from "@withkey/domain";
 import { cn } from "@/lib/utils";
 import { prepareForUpload } from "@/lib/image/prepare-upload";
-import { ALLOWED_PHOTO_MIME, MAX_PHOTO_BYTES } from "@/lib/validators/action-log";
+import {
+  precheckPhotoFile,
+  type PhotoPrecheckReason,
+  type PhotoPrecheckResult,
+} from "@/lib/verify/precheck";
 import { submitActionLog } from "../_actions";
 import { ActionResultDialog, type ActionResultVariant } from "./action-result-dialog";
 import { KeywordChipGroup } from "./keyword-chip-group";
@@ -36,6 +47,11 @@ const userMessage = makeUserMessage({
   not_found: "현재 참여 중인 챌린지를 찾을 수 없어요.",
   forbidden: "지금은 인증할 수 있는 기간이 아니에요.",
 });
+
+const PRECHECK_REASON_LABELS: Record<PhotoPrecheckReason, string> = {
+  blurry: "사진이 흐릿해 보여요",
+  screenshot: "스크린샷처럼 보여요",
+};
 
 // F10 — 등록 실패 시 draft 보존 (PRD §4.4 "1시간 보관"). 사진은 보존 불가(직렬화 한계).
 const DRAFT_TTL_MS = 60 * 60 * 1000;
@@ -134,6 +150,8 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
   const [memo, setMemo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [precheck, setPrecheck] = useState<PhotoPrecheckResult | null>(null);
+  const [precheckDismissed, setPrecheckDismissed] = useState(false);
   const [result, setResult] = useState<ResultState>({ open: false, variant: "completed" });
 
   // F10 + reset-on-reentry (spec 2026-05-29-action-form-reset-on-leave):
@@ -150,6 +168,8 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
     if (isReentry) {
       setFile(null);
       setPreview(null);
+      setPrecheck(null);
+      setPrecheckDismissed(false);
       setResult({ open: false, variant: "completed" });
       if (!draft) {
         setActivityType("gym");
@@ -199,8 +219,15 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
   function clearPhoto() {
     setFile(null);
     setPreview(null);
+    setPrecheck(null);
+    setPrecheckDismissed(false);
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (libraryInputRef.current) libraryInputRef.current.value = "";
+  }
+
+  function retakePhoto() {
+    clearPhoto();
+    window.setTimeout(() => cameraInputRef.current?.click(), 0);
   }
 
   const handleFile = useCallback(async (nextFile: File | null) => {
@@ -219,10 +246,16 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
       clearPhoto();
       return;
     }
+    setPrecheck(null);
+    setPrecheckDismissed(false);
     setPreparing(true);
     try {
-      const prepared = await prepareForUpload(nextFile);
+      const [prepared, precheckResult] = await Promise.all([
+        prepareForUpload(nextFile),
+        precheckPhotoFile(nextFile),
+      ]);
       setFile(prepared);
+      setPrecheck(precheckResult);
       setPreview(URL.createObjectURL(prepared));
     } finally {
       setPreparing(false);
@@ -297,6 +330,7 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
   }
 
   const busy = pending || preparing;
+  const activePrecheck = precheck?.shouldRetake && !precheckDismissed ? precheck : null;
 
   // 사진 미선택 empty state — Fab(카메라) + 라이브러리 텍스트 링크 (모킹업 §10 진입 흐름).
   if (!file && !preview) {
@@ -363,6 +397,15 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
               </button>
             </div>
           </div>
+        )}
+
+        {activePrecheck && (
+          <PhotoPrecheckAdvice
+            result={activePrecheck}
+            busy={busy}
+            onRetake={retakePhoto}
+            onContinue={() => setPrecheckDismissed(true)}
+          />
         )}
 
         <DiaryBotInfo />
@@ -477,6 +520,57 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
         goalCount={result.goalCount}
       />
     </>
+  );
+}
+
+function PhotoPrecheckAdvice({
+  result,
+  busy,
+  onRetake,
+  onContinue,
+}: {
+  result: PhotoPrecheckResult;
+  busy: boolean;
+  onRetake: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <Card
+      tone="muted"
+      padding="sm"
+      className="border-amber-200 bg-amber-50 text-amber-950"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="t-caption font-semibold">다시 찍는 게 좋아 보여요</p>
+            <ul className="mt-1 flex flex-wrap gap-1">
+              {result.reasons.map((reason) => (
+                <li
+                  key={reason}
+                  className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold"
+                >
+                  {PRECHECK_REASON_LABELS[reason]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={onRetake}>
+            <Camera className="size-4" aria-hidden="true" />
+            다시 찍기
+          </Button>
+          <Button type="button" size="sm" disabled={busy} onClick={onContinue}>
+            <Check className="size-4" aria-hidden="true" />
+            그대로 진행
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

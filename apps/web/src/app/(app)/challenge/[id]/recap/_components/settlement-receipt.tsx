@@ -1,9 +1,6 @@
 // src/app/(app)/challenge/[id]/recap/_components/settlement-receipt.tsx
 import Image from "next/image";
-import { formatKRW } from "@/lib/challenge/penalty";
-import { goalCountLabel } from "@/lib/challenge/frequency";
-import { totalWeeks } from "@/lib/challenge/weekly";
-import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
+import { formatKRW, goalCountLabel, totalWeeks, BANK_NAMES, type BankCode } from "@withkey/domain";
 import { Stamp } from "@/components/ui/stamp";
 import { cn } from "@/lib/utils";
 import { AccountCopyButton } from "./account-copy-button";

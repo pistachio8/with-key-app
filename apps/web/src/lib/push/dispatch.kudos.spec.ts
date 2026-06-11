@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { KudosEmoji } from "@/lib/validators/kudos";
+import type { KudosEmoji } from "@withkey/domain";
 
 // dispatchKudosReceivedNotification 전용 spec. plan 2026-05-22-kudos-received-notification.
 

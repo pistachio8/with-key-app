@@ -3,7 +3,7 @@
 import { Bell } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PushSettings } from "./push-settings";
-import type { NotificationPrefs } from "@/lib/validators/push";
+import type { NotificationPrefs } from "@withkey/domain";
 
 interface NotificationCardProps {
   initialPrefs: NotificationPrefs;

@@ -2,7 +2,7 @@
 
 import { Wallet, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { BANK_NAMES, type BankCode } from "@/lib/bank/codes";
+import { BANK_NAMES, type BankCode } from "@withkey/domain";
 import { AccountInputSheet } from "./account-input-sheet";
 
 interface GroupAccountCardProps {

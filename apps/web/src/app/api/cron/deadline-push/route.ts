@@ -4,8 +4,12 @@ import {
   dispatchDeadlineNotification,
   dispatchGoalUnreachableNotification,
 } from "@/lib/push/dispatch";
-import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
-import { unreachableParticipants, type CutoffContext } from "@/lib/challenge/weekly";
+import {
+  toKstDayKey,
+  dayIndexOf,
+  unreachableParticipants,
+  type CutoffContext,
+} from "@withkey/domain";
 
 // Vercel hobby plan 은 cron 을 하루 1 회까지만 허용해 `vercel.json` 의 스케줄이
 // `0 0 * * *` (UTC 자정 = KST 09 시) 로 잡혀 있다. "마감 24 시간 전" 의도를

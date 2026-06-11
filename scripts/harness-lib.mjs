@@ -112,6 +112,35 @@ export function validateTask(task, { exists = existsSync } = {}) {
   return errors;
 }
 
+// Work Package 브랜치명을 task 본문에서 추출한다 — 템플릿이 `> WPn (`feat/<slug>`)` 형태로 적는다.
+// frontmatter 필드가 아니라 prose 라서 첫 백틱 `feat/...` 토큰을 신호로 쓴다.
+// renamed 브랜치(예: 본문 feat/rn-verify-replace ↔ 머지 feat/rn-verify-photo-replace)는 놓칠 수 있다 — warn 전용이라 허용.
+export function extractWorkPackageBranch(task) {
+  const match = (task.content || "").match(/`(feat\/[a-z0-9][a-z0-9-]*)`/);
+  return match ? match[1] : null;
+}
+
+// stale status 휴리스틱: todo·in_progress 인데 WP 브랜치가 이미 머지됨 → status 갱신 누락 의심.
+// blocker 아닌 warn — Target Files 가 디렉토리 단위라 파일 존재로는 done 을 가릴 수 없어 머지 신호를 쓴다.
+// mergedBranches(Set)·branchOf 를 주입받아 git·본문 비의존으로 테스트한다(validateTask 의 exists 주입과 동형).
+export function detectStaleStatus(
+  task,
+  mergedBranches,
+  { branchOf = extractWorkPackageBranch } = {},
+) {
+  const status = task.frontmatter.Status;
+  if (status !== "todo" && status !== "in_progress") {
+    return [];
+  }
+  const branch = branchOf(task);
+  if (!branch || !mergedBranches.has(branch)) {
+    return [];
+  }
+  return [
+    `${task.repoPath}: Status '${status}' but Work Package branch '${branch}' is merged — flip to done?`,
+  ];
+}
+
 export function formatPathList(paths) {
   return paths
     .map((item) => {
@@ -531,5 +560,39 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   out.push("## Stop Condition");
   out.push(stop || "(task Stop Condition 참조)");
   out.push("");
-  return out.join("\n");
+  return compactTableRows(out.join("\n"));
+}
+
+// prettier(pre-commit lint-staged)가 markdown 표를 열 정렬 padding 으로 재포맷해 커밋 때마다
+// 렌더 길이를 부풀린다(task 1개당 수백 자). /goal 프롬프트는 정렬이 불필요하므로 표 행(| 시작)의
+// 연속 공백과 separator 대시 런만 압축해 4000자 예산을 padding 과 무관하게 만든다.
+function compactTableRows(text) {
+  return text
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("|")) {
+        return line;
+      }
+      return trimmed.replace(/ {2,}/g, " ").replace(/-{4,}/g, "---");
+    })
+    .join("\n");
+}
+
+// /goal 명령의 goal condition 은 4000자 하드 리밋 — 초과 프롬프트는 실행 자체가 거부된다.
+export const GOAL_PROMPT_CHAR_LIMIT = 4000;
+
+// 렌더된 /goal 프롬프트가 리밋을 넘는 task 를 잡는다. done task 는 /goal 재실행 대상이
+// 아니므로 open(todo·blocked·in_progress) task 만 검사한다 — 과거 done 초과분은 소급하지 않는다.
+export function validateGoalPromptLength(task, { render = renderGoalPrompt } = {}) {
+  if (task.frontmatter.Status === "done") {
+    return [];
+  }
+  const length = render(task).length;
+  if (length <= GOAL_PROMPT_CHAR_LIMIT) {
+    return [];
+  }
+  return [
+    `${task.repoPath}: rendered /goal prompt is ${length} chars > ${GOAL_PROMPT_CHAR_LIMIT} (/goal 하드 리밋) — task 를 분할하거나 본문을 줄여라 (05 §9.4)`,
+  ];
 }

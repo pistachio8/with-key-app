@@ -49,6 +49,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: pnpm check:spec-required --base origin/${{ github.base_ref }}
       - run: pnpm test:ci
+      # mobile 단위 테스트(jest-expo) — test:ci 는 web 전용 필터라 별도 step (EVAL-0012)
+      - run: pnpm --filter @withkey/mobile test
 
   integration:
     name: Integration (shared with-key project)

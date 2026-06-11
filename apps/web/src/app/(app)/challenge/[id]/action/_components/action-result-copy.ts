@@ -1,4 +1,4 @@
-import type { ActivityType } from "@/lib/keywords/pool";
+import type { ActivityType } from "@withkey/domain";
 
 // 결과 모달용 활동 명사(이모지 없음). other(기타)는 활동명을 생략하고 중립 문구를 쓴다.
 const ACTIVITY_NOUN: Partial<Record<ActivityType, string>> = {

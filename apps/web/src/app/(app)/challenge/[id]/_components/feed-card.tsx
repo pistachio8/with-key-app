@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { KudosEmoji } from "@/lib/validators/kudos";
+import type { KudosEmoji } from "@withkey/domain";
 import { KudosBar } from "./kudos-bar";
 
 interface FeedCardProps {

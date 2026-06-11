@@ -1,18 +1,17 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
 import {
+  toKstDayKey,
+  dayIndexOf,
   challengePhase,
   remainingDays,
   type ChallengePhase,
   type ChallengeStatus,
-} from "@/lib/challenge/lifecycle";
-import {
   weekBucketsFromDayKeys,
   computeAccruedPot,
   confirmedPenalty,
   type CutoffContext,
   type CutoffPhase,
-} from "@/lib/challenge/weekly";
+} from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
 export type GroupChallengeView = {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACTIVITY_TYPES } from "@/lib/keywords/pool";
+import { ACTIVITY_TYPES } from "@withkey/domain";
 
 const activityType = z.enum(ACTIVITY_TYPES);
 const uuid = z.string().uuid();

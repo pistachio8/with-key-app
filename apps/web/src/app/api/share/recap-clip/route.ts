@@ -4,8 +4,7 @@ import { renderPhotoCard, type CardData } from "@/app/api/og/recap-card/template
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { loadCardFonts } from "@/lib/share/og-fonts";
-import { formatSharePeriod } from "@/lib/share/period";
-import { pickOne, sample } from "@/lib/share/seeded-pick";
+import { formatSharePeriod, pickOne, sample } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 import { encodeClip } from "./encode";
 import { renderIntroFrame } from "./frames";

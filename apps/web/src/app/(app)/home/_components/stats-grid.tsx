@@ -5,7 +5,7 @@
 // min-w-0 은 긴 값이 트랙을 밀어내는 grid blowout 을 차단.
 // 숫자 행은 h-8(폰트 크기가 달라도 32px 고정·중앙 정렬)로 통일 — 셀 간 라벨 세로 정렬 유지.
 
-import { formatKRWParts } from "@/lib/challenge/penalty";
+import { formatKRWParts } from "@withkey/domain";
 
 type Props = {
   activeCount: number;

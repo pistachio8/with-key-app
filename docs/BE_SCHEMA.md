@@ -44,7 +44,7 @@
 
 ---
 
-## 2. 테이블 인벤토리 (10개)
+## 2. 테이블 인벤토리 (13개)
 
 | #   | 테이블                   | 목적                                            | PRD 근거      |
 | --- | ------------------------ | ----------------------------------------------- | ------------- |
@@ -54,12 +54,15 @@
 | 4   | `invites`                | 초대 토큰 · 72h 만료                            | §3.3 AC-2     |
 | 5   | `challenges`             | 서약서 본문(제목·횟수·기간·금액) + 상태         | §3, §8.2      |
 | 6   | `challenge_participants` | 서명/참여 여부, `signed_at`                     | §3.3 AC-3/5   |
-| 7   | `action_logs`            | 사진+종류+키워드칩 인증 **+ AI 일기 결과 흡수** | §4, §5, §8.2  |
-| 8   | `kudos`                  | 3고정 이모지 응원(토글)                         | §7, §8.2      |
-| 9   | `push_subscriptions`     | Web Push 구독 토큰                              | §6            |
-| 10  | `events`                 | 분석 이벤트 로그(§9) · AI 비용 추적 포함        | §9            |
+| 7   | `point_ledger`           | append-only 포인트 원장, 잔액=`SUM(delta)`      | §5.C P1       |
+| 8   | `settlements`            | 챌린지별 불변 정산 스냅샷                       | §5.C P1       |
+| 9   | `action_logs`            | 사진+종류+키워드칩 인증 **+ AI 일기 결과 흡수** | §4, §5, §8.2  |
+| 10  | `kudos`                  | 3고정 이모지 응원(토글)                         | §7, §8.2      |
+| 11  | `push_subscriptions`     | Web Push 구독 토큰                              | §6            |
+| 12  | `events`                 | 분석 이벤트 로그(§9) · AI 비용 추적 포함        | §9            |
+| 13  | `feedback`               | 개발자에게 건의 (카테고리·본문·사진)            | dogfood 운영  |
 
-> 신규 추가: `invites` · `events` (PRD §8.1 명시 9종 외 운영 필수).
+> 신규 추가: `invites` · `events` (PRD §8.1 명시 9종 외 운영 필수), `point_ledger` · `settlements` (P1 포인트 정산 실데이터), `feedback` (dogfood 건의 — [ADR-0035](./adr/0035-feedback-table-storage.md), PRD AC 없음).
 > **제외(POC out of scope)**:
 >
 > - `ai_cost_log` — 규모 불필요. `events(name='ai_generated')` 집계로 대체. → §13 v1 백로그.
@@ -76,14 +79,18 @@ erDiagram
     users ||--o{ action_logs : "authors"
     users ||--o{ kudos : "gives"
     users ||--o{ challenge_participants : "joins"
+    users ||--o{ point_ledger : "owns point deltas"
     users ||--o{ events : "tracks"
 
     groups ||--o{ group_members : "has"
     groups ||--o{ invites : "generates"
     groups ||--o{ challenges : "runs"
+    groups ||--o{ point_ledger : "scopes"
 
     challenges ||--o{ challenge_participants : "requires signatures"
     challenges ||--o{ action_logs : "records"
+    challenges ||--o{ point_ledger : "may reference"
+    challenges ||--|| settlements : "settles once"
 
     action_logs ||--o{ kudos : "receives"
 
@@ -133,6 +140,24 @@ erDiagram
         uuid user_id PK,FK
         timestamptz signed_at
         timestamptz joined_at
+        int deposit_points
+    }
+    point_ledger {
+        uuid id PK
+        uuid user_id FK
+        uuid group_id FK
+        uuid challenge_id FK
+        int delta
+        text reason
+        uuid ref_id
+        timestamptz created_at
+    }
+    settlements {
+        uuid challenge_id PK,FK
+        timestamptz settled_at
+        text settled_by
+        int pool_points
+        jsonb distribution
     }
     action_logs {
         uuid id PK
@@ -267,35 +292,78 @@ stateDiagram-v2
 
 ### 5.6 `challenge_participants`
 
-| 컬럼           | 타입        | Null | Default | 제약/비고                            |
-| -------------- | ----------- | ---- | ------- | ------------------------------------ |
-| `challenge_id` | uuid        | NO   | —       | PK, FK → `challenges.id`             |
-| `user_id`      | uuid        | NO   | —       | PK, FK → `users.id`                  |
-| `signed_at`    | timestamptz | YES  | null    | `NULL = 미서명`, 값 존재 = 서명 완료 |
-| `joined_at`    | timestamptz | NO   | `now()` |                                      |
+| 컬럼             | 타입        | Null | Default | 제약/비고                                                                               |
+| ---------------- | ----------- | ---- | ------- | --------------------------------------------------------------------------------------- |
+| `challenge_id`   | uuid        | NO   | —       | PK, FK → `challenges.id`                                                                |
+| `user_id`        | uuid        | NO   | —       | PK, FK → `users.id`                                                                     |
+| `signed_at`      | timestamptz | YES  | null    | `NULL = 미서명`, 값 존재 = 서명 완료                                                    |
+| `joined_at`      | timestamptz | NO   | `now()` |                                                                                         |
+| `deposit_points` | int         | NO   | `0`     | 보증금 hold 금액의 게이지 read용 denormalized cache. `CHECK >= 0`. SoT는 `point_ledger` |
 
 - 전원 서명 판별: `COUNT(*) FILTER (WHERE signed_at IS NULL) = 0`.
+- `deposit_points`는 `signed_at` self-update 정책에 우발적으로 노출되지 않도록 BEFORE INSERT/UPDATE 트리거가 service_role 외 변경을 차단한다(migration 0042).
+
+### 5.6.1 `point_ledger`
+
+Append-only 포인트 원장. 잔액 컬럼은 두지 않고, 표시 잔액은 항상 `user_id + group_id` 스코프의 `SUM(delta)`로 도출한다(ADR-0032, `AC-deposit-hold-5`).
+
+| 컬럼           | 타입        | Null | Default             | 제약/비고                                                                                   |
+| -------------- | ----------- | ---- | ------------------- | ------------------------------------------------------------------------------------------- |
+| `id`           | uuid        | NO   | `gen_random_uuid()` | PK                                                                                          |
+| `user_id`      | uuid        | NO   | —                   | FK → `users.id`                                                                             |
+| `group_id`     | uuid        | NO   | —                   | FK → `groups.id`                                                                            |
+| `challenge_id` | uuid        | YES  | null                | FK → `challenges.id`, 가입/번들 지급처럼 챌린지와 무관한 행은 NULL 허용                     |
+| `delta`        | int         | NO   | —                   | signed point delta, `CHECK (delta <> 0)`                                                    |
+| `reason`       | text        | NO   | —                   | `bundle_grant` · `deposit_hold` · `deposit_release` · `penalty` · `distribution` · `refund` |
+| `ref_id`       | uuid        | YES  | null                | 원천 행(`settlements.challenge_id`, RPC idempotency key 등) 추적용                          |
+| `created_at`   | timestamptz | NO   | `now()`             |                                                                                             |
+
+- 인덱스: `(user_id, group_id, created_at desc)`, `(group_id, created_at desc)`, partial `challenge_id`, partial `ref_id`.
+- RLS: 본인(`user_id=auth.uid()`) 또는 같은 그룹 멤버 read. INSERT/UPDATE/DELETE 정책 없음.
+- 가드 트리거: service_role 외 INSERT는 `42501`, UPDATE/DELETE는 append-only 위반으로 `42501`.
+
+### 5.6.2 `settlements`
+
+챌린지별 불변 정산 스냅샷. `challenge_id`를 PK로 두어 이중 정산을 스키마 레벨에서 차단한다(`AC-settle-trigger-3`).
+
+| 컬럼           | 타입        | Null | Default       | 제약/비고                                        |
+| -------------- | ----------- | ---- | ------------- | ------------------------------------------------ |
+| `challenge_id` | uuid        | NO   | —             | PK, FK → `challenges.id`                         |
+| `settled_at`   | timestamptz | NO   | `now()`       | 정산 확정 시각                                   |
+| `settled_by`   | text        | NO   | —             | `CHECK IN ('owner','auto')`                      |
+| `pool_points`  | int         | NO   | —             | 그룹 공동 주머니로 이월되는 포인트, `CHECK >= 0` |
+| `distribution` | jsonb       | NO   | `'{}'::jsonb` | 확정 시점 분배 스냅샷. 사후 재계산하지 않음      |
+
+- RLS: 연결된 `challenges.group_id`의 그룹 멤버 read. INSERT/UPDATE/DELETE 정책 없음.
+- 가드 트리거: service_role 외 INSERT는 `42501`, UPDATE/DELETE는 불변 스냅샷 위반으로 `42501`.
 
 ### 5.7 `action_logs` ⭐ (AI 일기 흡수)
 
-| 컬럼                | 타입        | Null | Default             | 제약/비고                                                                                                                          |
-| ------------------- | ----------- | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                | uuid        | NO   | `gen_random_uuid()` | PK                                                                                                                                 |
-| `challenge_id`      | uuid        | NO   | —                   | FK → `challenges.id`                                                                                                               |
-| `user_id`           | uuid        | NO   | —                   | FK → `users.id`                                                                                                                    |
-| `activity_type`     | text        | NO   | —                   | `CHECK IN ('running','gym','yoga','other')`                                                                                        |
-| `photo_url`         | text        | NO   | —                   | Storage pre-signed key                                                                                                             |
-| `selected_keywords` | text[]      | NO   | —                   | `array_length BETWEEN 1 AND 3`(빈 배열은 `array_length`=NULL→CHECK 통과, 직접 입력 일기) · **풀 검증은 앱(zod) 레이어**(PRD AC-10) |
-| `shown_keywords`    | text[]      | NO   | —                   | 재현·분석용 스냅샷(노출된 칩 전체)                                                                                                 |
-| `reroll_count`      | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 5` (PRD AC-9)                                                                                                 |
-| `memo`              | text        | YES  | null                | `char_length <= 100` (escape hatch)                                                                                                |
-| `ai_summary`        | text        | NO   | —                   | `char_length <= 150` · 3~5줄(앱 검증) — AI 또는 템플릿 폴백 결과                                                                   |
-| `template_fallback` | bool        | NO   | `false`             | AI 실패 시 true (PRD §5.3 AC-8)                                                                                                    |
-| `regenerate_count`  | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 2` (PRD AC-5)                                                                                                 |
-| `prompt_version`    | text        | NO   | —                   | `lib/ai/prompts.ts`의 `PROMPT_VERSION` — 이벤트와 조인 분석용 · 직접 입력은 `'manual'`                                             |
-| `created_at`        | timestamptz | NO   | `now()`             | 서버 타임 (AC-5)                                                                                                                   |
-| `edited_at`         | timestamptz | YES  | null                | 5분 이내 편집 시에만 세팅(AC-7)                                                                                                    |
+| 컬럼                        | 타입        | Null | Default             | 제약/비고                                                                                                                                                                                                             |
+| --------------------------- | ----------- | ---- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | uuid        | NO   | `gen_random_uuid()` | PK                                                                                                                                                                                                                    |
+| `challenge_id`              | uuid        | NO   | —                   | FK → `challenges.id`                                                                                                                                                                                                  |
+| `user_id`                   | uuid        | NO   | —                   | FK → `users.id`                                                                                                                                                                                                       |
+| `activity_type`             | text        | NO   | —                   | `CHECK IN ('running','gym','yoga','other')`                                                                                                                                                                           |
+| `photo_url`                 | text        | NO   | —                   | Storage pre-signed key                                                                                                                                                                                                |
+| `selected_keywords`         | text[]      | NO   | —                   | `array_length BETWEEN 1 AND 3`(빈 배열은 `array_length`=NULL→CHECK 통과, 직접 입력 일기) · **풀 검증은 앱(zod) 레이어**(PRD AC-10)                                                                                    |
+| `shown_keywords`            | text[]      | NO   | —                   | 재현·분석용 스냅샷(노출된 칩 전체)                                                                                                                                                                                    |
+| `reroll_count`              | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 5` (PRD AC-9)                                                                                                                                                                                    |
+| `memo`                      | text        | YES  | null                | `char_length <= 100` (escape hatch)                                                                                                                                                                                   |
+| `ai_summary`                | text        | NO   | —                   | `char_length <= 150` · 3~5줄(앱 검증) — AI 또는 템플릿 폴백 결과                                                                                                                                                      |
+| `template_fallback`         | bool        | NO   | `false`             | AI 실패 시 true (PRD §5.3 AC-8)                                                                                                                                                                                       |
+| `regenerate_count`          | int         | NO   | `0`                 | `CHECK BETWEEN 0 AND 2` (PRD AC-5)                                                                                                                                                                                    |
+| `prompt_version`            | text        | NO   | —                   | `lib/ai/prompts.ts`의 `PROMPT_VERSION` — 이벤트와 조인 분석용 · 직접 입력은 `'manual'`                                                                                                                                |
+| `created_at`                | timestamptz | NO   | `now()`             | 서버 타임 (AC-5)                                                                                                                                                                                                      |
+| `edited_at`                 | timestamptz | YES  | null                | 5분 이내 편집 시에만 세팅(AC-7)                                                                                                                                                                                       |
+| `auto_verify_status`        | text        | NO   | `'passed'`          | `CHECK IN ('pending','passed','failed','manual_review','peer_rejected')` · 기본 passed(친구 신뢰) · **서버 전용**(검증 RPC/service_role) · `peer_rejected`=WP5 다수결 반려(카운트 제외) — migration 0045, ADR-0032 §4 |
+| `auto_verify_score`         | numeric     | YES  | null                | 결정론 부정 신호 점수(메타) · **서버 전용** · 사진/일기 본문 미저장                                                                                                                                                   |
+| `auto_verify_model_version` | text        | YES  | null                | 검증 로직/모델 버전 marker(이벤트 조인 분석용) · **서버 전용**                                                                                                                                                        |
+| `photo_phash`               | text        | YES  | null                | perceptual hash — 사진 재사용·중복 검출 메타(AC-cheat-detect-1) · 원본 미저장 · **서버 전용**                                                                                                                         |
+| `photo_captured_at`         | timestamptz | YES  | null                | EXIF 촬영시각 — 촬영-제출 시각 불일치 신호용 메타 · **서버 전용**                                                                                                                                                     |
 
+- **자동검증 컬럼군**([ADR-0032 §4](adr/0032-settlement-verification-data-model.md) · migration 0045): 위 5개는 모두 **서버 write 전용**. AI 컬럼처럼 `prevent_ai_column_update` 가드가 클라(anon/authenticated) 직접 UPDATE 위조를 `42501`로 거부하고, 검증 status 의 사후 UPDATE(비동기 확정·override)는 서버 경로(service_role 또는 SECURITY DEFINER 검증 RPC)에서만 가능하다. INSERT 시엔 default(`status='passed'`, 나머지 NULL)로 시작하고 판정 RPC(WP2)가 채운다 — 메타(신호·점수·버전)만 저장하고 본문은 적재하지 않는다.
+- **본문 immutability**(migration 0045 + 0046): `prevent_action_log_body_mutation` BEFORE UPDATE 트리거가 본문(`challenge_id`·`user_id`·`activity_type`·`selected_keywords`·`shown_keywords`·`reroll_count`·`memo`·`created_at`) 변경을 **클라(anon/authenticated) 에 한해** `42501`로 거부한다(0046 이 서버 경로를 신뢰 예외로 교정 — service_role/SECURITY DEFINER RPC 의 보정·backfill 허용, ADR-0032 "immutability 는 클라가 못 바꾼다"). **예외 2가지만**: ① 검증 status 컬럼군 서버 UPDATE(위 가드가 허용) ② 마감 전 사진 교체(`photo_path` — 기존 `update_action_log_photo_path` RPC[0011] 경로). 사진 교체의 '마감 전·1회' 한정과 부정탐지 재실행은 WP4(EVAL-0024).
 - **`counted` 컬럼 제거**: POC 전체 로그 ~30건 규모에서 트리거+타임존 하드코딩 비용이 집계 쿼리보다 크다. "1일 1회 카운트"(AC-4)는 조회 시 `COUNT(DISTINCT date_trunc('day', created_at AT TIME ZONE 'Asia/Seoul'))` 집계로 처리. 집계 헬퍼는 `lib/challenge/done-days.ts`(KST distinct day)에 통일, 주 단위 벌금 누적 평가는 `lib/challenge/weekly.ts`. → v1에서 트래픽 증가 시 재검토(§13).
 - **AI 일기 결과 흡수**: `feed_items` 별도 테이블 폐지. JOIN 없이 단일 SELECT로 피드 렌더링.
 - **직접 입력 일기**([spec 2026-05-28-action-manual-diary](superpowers/specs/2026-05-28-action-manual-diary.md)): `memo` 가 채워진 제출은 AI 를 건너뛰고 입력 글을 `ai_summary` 에 그대로 저장한다(`prompt_version='manual'` · `template_fallback=false` · `selected_keywords=[]` · `memo` 컬럼 null). 빈 `selected_keywords` 는 `array_length`=NULL 로 기존 CHECK 를 통과하므로 마이그레이션이 필요 없다.
@@ -338,22 +406,45 @@ stateDiagram-v2
 - 이벤트 화이트리스트는 **앱 레이어(`lib/analytics/track.ts`의 `AnalyticsEvent` union)에서 TS 타입으로 강제**. DB CHECK는 두지 않음(이벤트 추가마다 마이그레이션 부담).
 - **AI 비용 추적은 본 테이블의 `ai_generated` 이벤트 집계로 대체** (`props` 에 `tokens`/`latencyMs`/`fallback` 포함). POC 규모(50~100건) 에서 별도 `ai_cost_log` 불필요. v1 재검토.
 
+### 5.11 `feedback` (개발자에게 건의)
+
+> dogfood 운영 기능 — spec [2026-06-10-feedback-suggestion-design](superpowers/specs/2026-06-10-feedback-suggestion-design.md) · [ADR-0035](./adr/0035-feedback-table-storage.md) · migration 0047. CHECK 제약은 `@withkey/domain` 의 `feedbackSchema` 와 1:1.
+
+| 컬럼         | 타입        | Null | Default             | 제약/비고                                                                      |
+| ------------ | ----------- | ---- | ------------------- | ------------------------------------------------------------------------------ |
+| `id`         | uuid        | NO   | `gen_random_uuid()` | PK. Server Action 이 `randomUUID()` 로 선생성(아래 주석)                       |
+| `user_id`    | uuid        | NO   | —                   | FK `users(id)` ON DELETE CASCADE                                               |
+| `category`   | text        | NO   | —                   | CHECK `in ('bug','feature','other')`                                           |
+| `body`       | text        | NO   | —                   | CHECK `char_length between 1 and 1000`                                         |
+| `photo_path` | text        | YES  | null                | `feedback-photos` 버킷 `{userId}/{feedbackId}-{nonce}.{ext}`. NULL = 사진 없음 |
+| `created_at` | timestamptz | NO   | `now()`             |                                                                                |
+
+- **RLS INSERT-only**: 앱에 열람 화면이 없어 SELECT/UPDATE/DELETE 정책을 두지 않는다(노출면 최소화). 개발자 조회는 service_role(Supabase Studio).
+- **id 선생성 함정**: SELECT 정책이 없어 `insert(...).select("id")` 가 RLS 에 막힌다. 그래서 Server Action 이 `id` 를 선생성해 사진 경로(`{feedbackId}`)를 만든 뒤 insert 에 넣는다(ADR-0035).
+- **사진**: 신규 private 버킷 `feedback-photos`(5MB, jpeg/png/webp). owner-scoped storage RLS(INSERT/SELECT/DELETE `auth.uid() = foldername[1]`). 0011 `action-photos` 와 동형이되 경로가 2-segment.
+
 ---
 
 ## 6. 인덱스 세트
 
 PRD §8.3을 기준으로 본 문서에서 확정:
 
-| 인덱스                                                                                            | 용도                    |
-| ------------------------------------------------------------------------------------------------- | ----------------------- |
-| `idx_challenges_group_status` ON `challenges(group_id, status)`                                   | 그룹의 활성 챌린지 조회 |
-| `idx_action_logs_challenge_user_created` ON `action_logs(challenge_id, user_id, created_at DESC)` | 주간 목표 집계          |
-| `idx_action_logs_user_created` ON `action_logs(user_id, created_at DESC)`                         | "오늘 인증 여부" 조회   |
-| `idx_kudos_action_log` ON `kudos(action_log_id)`                                                  | 피드 카드당 카운트      |
-| `idx_action_logs_keywords_gin` ON `action_logs USING GIN (selected_keywords)`                     | Week 2 키워드 분포 분석 |
-| `idx_events_name_created` ON `events(name, created_at DESC)`                                      | 이벤트 집계(§9)         |
-| `idx_invites_token` ON `invites(token)`                                                           | 초대 링크 조회          |
-| `idx_push_sub_user` ON `push_subscriptions(user_id)`                                              | 발송 대상 조회          |
+| 인덱스                                                                                                         | 용도                                                                |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `idx_challenges_group_status` ON `challenges(group_id, status)`                                                | 그룹의 활성 챌린지 조회                                             |
+| `idx_action_logs_challenge_user_created` ON `action_logs(challenge_id, user_id, created_at DESC)`              | 주간 목표 집계                                                      |
+| `idx_action_logs_user_created` ON `action_logs(user_id, created_at DESC)`                                      | "오늘 인증 여부" 조회                                               |
+| `idx_kudos_action_log` ON `kudos(action_log_id)`                                                               | 피드 카드당 카운트                                                  |
+| `idx_action_logs_keywords_gin` ON `action_logs USING GIN (selected_keywords)`                                  | Week 2 키워드 분포 분석                                             |
+| `idx_events_name_created` ON `events(name, created_at DESC)`                                                   | 이벤트 집계(§9)                                                     |
+| `idx_invites_token` ON `invites(token)`                                                                        | 초대 링크 조회                                                      |
+| `idx_push_sub_user` ON `push_subscriptions(user_id)`                                                           | 발송 대상 조회                                                      |
+| `idx_point_ledger_user_group_created` ON `point_ledger(user_id, group_id, created_at DESC)`                    | user/group 잔액·이력 조회                                           |
+| `idx_point_ledger_group_created` ON `point_ledger(group_id, created_at DESC)`                                  | 그룹 정산 투명성 조회                                               |
+| `idx_point_ledger_challenge` ON `point_ledger(challenge_id) WHERE challenge_id IS NOT NULL`                    | 챌린지 관련 원장 조회                                               |
+| `idx_point_ledger_ref` ON `point_ledger(ref_id) WHERE ref_id IS NOT NULL`                                      | 원천 행/idempotency 추적                                            |
+| `ux_point_ledger_deposit_hold` (UNIQUE) ON `point_ledger(user_id, challenge_id) WHERE reason = 'deposit_hold'` | (user, challenge)당 hold 1행 강제 — 동시 호출 중복 hold 차단 (0044) |
+| `idx_settlements_settled_at` ON `settlements(settled_at DESC)`                                                 | 최근 정산 조회                                                      |
 
 ---
 
@@ -372,25 +463,32 @@ language sql stable as $$
 $$;
 ```
 
-| 테이블                   | SELECT                              | INSERT                                                                           | UPDATE                                                  | DELETE                 |
-| ------------------------ | ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------- |
-| `users`                  | self + 같은 그룹 멤버               | self only                                                                        | self only (display_name/avatar)                         | ❌                     |
-| `groups`                 | 멤버만                              | 인증된 사용자 (owner = self)                                                     | owner만 (name, status→'disbanded')                      | ❌ POC                 |
-| `group_members`          | 멤버만                              | 초대 수락 Server Action 경유(service role)                                       | ❌                                                      | owner 또는 self (탈퇴) |
-| `invites`                | 그룹 owner + 토큰 정확 일치 시 anon | owner only                                                                       | ❌                                                      | owner only             |
-| `challenges`             | 그룹 멤버                           | 그룹 owner                                                                       | owner AND status='pending'                              | ❌                     |
-| `challenge_participants` | 그룹 멤버                           | 참여자 self(서명)                                                                | self (signed_at 채움, 되돌리기 금지)                    | ❌                     |
-| `action_logs`            | 그룹 멤버                           | self AND 챌린지 active (AI 컬럼은 서버만)                                        | self AND 5분 이내 AND keyword/memo만 (AI 컬럼은 서버만) | ❌ (AC-6)              |
-| `kudos`                  | 그룹 멤버                           | self AND 본인 action_log 금지 AND 같은 그룹 멤버                                 | ❌                                                      | self (토글 취소)       |
-| `push_subscriptions`     | self                                | self                                                                             | self                                                    | self                   |
-| `events`                 | 서버만                              | self(`user_id=auth.uid()`) 또는 anon(`user_id IS NULL`) — 클라이언트 이벤트 허용 | ❌                                                      | ❌                     |
+| 테이블                   | SELECT                              | INSERT                                                                           | UPDATE                                                                        | DELETE                             |
+| ------------------------ | ----------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------- |
+| `users`                  | self + 같은 그룹 멤버               | self only                                                                        | self only (display_name/avatar)                                               | ❌                                 |
+| `groups`                 | 멤버만                              | 인증된 사용자 (owner = self)                                                     | owner만 (name, status→'disbanded')                                            | ❌ POC                             |
+| `group_members`          | 멤버만                              | 초대 수락 Server Action 경유(service role)                                       | ❌                                                                            | owner 또는 self (탈퇴)             |
+| `invites`                | 그룹 owner + 토큰 정확 일치 시 anon | owner only                                                                       | ❌                                                                            | owner only                         |
+| `challenges`             | 그룹 멤버                           | 그룹 owner                                                                       | owner AND status='pending'                                                    | ❌                                 |
+| `challenge_participants` | 그룹 멤버                           | service role/RPC only                                                            | self (`signed_at` 채움, `deposit_points`는 trigger로 서버 전용)               | ❌                                 |
+| `point_ledger`           | 본인 또는 그룹 멤버                 | ❌ 정책 없음(RPC/server only)                                                    | ❌ 정책 없음 + append-only trigger                                            | ❌ 정책 없음 + append-only trigger |
+| `settlements`            | 그룹 멤버                           | ❌ 정책 없음(RPC/server only)                                                    | ❌ 정책 없음 + immutable trigger                                              | ❌ 정책 없음 + immutable trigger   |
+| `action_logs`            | 그룹 멤버                           | self AND 챌린지 active (AI·검증 컬럼은 서버만)                                   | self AND 5분 이내(본문 immutable, `photo_path`만 교체; AI·검증 컬럼은 서버만) | ❌ (AC-6)                          |
+| `kudos`                  | 그룹 멤버                           | self AND 본인 action_log 금지 AND 같은 그룹 멤버                                 | ❌                                                                            | self (토글 취소)                   |
+| `push_subscriptions`     | self                                | self                                                                             | self                                                                          | self                               |
+| `events`                 | 서버만                              | self(`user_id=auth.uid()`) 또는 anon(`user_id IS NULL`) — 클라이언트 이벤트 허용 | ❌                                                                            | ❌                                 |
+| `feedback`               | ❌ (열람 화면 없음 · service_role)  | self only (`user_id = auth.uid()`)                                               | ❌                                                                            | ❌                                 |
 
 **방어 이중화 포인트**:
 
 - `kudos` 본인 action_log 금지: RLS 정책 + zod 검증 + 앱 레이어 3중.
 - 5분 내 편집 제한: UPDATE 정책에서 `created_at > now() - interval '5 minutes'`.
 - `challenges` `status` 전이: UPDATE 정책에서 status 전환 조건부(pending→pending 수정만 허용; accepted/active/closed 전이는 Server Action + service role).
+- `point_ledger`/`settlements`: SELECT만 열고 write 정책을 두지 않는다. 직접 클라(anon/authenticated) INSERT는 BEFORE trigger가 `42501`, UPDATE/DELETE는 원장 append-only·스냅샷 immutable 위반으로 `42501`. **write 허용 경로는 둘**: ① service_role 직접 write(BFF/cron) ② `SECURITY DEFINER` 정산 RPC(트리거 시점 `current_user`가 함수 소유자라 `anon`/`authenticated`가 아님). 0044가 가드를 이 2경로 허용으로 보강 — 0042/0043의 `request.jwt.claims='service_role'` 단독 검사로는 authenticated 그룹장의 `settle_challenge` 호출이 막혔다.
+- `challenge_participants.deposit_points`: 기존 self UPDATE 정책은 서명용으로 유지하되, 보증금 cache 컬럼 변경은 BEFORE trigger가 차단(허용 경로: service_role 또는 SECURITY DEFINER RPC, 위와 동일).
 - `action_logs.ai_summary`/`template_fallback`/`regenerate_count`/`prompt_version`: 클라이언트 INSERT/UPDATE 시 컬럼 차단 — column-level RLS 또는 Server Action 단일 경로 강제.
+- `action_logs` 검증 컬럼군(`auto_verify_status`/`auto_verify_score`/`auto_verify_model_version`/`photo_phash`/`photo_captured_at`): `prevent_ai_column_update` 가드를 확장(0045)해 클라 직접 UPDATE 위조를 `42501`로 차단. 허용 경로는 정산 가드(0044)와 동일한 2경로 — ① service_role 직접 write ② `SECURITY DEFINER` 검증 RPC(`current_user`가 함수 소유자). 이로써 검증 status 의 사후 UPDATE(immutability 예외 ①)는 서버만 가능하다.
+- `action_logs` 본문 immutability(0045 + 0046): `prevent_action_log_body_mutation` BEFORE UPDATE 트리거가 본문 컬럼 변경을 **클라(anon/authenticated) 에 한해** `42501`로 거부(0046 이 service_role/RPC 는 신뢰 예외로 교정). **예외 2가지만** — ① 검증 status 컬럼군 서버 UPDATE ② 마감 전 사진 교체(`photo_path`, 기존 `update_action_log_photo_path` RPC). 기존 `al_update_self_5min`(본인 5분 창) 정책은 유지하되, 그 창 안에서도 클라가 바꿀 수 있는 컬럼은 `photo_path` 로 좁아진다(키워드/memo 도 불변).
 - `events` INSERT 완화 배경: PRD §9.1 중 `keywords_shown`/`keywords_reroll`/`keyword_selected`/`memo_fallback_opened`/`feed_view`/`notification_opened` 6종은 클라이언트 전용이라 Server Action 왕복 없이 직접 insert 허용. **서버 이벤트**(AI 성공/실패·알림 발송 등)는 여전히 서버에서 track.
 
 ---
@@ -440,6 +538,25 @@ $$;
 - UPSERT/DELETE 토글 (UNIQUE `(action_log_id, user_id, emoji)` 이용)
 - 이벤트: `kudos_given`
 
+### 8.7 정산·보증금 RPC (P1 — migration `0044_settlement_rpcs.sql`)
+
+> Server Action 이 아니라 **RN/그룹장이 직접 호출하는 `SECURITY DEFINER` RPC**(RN 은 Server Action 불가, migration §9). 모든 금전성 write 를 RPC 한 경로로 닫는다(ADR-0032). 원장 sign 규약·산식은 spec [`2026-06-08-settlement-rpc-ledger`](superpowers/specs/2026-06-08-settlement-rpc-ledger.md) · 분배 산식 SoT 는 `packages/domain/src/settlement.ts`.
+
+| RPC                                                | 호출자                   | 동작                                                                                                                                          | 멱등 키                          |
+| -------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `grant_bundle_points(user, group, amount, ref_id)` | service_role(BFF) 전용   | `bundle_grant`(+amount) 적립                                                                                                                  | `ref_id`                         |
+| `hold_deposit(challenge, amount)`                  | 본인(서명 참가자)        | 잔액 부족 차단 → `deposit_hold`(-amount) + `deposit_points` cache set                                                                         | `(user, challenge)` deposit_hold |
+| `deposit_release(challenge, user)`                 | 그룹장·본인·service_role | held 전액 `deposit_release`(+held), cache 0 (held 없으면 no-op)                                                                               | `deposit_points=0`               |
+| `settle_challenge(challenge)`                      | 그룹장(owner)·cron(auto) | `settlements` insert `on conflict do nothing`(0행이면 no-op) → 참가자별 release(+held)+penalty(-forfeit), `pool_points=Σforfeit`, 분배 스냅샷 | `settlements.challenge_id` PK    |
+| `distribute_pool(challenge)`                       | 그룹 멤버                | 정산된 챌린지 `pool_points` 반환 + 개인 재분배 원장 0행 보증(AC-settle-6)                                                                     | (read)                           |
+
+- **원장 규약(release-full + penalty)**: 서약 `deposit_hold(-H)` → 정산 `deposit_release(+H)` 전액 환급 후 미달분만 `penalty(-F)`, `F = min(H, confirmedPenalty)`. 달성자 net 0, 미달자 net -F. 미달분은 `settlements.pool_points`(그룹 공동 주머니)로만 이월 — 개인↔개인 원장 행 없음.
+- **미달분 산정**: 주 단위 누적(`confirmedPenalty`, binary 아님, `AC-settle-4`). `_settlement_confirmed_penalties(challenge)` 가 `weekly.ts` 를 SQL 로 포팅(KST 일자·자투리 주 ceil·`closed_at` cutoff = ADR-0030 정합).
+- **이중정산 방지**: `settlements.challenge_id` PK + `on conflict do nothing` → 재트리거(클릭+cron)에도 추가 원장 0행(`AC-settle-trigger-3`).
+- **이중 hold 방지(동시성)**: `hold_deposit` 의 함수 내 if-exists 가드만으로는 동시 호출 race 가 남아, `ux_point_ledger_deposit_hold` partial unique + INSERT `on conflict do nothing` 으로 `(user, challenge)` 당 hold 1행을 DB 가 원자적으로 강제(중복 -2H 차단). settle 의 PK 멱등과 동일 전략.
+- **잔액 read**: `point_balance(user, group)` SQL(SECURITY INVOKER, RLS 통과) = `SUM(delta)`. TS read 는 `apps/web/src/lib/db/reads/point-balance.ts`(`@withkey/domain` `pointBalanceFor` 재사용).
+- **gate**: 결정론 불변식(idempotency·잔액=Σdelta)은 게이트 무관 즉시. production apply 는 G2(법무) 후. 사용자향 hold/게이지 UI 는 WP3(EVAL-0007), 트리거/cron 배선은 WP4(EVAL-0008), AnalyticsEvent 는 WP5(EVAL-0009).
+
 ---
 
 ## 9. zod ↔ DB 정합성 매트릭스
@@ -461,11 +578,16 @@ $$;
 
 > ONBOARDING §4.3 원칙: 파일명 `000X_<snake_case>.sql`, 번호 append-only, down 없음. **Append-only는 "기존 번호 재배치 금지"가 취지이지 "작게 쪼개기"가 아님** — Day 1 초기 DDL은 한 파일에 묶는다.
 
-| 파일            | 내용                                                                   |
-| --------------- | ---------------------------------------------------------------------- |
-| `0001_init.sql` | §5의 10개 테이블 + 제약 + 인덱스(§6) + `challenges.status` UPDATE 가드 |
-| `0002_rls.sql`  | §7 RLS 정책 + `is_group_member` 헬퍼                                   |
-| 이후            | Day 1 이후의 **신규 변경만** `0003_<snake_case>.sql` 부터 append.      |
+| 파일                                              | 내용                                                                                                                                                                                                        |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_init.sql`                                   | §5의 10개 테이블 + 제약 + 인덱스(§6) + `challenges.status` UPDATE 가드                                                                                                                                      |
+| `0002_rls.sql`                                    | §7 RLS 정책 + `is_group_member` 헬퍼                                                                                                                                                                        |
+| `0042_point_ledger.sql`                           | `challenge_participants.deposit_points` + `point_ledger` + RLS/가드 트리거                                                                                                                                  |
+| `0043_settlements.sql`                            | `settlements` + RLS/가드 트리거                                                                                                                                                                             |
+| `0044_settlement_rpcs.sql`                        | 정산·보증금 RPC 5종 + 가드 dual-guard 보강(§8.7)                                                                                                                                                            |
+| `0045_action_logs_verify_columns.sql`             | `action_logs` 검증 컬럼군 5개 + `prevent_ai_column_update` 가드 확장 + 본문 immutability 트리거(예외 2가지: 검증 status 서버 UPDATE·마감 전 사진 교체) — ADR-0032 §4                                        |
+| `0046_action_logs_body_immutable_client_only.sql` | 0045 forward-fix — 본문 immutability 를 클라 전용으로 좁힘(service_role/RPC 보정 허용). 0045 가 created_at 등 본문을 service_role 까지 막아 `update_action_log_photo_path`/admin backfill 이 깨진 회귀 교정 |
+| 이후                                              | Day 1 이후의 **신규 변경만** `0003_<snake_case>.sql` 부터 append.                                                                                                                                           |
 
 ---
 
@@ -485,6 +607,15 @@ $$;
 
 ## 12. Changelog
 
+- **v0.7** (2026-06-11) — **개발자에게 건의하기 데이터 레이어 반영** (Ian · [ADR-0035](./adr/0035-feedback-table-storage.md) · EVAL-0027)
+  - §2: `feedback` 테이블 추가(13번째) — dogfood 건의(카테고리·본문·사진), PRD AC 없음(spec SoT).
+  - §5.11: `feedback` 컬럼 표 추가. CHECK(`category in ('bug','feature','other')` · `char_length(body) 1..1000`)는 `@withkey/domain` `feedbackSchema` 와 1:1. id 선생성 함정 명시.
+  - §7: `feedback` INSERT-only RLS(`user_id = auth.uid()`) · SELECT/UPDATE/DELETE 정책 없음(열람 화면 부재, service_role 조회).
+  - 신규 private 버킷 `feedback-photos`(owner-scoped storage RLS) + `truncate_test_data` 재발행(0012 전문 기반, feedback 정리 확장). migration 0047 반영.
+- **v0.6** (2026-06-06) — **정산 데이터 레이어 반영** (Ian · [ADR-0032](./adr/0032-settlement-verification-data-model.md) · EVAL-0005)
+  - §2/§3/§5.6: `point_ledger`(append-only, 잔액=`SUM(delta)`)와 `settlements`(`challenge_id` PK 불변 스냅샷) 추가.
+  - §5.6: `challenge_participants.deposit_points` 추가. 게이지 read cache이며 SoT는 `point_ledger`; trigger로 service_role 외 변경 차단.
+  - §7/§10: point ledger/settlements SELECT-only RLS, service_role-only INSERT guard, UPDATE/DELETE 불변성 guard, migration 0042/0043 반영.
 - **v0.5** (2026-06-02) — **주 단위 벌금 누적 모델 반영** (Ian · [spec/plan 2026-06-02-weekly-penalty-accrual](superpowers/specs/2026-06-02-weekly-penalty-accrual.md))
   - §5.5 `challenges.closed_at timestamptz null` 추가(조기 종료 정산 cutoff — [ADR-0030](./adr/0030-early-close-settlement-cutoff.md), migration 0041). CHECK·RLS 무변경.
   - §5.5/§5.7/§8 집계 서술: `goal_count`(주 N회) 벌금이 **끝난 주마다 독립 평가·누적**됨을 명시(D-006 측정단위 모순 해소). 이전 `settlement.ts` 전체 1회 평가를 `lib/challenge/weekly.ts`로 대체.

@@ -6,7 +6,7 @@ import { FeedCard } from "./feed-card";
 import { toggleKudos } from "../_actions";
 import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "@/lib/actions/error-messages";
 import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
-import type { KudosEmoji } from "@/lib/validators/kudos";
+import type { KudosEmoji } from "@withkey/domain";
 
 // FeedTab(RSC) 가 createdAt → 상대 시간/일자 label 을 render 시점에 계산해 주입한다.
 // 상대 시간은 시점 의존이라 cache 에 저장하지 않고 immutable createdAt 만 캐시 → 여기로 전달.

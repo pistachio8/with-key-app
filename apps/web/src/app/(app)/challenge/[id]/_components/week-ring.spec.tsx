@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WeekRing } from "./week-ring";
-import type { CurrentWeekStatus } from "@/lib/challenge/weekly";
+import type { CurrentWeekStatus } from "@withkey/domain";
 
 const base: CurrentWeekStatus = {
   week: 2,

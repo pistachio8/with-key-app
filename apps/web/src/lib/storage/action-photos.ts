@@ -2,11 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import {
-  ALLOWED_PHOTO_MIME,
-  MAX_PHOTO_BYTES,
-  type AllowedPhotoMime,
-} from "@/lib/validators/action-log";
+import { ALLOWED_PHOTO_MIME, MAX_PHOTO_BYTES, type AllowedPhotoMime } from "@withkey/domain";
 
 const BUCKET = "action-photos";
 const ALLOWED_EXT = ["jpg", "jpeg", "png", "webp"] as const;

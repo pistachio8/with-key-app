@@ -17,6 +17,11 @@ const eslintConfig = defineConfig([
     files: ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx"],
     rules: { "max-lines": "off" },
   },
+  // 자동 생성 DB 타입(pnpm db:types)은 분할 불가 산출물이라 길이 budget 비대상.
+  {
+    files: ["src/types/supabase.ts"],
+    rules: { "max-lines": "off" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

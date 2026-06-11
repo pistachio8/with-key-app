@@ -19,7 +19,7 @@ import {
   type NotificationPrefs,
   type PushSubscriptionInput,
   type UnregisterPushInput,
-} from "@/lib/validators/push";
+} from "@withkey/domain";
 
 export const registerPushSubscription = withUser<PushSubscriptionInput, { ok: true }>(
   async (user, input): Promise<ActionResult<{ ok: true }>> => {

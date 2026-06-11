@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "everything-claude-code@everything-claude-code": true
-  },
   "env": {
     "ECC_DISABLED_HOOKS": "post:quality-gate"
   },
@@ -17,5 +14,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "skill-creator@claude-plugins-official": true
   }
 }

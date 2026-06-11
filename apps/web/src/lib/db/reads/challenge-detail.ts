@@ -1,12 +1,13 @@
 import { cache } from "react";
-import { toKstDayKey, dayIndexOf } from "@/lib/challenge/done-days";
-import { challengePhase } from "@/lib/challenge/lifecycle";
 import {
+  toKstDayKey,
+  dayIndexOf,
+  challengePhase,
   countDoneDaysByUserByWeek,
   computeAccruedPot,
   type CutoffContext,
   type CutoffPhase,
-} from "@/lib/challenge/weekly";
+} from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChallengeMemberView = {
