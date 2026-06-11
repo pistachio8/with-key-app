@@ -2,13 +2,13 @@
 Task: EVAL-0027
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/superpowers/plans/2026-06-10-feedback-suggestion.md
 ---
 
 # EVAL-0027: 건의 데이터 레이어 — feedbackSchema validator + migration 0047 + ADR·BE_SCHEMA·env 문서
 
-> WP-feedback (`feat/feedback-suggestion`, develop 1 PR). 외부 게이트 없음 → `todo`. plan Task 1·2·3 묶음(데이터 레이어). Slack env 설정은 코드를 blocked 시키지 않는 운영 후속.
+> WP-feedback (`feat/feedback-submit`, develop 1 PR). 외부 게이트 없음 → `todo`. plan Task 1·2·3 묶음(데이터 레이어). Slack env 설정은 코드를 blocked 시키지 않는 운영 후속.
 > ADR 번호: 0034는 `rn-kakao-native-auth`로 선점됨 → 본 태스크 ADR은 **0035** (`0035-feedback-table-storage.md`).
 
 ## Parent Links
@@ -17,7 +17,7 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 - Parent Test Scenario: TS SoT 없음 — AT eval 수용기준 흡수(05 §2 D10)
 - Parent Job Story: JS 인스턴스 없음(스코프 밖) — 의도는 spec §Why 참조: [2026-06-10-feedback-suggestion-design.md](../../docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md)
 - Parent Engineering Story: ES 인스턴스 없음(스코프 밖) — 구현 계획이 대행: [2026-06-10-feedback-suggestion.md](../../docs/superpowers/plans/2026-06-10-feedback-suggestion.md) Task 1·2·3
-- Parent Work Package: `feat/feedback-suggestion` (WP-feedback)
+- Parent Work Package: `feat/feedback-submit` (WP-feedback)
 
 ## Goal
 
@@ -26,7 +26,7 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 **G1 — validator (plan Task 1)**
 `@withkey/domain`에 `feedbackSchema`(카테고리 enum + 본문 1~1000자 trim) zod SoT가 barrel export로 존재한다.
 
-- done 기준: `pnpm --filter @withkey/domain test -- feedback` 6개 green + `pnpm typecheck` 통과(index.ts export 포함).
+- done 기준: `pnpm --filter @withkey/domain test -- feedback` 8개 green + `pnpm typecheck` 통과(index.ts export 포함).
 
 **G2 — migration (plan Task 2)**
 migration `0047_feedback.sql`이 `feedback` 테이블(INSERT-only RLS) + private `feedback-photos` 버킷(owner-scoped RLS) + `truncate_test_data` 재발행(0012 정의 전문 기반)을 append-only 마지막 번호로 정의한다.
@@ -64,7 +64,7 @@ ADR-0035(`0035-feedback-table-storage.md`)·BE_SCHEMA(13번째 테이블)·`.env
 
 구현 상세는 plan Task 1·2·3(SoT)을 따른다. 핵심 결정만 기록:
 
-- G1: `feedbackSchema` — enum `["bug","feature","other"]`, `body` trim 1~1000자, `z.infer<>` 도출. 테스트 6개 RED→GREEN.
+- G1: `feedbackSchema` — enum `["bug","feature","other"]`, `body` trim 1~1000자, `z.infer<>` 도출. 테스트 8개 RED→GREEN(경계: 빈문자열·1자·1000자·1001자·trim·unknown category·상수 일치).
 - G2: `0047_feedback.sql` — INSERT-only RLS(`with check (user_id = auth.uid())`), feedback-photos 버킷(5MB), `truncate_test_data` 재발행은 **0012 전문 기반**(0011 금지 — `allow_delete_query` 플래그 필수).
 - G3: ADR-0035(`0035-feedback-table-storage.md`), BE*SCHEMA §2 13번째 행, `.env.example` `SLACK_FEEDBACK_WEBHOOK_URL`(서버 전용, `NEXT_PUBLIC*` 금지).
 
@@ -80,7 +80,7 @@ ADR-0035(`0035-feedback-table-storage.md`)·BE_SCHEMA(13번째 테이블)·`.env
 
 | 기준                                                 | 검증                                             |
 | ---------------------------------------------------- | ------------------------------------------------ |
-| feedbackSchema 테스트 6개 green                      | `pnpm --filter @withkey/domain test -- feedback` |
+| feedbackSchema 테스트 8개 green                      | `pnpm --filter @withkey/domain test -- feedback` |
 | barrel export + typecheck                            | `pnpm typecheck`                                 |
 | 0047이 마지막 migration 번호                         | `ls supabase/migrations/ \| tail -3`             |
 | INSERT-only RLS + 버킷 + `allow_delete_query` 플래그 | 파일 확인                                        |
