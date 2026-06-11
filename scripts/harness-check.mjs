@@ -6,6 +6,8 @@ import {
   loadAcIndex,
   loadCitationFiles,
   validateAcTraceability,
+  loadAgentResults,
+  validateDoneRunParity,
 } from "./harness-lib.mjs";
 
 // Tier 1-A: Agent Task frontmatter·경로 추적성.
@@ -22,7 +24,11 @@ const acErrors = validateAcTraceability(acIndex, citationFiles);
 const goalErrors =
   taskErrors.length > 0 ? [] : tasks.flatMap((task) => validateGoalPromptLength(task));
 
-const errors = [...taskErrors, ...acErrors, ...goalErrors];
+// Tier 1-D: done↔runs 정합 — Status done 인 task 는 agent-results.json runs[] 기록이 있어야 한다.
+// 무기록 done(가짜 완료)이 회귀 baseline 을 비우는 것을 차단한다. 도입 이전 done 은 GRANDFATHERED_DONE.
+const runParityErrors = validateDoneRunParity(tasks, loadAgentResults());
+
+const errors = [...taskErrors, ...acErrors, ...goalErrors, ...runParityErrors];
 
 if (errors.length > 0) {
   console.error(`[harness:check] FAIL — ${errors.length} violation(s).`);

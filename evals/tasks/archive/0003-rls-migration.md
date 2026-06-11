@@ -9,14 +9,14 @@
 
 ## Pass criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| 파일명 `000X_<snake_case>.sql` (단순 증가) | 기존 번호 재정렬 0건, 다음 번호 사용 |
-| RLS `ENABLE ROW LEVEL SECURITY` 포함 | grep on new file |
-| anon role select/insert deny | policy WHERE `auth.uid() IS NOT NULL` 또는 명시 deny |
-| authenticated role 자기 row만 | policy `USING (user_id = auth.uid())` |
-| down 스크립트 없음 | 별도 down 파일 0건 |
-| `pnpm supabase db reset` 성공 | (수동 검증) |
+| 기준                                       | 검증 방법                                            |
+| ------------------------------------------ | ---------------------------------------------------- |
+| 파일명 `000X_<snake_case>.sql` (단순 증가) | 기존 번호 재정렬 0건, 다음 번호 사용                 |
+| RLS `ENABLE ROW LEVEL SECURITY` 포함       | grep on new file                                     |
+| anon role select/insert deny               | policy WHERE `auth.uid() IS NOT NULL` 또는 명시 deny |
+| authenticated role 자기 row만              | policy `USING (user_id = auth.uid())`                |
+| down 스크립트 없음                         | 별도 down 파일 0건                                   |
+| `pnpm supabase db reset` 성공              | (수동 검증)                                          |
 
 ## One-shot 정의
 

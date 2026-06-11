@@ -9,13 +9,13 @@
 
 ## Pass criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| zod schema 재사용 (직접 정의 금지) | 코드 grep `z.object\(` in `_actions.ts` → 0건이어야 |
-| 인증 가드 통과 | [`src/lib/auth/with-user.ts`](../../src/lib/auth/with-user.ts) 패턴 사용 |
-| Server Action 마커 | `"use server"` directive 또는 파일 단위 일관 |
-| 캐시 무효화 | `revalidatePath` 또는 `revalidateTag` 호출 |
-| typecheck · lint · test 모두 pass | `pnpm typecheck && pnpm lint && pnpm test` |
+| 기준                               | 검증 방법                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| zod schema 재사용 (직접 정의 금지) | 코드 grep `z.object\(` in `_actions.ts` → 0건이어야                      |
+| 인증 가드 통과                     | [`src/lib/auth/with-user.ts`](../../src/lib/auth/with-user.ts) 패턴 사용 |
+| Server Action 마커                 | `"use server"` directive 또는 파일 단위 일관                             |
+| 캐시 무효화                        | `revalidatePath` 또는 `revalidateTag` 호출                               |
+| typecheck · lint · test 모두 pass  | `pnpm typecheck && pnpm lint && pnpm test`                               |
 
 ## One-shot 정의
 
