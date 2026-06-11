@@ -32,7 +32,11 @@ export async function signInWithKakao(): Promise<AuthResult> {
   try {
     ({ idToken, accessToken } = await kakaoAuth.login());
   } catch (error) {
-    console.error("[auth] kakao login failed:", error instanceof Error ? error.message : error);
+    // SDK reject 가 객체일 수 있어 message 만 — 토큰 필드가 로그에 새지 않게 String() 으로 좁힌다
+    console.error(
+      "[auth] kakao login failed:",
+      error instanceof Error ? error.message : String(error),
+    );
     return { ok: false, error: "kakao_cancelled" };
   }
 
@@ -98,6 +102,7 @@ export async function signOut(): Promise<AuthResult> {
   }
 
   const supabase = getSupabaseClient();
+  // 기본 scope('global') 의도 유지 — PoC 는 단일 기기 전제라 전 기기 세션 폐기가 안전한 기본값
   const { error } = await supabase.auth.signOut();
   if (error) {
     console.error("[auth] signOut failed:", error.message);

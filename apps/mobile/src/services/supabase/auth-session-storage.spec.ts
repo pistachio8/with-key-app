@@ -48,6 +48,34 @@ describe("createAuthSessionStorage", () => {
     expect(await storage.getItem(KEY)).toBe(value);
   });
 
+  it("멀티바이트(한글·이모지) 값은 바이트 예산으로 분할하고 코드포인트를 쪼개지 않는다", async () => {
+    const storage = createAuthSessionStorage();
+    // 한글 3B/자 600자 + 이모지 4B/개 300개 + ASCII 1000자 = 약 4KB
+    const value = `${"한".repeat(600)}${"😀".repeat(300)}${"a".repeat(1000)}`;
+
+    await storage.setItem(KEY, value);
+
+    const meta = mockStore.get(KEY) ?? "";
+    expect(meta.startsWith("__chunked__:")).toBe(true);
+    const count = Number(meta.slice("__chunked__:".length));
+    for (let i = 0; i < count; i += 1) {
+      const chunk = mockStore.get(`${KEY}.${i}`) ?? "";
+      const encoded = new TextEncoder().encode(chunk);
+      expect(encoded.length).toBeLessThanOrEqual(1800);
+      // UTF-8 왕복 보존 = lone surrogate 없음 = 이모지가 경계에서 쪼개지지 않음
+      expect(new TextDecoder().decode(encoded)).toBe(chunk);
+    }
+    expect(await storage.getItem(KEY)).toBe(value);
+  });
+
+  it("SecureStore 읽기 throw(keystore 무효화)는 null(미인증) 로 흡수한다", async () => {
+    const storage = createAuthSessionStorage();
+    const secureStore = jest.requireMock("expo-secure-store");
+    secureStore.getItemAsync.mockRejectedValueOnce(new Error("Could not decrypt value"));
+
+    expect(await storage.getItem(KEY)).toBeNull();
+  });
+
   it("세션이 줄어들면 잔여 청크를 정리한다", async () => {
     const storage = createAuthSessionStorage();
     await storage.setItem(KEY, "y".repeat(5400)); // 3 청크

@@ -9,7 +9,9 @@ import { verifyMagicLinkToken } from "@/features/auth";
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
-  const { token_hash: tokenHash } = useLocalSearchParams<{ token_hash?: string }>();
+  const params = useLocalSearchParams<{ token_hash?: string | string[] }>();
+  // 중복 쿼리 파라미터는 string[] 로 도착할 수 있다 — 첫 값만 사용
+  const tokenHash = Array.isArray(params.token_hash) ? params.token_hash[0] : params.token_hash;
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

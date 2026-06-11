@@ -19,9 +19,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const supabase = getSupabaseClient();
     let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setState({ session: data.session, isLoading: false });
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (active) setState({ session: data.session, isLoading: false });
+      })
+      // 복원 실패(스토리지 예외 등)를 미인증으로 흡수 — isLoading 고착 방지
+      .catch(() => {
+        if (active) setState({ session: null, isLoading: false });
+      });
 
     const {
       data: { subscription },
