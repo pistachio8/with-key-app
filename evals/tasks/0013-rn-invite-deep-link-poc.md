@@ -2,8 +2,7 @@
 Task: EVAL-0013
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: EVAL-0012(G3 auth PoC) complete. PO decision resolved 2026-06-11 — re-tap MVP accepted, friction mitigated via UX(웹 랜딩 재탭 안내, 04 A7).
+Status: todo
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/migration/05-rn-harness-decisions.md
 ---
 
