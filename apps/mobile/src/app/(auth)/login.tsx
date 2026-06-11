@@ -37,9 +37,9 @@ export default function LoginScreen() {
     );
   }
 
-  // 세션 성립(Kakao SSO·magic link 어느 쪽이든) 시 즉시 홈으로.
+  // 세션 성립(Kakao SSO·magic link 어느 쪽이든) 시 즉시 홈으로 — 인증→login 우회 (G5).
   if (session) {
-    return <Redirect href="/" />;
+    return <Redirect href="/home" />;
   }
 
   const handleKakao = async () => {

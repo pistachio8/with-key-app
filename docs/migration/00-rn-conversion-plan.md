@@ -242,23 +242,23 @@
 
 ## 10. 권장 target route map
 
-| RN route                          | 대응 PWA route              | 비고                                |
-| --------------------------------- | --------------------------- | ----------------------------------- |
-| `/(auth)/login`                   | `/login`                    | AuthSession/deep link callback 포함 |
-| `/(auth)/invite/[token]`          | `/invite/[token]`           | 웹 OG URL과 token 규칙 공유         |
-| `/(app)/home`                     | `/home`                     | initial route                       |
-| `/(flow)/challenge/new`           | `/challenge/new`            | AppHeader 없는 flow 유지            |
-| `/(flow)/challenge/new/done/[id]` | `/challenge/new/done/[id]`  | native share sheet                  |
-| `/(app)/challenge/[id]/index`     | `/challenge/[id]`           | feed tab                            |
-| `/(app)/challenge/[id]/dashboard` | `/challenge/[id]/dashboard` | dashboard tab                       |
-| `/(app)/challenge/[id]/info`      | `/challenge/[id]/info`      | info tab                            |
-| `/(app)/challenge/[id]/action`    | `/challenge/[id]/action`    | modal/stack flow 검토               |
-| `/(app)/challenge/[id]/pledge`    | `/challenge/[id]/pledge`    | pending gate                        |
-| `/(app)/challenge/[id]/recap`     | `/challenge/[id]/recap`     | share endpoint integration          |
-| `/(app)/group/[id]`               | `/group/[id]`               | group stack                         |
-| `/(app)/me/index`                 | `/me`                       | profile/settings                    |
-| `/(app)/me/challenges`            | `/me/challenges`            | management                          |
-| `/(app)/notifications`            | `/notifications`            | local/server notification center    |
+| RN route                                | 대응 PWA route              | 비고                                               |
+| --------------------------------------- | --------------------------- | -------------------------------------------------- |
+| `/(auth)/login`                         | `/login`                    | AuthSession/deep link callback 포함                |
+| `/(auth)/invite/[token]`                | `/invite/[token]`           | 웹 OG URL과 token 규칙 공유                        |
+| `/(app)/home`                           | `/home`                     | initial route                                      |
+| `/(app)/(flow)/challenge/new`           | `/challenge/new`            | AppHeader 없는 flow 유지 (auth gate 안, EVAL-0014) |
+| `/(app)/(flow)/challenge/new/done/[id]` | `/challenge/new/done/[id]`  | native share sheet                                 |
+| `/(app)/challenge/[id]/index`           | `/challenge/[id]`           | feed tab                                           |
+| `/(app)/challenge/[id]/dashboard`       | `/challenge/[id]/dashboard` | dashboard tab                                      |
+| `/(app)/challenge/[id]/info`            | `/challenge/[id]/info`      | info tab                                           |
+| `/(app)/challenge/[id]/action`          | `/challenge/[id]/action`    | modal/stack flow 검토                              |
+| `/(app)/challenge/[id]/pledge`          | `/challenge/[id]/pledge`    | pending gate                                       |
+| `/(app)/challenge/[id]/recap`           | `/challenge/[id]/recap`     | share endpoint integration                         |
+| `/(app)/group/[id]`                     | `/group/[id]`               | group stack                                        |
+| `/(app)/me/index`                       | `/me`                       | profile/settings                                   |
+| `/(app)/me/challenges`                  | `/me/challenges`            | management                                         |
+| `/(app)/notifications`                  | `/notifications`            | local/server notification center                   |
 
 ## 11. 공식 문서 확인 포인트
 

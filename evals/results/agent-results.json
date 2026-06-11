@@ -132,6 +132,27 @@
         }
       },
       "notes": "Status done 전환 조건: 실기기 dev build에서 Kakao 또는 magic link 로그인 → force-close 재실행 세션 복원 → 로그아웃(SecureStore chunk 삭제) 확인. drift report: evals/drift-reports/EVAL-0012-rn-auth-poc.md"
+    },
+    {
+      "taskId": "EVAL-0014",
+      "date": "2026-06-11",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "oneShot": true,
+      "summary": "G5 Expo Router skeleton + auth gate. 04 §3 IA group 트리 재구성: (auth)/{login,invite/[token]} · (app)/_layout(auth gate — SecureStore 복원 중 판정 보류, 미인증→/login) · (app)/(tabs)/{home,me} · (app)/challenge/[id]/{index,action,pledge,recap}(challengeId uuid 검증 _layout) · (app)/(flow)/challenge/new(modal) · +not-found. 인증→login 우회는 (auth)/login의 Redirect /home. param 검증은 @withkey/domain zod 재사용(challengeSchema.shape.id·inviteTokenSchema, domain 무변경). 00 §1.2 legacy alias: /action·/feed·/pledge·/recap → /home redirect(컨텍스트 resolution은 EVAL-0016/0017), /group/new·/settings 미생성. data fetching 0건(EVAL-0016~0019 봉인). router 테스트 19건(renderRouter gate/param/alias + G5 route map fs coverage + navigation/ 부재). devDep @testing-library/react-native(expo-router/testing-library optional peer, 테스트 전용).",
+      "verification": {
+        "local": {
+          "pnpm harness:context EVAL-0014": "pass — all paths ok",
+          "pnpm -r typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm -r lint": "pass",
+          "pnpm -r test": "pass (web 110 files 672 tests · mobile 3 files 39 tests)",
+          "pnpm --filter @withkey/mobile test -- router": "pass (19 tests)",
+          "pnpm harness:check": "PASS — 26 tasks · 0 violations",
+          "pnpm validate:docs": "OK — 256 references, no broken"
+        }
+      },
+      "notes": "expo-router build expect.d.ts가 빈 파일(export {})이라 matcher 타입을 spec 로컬 declare global로 보강, node 타입은 src/test-env.d.ts 최소 선언(@types/node 기각 — RN 전역 충돌). stale .expo/types/router.d.ts는 headless expo start 1회로 재생성. 세션 외부 working-tree 편집 2건(implement-agent-task step 6 + 0012 done)을 chore 커밋으로 분리 반영, 0014 done 전환은 그 step 6 준수. 커밋 a8b5120(feat)+2806f15(chore), push/PR 사용자 확인 대기."
     }
   ]
 }
