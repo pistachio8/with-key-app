@@ -12,6 +12,7 @@ import { fetchMyDisplayName } from "@/lib/db/reads/me";
 import { ProfileCard } from "./_components/profile-card";
 import { NotificationCard } from "./_components/notification-card";
 import { MyChallengesCard } from "./_components/my-challenges-card";
+import { FeedbackLink } from "./_components/feedback-link";
 import { LegalLinks } from "./_components/legal-links";
 import { LogoutButton } from "./_components/logout-button";
 
@@ -56,6 +57,7 @@ export default async function MePage() {
         initialSubscribedEndpoint={endpoint}
         vapidPublicKey={vapidPublicKey}
       />
+      <FeedbackLink />
       <LegalLinks />
       <LogoutButton />
     </div>

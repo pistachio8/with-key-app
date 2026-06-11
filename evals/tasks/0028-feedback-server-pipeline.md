@@ -2,13 +2,13 @@
 Task: EVAL-0028
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/superpowers/plans/2026-06-10-feedback-suggestion.md
 ---
 
 # EVAL-0028: 건의 서버 파이프라인 — feedback-photos 헬퍼 + Slack notify + submitFeedback Server Action
 
-> WP-feedback (`feat/feedback-suggestion`). 외부 게이트 없음 → `todo`. **Depends-on: EVAL-0027**(feedbackSchema·migration 0047 — 같은 WP 내 순서 의존, blocked 아님). plan Task 4·5·6 묶음(서버 레이어).
+> WP-feedback (`feat/feedback-submit`). 외부 게이트 없음 → `todo`. **Depends-on: EVAL-0027**(feedbackSchema·migration 0047 — 같은 WP 내 순서 의존, blocked 아님). plan Task 4·5·6 묶음(서버 레이어).
 
 ## Parent Links
 
@@ -16,7 +16,7 @@ Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/su
 - Parent Test Scenario: TS SoT 없음 — AT eval 수용기준 흡수(05 §2 D10)
 - Parent Job Story: JS 인스턴스 없음(스코프 밖) — 의도는 spec §Why 참조: [2026-06-10-feedback-suggestion-design.md](../../docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md)
 - Parent Engineering Story: ES 인스턴스 없음(스코프 밖) — 구현 계획이 대행: [2026-06-10-feedback-suggestion.md](../../docs/superpowers/plans/2026-06-10-feedback-suggestion.md) Task 4·5·6
-- Parent Work Package: `feat/feedback-suggestion` (WP-feedback)
+- Parent Work Package: `feat/feedback-submit` (WP-feedback)
 
 ## Goal
 
