@@ -100,6 +100,27 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
           },
         },
       ],
+      "expo-secure-store",
+      // Kakao 네이티브 SDK (ADR-0034 결정 1) — native app key 는 공개 가능 키
+      // (카카오 콘솔에서 Android keyhash·iOS bundle id 로 사용처 제한).
+      // plugin 이 빈 키를 거부하므로 env 가 있을 때만 포함 — 키 없는 빌드는 Kakao
+      // 로그인이 비활성(런타임 가드 동일)이고 magic link 만 동작한다.
+      [
+        "expo-build-properties",
+        {
+          android: {
+            extraMavenRepos: ["https://devrepo.kakao.com/nexus/content/groups/public/"],
+          },
+        },
+      ],
+      ...(process.env.EXPO_PUBLIC_KAKAO_NATIVE_KEY
+        ? [
+            [
+              "@react-native-kakao/core",
+              { nativeAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_KEY },
+            ] satisfies [string, unknown],
+          ]
+        : []),
     ],
     experiments: {
       typedRoutes: true,

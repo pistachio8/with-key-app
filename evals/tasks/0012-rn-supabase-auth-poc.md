@@ -2,7 +2,7 @@
 Task: EVAL-0012
 Track: port
 Kind: migration
-Status: todo
+Status: in_progress
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/adr/0033-rn-target-architecture.md, docs/adr/0034-rn-kakao-native-auth.md
 ---
 

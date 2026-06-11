@@ -111,6 +111,27 @@
         "apps/web/.env.example (VERIFY_* 주석 동기)",
         "evals/tasks/0022-verify-judgment-theta-gated.md (Status: done)"
       ]
+    },
+    {
+      "taskId": "EVAL-0012",
+      "date": "2026-06-11",
+      "track": "port",
+      "kind": "migration",
+      "status": "in_progress",
+      "oneShot": true,
+      "summary": "G3 RN 인증 백본 코드 착지(ADR-0034 실행). services/supabase: SecureStore chunked adapter(1800자 분할+메타+잔여 청크 정리+유실 시 미인증 처리) + RN client 싱글톤(EXPO_PUBLIC_* fail-fast, detectSessionInUrl=false, AppState 연동 autoRefresh). capabilities/kakao-auth: 네이티브 SDK 격리 인터페이스. features/auth: signInWithKakao(id token→signInWithIdToken, OIDC 미활성 시 명시 에러)·requestMagicLink(universal link redirect)·verifyMagicLinkToken(token_hash flow)·signOut(kakao best-effort+세션 폐기)+SessionProvider/useSession(복원 중 isLoading으로 flash 방지). 라우트: /login(Kakao+magic link fallback)·/auth/callback(token_hash 교환)·/(세션 게이트+로그아웃). Kakao config plugin은 EXPO_PUBLIC_KAKAO_NATIVE_KEY 존재 시에만 포함. mobile test no-op→jest 전환(18 tests). PWA cookie flow 무변경.",
+      "verification": {
+        "local": {
+          "pnpm -r typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm -r lint": "pass",
+          "pnpm -r test": "pass (web 110 files 672 tests · mobile 2 files 18 tests)",
+          "pnpm --filter @withkey/mobile test -- auth": "pass (18 tests)",
+          "pnpm harness:check": "PASS — 0 violations",
+          "pnpm validate:docs": "OK — no broken references",
+          "manual dev-build smoke": "pending — Kakao 콘솔 플랫폼 등록(keyhash·bundle id)+Supabase Kakao id token 신뢰 구성+실기기 login/restart/logout 후 done 전환"
+        }
+      },
+      "notes": "Status done 전환 조건: 실기기 dev build에서 Kakao 또는 magic link 로그인 → force-close 재실행 세션 복원 → 로그아웃(SecureStore chunk 삭제) 확인. drift report: evals/drift-reports/EVAL-0012-rn-auth-poc.md"
     }
   ]
 }
