@@ -40,7 +40,7 @@ with-key의 AI 에이전트와 사람이 공유하는 코딩 품질 기준. Clau
 
 - Feature 컴포넌트와 Server Action은 route 아래 colocate.
 - 클라이언트→서버 쓰기는 `_actions.ts` Server Action으로 통일.
-- Route Handler(`src/app/api/*`)는 외부 콜백 전용.
+- Route Handler(`src/app/api/*`)는 외부 콜백 + RN BFF(Bearer 인증) 전용(ADR-0036). PWA 클라이언트의 BFF endpoint 호출 금지.
 - RSC + server fetch 기본. `useEffect` + `fetch` 쓰기 경로 · SWR · React Query 도입 금지.
 - `src/features/` 신설 금지. 화면 30개 초과 시 별도 결정.
 
