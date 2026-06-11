@@ -53,7 +53,7 @@
 | A4  | Expo 워크플로우 | Managed + CNG + Dev Build, New Architecture ON                         | 확정                                                 | §2    |
 | A5  | 네비게이션 셸   | Root Stack + 인증 후 Bottom Tabs[홈·내챌린지·알림·프로필]              | ⚠️ 확정(PO 승인)                                     | §3    |
 | A6  | Kakao OAuth     | 네이티브 Kakao SDK + `signInWithIdToken`(카카오톡 SSO)                 | [ADR-0034](../adr/0034-rn-kakao-native-auth.md)      | §4    |
-| A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ⚠️ 확정(PO)                                          | §4    |
+| A7  | 딥링크          | Universal/App Links(https) + scheme, deferred = re-tap(MVP)            | ✅ 확정(PO 2026-06-11)                               | §4    |
 | A8  | 쓰기/BFF        | Hybrid: RPC direct + apps/web Next API as BFF(Bearer)                  | 확정                                                 | §5    |
 | A9  | 푸시 테이블     | 신규 `device_push_tokens`, `push_subscriptions`는 cutover까지          | ADR                                                  | §7    |
 | A10 | 디자인 토큰     | Mobile-local(hex), 공유 `packages/tokens`는 cutover 후                 | spec                                                 | §6    |
@@ -155,11 +155,11 @@ PWA 인증은 **magic link**(`signInWithOtp`, token_hash flow, ADR-0007) + **Kak
 - **네이티브 Kakao SDK + `signInWithIdToken`**: 카카오톡 앱 SSO로 id token 획득 → `supabase.auth.signInWithIdToken({ provider: 'kakao', token })`. **왜**: 카카오톡 원탭 SSO가 한국 사용자 UX 최상. **비용은 사업자등록이 아니라**(이메일 필수동의 → 비즈앱 전환은 웹 OAuth도 공통, 개인 비즈앱은 사업자번호 없이 전환 가능) **네이티브 설정**: 카카오 콘솔 플랫폼 등록(Android keyhash·iOS bundle id) + `EXPO_PUBLIC_KAKAO_NATIVE_KEY`(공개 가능 키) + config plugin + Supabase의 Kakao id token 신뢰 구성. **ADR 필요**(인증 백본 변경, [AGENTS.md §4](../../AGENTS.md) `src/lib/supabase/**` → ADR).
 - **magic link**: RN에서도 fallback으로 유지. `emailRedirectTo`는 universal link(`https://<도메인>/auth/callback?token_hash=`) — 이메일 클라이언트가 custom scheme을 신뢰하지 않으므로 https로(§A7).
 
-### A7 딥링크 — Universal/App Links + re-tap (⚠️ PO)
+### A7 딥링크 — Universal/App Links + re-tap (✅ PO 확정 2026-06-11)
 
 - **외부 진입 = Universal Links(iOS) + App Links(Android)**: `https://<도메인>/invite/<token>`·`/auth/callback`이 앱을 직접 연다. `apps/web`이 `/.well-known/apple-app-site-association`·`assetlinks.json` 호스팅. **왜**: 초대 링크는 카카오톡으로 https로 공유되므로 scheme만으론 앱이 안 열린다. 기존 invite URL 포맷 유지([03 §1](./03-rn-migration-rules.md)).
 - **내부 이동 = `fromwith://`** scheme(알림 탭 → 특정 화면 등).
-- **deferred(미설치 → 설치 후 자동 복구) = re-tap (MVP, ⚠️)**: Firebase Dynamic Links가 **2025-08-25 종료**되어 자동 deferred 수단이 사라졌다. MVP는 "미설치 → 웹 랜딩 → 스토어 → 설치 → 카카오톡의 같은 링크 재탭 → 앱 오픈 → 수락"으로 처리(추가 SDK 0). **왜**: Branch.io 등 전용 플랫폼은 SDK·대시보드·개인정보 처리(iOS 프라이버시) 비용이 dogfood엔 과함. **단 [PRD goal 4](./00-rn-conversion-plan.md)의 "설치 후 컨텍스트 복구"를 자동이 아닌 재탭으로 충족** → PO 확인 후속. 마찰이 크면 post-MVP에 Branch 도입.
+- **deferred(미설치 → 설치 후 자동 복구) = re-tap (MVP, ✅ PO 확정 2026-06-11)**: Firebase Dynamic Links가 **2025-08-25 종료**되어 자동 deferred 수단이 사라졌다. MVP는 "미설치 → 웹 랜딩 → 스토어 → 설치 → 카카오톡의 같은 링크 재탭 → 앱 오픈 → 수락"으로 처리(추가 SDK 0). **왜**: Branch.io 등 전용 플랫폼은 SDK·대시보드·개인정보 처리(iOS 프라이버시) 비용이 dogfood엔 과함. **PO 결정(2026-06-11)**: [PRD goal 4](./00-rn-conversion-plan.md)의 "설치 후 컨텍스트 복구"를 재탭으로 충족하는 것을 수용하되, **마찰은 UX로 완화**(웹 랜딩에 "설치 후 카카오톡으로 돌아가 초대 링크를 다시 눌러주세요" 재탭 안내 — EVAL-0013에서 구현). 재탭 마찰이 지표(서명률)로 확인되면 post-MVP에 Branch 도입 재검토.
 
 ### 세션 저장 & invite orchestration (기본값)
 
@@ -304,7 +304,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 아래 3건은 source 문서에 반영해 **문서 수준 모순을 해소**했다. 단 ⓑ·ⓒ는 문서가 아니라 **PO 제품 판단**이 남아 있다.
 
 - ✅ ⓐ **harness §3.2 정정**: "전면 restructure 선행 + `packages/domain`은 그 안에서 점진 채움(구조는 한 번에, 내용은 기능 단위)"으로 갱신([02 §3.2](./02-rn-migration-harness.md)). 남은 결정 없음(A1 ADR 작성으로 확정).
-- ✅ ⓑ **00 plan goal 4 정정**: invite 복구를 "**설치=자동**(token stash→로그인→수락), **미설치=재탭**"으로 명시([00 §8 goal 4](./00-rn-conversion-plan.md)). ⚠️ **남은 PO 결정**: 재탭 UX를 MVP 수용으로 확정할지 / Branch 도입을 앞당길지.
+- ✅ ⓑ **00 plan goal 4 정정**: invite 복구를 "**설치=자동**(token stash→로그인→수락), **미설치=재탭**"으로 명시([00 §8 goal 4](./00-rn-conversion-plan.md)). ✅ **PO 결정(2026-06-11)**: 재탭 UX MVP 수용 확정 — 마찰은 UX(웹 랜딩 재탭 안내)로 완화, Branch 도입은 post-MVP 재검토([§4 A7](#4-auth-a6a7)).
 - ✅ ⓒ **PRD §6.3 정정**: Bottom Tabs 새 IA + 외부=universal link·내부=scheme을 명시([01 §6.3](./01-rn-mvp-prd.md)). ⚠️ **남은 PO 결정**: 새 IA 승인 + 핵심 플로우 screenshot acceptance.
 
 ### 권장 부트스트랩 순서

@@ -3,13 +3,13 @@ Task: EVAL-0013
 Track: port
 Kind: migration
 Status: blocked
-Blocked-by: EVAL-0012(G3 auth PoC) complete + PO decision — MVP re-tap deferred invite UX accepted vs Branch moved earlier(04 A7, 04 §9).
+Blocked-by: EVAL-0012(G3 auth PoC) complete. PO decision resolved 2026-06-11 — re-tap MVP accepted, friction mitigated via UX(웹 랜딩 재탭 안내, 04 A7).
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/migration/05-rn-harness-decisions.md
 ---
 
 # EVAL-0013: G4 Invite deep link PoC — installed auto return + uninstalled re-tap path
 
-> 00 §8 G4. 04 A7 "미설치 재탭" MVP는 PO 확정 대기. deferred 플랫폼 임의 결정 금지.
+> 00 §8 G4. 04 A7 "미설치 재탭" MVP는 PO 수용 확정(2026-06-11) — 마찰은 웹 랜딩 재탭 안내 UX로 완화. deferred 플랫폼(Branch 등) 임의 도입 금지는 유지.
 
 ## Parent Links
 
