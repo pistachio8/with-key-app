@@ -2,7 +2,7 @@
 Task: EVAL-0029
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/specs/2026-06-10-feedback-suggestion-design.md, docs/superpowers/plans/2026-06-10-feedback-suggestion.md
 ---
 
