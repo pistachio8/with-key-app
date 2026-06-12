@@ -34,6 +34,7 @@ import {
   fetchCurrentChallenges,
   fetchChallengeDetail,
   fetchMyChallenges,
+  fetchMyUnsignedChallengeIds,
   fetchPendingPledge,
 } from "./challenge-reads";
 
@@ -124,5 +125,29 @@ describe("fetchPendingPledge", () => {
   it("대기 건이 없으면 null", async () => {
     mockGetSupabaseClient.mockReturnValue(makeMockSupabase({}));
     await expect(fetchPendingPledge("u1")).resolves.toBeNull();
+  });
+});
+
+describe("fetchMyUnsignedChallengeIds (EVAL-0017 홈 초대 배너)", () => {
+  it("내 미서명 row 만 — 서명 완료·타인·후보 밖 챌린지는 제외 (JS 재확인 필터)", async () => {
+    mockGetSupabaseClient.mockReturnValue(
+      makeMockSupabase({
+        challenge_participants: [
+          { challenge_id: "c1", user_id: "u1", signed_at: null },
+          { challenge_id: "c2", user_id: "u1", signed_at: "2026-05-01T00:00:00Z" },
+          { challenge_id: "c1", user_id: "u2", signed_at: null },
+          { challenge_id: "c9", user_id: "u1", signed_at: null },
+        ],
+      }),
+    );
+
+    const ids = await fetchMyUnsignedChallengeIds("u1", ["c1", "c2"]);
+    expect(ids).toEqual(new Set(["c1"]));
+  });
+
+  it("후보가 비어 있으면 쿼리 없이 빈 Set", async () => {
+    const ids = await fetchMyUnsignedChallengeIds("u1", []);
+    expect(ids).toEqual(new Set());
+    expect(mockGetSupabaseClient).not.toHaveBeenCalled();
   });
 });

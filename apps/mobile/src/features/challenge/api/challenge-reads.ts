@@ -354,6 +354,41 @@ export async function fetchMyChallenges(userId: string): Promise<MyChallenges> {
   return { owner, member };
 }
 
+/**
+ * 주어진 챌린지들 중 내가 아직 서명하지 않은 챌린지 id 집합 — 홈 "초대받은 챌린지"
+ * 배너용 (web home/page.tsx 인라인 쿼리와 동일 기준: 참여자 row 존재 + signed_at null).
+ * SQL 필터에 더해 JS 에서도 같은 조건을 재확인한다 — mock builder 가 필터를 무시하는
+ * 보존 eval 환경에서도 결정론을 유지하기 위함 (ADR-0037 Consequences 의 필터 drift 방어).
+ */
+export async function fetchMyUnsignedChallengeIds(
+  userId: string,
+  challengeIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  if (challengeIds.length === 0) return new Set();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("challenge_participants")
+    .select("challenge_id, user_id, signed_at")
+    .eq("user_id", userId)
+    .in("challenge_id", [...challengeIds])
+    .is("signed_at", null);
+
+  if (error) {
+    // 빈 Set 폴백(홈 초대 배너만 미표시) 전에 에러 메타만 로그 — silent failure 방지.
+    console.error("[fetchMyUnsignedChallengeIds] supabase error", error);
+  }
+  if (error || !data) return new Set();
+  const candidates = new Set(challengeIds);
+  const unsigned = new Set<string>();
+  for (const row of data) {
+    const r = row as { challenge_id: string; user_id: string; signed_at: string | null };
+    if (r.user_id === userId && r.signed_at == null && candidates.has(r.challenge_id)) {
+      unsigned.add(r.challenge_id);
+    }
+  }
+  return unsigned;
+}
+
 /** 서명 대기(pending/accepted) 서약 뷰. challengeId 미지정 시 내 첫 대기 건. */
 export async function fetchPendingPledge(
   userId: string,

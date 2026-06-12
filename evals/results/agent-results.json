@@ -200,6 +200,22 @@
       },
       "notes": "drift report: evals/drift-reports/EVAL-0013-invite-deep-link.md — 신규 폴더(features/invite)·네이밍(PostAuthRedirect) 답변 포함. 후속(PO/인프라): AASA·assetlinks.json 호스팅 + dev.fromwith.app 도메인 연결, invite_opened RN emit 은 events BFF 착지 후 별도 task. invite preview read(그룹명·서약 조건 표시)는 EVAL-0016 read 계약의 RPC 예정(get_invite_preview) 후속과 합류. 커밋·push 는 사용자 확인 후.",
       "oneShot": true
+    },
+    {
+      "taskId": "EVAL-0017",
+      "date": "2026-06-12",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "summary": "G8 Home + challenge read-only screens — 실 Supabase 데이터 렌더. 홈 placeholder 를 실데이터 화면으로 교체: fetchCurrentChallenges(EVAL-0016 계약)+fetchMyDisplayName+신규 fetchMyUnsignedChallengeIds 로 인사·초대(미서명 pending) 배너·stats 4칸·진행 중/정산 대기 리스트(분기 기준 web home/page.tsx 패리티, ADR-0027 phase 일원화). 챌린지 상세는 3탭 — feed: BFF GET /api/feed(Bearer, ADR-0036) 단일 표면, 카드에 author·signed URL 사진(onError placeholder 폴백)·키워드 칩·AI 일기 요약·상대 시간·kudos 카운트(read-only), 시작 전 미조회·빈 피드·401/403 권한 안내; dashboard(신규 route): potTotal+멤버별 doneCount/goalCount 진행 바(주차 칩·링은 doneByWeek 가 RN 계약 제외라 의도적 미포팅 — drift report 기록); info(신규 route): 기간·일정·벌금·인원·운영자·서명 현황·계좌 last4 마스킹 표시 전용(D-016). 공용 ChallengeScaffold·useAsyncRead(epoch race 가드, refresh 실패 시 기존 데이터 보존)·screen-states·theme 토큰 — 전부 RN StyleSheet, DOM/Tailwind 복사 0. write 0건(PRD §9.1 이벤트 포함). EVAL-0016 계약·domain·web 무변경(소비만). 멀티 에이전트 파일럿: implementer→독립 재검증→리뷰 fan-out(harness port-track+typescript) 양측 Approve→fixer 6건(KUDOS_EMOJIS @withkey/domain import 교체·async onPress void 래핑·useAsyncRead refresh 데이터 보존·status→phase 분기 3곳·silent error 메타 로그·feedError 타입 정리) 반영.",
+      "verification": {
+        "local": {
+          "pnpm harness:verify (typecheck·lint·test·harness:check·harness:test)": "pass — exit 0, web 695·mobile 111·domain 193 tests, harness:check 26 tasks 0 violations",
+          "pnpm --filter @withkey/mobile test -- read-only": "pass — 단 worktree 경로명에 read-only 포함 시 전 suite superset 매칭(마찰 기록)",
+          "pnpm validate:docs": "pass — 208 refs, no broken"
+        }
+      },
+      "notes": "manual/dev-build smoke(login→home→feed/dashboard/info, seeded 데이터)·RLS negative 실측(비멤버 계정)·iOS/Android safe-area overlap 은 시뮬레이터/실기기 부재로 미실행 — PO·실기기 핸드오프. 테스트는 EVAL-0016 fixture mock 기반 검증까지 수행."
     }
   ]
 }
