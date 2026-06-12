@@ -63,13 +63,14 @@ Depends-on: [task:EVAL-0020] [task:EVAL-0021] — intra-feature 순서(게이트
 
 ### C2. 파서 · 검증 (`harness-lib.mjs`)
 
-- `parseBlockers(line)` 신설: **첫 `—` 기준으로 먼저 자르고**(prose 안의 두 번째 `—`·토큰 인용 오탐 방지), 왼쪽에서만 `\[([a-z]+):([^\]]+)\]` 전체 추출 → `{ type, value }[]`.
+- `parseBlockers(line)` 신설: **첫 `—` 기준으로 먼저 자르고**(prose 안의 두 번째 `—`·토큰 인용 오탐 방지), 왼쪽에서만 `\[([a-z]+):([^\]]+)\]` 전체 추출 → `{ type, value }[]`. dash 변형(`–`·`―`·`--`)도 분리자로 수용한다(리뷰 반영 2026-06-12) — em dash 오타 시 오른쪽 prose 인용이 실제 의존으로 추출되는 silent 오염 방지. 정식 표기는 em dash 하나.
 - 소비처 교체:
   - worktree base branch(`renderGoalPrompt`): 첫 `EVAL-` 정규식 → 첫 `task:` 토큰. **`Blocked-by` 우선, 없으면 `Depends-on`**. **왜 첫 토큰**: 현행 동작(첫 선행 브랜치 위에 쌓기) 보존 — 복수 base 병합은 범위 밖.
   - ADR 게이트 경고: `\bADR\b` 텍스트 매치 → `adr:` 또는 `spec:` 토큰 존재.
 - `validateTask` 추가 규칙(`harness:check` 에러):
   - `Blocked-by` 또는 `Depends-on` **키가 존재하면 토큰 ≥1 필수**. **왜**: blocked 한정으로 좁히면 todo task의 `Depends-on` 구문법이 무검출로 살아남아 base branch가 조용히 develop으로 떨어진다 — "병존 기간 없음"은 이 규칙이어야 성립.
   - 알 수 없는 토큰 타입 → 에러.
+  - `—` 왼쪽의 비토큰 잔여 텍스트(대문자 `[Task:]` 오타 등) → 에러. 빈 value 토큰(`[gate: ]`) → 에러(리뷰 반영 2026-06-12). **왜**: 소문자-only 토큰 정규식의 무매치는 에러가 아니라 silent drop 이라 lint 로 승격해야 잡힌다.
   - `task:` 토큰이 존재하지 않는 task 참조 → 에러. 존재 탐색은 `evals/tasks/` + `archive/` 포함. **왜**: 선행 done task가 나중에 archive 되는 순간 하류 토큰이 CI를 깨는 회귀 방지.
 - `harness:drift`에 **warnings 채널(비차단)** advisory 1건 추가: blocked task의 `task:` 토큰이 전부 done이고 다른 타입 토큰이 없으면 "해제 후보 — todo로 flip?" 경고. **자동 flip 아님**(보고만). **왜**: 해제 결정은 사람/구현 세션 몫. gate/adr/spec/po 토큰이 섞이면 침묵 — 해제 판단이 사람 몫인 타입이 남아 있는 한 후보가 아니다.
 - `validateDoneRunParity`(Tier 1-D) 확장: done task의 runs[] entry에 `<<FILL>>` placeholder가 남아 있으면 **에러**. **왜**: finalize의 exit 1은 프로세스가 살아있는 동안만 유효 — placeholder 채로 커밋되는 회귀는 CI 게이트(check)가 막아야 한다.

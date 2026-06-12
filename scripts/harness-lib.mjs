@@ -37,10 +37,19 @@ const STATUSES = new Set(["todo", "blocked", "in_progress", "done"]);
 // 타입 5종 고정 — 현행 13개 task blocker 전수 분류가 이 5종으로 닫힌다. 신규 타입은 spec 갱신으로만.
 export const BLOCKER_TOKEN_TYPES = new Set(["task", "gate", "adr", "spec", "po"]);
 
+// dash 변형(em·horizontal bar·en·ASCII --)도 분리자로 수용 — em dash 오타 시 오른쪽 prose 인용이
+// 실제 의존으로 추출되는 silent 오염을 막는다. 정식 표기는 em dash(—) 하나(spec §C1).
+const BLOCKER_DASH_RE = /—|―|–|--/;
+// 매 호출 새 정규식 — 전역 플래그 lastIndex 공유 방지(acIdRe 패턴과 동형).
+const blockerTokenRe = () => /\[([a-z]+):([^\]]+)\]/g;
+
+function blockerLeftSide(line) {
+  return String(line ?? "").split(BLOCKER_DASH_RE)[0];
+}
+
 export function parseBlockers(line) {
-  const left = String(line ?? "").split("—")[0];
   const tokens = [];
-  for (const match of left.matchAll(/\[([a-z]+):([^\]]+)\]/g)) {
+  for (const match of blockerLeftSide(line).matchAll(blockerTokenRe())) {
     tokens.push({ type: match[1], value: match[2].trim() });
   }
   return tokens;
@@ -130,6 +139,7 @@ export function validateTask(task, { exists = existsSync, knownTaskIds = null } 
 
   // 토큰 문법 강제 (spec §C2) — blocked 한정이 아니라 "키가 존재하면" 검사한다.
   // 왜: blocked 한정이면 todo task 의 Depends-on 구문법이 무검출로 살아남아 base branch 가 조용히 develop 으로 떨어진다.
+  // knownTaskIds 는 모든 CLI 진입점(check·drift·goal·context)이 loadKnownTaskIds() 로 주입한다 — null 은 테스트 격리용.
   for (const key of ["Blocked-by", "Depends-on"]) {
     if (!(key in task.frontmatter)) {
       continue;
@@ -139,12 +149,22 @@ export function validateTask(task, { exists = existsSync, knownTaskIds = null } 
       errors.push(
         `${task.repoPath}: ${key} must have >=1 [type:value] token before — (구문법 prose 금지, spec 2026-06-12 §C1)`,
       );
+      continue;
+    }
+    // 토큰 왼쪽의 비토큰 잔여 텍스트 = 오타(대문자 [Task:]·괄호 깨짐 등)의 silent drop 신호 — 에러로 승격.
+    const leftover = blockerLeftSide(task.frontmatter[key]).replace(blockerTokenRe(), "").trim();
+    if (leftover) {
+      errors.push(
+        `${task.repoPath}: ${key} non-token text before — : "${leftover}" (토큰 오타 의심 — 왼쪽은 [type:value] 만 허용)`,
+      );
     }
     for (const token of tokens) {
       if (!BLOCKER_TOKEN_TYPES.has(token.type)) {
         errors.push(
           `${task.repoPath}: ${key} unknown token type [${token.type}:] — task·gate·adr·spec·po 만 허용(신규 타입은 spec 갱신)`,
         );
+      } else if (!token.value) {
+        errors.push(`${task.repoPath}: ${key} [${token.type}:] empty value — 토큰 값 필수`);
       } else if (
         token.type === "task" &&
         knownTaskIds &&

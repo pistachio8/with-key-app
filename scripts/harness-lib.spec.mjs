@@ -143,6 +143,16 @@ test("parseBlockers: 첫 — 오른쪽 prose 의 토큰·EVAL 인용은 무시 (
   assert.deepEqual(tokens, [{ type: "task", value: "EVAL-0020" }]);
 });
 
+test("parseBlockers: en dash(–)·horizontal bar(―)·ASCII -- 도 분리자 (dash 오타 방어)", () => {
+  for (const dash of ["–", "―", "--"]) {
+    assert.deepEqual(
+      parseBlockers(`[task:EVAL-0005] ${dash} prose 인용 [task:EVAL-0099]`),
+      [{ type: "task", value: "EVAL-0005" }],
+      `dash variant: ${dash}`,
+    );
+  }
+});
+
 test("parseBlockers: 토큰 없는 구문법 prose → 빈 배열", () => {
   assert.deepEqual(parseBlockers("G2(법무) 통과 + EVAL-0005 선행."), []);
 });
@@ -236,6 +246,26 @@ test("validateTask: task: 토큰이 미존재 task 참조 → 위반", () => {
     { exists: fakeExists, knownTaskIds: KNOWN_IDS },
   );
   assert.ok(errs.some((e) => /\[task:EVAL-9999\] not found/.test(e)));
+});
+
+test("validateTask: 토큰 왼쪽 비토큰 텍스트(대문자 [Task:] 오타 등) → 위반 (silent drop 방지)", () => {
+  const errs = validateTask(
+    makeTask({
+      ...VALID_FM,
+      Status: "blocked",
+      "Blocked-by": "[task:EVAL-0010] [Task:EVAL-0020] — 설명.",
+    }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.ok(errs.some((e) => /non-token text/.test(e) && e.includes("[Task:EVAL-0020]")));
+});
+
+test("validateTask: 빈 value 토큰([gate: ]) → 위반", () => {
+  const errs = validateTask(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "[gate: ] [task:EVAL-0010] — 설명." }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.ok(errs.some((e) => /\[gate:\] empty value/.test(e)));
 });
 
 test("validateTask: 정상 토큰 문법 → 위반 0 (사람-판단 타입 값은 검증 안 함)", () => {
