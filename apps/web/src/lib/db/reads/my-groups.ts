@@ -1,10 +1,9 @@
 import "server-only";
+import type { MyGroupSummary } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type MyGroupSummary = {
-  id: string;
-  name: string | null;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+export type { MyGroupSummary };
 
 // AppHeader chevron-down sheet (F15) 용 — 활성 그룹만, created_at 내림차순.
 // RLS(`groups_select_member`)가 비멤버를 자동 필터링하므로 userId 인자는 불필요.

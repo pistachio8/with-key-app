@@ -1,6 +1,7 @@
-// src/lib/db/reads/recap.ts
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+// 정산(recap) read service — RN-safe(RLS) Supabase 직접 read (00 §13.3 · ADR-0037).
+// 추출 소스: apps/web/src/lib/db/reads/{recap,challenge-photos}.ts.
+// view 조립은 @withkey/domain 계산 함수 합성 — 보존 eval(evals/fixtures/read-contracts/recap.ts)
+// 스냅샷이 web buildRecapView 와의 일치를 강제한다.
 import {
   toKstDayKey,
   countDoneDaysByUserByWeek,
@@ -13,12 +14,11 @@ import {
   type CutoffContext,
   type RecapGroupView,
   type RecapMemberView,
+  type RecapPhotoView,
   type RecapView,
 } from "@withkey/domain";
 
-// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
-// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
-export type { RecapGroupView, RecapMemberView, RecapView };
+import { getSupabaseClient } from "@/services/supabase/client";
 
 type ChallengeRow = {
   id: string;
@@ -38,11 +38,11 @@ type ParticipantRow = {
   doneByWeek: Map<number, number>;
 };
 
-export function buildRecapView(input: {
+// web recap.ts buildRecapView 와 동일 조립 — 보존 스냅샷으로 drift 차단.
+function buildRecapView(input: {
   challenge: ChallengeRow;
-  participants: ReadonlyArray<ParticipantRow>;
+  participants: readonly ParticipantRow[];
   viewerId: string;
-  now: Date;
   group?: RecapGroupView | null;
 }): RecapView {
   const { challenge, participants, viewerId } = input;
@@ -100,26 +100,21 @@ export function buildRecapView(input: {
   };
 }
 
-type Options = { client?: SupabaseClient; now?: Date; challengeId?: string };
+type FetchRecapOptions = { now?: Date; challengeId?: string };
 
 /**
- * 내가 참가 중인 챌린지 중 "이미 끝났거나 end_at 이 지난" 가장 최근 챌린지 1개의 정산 뷰.
- * options.challengeId 지정 시 그 특정 챌린지만. 없으면 null.
+ * 끝났거나 만기 지난 가장 최근 챌린지 1개의 정산 뷰 (challengeId 지정 시 그 건만).
  * RLS 가 챌린지/참가자/로그 접근을 자동 필터링.
  */
 export async function fetchRecap(
   viewerId: string,
-  options: Options = {},
+  options: FetchRecapOptions = {},
 ): Promise<RecapView | null> {
-  const supabase = options.client ?? (await createClient());
+  const supabase = getSupabaseClient();
   const now = options.now ?? new Date();
   const nowIso = now.toISOString();
 
-  // status='closed' 면 운영자가 명시적으로 종료 누름 → end_at 미래(조기 종료) 여도 정산 진입.
-  // status='active' + end_at 지남 (만기 도달했지만 운영자 미종료) 도 정산 대상.
-  // status='pending'/'accepted' 또는 active+end_at 미래(진행 중) 는 제외.
-  // canonical 판정은 isChallengeOver(@withkey/domain, challenge/lifecycle, ADR-0027) — 아래 .or 는 그 SQL 미러
-  // (Supabase 쿼리 빌더 문자열이라 TS 헬퍼를 직접 호출할 수 없어 동일 로직을 인라인 유지).
+  // canonical 판정은 isChallengeOver(@withkey/domain) — .or 는 그 SQL 미러 (web recap.ts 와 동일).
   let cq = supabase
     .from("challenges")
     .select(
@@ -173,11 +168,93 @@ export async function fetchRecap(
   const participants: ParticipantRow[] = (parts ?? []).map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;
     return {
-      user_id: p.user_id,
-      display_name: u?.display_name ?? null,
+      user_id: p.user_id as string,
+      display_name: (u?.display_name as string | null) ?? null,
       doneByWeek: byUserByWeek.get(p.user_id) ?? new Map<number, number>(),
     };
   });
 
-  return buildRecapView({ challenge, participants, viewerId, now, group });
+  return buildRecapView({ challenge, participants, viewerId, group });
+}
+
+const PHOTO_BUCKET = "action-photos";
+// web lib/storage/action-photos.ts 와 동일 TTL. signed URL 수명 정책 변경(ADR-0036 §3,
+// feed 경로 900s)은 후속 task — recap 그리드는 web getPhotoSignedUrls(600s)와 정합 유지.
+const PHOTO_SIGNED_TTL_SECONDS = 600;
+// web looksLikePhotoPath 와 동일 패턴 — photo_path 가 URL/이상값이면 signed URL 생성 제외.
+const PHOTO_PATH_RE =
+  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+-[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp)$/i;
+
+type PhotoRow = {
+  id: string;
+  user_id: string;
+  photo_path: string | null;
+  created_at: string;
+  users: { display_name: string | null } | { display_name: string | null }[];
+};
+
+/**
+ * recap 사진 그리드 — viewer 토큰으로 직접 signed URL 생성.
+ * 스토리지 RLS(`ap_select_group_member`)가 그룹 멤버만 허용 → 비멤버는 빈 배열.
+ */
+export async function fetchChallengePhotos(
+  challengeId: string,
+): Promise<readonly RecapPhotoView[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("action_logs")
+    .select(
+      // ADR-0017 — PostgREST embed 모호함(PGRST201) 회피 위해 작성자 FK 명시 (web 과 동일).
+      [
+        "id",
+        "user_id",
+        "photo_path",
+        "created_at",
+        "users!action_logs_user_id_fkey!inner(display_name)",
+      ].join(","),
+    )
+    .eq("challenge_id", challengeId)
+    .not("photo_path", "is", null)
+    .order("created_at", { ascending: true });
+
+  if (error || !data) return [];
+
+  const rows = data as unknown as PhotoRow[];
+  const validIndices: number[] = [];
+  const validPaths: string[] = [];
+  rows.forEach((row, index) => {
+    const path = row.photo_path;
+    if (path && !path.includes("://") && PHOTO_PATH_RE.test(path)) {
+      validIndices.push(index);
+      validPaths.push(path);
+    }
+  });
+
+  const signedUrls: (string | null)[] = rows.map(() => null);
+  if (validPaths.length > 0) {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .createSignedUrls(validPaths, PHOTO_SIGNED_TTL_SECONDS);
+    if (!signErr && signed) {
+      signed.forEach((row, i) => {
+        if (row?.signedUrl) signedUrls[validIndices[i]] = row.signedUrl;
+      });
+    }
+  }
+
+  const out: RecapPhotoView[] = [];
+  rows.forEach((row, i) => {
+    if (!row.photo_path) return;
+    const url = signedUrls[i];
+    if (!url) return;
+    const author = Array.isArray(row.users) ? row.users[0] : row.users;
+    out.push({
+      id: row.id,
+      signedUrl: url,
+      takenAt: row.created_at,
+      ownerDisplayName: author?.display_name ?? "익명",
+      ownerId: row.user_id,
+    });
+  });
+  return out;
 }

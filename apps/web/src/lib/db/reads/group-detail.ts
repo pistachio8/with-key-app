@@ -1,32 +1,11 @@
 import { cacheLife, cacheTag } from "next/cache";
+import type { GroupChallengeRow, GroupDetailView, GroupMemberView } from "@withkey/domain";
 import { getAuthedUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export type GroupMemberView = {
-  id: string;
-  displayName: string;
-  role: "owner" | "member";
-  joinedAt: string;
-};
-
-export type GroupChallengeRow = {
-  id: string;
-  title: string;
-  status: "pending" | "accepted" | "active" | "closed";
-  startAt: string | null;
-  endAt: string | null;
-};
-
-export type GroupDetailView = {
-  id: string;
-  name: string | null;
-  ownerId: string;
-  bankCode: string | null;
-  accountHolder: string | null;
-  accountNumberLast4: string | null;
-  members: GroupMemberView[];
-  challenges: GroupChallengeRow[];
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { GroupChallengeRow, GroupDetailView, GroupMemberView };
 
 // RLS(`groups_select_member` / `gm_select_member` / `challenges_select_member`) 가
 // 비멤버 차단. account_number_encrypted 평문은 본 read 에 포함되지 않음 (D-016).

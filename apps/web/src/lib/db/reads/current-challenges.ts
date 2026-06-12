@@ -4,49 +4,19 @@ import {
   dayIndexOf,
   challengePhase,
   remainingDays,
-  type ChallengePhase,
   type ChallengeStatus,
   weekBucketsFromDayKeys,
   computeAccruedPot,
   confirmedPenalty,
   type CutoffContext,
   type CutoffPhase,
+  type GroupChallengeView,
 } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type GroupChallengeView = {
-  groupId: string;
-  groupName: string | null;
-  // D-016: 마스킹·표시용 필드만 RSC 까지 내려보냄.
-  // `account_number_encrypted` 컬럼은 의도적으로 SELECT 화이트리스트에서 제외 —
-  // 평문 복호화는 `revealAccountNumber` Server Action 한 경로로만.
-  bankCode: string | null;
-  accountHolder: string | null;
-  accountNumberLast4: string | null;
-  challenge: {
-    id: string;
-    title: string;
-    goalCount: number;
-    durationDays: number;
-    penaltyAmount: number;
-    status: ChallengeStatus;
-    // status + end_at 파생 phase (ADR-0027). 표시·자격 분기는 status 가 아니라 phase 로.
-    phase: ChallengePhase;
-    startAt: string | null;
-    endAt: string | null;
-    doneCount: number;
-    daysLeft: number;
-    potTotal: number;
-    // 내 확정 벌금(끝난 주 미달 합·단조). 홈 "내 벌금" stat 용. (spec C0·C3)
-    myConfirmedPenalty: number;
-    // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
-    participantCount: number;
-    // 그룹 멤버이지만 이미 시작된 챌린지 코호트에는 없을 수 있다.
-    userIsParticipant: boolean;
-    // 모킹업 §2-B 홈 stats/list — 오늘 본인 인증 여부. KST 자정 기준.
-    verifiedToday: boolean;
-  } | null;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { GroupChallengeView };
 
 const DEFAULT_CURRENT_STATUSES = [
   "pending",

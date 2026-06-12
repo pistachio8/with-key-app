@@ -1,21 +1,12 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
+import type { MyChallengeCounts, MyChallengeItem, MyChallenges } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 import type { ChallengeStatus } from "./active-challenge";
 
-export type MyChallengeItem = {
-  id: string;
-  title: string;
-  status: ChallengeStatus;
-  startAt: string | null;
-  endAt: string | null;
-  ownerId: string;
-};
-
-export type MyChallenges = {
-  owner: MyChallengeItem[];
-  member: MyChallengeItem[];
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { MyChallengeCounts, MyChallengeItem, MyChallenges };
 
 // 모킹업 §12 — /me/challenges 의 운영/참여 분리.
 // 사용자가 participant 인 모든 챌린지를 한 번에 fetch 후 owner 여부로 분리.
@@ -72,12 +63,6 @@ async function fetchMyChallengesInner(userId: string): Promise<MyChallenges> {
 export async function fetchMyChallenges(userId: string): Promise<MyChallenges> {
   return fetchMyChallengesInner(userId);
 }
-
-export type MyChallengeCounts = {
-  owner: number;
-  member: number;
-  totalParticipated: number;
-};
 
 export function deriveCounts(my: MyChallenges): MyChallengeCounts {
   const ownerActive = my.owner.filter((c) => c.status !== "closed").length;
