@@ -178,6 +178,28 @@
         }
       },
       "notes": "get_invite_preview RPC migration·web 전환 + signed URL TTL 600→900(ADR-0036 §3·§4)은 후속 task(Non-goal: DB 변경). RN-safe read 조립 web/mobile 중복은 공유 fixture 스냅샷이 방어(drift-reports/EVAL-0016 참조). 서브에이전트 3-fan-out 리뷰(backend·frontend·mobile/eval) 반영: Major 2 — ① /api/feed challengeId 를 zod SoT(challengeSchema.shape.id, uuid)로 검증(400) ② group fixture 를 web parity spec 에도 추가(getAuthedUser mock)해 6종 fixture 전부 양측 비교. Minor — MyChallengeCounts 를 domain SoT 로 통일, GroupChallengeRow.status 를 ChallengeStatus 재사용, ADR-0037 에 mock builder 필터 무시(SQL 필터 drift 사각) 명문화. 커밋·push 는 사용자 확인 대기."
+    },
+    {
+      "taskId": "EVAL-0013",
+      "date": "2026-06-12",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "summary": "G4 invite deep link PoC. /invite/[token] 을 placeholder 에서 수락 orchestration SoT 로 승격 — 미인증: inviteTokenSchema(zod) 검증 → SecureStore stash(fromwith.pending-invite-token) → /login, 세션 성립 후 PostAuthRedirect(features/invite 공개 API) 가 stash 1회성 take 로 /invite/<token> 복귀(없으면 /home) — login.tsx·auth/callback.tsx 의 '/home 하드코딩 착지' 를 이 컴포넌트로 일원화. 인증: accept_invite RPC(0028, SECURITY DEFINER) 클라이언트 직접 호출 — semantics 무변경 소비: P0002→invalid_or_expired, 42501 'group full'→group_full(PRD §3.3 AC-4 카피), already-joined 는 RPC 성공 수렴. 착지 분기는 web invite/_actions.ts 와 동일: pending→/challenge/[id]/pledge, active→/challenge/[id], 없으면 /home. 신규 슬라이스 src/features/invite/{api,components}/ (04 §5.1 lazy 생성) — capabilities/deep-linking wrapper 는 빈 추상화라 미생성(Expo Router 가 URL→route 전담). 추가 SDK 0(Branch/Firebase DL 금지 준수), token 본문 로그 금지, RN analytics emit 0건(track.ts 는 service-role insert — RN 직접 호출 금지). 미설치 re-tap MVP(PO 확정 2026-06-11)는 README §Invite deep link 에 문서화 — 웹 랜딩 재탭 안내 카피는 스토어 공개 시점으로 이연(현 dogfood 는 PWA 가 본 제품). 보존: router-skeleton.spec 갱신 + invite-deep-link.spec(화면 흐름)·invite-service.spec(RPC 에러 매핑)·invite-token-stash.spec(1회성·keystore 예외) 신규.",
+      "verification": {
+        "local": {
+          "pnpm harness:context EVAL-0013": "pass — all paths ok",
+          "pnpm -r typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm -r lint": "pass (0 errors 0 warnings)",
+          "pnpm -r test": "pass (web 114 files · domain 23 files · mobile 12 suites 88 tests)",
+          "pnpm --filter @withkey/mobile test -- invite": "pass (12 suites 88 tests — invite spec 3종 포함)",
+          "pnpm harness:check": "PASS — 26 tasks · 0 violations",
+          "pnpm validate:docs": "OK — 208 references, no broken"
+        },
+        "manual_deferred": "실기기 dev build smoke(설치 링크 오픈·unauth stash·auth accept·re-tap)는 수동 미실행으로 보고(통과 위조 금지). universal link 실링크는 AASA/assetlinks 호스팅·도메인 연결 미구성 — scheme(fromwith-dev://invite/<token>) 경로가 AC 대체(또는 scheme)."
+      },
+      "notes": "drift report: evals/drift-reports/EVAL-0013-invite-deep-link.md — 신규 폴더(features/invite)·네이밍(PostAuthRedirect) 답변 포함. 후속(PO/인프라): AASA·assetlinks.json 호스팅 + dev.fromwith.app 도메인 연결, invite_opened RN emit 은 events BFF 착지 후 별도 task. invite preview read(그룹명·서약 조건 표시)는 EVAL-0016 read 계약의 RPC 예정(get_invite_preview) 후속과 합류. 커밋·push 는 사용자 확인 후.",
+      "oneShot": true
     }
   ]
 }

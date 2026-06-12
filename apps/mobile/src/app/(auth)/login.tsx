@@ -1,4 +1,3 @@
-import { Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
@@ -14,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { requestMagicLink, signInWithKakao, useSession, type AuthErrorCode } from "@/features/auth";
+import { PostAuthRedirect } from "@/features/invite";
 
 const ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   kakao_cancelled: "카카오 로그인이 취소되었어요. 다시 시도해 주세요.",
@@ -37,9 +37,10 @@ export default function LoginScreen() {
     );
   }
 
-  // 세션 성립(Kakao SSO·magic link 어느 쪽이든) 시 즉시 홈으로 — 인증→login 우회 (G5).
+  // 세션 성립(Kakao SSO·magic link 어느 쪽이든) 시 즉시 이탈 — 인증→login 우회 (G5).
+  // stash 된 invite token 이 있으면 /invite/<token> 으로 복귀, 없으면 /home (EVAL-0013).
   if (session) {
-    return <Redirect href="/home" />;
+    return <PostAuthRedirect />;
   }
 
   const handleKakao = async () => {
