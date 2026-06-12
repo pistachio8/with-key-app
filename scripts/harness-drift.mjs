@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 import { execSync } from "node:child_process";
-import { loadMigrationTasks, validateTask, detectStaleStatus } from "./harness-lib.mjs";
+import {
+  loadMigrationTasks,
+  loadKnownTaskIds,
+  validateTask,
+  detectStaleStatus,
+} from "./harness-lib.mjs";
 
 const tasks = loadMigrationTasks();
+const knownTaskIds = loadKnownTaskIds();
 const violations = tasks.flatMap((task) => {
-  return validateTask(task).map((message) => ({
+  return validateTask(task, { knownTaskIds }).map((message) => ({
     task: task.frontmatter.Task || task.repoPath,
     message,
   }));
@@ -47,7 +53,7 @@ console.log(`# Harness Drift Report
 
 - 0004+ eval task frontmatter required fields
 - Track / Kind / Status enum validity
-- blocked task Blocked-by presence
+- blocked task Blocked-by presence + Blocked-by/Depends-on 토큰 문법(≥1 [type:value]·타입 5종·task: 존재)
 - Parent path existence
 - Source Files path existence
 - Target Files path existence

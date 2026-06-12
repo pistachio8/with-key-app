@@ -97,7 +97,7 @@ export function parseTaskFile(absolutePath, content) {
   };
 }
 
-export function validateTask(task, { exists = existsSync } = {}) {
+export function validateTask(task, { exists = existsSync, knownTaskIds = null } = {}) {
   const errors = [];
 
   for (const key of REQUIRED_FRONTMATTER) {
@@ -126,6 +126,35 @@ export function validateTask(task, { exists = existsSync } = {}) {
 
   if (task.frontmatter.Status === "blocked" && !task.frontmatter["Blocked-by"]) {
     errors.push(`${task.repoPath}: blocked tasks require Blocked-by`);
+  }
+
+  // 토큰 문법 강제 (spec §C2) — blocked 한정이 아니라 "키가 존재하면" 검사한다.
+  // 왜: blocked 한정이면 todo task 의 Depends-on 구문법이 무검출로 살아남아 base branch 가 조용히 develop 으로 떨어진다.
+  for (const key of ["Blocked-by", "Depends-on"]) {
+    if (!(key in task.frontmatter)) {
+      continue;
+    }
+    const tokens = parseBlockers(task.frontmatter[key]);
+    if (tokens.length === 0) {
+      errors.push(
+        `${task.repoPath}: ${key} must have >=1 [type:value] token before — (구문법 prose 금지, spec 2026-06-12 §C1)`,
+      );
+    }
+    for (const token of tokens) {
+      if (!BLOCKER_TOKEN_TYPES.has(token.type)) {
+        errors.push(
+          `${task.repoPath}: ${key} unknown token type [${token.type}:] — task·gate·adr·spec·po 만 허용(신규 타입은 spec 갱신)`,
+        );
+      } else if (
+        token.type === "task" &&
+        knownTaskIds &&
+        !knownTaskIds.has(token.value.toUpperCase())
+      ) {
+        errors.push(
+          `${task.repoPath}: ${key} [task:${token.value}] not found in evals/tasks/ (+archive/)`,
+        );
+      }
+    }
   }
 
   const pathGroups = [

@@ -196,6 +196,61 @@ test("validateTask: Status=blocked 인데 Blocked-by 없음 → 위반", () => {
   assert.ok(errs.some((e) => /blocked tasks require Blocked-by/.test(e)));
 });
 
+const KNOWN_IDS = new Set(["EVAL-0004", "EVAL-0010", "EVAL-0020"]);
+
+test("validateTask: Blocked-by 키 존재 + 토큰 0개(구문법 prose) → 위반", () => {
+  const errs = validateTask(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "G2 통과 + EVAL-0010 선행." }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.ok(errs.some((e) => /Blocked-by must have >=1 \[type:value\] token/.test(e)));
+});
+
+test("validateTask: Depends-on 도 같은 규칙 — todo task 의 구문법이 무검출로 살아남지 않는다", () => {
+  const errs = validateTask(makeTask({ ...VALID_FM, "Depends-on": "EVAL-0020 구현 선행." }), {
+    exists: fakeExists,
+    knownTaskIds: KNOWN_IDS,
+  });
+  assert.ok(errs.some((e) => /Depends-on must have >=1 \[type:value\] token/.test(e)));
+});
+
+test("validateTask: 미지 토큰 타입 → 위반", () => {
+  const errs = validateTask(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "[until:next-week] — 다음 주." }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.ok(errs.some((e) => /unknown token type \[until:\]/.test(e)));
+});
+
+test("validateTask: task: 토큰이 미존재 task 참조 → 위반", () => {
+  const errs = validateTask(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "[task:EVAL-9999] — 유령 선행." }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.ok(errs.some((e) => /\[task:EVAL-9999\] not found/.test(e)));
+});
+
+test("validateTask: 정상 토큰 문법 → 위반 0 (사람-판단 타입 값은 검증 안 함)", () => {
+  const errs = validateTask(
+    makeTask({
+      ...VALID_FM,
+      Status: "blocked",
+      "Blocked-by":
+        "[task:EVAL-0010] [gate:G2] [spec:analytics-union] [po:retap-flow] [adr:0036] — 설명.",
+    }),
+    { exists: fakeExists, knownTaskIds: KNOWN_IDS },
+  );
+  assert.deepEqual(errs, []);
+});
+
+test("validateTask: knownTaskIds 미주입(null)이면 task: 존재 검사만 skip", () => {
+  const errs = validateTask(
+    makeTask({ ...VALID_FM, Status: "blocked", "Blocked-by": "[task:EVAL-9999] — 유령." }),
+    { exists: fakeExists },
+  );
+  assert.deepEqual(errs, []);
+});
+
 test("validateTask: hallucinated 경로(존재 안 함) → 위반", () => {
   const errs = validateTask(makeTask(VALID_FM, { parent: [pr("docs/nope.md")] }), {
     exists: fakeExists,

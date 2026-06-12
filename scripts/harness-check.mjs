@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {
   loadMigrationTasks,
+  loadKnownTaskIds,
   validateTask,
   validateGoalPromptLength,
   loadAcIndex,
@@ -10,9 +11,10 @@ import {
   validateDoneRunParity,
 } from "./harness-lib.mjs";
 
-// Tier 1-A: Agent Task frontmatter·경로 추적성.
+// Tier 1-A: Agent Task frontmatter·경로 추적성 + Blocked-by/Depends-on 토큰 문법.
 const tasks = loadMigrationTasks();
-const taskErrors = tasks.flatMap((task) => validateTask(task));
+const knownTaskIds = loadKnownTaskIds();
+const taskErrors = tasks.flatMap((task) => validateTask(task, { knownTaskIds }));
 
 // Tier 1-B: 상류 AC 추적성 — spine 인용이 PRD AC 로 resolve 되나(05 §7).
 const acIndex = loadAcIndex();
