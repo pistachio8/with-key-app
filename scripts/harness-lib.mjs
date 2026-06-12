@@ -566,6 +566,8 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   const titleMatch = task.content.match(/^#\s+(EVAL-[^\n]+)$/m);
   const title = titleMatch ? titleMatch[1] : id;
   const blockedBy = task.frontmatter["Blocked-by"] || "";
+  const blockerTokens = parseBlockers(blockedBy);
+  const dependsTokens = parseBlockers(task.frontmatter["Depends-on"] || "");
 
   const parentLinks = extractSection(task.content, "Parent Links");
   const requirements = extractSection(task.content, "Requirements").trim();
@@ -576,11 +578,15 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   const verify = (task.verificationCommands || "").trim();
 
   const wpBranch = firstFeatBranch(parentLinks) || `feat/${slugFromRepoPath(task.repoPath)}`;
-  const predecessor = (blockedBy.match(/EVAL-\d+/) || [])[0];
+  // 첫 task: 토큰이 worktree base 선행 — Blocked-by 우선, 없으면 Depends-on (spec §C2).
+  // 왜 첫 토큰: 현행 동작(첫 선행 브랜치 위에 쌓기) 보존 — 복수 base 병합은 범위 밖.
+  const firstTaskToken = [...blockerTokens, ...dependsTokens].find((t) => t.type === "task");
+  const predecessor = firstTaskToken ? firstTaskToken.value : null;
   const baseBranch = (predecessor && lookupBranch(predecessor)) || "develop";
   const worktreeDir = `../with-key-${wpBranch.replace(/^feat\//, "").replace(/\//g, "-")}`;
 
-  const adrGate = /\bADR\b/.test(blockedBy);
+  // ADR/spec 게이트: prose 단어 매치가 아니라 토큰 존재로 판단 — 인용 오탐 제거 (spec §C2).
+  const adrGate = blockerTokens.some((t) => t.type === "adr" || t.type === "spec");
   // 수동/외부 단계는 task 저자가 Verification 의 # 주석으로 표시한다(예: "# manual/dev-build: ...").
   // AC 본문의 "dev build config" 같은 기능명에 오탐하지 않도록 # 주석만 신호로 쓴다.
   const manualHandoff = /(^|\n)\s*#/.test(verify);
@@ -608,7 +614,7 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   );
   if (adrGate) {
     out.push(
-      `- ⚠️ ADR 게이트: 이 task 는 선행 결정에 막혀 있다 — "Blocked-by: ${blockedBy}". 해당 ADR 이 docs/adr/ 에 accepted 로 없으면 \`pnpm new adr <topic>\` 로 초안만 작성하고 **STOP — PO 수락 요청**. 수락 전 관련 구성을 코드로 확정하지 않는다.`,
+      `- ⚠️ ADR/spec 게이트: 이 task 는 선행 결정에 막혀 있다 — "Blocked-by: ${blockedBy}". 해당 ADR/spec 이 docs/adr/ · docs/superpowers/specs/ 에 accepted 로 없으면 \`pnpm new adr <topic>\`(또는 \`pnpm new spec\`) 으로 초안만 작성하고 **STOP — PO 수락 요청**. 수락 전 관련 구성을 코드로 확정하지 않는다.`,
     );
   }
   out.push("");

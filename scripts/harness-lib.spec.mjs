@@ -462,7 +462,10 @@ test("renderGoalPrompt: ADR 게이트·수동 핸드오프·worktree base·mobil
   const task = {
     repoPath: "evals/tasks/0099-rn-foo.md",
     absolutePath: "/repo/evals/tasks/0099-rn-foo.md",
-    frontmatter: { Task: "EVAL-0099", "Blocked-by": "EVAL-0098 complete + ADR accepted." },
+    frontmatter: {
+      Task: "EVAL-0099",
+      "Blocked-by": "[task:EVAL-0098] [adr:0033] — complete + ADR accepted.",
+    },
     verificationCommands: "```bash\npnpm -r test\n# manual: device login\n```",
     sourcePaths: [pr("docs/PRD.md")],
     targetPaths: [pr("apps/mobile")],
@@ -491,7 +494,7 @@ test("renderGoalPrompt: ADR 게이트·수동 핸드오프·worktree base·mobil
   const out = renderGoalPrompt(task, { lookupBranch: () => "feat/rn-base" });
   assert.match(out, /# \/goal prompt — EVAL-0099: Foo title/);
   assert.match(out, /git worktree add -b feat\/rn-foo \.\.\/with-key-rn-foo feat\/rn-base/);
-  assert.match(out, /ADR 게이트/);
+  assert.match(out, /ADR\/spec 게이트/);
   assert.match(out, /PO·실기기 핸드오프/);
   assert.match(out, /EXPO_PUBLIC_\* 만/);
   assert.match(out, /do x/);
@@ -525,10 +528,90 @@ test("renderGoalPrompt: ADR/mobile 신호 없으면 게이트·핸드오프 생�
     ].join("\n"),
   };
   const out = renderGoalPrompt(task);
-  assert.doesNotMatch(out, /ADR 게이트/);
+  assert.doesNotMatch(out, /ADR\/spec 게이트/);
   assert.doesNotMatch(out, /PO·실기기 핸드오프/);
   assert.match(out, /git worktree add -b feat\/web-bar \.\.\/with-key-web-bar develop/);
   assert.match(out, /NEXT_PUBLIC_ 접두 금지/);
+});
+
+test("renderGoalPrompt: Depends-on 만 있는 task 도 첫 task: 토큰을 base 로 (Blocked-by 우선)", () => {
+  const base = {
+    repoPath: "evals/tasks/0099-web-dep.md",
+    absolutePath: "/repo/evals/tasks/0099-web-dep.md",
+    verificationCommands: "```bash\npnpm -r test\n```",
+    sourcePaths: [pr("docs/PRD.md")],
+    targetPaths: [pr("apps/web/src/x.ts")],
+    content: [
+      "# EVAL-0099: Dep title",
+      "## Parent Links",
+      "- Parent Work Package: `feat/web-dep`.",
+      "## Requirements",
+      "- do z",
+      "## Non-goals",
+      "- not w",
+      "## Acceptance Criteria",
+      "- ac",
+      "## Verification Commands",
+      "```bash",
+      "pnpm -r test",
+      "```",
+      "## Stop Condition",
+      "- done",
+    ].join("\n"),
+  };
+  const dependsOnly = {
+    ...base,
+    frontmatter: { Task: "EVAL-0099", "Depends-on": "[task:EVAL-0097] — intra-feature 순서." },
+  };
+  const out = renderGoalPrompt(dependsOnly, { lookupBranch: (id) => `feat/base-of-${id}` });
+  assert.match(
+    out,
+    /git worktree add -b feat\/web-dep \.\.\/with-key-web-dep feat\/base-of-EVAL-0097/,
+  );
+
+  const both = {
+    ...base,
+    frontmatter: {
+      Task: "EVAL-0099",
+      "Blocked-by": "[task:EVAL-0096] — 하드 게이트.",
+      "Depends-on": "[task:EVAL-0097] — 순서.",
+    },
+  };
+  const outBoth = renderGoalPrompt(both, { lookupBranch: (id) => `feat/base-of-${id}` });
+  assert.match(outBoth, /feat\/base-of-EVAL-0096/); // Blocked-by 우선
+});
+
+test("renderGoalPrompt: prose 의 ADR 단어는 더 이상 게이트 신호가 아님 — adr:/spec: 토큰만", () => {
+  const task = {
+    repoPath: "evals/tasks/0099-web-bar.md",
+    absolutePath: "/repo/evals/tasks/0099-web-bar.md",
+    frontmatter: {
+      Task: "EVAL-0099",
+      "Blocked-by": "[task:EVAL-0098] — ADR-0032 는 이미 accepted(인용일 뿐).",
+    },
+    verificationCommands: "```bash\npnpm -r test\n```",
+    sourcePaths: [pr("docs/PRD.md")],
+    targetPaths: [pr("apps/web/src/x.ts")],
+    content: [
+      "# EVAL-0099: Bar title",
+      "## Parent Links",
+      "- Parent Work Package: `feat/web-bar`.",
+      "## Requirements",
+      "- do z",
+      "## Non-goals",
+      "- not w",
+      "## Acceptance Criteria",
+      "- ac",
+      "## Verification Commands",
+      "```bash",
+      "pnpm -r test",
+      "```",
+      "## Stop Condition",
+      "- done",
+    ].join("\n"),
+  };
+  const out = renderGoalPrompt(task, { lookupBranch: () => "feat/x" });
+  assert.doesNotMatch(out, /ADR\/spec 게이트/);
 });
 
 // ── validateGoalPromptLength — /goal 4000자 하드 리밋 (render 주입 → 파일시스템 비의존) ──
