@@ -5,6 +5,8 @@ export * from "./keywords";
 export * from "./challenge";
 export * from "./bank";
 export * from "./share";
+// 화면 read view-model 계약 (EVAL-0016 · ADR-0037) — web read 모듈과 RN read service 가 공유.
+export * from "./read-contracts";
 
 // validators/challenge 와 challenge/lifecycle 이 동일한 4-status union `ChallengeStatus` 를
 // 각각 export 해 두 패밀리 barrel 의 `export *` 가 충돌(TS2308)한다. zod SoT(validators) 쪽을

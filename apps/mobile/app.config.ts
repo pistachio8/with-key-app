@@ -128,6 +128,9 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
     extra: {
       appVariant: variant,
       universalLinkDomain: variantConfig.universalLinkDomain,
+      // BFF(Bearer) base URL 명시 override (ADR-0036 — transport-중립 계약).
+      // 미지정 시 런타임은 `https://${universalLinkDomain}` 폴백(web = PWA + BFF 겸임).
+      bffBaseUrl: process.env.EXPO_PUBLIC_BFF_BASE_URL,
     },
   };
 };

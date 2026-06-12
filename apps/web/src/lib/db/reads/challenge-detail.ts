@@ -7,43 +7,23 @@ import {
   computeAccruedPot,
   type CutoffContext,
   type CutoffPhase,
+  type ChallengeMemberView as ChallengeMemberContract,
+  type ChallengeDetailView as ChallengeDetailContract,
+  type ChallengeGroupView,
 } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type ChallengeMemberView = {
-  id: string;
-  displayName: string;
-  doneCount: number;
-  signed: boolean;
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// web 은 계약 위에 서버 전용 doneByWeek(Map — JSON 직렬화 불가라 RN 계약 제외)만 확장한다.
+export type { ChallengeGroupView };
+
+export type ChallengeMemberView = ChallengeMemberContract & {
   // 주차별 done (week → distinct day count). dashboard H3 viewer 칩·링 계산용 (서버 전용).
   doneByWeek: ReadonlyMap<number, number>;
 };
 
-export type ChallengeGroupView = {
-  id: string;
-  ownerId: string;
-  bankCode: string | null;
-  accountHolder: string | null;
-  accountNumberLast4: string | null;
-};
-
-export type ChallengeDetailView = {
-  id: string;
-  title: string;
-  goalCount: number;
-  durationDays: number;
-  penaltyAmount: number;
-  status: "pending" | "accepted" | "active" | "closed";
-  startAt: string | null;
-  endAt: string | null;
-  // 조기 종료 cutoff 산정용 (ADR-0030). 미종료/레거시는 null.
-  closedAt: string | null;
+export type ChallengeDetailView = Omit<ChallengeDetailContract, "members"> & {
   members: ChallengeMemberView[];
-  potTotal: number;
-  group: ChallengeGroupView;
-  // 코호트 분리(솔로 1 / 그룹 ≥2) + UI 분기 — PR-2.
-  // = members.length 와 동일 (시드 후 freeze).
-  participantCount: number;
 };
 
 export const fetchChallengeDetail = cache(

@@ -4,14 +4,11 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getPhotoSignedUrls } from "@/lib/storage/action-photos";
+import type { RecapPhotoView } from "@withkey/domain";
 
-export type RecapPhotoView = {
-  id: string;
-  signedUrl: string;
-  takenAt: string;
-  ownerDisplayName: string;
-  ownerId: string;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { RecapPhotoView };
 
 type PhotoRow = {
   id: string;

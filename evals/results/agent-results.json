@@ -156,6 +156,28 @@
         }
       },
       "notes": "expo-router build expect.d.ts가 빈 파일(export {})이라 matcher 타입을 spec 로컬 declare global로 보강, node 타입은 src/test-env.d.ts 최소 선언(@types/node 기각 — RN 전역 충돌). stale .expo/types/router.d.ts는 headless expo start 1회로 재생성. 세션 외부 working-tree 편집 2건(implement-agent-task step 6 + 0012 done)을 chore 커밋으로 분리 반영, 0014 done 전환은 그 step 6 준수. 커밋 a8b5120(feat)+2806f15(chore), push/PR 사용자 확인 대기."
+    },
+    {
+      "taskId": "EVAL-0016",
+      "date": "2026-06-12",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "oneShot": true,
+      "summary": "G7 read model contract. view-model 계약 SoT 를 packages/domain/src/read-contracts/ 로 추출(GroupChallengeView·ChallengeDetailView·GroupDetailView·RecapView·RecapPhotoView·MyChallenges·PledgeView·MyGroupSummary·FeedItemView/feedResponseSchema(zod)·InvitePreview/invitePreviewSchema(zod)) — web read 모듈은 re-export 소비, 계약 경계에서 cookies()/@supabase/ssr/next-cache 제거. 00 §13.3 21개 read 분류 고정(ADR-0037 §1): feed 5종=BFF GET /api/feed(Bearer)·invite=RPC 예정·RN-safe(RLS) 13·web 전용 2. Layer 1 Bearer 변형은 쿼리 본체 공유(readVisibleActionLogIds(client)) + fetchChallengeFeedForViewerClient — use cache: private 은 Route Handler 불가라 비캐시, admin hydrate callsite 는 challenge-feed.ts 단일 유지. mobile 은 features/{challenge,feed,group,recap,profile}/api/ read service(+<domain>Keys query key factory·invalidation 기대값 주석) + services/api/bff-client(Bearer, base URL=EXPO_PUBLIC_BFF_BASE_URL??universal link). 보존 eval: evals/fixtures/read-contracts/{home,challenge-detail,recap,me,group,feed} 공유 fixture 를 web vitest(read-contract-parity.spec)와 mobile jest(*-reads.spec)가 같은 EXPECTED 로 비교(02 §5.2 결정론 스냅샷). mobile service-role leak 0건(rg). ADR-0037 작성(lib/supabase/bearer.ts 신설 spec-required 충족).",
+      "verification": {
+        "local": {
+          "pnpm harness:context EVAL-0016": "pass — all paths ok",
+          "pnpm -r typecheck": "pass (apps/web · packages/domain · apps/mobile)",
+          "pnpm -r lint": "pass (0 errors 0 warnings)",
+          "pnpm -r test": "pass (web 115 files 695 tests · domain 193 · mobile 9 files 67 tests)",
+          "pnpm --filter @withkey/mobile test -- read": "pass (read service 보존 스냅샷 포함)",
+          "pnpm harness:check": "PASS — 26 tasks · 0 violations",
+          "pnpm validate:docs": "OK — 208 references, no broken",
+          "pnpm build": "pass — /api/feed route 포함 production build"
+        }
+      },
+      "notes": "get_invite_preview RPC migration·web 전환 + signed URL TTL 600→900(ADR-0036 §3·§4)은 후속 task(Non-goal: DB 변경). RN-safe read 조립 web/mobile 중복은 공유 fixture 스냅샷이 방어(drift-reports/EVAL-0016 참조). 서브에이전트 3-fan-out 리뷰(backend·frontend·mobile/eval) 반영: Major 2 — ① /api/feed challengeId 를 zod SoT(challengeSchema.shape.id, uuid)로 검증(400) ② group fixture 를 web parity spec 에도 추가(getAuthedUser mock)해 6종 fixture 전부 양측 비교. Minor — MyChallengeCounts 를 domain SoT 로 통일, GroupChallengeRow.status 를 ChallengeStatus 재사용, ADR-0037 에 mock builder 필터 무시(SQL 필터 drift 사각) 명문화. 커밋·push 는 사용자 확인 대기."
     }
   ]
 }
