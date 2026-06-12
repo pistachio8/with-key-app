@@ -26,6 +26,14 @@ export function HomeOverview({ groups, unsignedPendingIds }: Props) {
       <View style={styles.emptyCard}>
         <Text style={styles.emptyTitle}>아직 진행 중인 챌린지가 없어요</Text>
         <Text style={styles.emptyDescription}>친구들과 함께 챌린지를 만들어보세요</Text>
+        {/* 생성 flow 진입 CTA — web home EmptyState 의 /challenge/new 링크 패리티 (EVAL-0018). */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/challenge/new")}
+          style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
+        >
+          <Text style={styles.emptyCtaLabel}>챌린지 만들기</Text>
+        </Pressable>
       </View>
     );
   }
@@ -220,6 +228,20 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
     fontSize: 14,
     marginTop: 6,
+  },
+  emptyCta: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    justifyContent: "center",
+    marginTop: 16,
+    minHeight: 44,
+    paddingHorizontal: 24,
+  },
+  emptyCtaLabel: {
+    color: colors.inverse,
+    fontSize: 15,
+    fontWeight: "700",
   },
   inviteBanner: {
     backgroundColor: colors.primarySoft,

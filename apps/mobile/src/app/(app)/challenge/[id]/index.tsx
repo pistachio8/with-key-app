@@ -12,7 +12,7 @@ import { useCallback } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { useSession } from "@/features/auth";
-import { ChallengeScaffold, fetchChallengeDetail } from "@/features/challenge";
+import { ChallengeScaffold, fetchChallengeDetail, StartChallengeCard } from "@/features/challenge";
 import { fetchChallengeFeed, FeedCard } from "@/features/feed";
 import { BffRequestError } from "@/services/api/bff-client";
 import { PlaceholderScreen } from "@/shared/components/placeholder-screen";
@@ -67,16 +67,33 @@ export default function ChallengeFeedScreen() {
   const phase = challengePhase(detail.status, detail.endAt);
   const showFeedSection = phase === "running" || phase === "over" || phase === "closed";
 
+  // 운영자 시작 카드 (EVAL-0018 · web (tabs)/layout.tsx 와 동일 조건):
+  // owner && status==='pending' && 본인 서명 완료. 강제는 RPC(0039)가 담당.
+  const me = detail.members.find((m) => m.id === viewerId);
+  const signedCount = detail.members.filter((m) => m.signed).length;
+  const showStartCard =
+    viewerId === detail.group.ownerId && detail.status === "pending" && (me?.signed ?? false);
+
   // 상대 시간 label 은 시점 의존 — render 시점 now 1회로 계산해 카드에 주입 (web 동일).
   const now = new Date();
 
   return (
     <ChallengeScaffold active="feed" challengeId={id} detail={detail}>
       {!showFeedSection ? (
-        <View style={styles.notice}>
-          <Text style={styles.noticeText}>
-            아직 시작 전이에요. 모두 서명하면 챌린지가 시작돼요.
-          </Text>
+        <View style={styles.preStart}>
+          {showStartCard && (
+            <StartChallengeCard
+              challengeId={id}
+              onStarted={reload}
+              signedCount={signedCount}
+              unsignedCount={detail.members.length - signedCount}
+            />
+          )}
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>
+              아직 시작 전이에요. 모두 서명하면 챌린지가 시작돼요.
+            </Text>
+          </View>
         </View>
       ) : feedError != null ? (
         <View style={styles.notice}>
@@ -169,6 +186,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 24,
     textAlign: "center",
+  },
+  preStart: {
+    gap: 12,
   },
   notice: {
     marginHorizontal: 16,
