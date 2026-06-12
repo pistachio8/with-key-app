@@ -235,23 +235,35 @@ export function loadAgentResults({ readFile = (p) => readFileSync(p, "utf8") } =
 // done↔runs 정합: Status done 인 task 는 agent-results.json runs[] 에 동일 taskId 기록 ≥1건.
 // run 내용 품질은 검증하지 않는다 — "done 인데 실행 이력 0건" 인 무기록 done 만 차단한다.
 export function validateDoneRunParity(tasks, results, { grandfathered = GRANDFATHERED_DONE } = {}) {
-  const recorded = new Set(
-    (results.runs ?? [])
-      .map((run) => (typeof run.taskId === "string" ? run.taskId.toUpperCase() : null))
-      .filter(Boolean),
-  );
+  const runs = results.runs ?? [];
 
   return tasks.flatMap((task) => {
     if (task.frontmatter.Status !== "done") {
       return [];
     }
     const id = task.frontmatter.Task?.toUpperCase();
-    if (!id || grandfathered.has(id) || recorded.has(id)) {
+    if (!id) {
       return [];
     }
-    return [
-      `${task.repoPath}: Status 'done' but no runs[] record for ${id} in evals/results/agent-results.json — append a run entry in the same PR`,
-    ];
+    const entries = runs.filter(
+      (run) => typeof run.taskId === "string" && run.taskId.toUpperCase() === id,
+    );
+    const errors = [];
+    if (entries.length === 0 && !grandfathered.has(id)) {
+      errors.push(
+        `${task.repoPath}: Status 'done' but no runs[] record for ${id} in evals/results/agent-results.json — append a run entry in the same PR`,
+      );
+    }
+    // finalize skeleton 의 <<FILL>> 이 채워지지 않은 채 커밋되는 회귀를 CI 게이트로 차단 (spec §C2).
+    // finalize 의 exit 1 은 프로세스가 살아있는 동안만 유효 — 영속 게이트는 여기다.
+    for (const entry of entries) {
+      if (JSON.stringify(entry).includes("<<FILL>>")) {
+        errors.push(
+          `${task.repoPath}: runs[] entry for ${id} has <<FILL>> placeholder — summary·verification 을 채우고 notes 불요 시 필드를 삭제하라`,
+        );
+      }
+    }
+    return errors;
   });
 }
 

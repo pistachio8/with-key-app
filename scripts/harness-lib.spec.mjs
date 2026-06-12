@@ -310,6 +310,31 @@ test("validateDoneRunParity: runs 필드 부재(빈 results)에도 안전", () =
   assert.equal(errs.length, 1);
 });
 
+test("validateDoneRunParity: done entry 에 <<FILL>> 잔존 → 위반 (finalize skeleton 미완 커밋 차단)", () => {
+  const errs = validateDoneRunParity(
+    [makeTask({ ...VALID_FM, Task: "EVAL-0099", Status: "done" })],
+    { runs: [{ taskId: "EVAL-0099", summary: "<<FILL>>", verification: "<<FILL>>" }] },
+  );
+  assert.equal(errs.length, 1);
+  assert.ok(/<<FILL>> placeholder/.test(errs[0]));
+});
+
+test("validateDoneRunParity: done entry 가 완전하면 위반 0 · done 아닌 task 의 entry 는 placeholder 무검사", () => {
+  const errs = validateDoneRunParity(
+    [
+      makeTask({ ...VALID_FM, Task: "EVAL-0099", Status: "done" }),
+      makeTask({ ...VALID_FM, Task: "EVAL-0098", Status: "in_progress" }),
+    ],
+    {
+      runs: [
+        { taskId: "EVAL-0099", summary: "요약", verification: { local: { "pnpm test": "pass" } } },
+        { taskId: "EVAL-0098", summary: "<<FILL>>" },
+      ],
+    },
+  );
+  assert.deepEqual(errs, []);
+});
+
 test("GRANDFATHERED_DONE: 게이트 도입 시점(2026-06-11) 무기록 done 11건 고정", () => {
   assert.equal(GRANDFATHERED_DONE.size, 11);
   assert.ok(GRANDFATHERED_DONE.has("EVAL-0004"));
