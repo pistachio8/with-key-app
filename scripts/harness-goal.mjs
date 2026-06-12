@@ -12,6 +12,7 @@ import path from "node:path";
 import {
   findTask,
   GOAL_PROMPT_CHAR_LIMIT,
+  loadKnownTaskIds,
   loadMigrationTasks,
   renderGoalPrompt,
   repoRoot,
@@ -26,9 +27,11 @@ function goalPath(task) {
   return task.absolutePath.replace(/\.md$/, ".goal.md");
 }
 
+const knownTaskIds = loadKnownTaskIds();
+
 // task 1개 검증 후 렌더. 위반이 있으면 stderr 로 보고 + false 반환(배치에서 skip 신호).
 function emitGoal(task, { toFile }) {
-  const errors = validateTask(task);
+  const errors = validateTask(task, { knownTaskIds });
   if (errors.length > 0) {
     console.error(`[harness:goal] Task is invalid: ${task.frontmatter.Task}`);
     for (const error of errors) {

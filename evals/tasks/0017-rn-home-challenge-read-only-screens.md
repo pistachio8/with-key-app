@@ -3,7 +3,7 @@ Task: EVAL-0017
 Track: port
 Kind: migration
 Status: blocked
-Blocked-by: EVAL-0014(G5 Expo Router skeleton) complete + EVAL-0016(G7 read model contract) complete.
+Blocked-by: [task:EVAL-0014] [task:EVAL-0016] — G5 Expo Router skeleton·G7 read model contract complete 선행.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-rn-migration-rules.md, docs/migration/04-rn-architecture.md
 ---
 

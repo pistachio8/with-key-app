@@ -3,7 +3,7 @@ Task: EVAL-0018
 Track: port
 Kind: migration
 Status: blocked
-Blocked-by: EVAL-0017(G8 read-only screens) complete.
+Blocked-by: [task:EVAL-0017] — G8 read-only screens complete 선행.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-rn-migration-rules.md, docs/migration/04-rn-architecture.md
 ---
 

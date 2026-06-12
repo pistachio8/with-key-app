@@ -20,7 +20,7 @@ Agent Task 1개를 구현해 Acceptance Criteria를 green으로.
 3. Requirements 구현.
 4. Verification Commands 실행 → green 될 때까지(pass@3).
 5. Harness Impact Questions 6개 답변. yes 있으면 evals/drift-reports/에 노트.
-6. AC green 확정 → 대상 AT의 `Status: in_progress → done` 갱신, 같은 WP 브랜치에 커밋(PR 에 포함). 머지 후 별도 편집 금지 — status drift 원천 차단(PR 템플릿 Verification 정렬, 누락 시 `pnpm harness:drift` 가 경고).
+6. AC green 확정 → `pnpm harness:finalize <EVAL-ID>` 실행 — Status done flip + runs[] skeleton append + `pnpm harness:check` 를 한 명령으로 처리한다. placeholder 안내(exit 1)가 나오면 `evals/results/agent-results.json` 의 `summary`·`verification`(기존 관례 `{ "local": { "<명령>": "<결과>" } }`)을 채우고 `notes` 불요 시 필드를 삭제한 뒤 같은 명령을 재실행해 exit 0 을 확인한다. 결과는 같은 WP 브랜치에 커밋(PR 에 포함). 머지 후 별도 편집 금지 — status drift 원천 차단(PR 템플릿 Verification 정렬, 누락 시 `pnpm harness:drift` 가 경고).
 
 ## Output Format
 

@@ -3,11 +3,57 @@ import path from "node:path";
 
 export const repoRoot = process.cwd();
 export const tasksDir = path.join(repoRoot, "evals/tasks");
+export const archiveTasksDir = path.join(tasksDir, "archive");
+
+// task: 토큰 존재 검사용 id 인덱스 — 활성 evals/tasks/ + archive/ 포함.
+// 왜 archive 포함: 선행 done task 가 나중에 archive 되는 순간 하류 토큰이 CI 를 깨는 회귀 방지.
+// archive 구파일(0001~0003)은 frontmatter 가 없어 파일명 번호에서 id 를 파생한다.
+export function loadKnownTaskIds() {
+  const ids = new Set();
+  for (const dir of [tasksDir, archiveTasksDir]) {
+    if (!existsSync(dir)) {
+      continue;
+    }
+    for (const file of readdirSync(dir)) {
+      const match = file.match(/^(\d{4})-.*\.md$/);
+      if (!match || file.endsWith(".goal.md")) {
+        continue;
+      }
+      const frontmatter = parseFrontmatter(readFileSync(path.join(dir, file), "utf8"));
+      ids.add((frontmatter.Task || `EVAL-${match[1]}`).toUpperCase());
+    }
+  }
+  return ids;
+}
 
 const REQUIRED_FRONTMATTER = ["Task", "Track", "Kind", "Status", "Parent"];
 const TRACKS = new Set(["port", "greenfield"]);
 const KINDS = new Set(["migration", "regression"]);
 const STATUSES = new Set(["todo", "blocked", "in_progress", "done"]);
+
+// ── Blocked-by · Depends-on 토큰 문법 (spec 2026-06-12-harness-finalize-blocked-by-tokens §C1) ──
+// `[type:value] [type:value] — 자유 문장`. 첫 `—`(em dash) 왼쪽에서만 토큰을 추출한다.
+// 왜 첫 — 기준: prose 안의 토큰·EVAL 인용(예: EVAL-0022 의 "EVAL-0006 선례")을 의존으로 오탐하지 않기 위해.
+// 타입 5종 고정 — 현행 13개 task blocker 전수 분류가 이 5종으로 닫힌다. 신규 타입은 spec 갱신으로만.
+export const BLOCKER_TOKEN_TYPES = new Set(["task", "gate", "adr", "spec", "po"]);
+
+// dash 변형(em·horizontal bar·en·ASCII --)도 분리자로 수용 — em dash 오타 시 오른쪽 prose 인용이
+// 실제 의존으로 추출되는 silent 오염을 막는다. 정식 표기는 em dash(—) 하나(spec §C1).
+const BLOCKER_DASH_RE = /—|―|–|--/;
+// 매 호출 새 정규식 — 전역 플래그 lastIndex 공유 방지(acIdRe 패턴과 동형).
+const blockerTokenRe = () => /\[([a-z]+):([^\]]+)\]/g;
+
+function blockerLeftSide(line) {
+  return String(line ?? "").split(BLOCKER_DASH_RE)[0];
+}
+
+export function parseBlockers(line) {
+  const tokens = [];
+  for (const match of blockerLeftSide(line).matchAll(blockerTokenRe())) {
+    tokens.push({ type: match[1], value: match[2].trim() });
+  }
+  return tokens;
+}
 
 export function loadMigrationTasks() {
   if (!existsSync(tasksDir)) {
@@ -60,7 +106,7 @@ export function parseTaskFile(absolutePath, content) {
   };
 }
 
-export function validateTask(task, { exists = existsSync } = {}) {
+export function validateTask(task, { exists = existsSync, knownTaskIds = null } = {}) {
   const errors = [];
 
   for (const key of REQUIRED_FRONTMATTER) {
@@ -89,6 +135,46 @@ export function validateTask(task, { exists = existsSync } = {}) {
 
   if (task.frontmatter.Status === "blocked" && !task.frontmatter["Blocked-by"]) {
     errors.push(`${task.repoPath}: blocked tasks require Blocked-by`);
+  }
+
+  // 토큰 문법 강제 (spec §C2) — blocked 한정이 아니라 "키가 존재하면" 검사한다.
+  // 왜: blocked 한정이면 todo task 의 Depends-on 구문법이 무검출로 살아남아 base branch 가 조용히 develop 으로 떨어진다.
+  // knownTaskIds 는 모든 CLI 진입점(check·drift·goal·context)이 loadKnownTaskIds() 로 주입한다 — null 은 테스트 격리용.
+  for (const key of ["Blocked-by", "Depends-on"]) {
+    if (!(key in task.frontmatter)) {
+      continue;
+    }
+    const tokens = parseBlockers(task.frontmatter[key]);
+    if (tokens.length === 0) {
+      errors.push(
+        `${task.repoPath}: ${key} must have >=1 [type:value] token before — (구문법 prose 금지, spec 2026-06-12 §C1)`,
+      );
+      continue;
+    }
+    // 토큰 왼쪽의 비토큰 잔여 텍스트 = 오타(대문자 [Task:]·괄호 깨짐 등)의 silent drop 신호 — 에러로 승격.
+    const leftover = blockerLeftSide(task.frontmatter[key]).replace(blockerTokenRe(), "").trim();
+    if (leftover) {
+      errors.push(
+        `${task.repoPath}: ${key} non-token text before — : "${leftover}" (토큰 오타 의심 — 왼쪽은 [type:value] 만 허용)`,
+      );
+    }
+    for (const token of tokens) {
+      if (!BLOCKER_TOKEN_TYPES.has(token.type)) {
+        errors.push(
+          `${task.repoPath}: ${key} unknown token type [${token.type}:] — task·gate·adr·spec·po 만 허용(신규 타입은 spec 갱신)`,
+        );
+      } else if (!token.value) {
+        errors.push(`${task.repoPath}: ${key} [${token.type}:] empty value — 토큰 값 필수`);
+      } else if (
+        token.type === "task" &&
+        knownTaskIds &&
+        !knownTaskIds.has(token.value.toUpperCase())
+      ) {
+        errors.push(
+          `${task.repoPath}: ${key} [task:${token.value}] not found in evals/tasks/ (+archive/)`,
+        );
+      }
+    }
   }
 
   const pathGroups = [
@@ -141,6 +227,36 @@ export function detectStaleStatus(
   ];
 }
 
+// 해제 후보 advisory (비차단 · spec §C2): blocked task 의 Blocked-by task: 토큰이 전부 done 이고
+// 사람-판단 토큰(gate/adr/spec/po)이 하나도 없으면 "todo flip?" 후보로 보고한다.
+// 자동 flip 아님 — 해제 결정은 사람/구현 세션 몫. 사람-판단 토큰이 남아 있는 한 후보가 아니다.
+export function detectUnblockCandidates(tasks) {
+  const statusById = new Map(
+    tasks.map((task) => [task.frontmatter.Task?.toUpperCase(), task.frontmatter.Status]),
+  );
+  return tasks.flatMap((task) => {
+    if (task.frontmatter.Status !== "blocked") {
+      return [];
+    }
+    const tokens = parseBlockers(task.frontmatter["Blocked-by"] || "");
+    const taskTokens = tokens.filter((token) => token.type === "task");
+    if (taskTokens.length === 0 || taskTokens.length !== tokens.length) {
+      return [];
+    }
+    // 활성 목록에 없는 id(archive 은퇴)는 resolved 취급 — 존재 자체는 Tier 1-A 가 보증한다.
+    const allDone = taskTokens.every((token) => {
+      const status = statusById.get(token.value.toUpperCase());
+      return status === undefined || status === "done";
+    });
+    if (!allDone) {
+      return [];
+    }
+    return [
+      `${task.repoPath}: blocked 인데 task: blocker 전부 done — Status todo 로 flip? (자동 flip 아님, 해제 결정은 사람 몫)`,
+    ];
+  });
+}
+
 export const agentResultsPath = path.join(repoRoot, "evals/results/agent-results.json");
 
 // done↔runs 정합 게이트(2026-06-11) 도입 이전에 runs[] 기록 없이 done 전환된 task.
@@ -169,23 +285,35 @@ export function loadAgentResults({ readFile = (p) => readFileSync(p, "utf8") } =
 // done↔runs 정합: Status done 인 task 는 agent-results.json runs[] 에 동일 taskId 기록 ≥1건.
 // run 내용 품질은 검증하지 않는다 — "done 인데 실행 이력 0건" 인 무기록 done 만 차단한다.
 export function validateDoneRunParity(tasks, results, { grandfathered = GRANDFATHERED_DONE } = {}) {
-  const recorded = new Set(
-    (results.runs ?? [])
-      .map((run) => (typeof run.taskId === "string" ? run.taskId.toUpperCase() : null))
-      .filter(Boolean),
-  );
+  const runs = results.runs ?? [];
 
   return tasks.flatMap((task) => {
     if (task.frontmatter.Status !== "done") {
       return [];
     }
     const id = task.frontmatter.Task?.toUpperCase();
-    if (!id || grandfathered.has(id) || recorded.has(id)) {
+    if (!id) {
       return [];
     }
-    return [
-      `${task.repoPath}: Status 'done' but no runs[] record for ${id} in evals/results/agent-results.json — append a run entry in the same PR`,
-    ];
+    const entries = runs.filter(
+      (run) => typeof run.taskId === "string" && run.taskId.toUpperCase() === id,
+    );
+    const errors = [];
+    if (entries.length === 0 && !grandfathered.has(id)) {
+      errors.push(
+        `${task.repoPath}: Status 'done' but no runs[] record for ${id} in evals/results/agent-results.json — append a run entry in the same PR`,
+      );
+    }
+    // finalize skeleton 의 <<FILL>> 이 채워지지 않은 채 커밋되는 회귀를 CI 게이트로 차단 (spec §C2).
+    // finalize 의 exit 1 은 프로세스가 살아있는 동안만 유효 — 영속 게이트는 여기다.
+    for (const entry of entries) {
+      if (JSON.stringify(entry).includes("<<FILL>>")) {
+        errors.push(
+          `${task.repoPath}: runs[] entry for ${id} has <<FILL>> placeholder — summary·verification 을 채우고 notes 불요 시 필드를 삭제하라`,
+        );
+      }
+    }
+    return errors;
   });
 }
 
@@ -500,6 +628,8 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   const titleMatch = task.content.match(/^#\s+(EVAL-[^\n]+)$/m);
   const title = titleMatch ? titleMatch[1] : id;
   const blockedBy = task.frontmatter["Blocked-by"] || "";
+  const blockerTokens = parseBlockers(blockedBy);
+  const dependsTokens = parseBlockers(task.frontmatter["Depends-on"] || "");
 
   const parentLinks = extractSection(task.content, "Parent Links");
   const requirements = extractSection(task.content, "Requirements").trim();
@@ -510,11 +640,15 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   const verify = (task.verificationCommands || "").trim();
 
   const wpBranch = firstFeatBranch(parentLinks) || `feat/${slugFromRepoPath(task.repoPath)}`;
-  const predecessor = (blockedBy.match(/EVAL-\d+/) || [])[0];
+  // 첫 task: 토큰이 worktree base 선행 — Blocked-by 우선, 없으면 Depends-on (spec §C2).
+  // 왜 첫 토큰: 현행 동작(첫 선행 브랜치 위에 쌓기) 보존 — 복수 base 병합은 범위 밖.
+  const firstTaskToken = [...blockerTokens, ...dependsTokens].find((t) => t.type === "task");
+  const predecessor = firstTaskToken ? firstTaskToken.value : null;
   const baseBranch = (predecessor && lookupBranch(predecessor)) || "develop";
   const worktreeDir = `../with-key-${wpBranch.replace(/^feat\//, "").replace(/\//g, "-")}`;
 
-  const adrGate = /\bADR\b/.test(blockedBy);
+  // ADR/spec 게이트: prose 단어 매치가 아니라 토큰 존재로 판단 — 인용 오탐 제거 (spec §C2).
+  const adrGate = blockerTokens.some((t) => t.type === "adr" || t.type === "spec");
   // 수동/외부 단계는 task 저자가 Verification 의 # 주석으로 표시한다(예: "# manual/dev-build: ...").
   // AC 본문의 "dev build config" 같은 기능명에 오탐하지 않도록 # 주석만 신호로 쓴다.
   const manualHandoff = /(^|\n)\s*#/.test(verify);
@@ -542,7 +676,7 @@ export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = 
   );
   if (adrGate) {
     out.push(
-      `- ⚠️ ADR 게이트: 이 task 는 선행 결정에 막혀 있다 — "Blocked-by: ${blockedBy}". 해당 ADR 이 docs/adr/ 에 accepted 로 없으면 \`pnpm new adr <topic>\` 로 초안만 작성하고 **STOP — PO 수락 요청**. 수락 전 관련 구성을 코드로 확정하지 않는다.`,
+      `- ⚠️ ADR/spec 게이트: 이 task 는 선행 결정에 막혀 있다 — "Blocked-by: ${blockedBy}". 해당 ADR/spec 이 docs/adr/ · docs/superpowers/specs/ 에 accepted 로 없으면 \`pnpm new adr <topic>\`(또는 \`pnpm new spec\`) 으로 초안만 작성하고 **STOP — PO 수락 요청**. 수락 전 관련 구성을 코드로 확정하지 않는다.`,
     );
   }
   out.push("");

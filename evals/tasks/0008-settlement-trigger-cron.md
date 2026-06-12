@@ -3,7 +3,7 @@ Task: EVAL-0008
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: G2(법무) 통과 + P2 peer-reject(48h 이의 마감) 의존. 선행 WP1·WP2(EVAL-0005·0006).
+Blocked-by: [task:EVAL-0005] [task:EVAL-0006] [task:EVAL-0025] [gate:G2] — G2(법무) 통과 + P2 peer-reject(EVAL-0025, 48h 이의 마감) 의존. 선행 WP1·WP2.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
