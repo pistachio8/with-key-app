@@ -9,6 +9,7 @@ with-key 팀이 공유하는 제품·아키텍처·운영 문서입니다.
 | 묻고 싶은 것                                 | 읽을 문서                                                                                       |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 무엇을 만드나? 인수 기준은?                  | [`PRD.md`](./PRD.md) — 유저 스토리 · AC · 이벤트 표(§9.1)                                       |
+| PRD 다음엔 뭘 만드나? spec은 언제?           | [`DOC_FLOW.md`](./DOC_FLOW.md) — 기능 spine vs 결정 문서(plan/spec/ADR) 판별 가이드             |
 | 코딩 품질·검증 기준은?                       | [`QUALITY_GATE.md`](./QUALITY_GATE.md) — 모든 AI 에이전트와 사람이 공유하는 성공 기준           |
 | AI 에이전트가 달라도 코드 품질을 유지하려면? | [`AI_AGENT_CODE_QUALITY.md`](./AI_AGENT_CODE_QUALITY.md) — 공통 품질 기준과 도구별 adapter 원칙 |
 | DB 스키마·RLS·상태 전이                      | [`BE_SCHEMA.md`](./BE_SCHEMA.md) + [`BE_SCHEMA_RLS.md`](./BE_SCHEMA_RLS.md)                     |
