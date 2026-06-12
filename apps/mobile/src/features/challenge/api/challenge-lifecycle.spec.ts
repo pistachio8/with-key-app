@@ -106,6 +106,30 @@ describe("createChallenge", () => {
     expect(mockRpc).not.toHaveBeenCalledWith("sign_and_maybe_activate", expect.anything());
   });
 
+  it("자가 서명 실패는 실패로 보고한다 — 챌린지는 이미 생성된 상태 (web 패리티, 서명은 pledge 화면에서 재시도)", async () => {
+    mockRpc.mockImplementation((fn: string) => {
+      if (fn === "create_challenge") {
+        return Promise.resolve({
+          data: [{ id: CHALLENGE_ID, participant_count: 1 }],
+          error: null,
+        });
+      }
+      if (fn === "sign_and_maybe_activate") {
+        return Promise.resolve({
+          data: null,
+          error: { code: "42501", message: "not a participant" },
+        });
+      }
+      throw new Error(`unexpected rpc: ${fn}`);
+    });
+
+    expect(await createChallenge(USER_ID, VALID_INPUT)).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(mockRpc).toHaveBeenCalledWith("create_challenge", expect.anything());
+  });
+
   it("zod 검증 실패(기간 7일 미만)는 invalid_input — RPC 미호출", async () => {
     const result = await createChallenge(USER_ID, { ...VALID_INPUT, durationDays: 3 });
 
@@ -148,6 +172,26 @@ describe("createChallenge", () => {
       groupId: GROUP_ID,
       participantCount: 1,
     });
+  });
+
+  it("groupId 미지정 + owner 그룹 0개에서 create_group_with_owner RPC 에러는 mapPgError 로 표면화한다", async () => {
+    mockFetchOwnerGroups.mockResolvedValue([]);
+    mockMaybeSingle.mockResolvedValue({ data: { display_name: "민지" }, error: null });
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "permission denied" },
+    });
+
+    const result = await createChallenge(USER_ID, {
+      ...VALID_INPUT,
+      groupId: undefined,
+      ownerSigned: false,
+    });
+
+    expect(result).toEqual({ ok: false, error: "forbidden" });
+    // 그룹 생성 실패에서 멈춘다 — create_challenge 까지 가지 않는다.
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).not.toHaveBeenCalledWith("create_challenge", expect.anything());
   });
 
   it("groupId 미지정 + owner 그룹 2개 이상이면 group_selection_required", async () => {
@@ -193,6 +237,15 @@ describe("createChallenge", () => {
     });
 
     expect(await createChallenge(USER_ID, VALID_INPUT)).toEqual({ ok: false, error: "conflict" });
+  });
+
+  it("P0002(대상 그룹 없음)는 not_found 로 매핑한다", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: "P0002", message: "no_data_found" },
+    });
+
+    expect(await createChallenge(USER_ID, VALID_INPUT)).toEqual({ ok: false, error: "not_found" });
   });
 });
 

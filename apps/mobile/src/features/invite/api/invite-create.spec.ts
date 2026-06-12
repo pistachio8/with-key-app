@@ -9,8 +9,13 @@ jest.mock("@/services/supabase/client", () => ({
   }),
 }));
 
+// 테스트별 도메인 토글 — getter 로 lazy 평가해 미설정(url null) 케이스도 검증한다.
+let mockUniversalLinkDomain: string | undefined = "dev.fromwith.app";
+
 jest.mock("expo-constants", () => ({
-  expoConfig: { extra: { universalLinkDomain: "dev.fromwith.app" } },
+  get expoConfig() {
+    return { extra: { universalLinkDomain: mockUniversalLinkDomain } };
+  },
 }));
 
 // eslint-disable-next-line import/first -- jest.mock 은 babel 이 hoist 하므로 모킹 선언을 위에 둔다
@@ -22,6 +27,7 @@ const USER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(console, "error").mockImplementation(() => undefined);
+  mockUniversalLinkDomain = "dev.fromwith.app";
 });
 
 describe("createInvite", () => {
@@ -55,6 +61,17 @@ describe("createInvite", () => {
     const second = await createInvite(GROUP_ID, USER_ID);
 
     expect(first.ok && second.ok && first.token !== second.token).toBe(true);
+  });
+
+  it("universalLinkDomain 미설정이면 토큰은 발급하되 url 은 null 로 돌려준다", async () => {
+    mockUniversalLinkDomain = undefined;
+    mockInsert.mockResolvedValue({ error: null });
+
+    expect(await createInvite(GROUP_ID, USER_ID)).toEqual({
+      ok: true,
+      token: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+      url: null,
+    });
   });
 
   it("INSERT 실패(42501 — 비owner RLS 거부)는 invite_failed", async () => {

@@ -279,8 +279,9 @@ function CreationDone({ done }: { done: DoneState }) {
           </Pressable>
         </>
       ) : (
+        // mobile 엔 invite 재발급 UI 가 없다 — 재발급은 web group/[id] InviteTrigger 경로.
         <Text style={styles.doneDescription}>
-          초대 링크 발급에 실패했어요. 챌린지 화면에서 다시 시도할 수 있어요.
+          초대 링크 발급에 실패했어요. 웹 그룹 화면에서 초대 링크를 다시 만들 수 있어요.
         </Text>
       )}
       <Pressable

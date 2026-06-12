@@ -108,11 +108,13 @@ export async function createChallenge(
     } else if (ownerGroups.length >= 2) {
       return { ok: false, error: "group_selection_required" };
     } else {
-      const { data: me } = await supabase
+      const { data: me, error: meErr } = await supabase
         .from("users")
         .select("display_name")
         .eq("id", userId)
         .maybeSingle();
+      // displayName 은 기본 그룹명 장식용 — 조회 실패는 메타만 남기고 "내" 폴백으로 진행.
+      if (meErr) console.error("[createChallenge] users displayName lookup failed", meErr.code);
       const displayName = (me?.display_name as string | null) ?? null;
       const { data: createdGroupId, error: groupErr } = await supabase.rpc(
         "create_group_with_owner",
@@ -185,7 +187,10 @@ export type SignPledgeResult =
  * 서약 서명 — sign_and_maybe_activate RPC(0040). 서명만 기록하고 자동 시작하지
  * 않는다(0028 pending freeze — 시작은 owner 의 명시 start). 이미 서명한 경우에도
  * RPC 가 timestamp 를 보존(coalesce)하고 성공으로 수렴한다 — 멱등.
- * should_nudge_owner(전원 서명 nudge push)는 server 전용 side-effect 라 무시한다(D-2).
+ * should_nudge_owner flag 는 RN 에서 소비하지 못한다 — push dispatch 가 server 전용(D-2)
+ * 이라 발사 불가한데, 0040 RPC 는 마지막 서명 시 start_nudge_sent_at 마커를 atomic 하게
+ * 이미 소비하므로 마지막 서명자가 RN 이면 owner start nudge 가 발송되지 않는다(known
+ * debt — BFF sign endpoint 또는 RPC nudge 소비 여부 파라미터 도입이 후속 결정 대상).
  */
 export async function signPledge(challengeId: string): Promise<SignPledgeResult> {
   if (!uuidSchema.safeParse(challengeId).success) return { ok: false, error: "invalid_input" };

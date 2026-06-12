@@ -81,15 +81,18 @@ function PledgeSheet({ pledge, currentUserId }: { pledge: PledgeView; currentUse
               ? "서명할 수 없어요. 이미 시작된 챌린지일 수 있어요."
               : "서명에 실패했어요. 다시 시도해 주세요.",
           );
+          setPending(false);
           return;
         }
+        // 성공 시 pending 을 풀지 않는다 — replace 로 곧 언마운트되므로
+        // setState-after-unmount 방지 + 화면 교체 전 연타 방지.
         router.replace({ pathname: "/challenge/[id]", params: { id: pledge.id } });
       })
       .catch((err) => {
         console.error("[signPledge] unexpected throw:", err);
         setError("서명에 실패했어요. 다시 시도해 주세요.");
-      })
-      .finally(() => setPending(false));
+        setPending(false);
+      });
   }
 
   return (
