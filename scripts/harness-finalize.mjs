@@ -34,17 +34,19 @@ export function entryHasPlaceholder(entry) {
 }
 
 // frontmatter 블록(첫 --- ~ 다음 ---) 안의 Status 줄만 done 으로 바꾼다 — 본문 "Status:" 오염 방지.
+// CRLF 파일도 처리하고 줄끝 \r 을 보존한다. 변경이 없으면 원문 그대로 — 호출부가 no-op 을 에러로 승격.
 export function flipStatusToDone(content) {
   const lines = content.split("\n");
-  if (lines[0].replace(/^﻿/, "") !== "---") {
+  const stripEol = (line) => line.replace(/\r$/, "");
+  if (stripEol(lines[0].replace(/^﻿/, "")) !== "---") {
     return content;
   }
   for (let index = 1; index < lines.length; index += 1) {
-    if (lines[index] === "---") {
+    if (stripEol(lines[index]) === "---") {
       break;
     }
     if (/^Status:/.test(lines[index])) {
-      lines[index] = "Status: done";
+      lines[index] = `Status: done${lines[index].endsWith("\r") ? "\r" : ""}`;
       break;
     }
   }
@@ -87,10 +89,86 @@ export function decideFinalize({ status, entry, force }) {
     : { action: "refuse", reason: `Status '${status}' — in_progress 가 아니면 --force 필요` };
 }
 
-function findRunEntry(results, normalizedId) {
-  return (results.runs ?? []).find(
+function findRunEntries(results, normalizedId) {
+  return (results.runs ?? []).filter(
     (run) => typeof run.taskId === "string" && run.taskId.toUpperCase() === normalizedId,
   );
+}
+
+// finalize 오케스트레이션 본체 — IO(파일 쓰기·check 실행)를 주입받아 단위 테스트 가능.
+// 반환값 = 프로세스 exit code. main() 이 실제 IO 를 배선한다.
+export function runFinalize({
+  id,
+  force,
+  tasks,
+  results,
+  writeTaskFile,
+  writeResults,
+  runCheck,
+  today,
+  log = () => {},
+}) {
+  const normalized = String(id).trim().toUpperCase();
+  const task = tasks.find((t) => t.frontmatter.Task?.toUpperCase() === normalized);
+  if (!task) {
+    log(`[finalize] task not found in evals/tasks/: ${id}`);
+    return 1;
+  }
+
+  const entries = findRunEntries(results, normalized);
+  // 동일 taskId 복수 entry 면 placeholder 잔존 entry 우선 — resume 판정이 완전한 첫 entry 에 가려지지 않게.
+  const entry = entries.find((item) => entryHasPlaceholder(item)) ?? entries[0];
+  const decision = decideFinalize({ status: task.frontmatter.Status, entry, force });
+
+  if (decision.action === "refuse") {
+    log(`[finalize] 거부 — ${decision.reason}`);
+    return 1;
+  }
+
+  let appended = null;
+  if (decision.action === "proceed") {
+    // 미해소 task: 선행 거부는 --force 로도 우회 불가 (--force 는 Status 검사만 우회).
+    const statusById = new Map(
+      tasks.map((t) => [t.frontmatter.Task?.toUpperCase(), t.frontmatter.Status]),
+    );
+    const unresolved = findUnresolvedTaskBlockers(task, statusById);
+    if (unresolved.length > 0) {
+      log(
+        `[finalize] 거부 — Blocked-by 미해소 task: 선행 ${unresolved.join(", ")} (done 아님) — --force 로도 우회 불가`,
+      );
+      return 1;
+    }
+    if (task.frontmatter.Status !== "done") {
+      const flipped = flipStatusToDone(task.content);
+      if (flipped === task.content) {
+        // 거짓 성공 방지 — flip 이 no-op 이면(frontmatter Status 줄 부재 등) 기록 없이 중단한다.
+        log(`[finalize] Status flip 실패 — frontmatter 의 Status 줄을 찾지 못함: ${task.repoPath}`);
+        return 1;
+      }
+      writeTaskFile(task.absolutePath, flipped);
+      log(`[finalize] Status → done: ${task.repoPath}`);
+    }
+    if (entries.length === 0) {
+      appended = buildRunSkeleton(task, today);
+      writeResults({ ...results, runs: [...(results.runs ?? []), appended] });
+      log(`[finalize] runs[] skeleton append: ${normalized} (summary·verification 은 <<FILL>>)`);
+    } else {
+      log(`[finalize] runs[] entry 기존재 — append skip`);
+    }
+  } else {
+    log(`[finalize] ${decision.action} — 파일 변경 없음, 검증만 수행`);
+  }
+
+  // step 4 — 검증. 영속 게이트는 Tier 1-D(placeholder = check 에러)가 담당, 이 exit 1 은 채움 루프 유도.
+  const checkStatus = runCheck();
+  const finalEntries = appended ? [...entries, appended] : entries;
+  if (finalEntries.some((item) => entryHasPlaceholder(item))) {
+    log(
+      `[finalize] runs[] entry 에 <<FILL>> 잔존 — evals/results/agent-results.json 의 summary·verification 을 채우고(notes 불요 시 필드 삭제) pnpm harness:finalize ${normalized} 를 재실행하라`,
+    );
+    return 1;
+  }
+  return checkStatus;
 }
 
 function main() {
@@ -102,61 +180,29 @@ function main() {
     process.exit(1);
   }
 
-  const tasks = loadMigrationTasks();
-  const id = rawId.trim().toUpperCase();
-  const task = tasks.find((t) => t.frontmatter.Task?.toUpperCase() === id);
-  if (!task) {
-    console.error(`[finalize] task not found in evals/tasks/: ${rawId}`);
-    process.exit(1);
-  }
+  // 로컬 날짜 YYYY-MM-DD — toLocaleDateString 은 ICU 빌드에 따라 포맷이 흔들려 수동 포맷.
+  const now = new Date();
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
 
-  const results = loadAgentResults();
-  const entry = findRunEntry(results, id);
-  const decision = decideFinalize({ status: task.frontmatter.Status, entry, force });
-
-  if (decision.action === "refuse") {
-    console.error(`[finalize] 거부 — ${decision.reason}`);
-    process.exit(1);
-  }
-
-  if (decision.action === "proceed") {
-    // 미해소 task: 선행 거부는 --force 로도 우회 불가 (--force 는 Status 검사만 우회).
-    const statusById = new Map(
-      tasks.map((t) => [t.frontmatter.Task?.toUpperCase(), t.frontmatter.Status]),
-    );
-    const unresolved = findUnresolvedTaskBlockers(task, statusById);
-    if (unresolved.length > 0) {
-      console.error(
-        `[finalize] 거부 — Blocked-by 미해소 task: 선행 ${unresolved.join(", ")} (done 아님) — --force 로도 우회 불가`,
-      );
-      process.exit(1);
-    }
-    if (task.frontmatter.Status !== "done") {
-      writeFileSync(task.absolutePath, flipStatusToDone(task.content));
-      console.error(`[finalize] Status → done: ${task.repoPath}`);
-    }
-    if (!entry) {
-      const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD (로컬 날짜)
-      results.runs = [...(results.runs ?? []), buildRunSkeleton(task, today)];
-      writeFileSync(agentResultsPath, `${JSON.stringify(results, null, 2)}\n`);
-      console.error(`[finalize] runs[] skeleton append: ${id} (summary·verification 은 <<FILL>>)`);
-    } else {
-      console.error(`[finalize] runs[] entry 기존재 — append skip`);
-    }
-  } else {
-    console.error(`[finalize] ${decision.action} — 파일 변경 없음, 검증만 수행`);
-  }
-
-  // step 4 — 검증. 영속 게이트는 Tier 1-D(placeholder = check 에러)가 담당, 이 exit 1 은 채움 루프 유도.
-  const check = spawnSync("node", ["scripts/harness-check.mjs"], { stdio: "inherit" });
-  const after = findRunEntry(loadAgentResults(), id);
-  if (after && entryHasPlaceholder(after)) {
-    console.error(
-      `[finalize] runs[] entry 에 <<FILL>> 잔존 — evals/results/agent-results.json 의 summary·verification 을 채우고(notes 불요 시 필드 삭제) pnpm harness:finalize ${id} 를 재실행하라`,
-    );
-    process.exit(1);
-  }
-  process.exit(check.status ?? 1);
+  process.exit(
+    runFinalize({
+      id: rawId,
+      force,
+      tasks: loadMigrationTasks(),
+      results: loadAgentResults(),
+      writeTaskFile: (absolutePath, content) => writeFileSync(absolutePath, content),
+      writeResults: (data) => writeFileSync(agentResultsPath, `${JSON.stringify(data, null, 2)}\n`),
+      runCheck: () =>
+        spawnSync(process.execPath, ["scripts/harness-check.mjs"], { stdio: "inherit" }).status ??
+        1,
+      today,
+      log: console.error,
+    }),
+  );
 }
 
 // node --test 가 import 할 때 main 이 돌지 않게 직접 실행시에만 구동.

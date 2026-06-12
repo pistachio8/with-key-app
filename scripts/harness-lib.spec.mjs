@@ -37,6 +37,7 @@ import {
   flipStatusToDone,
   findUnresolvedTaskBlockers,
   decideFinalize,
+  runFinalize,
 } from "./harness-finalize.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
@@ -849,4 +850,131 @@ test("decideFinalize: 전제 검사 매트릭스 (spec §C3 step 1)", () => {
     decideFinalize({ status: "blocked", entry: undefined, force: true }).action,
     "proceed",
   );
+});
+
+test("flipStatusToDone: CRLF 파일도 frontmatter Status 만 교체 — 줄끝 \\r 보존", () => {
+  const crlf = "---\r\nTask: EVAL-0030\r\nStatus: in_progress\r\n---\r\n본문";
+  const flipped = flipStatusToDone(crlf);
+  assert.ok(flipped.includes("Status: done\r\n"));
+  assert.ok(flipped.endsWith("본문"));
+});
+
+test("flipStatusToDone: Status 줄 부재·frontmatter 없음 → 원문 그대로 (no-op)", () => {
+  const noStatus = "---\nTask: EVAL-0030\n---\n본문";
+  assert.equal(flipStatusToDone(noStatus), noStatus);
+  const noFm = "# frontmatter 없는 본문";
+  assert.equal(flipStatusToDone(noFm), noFm);
+});
+
+// ── runFinalize (IO 주입 — 파일시스템·spawn 비의존) ──
+
+function finalizeTask(status, extra = {}) {
+  return {
+    ...makeTask({ ...VALID_FM, Task: "EVAL-0030", Status: status }),
+    absolutePath: "/repo/evals/tasks/0030-x.md",
+    repoPath: "evals/tasks/0030-x.md",
+    content: `---\nTask: EVAL-0030\nTrack: port\nKind: migration\nStatus: ${status}\nParent: docs/PRD.md\n---\n# 본문`,
+    ...extra,
+  };
+}
+
+function finalizeIo(overrides = {}) {
+  const io = {
+    writes: { task: null, results: null },
+    id: "EVAL-0030",
+    force: false,
+    runCheck: () => 0,
+    today: "2026-06-12",
+    ...overrides,
+  };
+  io.writeTaskFile = io.writeTaskFile ?? ((_, content) => (io.writes.task = content));
+  io.writeResults = io.writeResults ?? ((data) => (io.writes.results = data));
+  return io;
+}
+
+test("runFinalize: in_progress 전체 루프 — flip+skeleton+exit 1 → 채운 뒤 재실행 exit 0", () => {
+  const io = finalizeIo();
+  const first = runFinalize({ ...io, tasks: [finalizeTask("in_progress")], results: { runs: [] } });
+  assert.equal(first, 1); // skeleton placeholder → 채움 루프 유도
+  assert.ok(io.writes.task.includes("Status: done"));
+  assert.equal(io.writes.results.runs[0].taskId, "EVAL-0030");
+  assert.equal(io.writes.results.runs[0].summary, "<<FILL>>");
+
+  // 채운 뒤 재실행 — done + 완전 entry → verify-only 멱등 exit 0
+  const io2 = finalizeIo();
+  const second = runFinalize({
+    ...io2,
+    tasks: [finalizeTask("done")],
+    results: { runs: [{ taskId: "EVAL-0030", summary: "요약", verification: { local: {} } }] },
+  });
+  assert.equal(second, 0);
+  assert.equal(io2.writes.task, null); // 무변경 멱등
+  assert.equal(io2.writes.results, null);
+});
+
+test("runFinalize: runs[] entry 기존재 → append skip (flip 만 수행)", () => {
+  const io = finalizeIo();
+  const code = runFinalize({
+    ...io,
+    tasks: [finalizeTask("in_progress")],
+    results: { runs: [{ taskId: "eval-0030", summary: "기록", verification: { local: {} } }] },
+  });
+  assert.equal(code, 0);
+  assert.ok(io.writes.task.includes("Status: done"));
+  assert.equal(io.writes.results, null); // append skip
+});
+
+test("runFinalize: frontmatter Status 줄을 못 찾으면 거짓 성공 대신 exit 1 + 무기록", () => {
+  const io = finalizeIo({
+    writeTaskFile: () => {
+      throw new Error("flip 실패 시 호출되면 안 됨");
+    },
+  });
+  const code = runFinalize({
+    ...io,
+    tasks: [finalizeTask("in_progress", { content: "# frontmatter 없는 본문" })],
+    results: { runs: [] },
+  });
+  assert.equal(code, 1);
+  assert.equal(io.writes.results, null);
+});
+
+test("runFinalize: 미해소 task: blocker 는 --force 로도 거부", () => {
+  const io = finalizeIo({ force: true });
+  const blocked = finalizeTask("blocked", {
+    frontmatter: {
+      ...VALID_FM,
+      Task: "EVAL-0030",
+      Status: "blocked",
+      "Blocked-by": "[task:EVAL-0031] — 선행.",
+    },
+  });
+  const code = runFinalize({
+    ...io,
+    tasks: [
+      blocked,
+      finalizeTask("in_progress", {
+        frontmatter: { ...VALID_FM, Task: "EVAL-0031", Status: "in_progress" },
+      }),
+    ],
+    results: { runs: [] },
+  });
+  assert.equal(code, 1);
+  assert.equal(io.writes.task, null);
+});
+
+test("runFinalize: 동일 taskId 복수 entry 중 하나라도 <<FILL>> 이면 resume + exit 1", () => {
+  const io = finalizeIo();
+  const code = runFinalize({
+    ...io,
+    tasks: [finalizeTask("done")],
+    results: {
+      runs: [
+        { taskId: "EVAL-0030", summary: "완전", verification: { local: {} } },
+        { taskId: "EVAL-0030", summary: "<<FILL>>" },
+      ],
+    },
+  });
+  assert.equal(code, 1);
+  assert.equal(io.writes.results, null); // 변경 없이 안내만
 });
