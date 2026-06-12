@@ -165,6 +165,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 - PR 베이스는 `develop`. main 직접 PR은 release 시점에만
 - PR 생성 후에는 CI/checks 상태를 성공 또는 실패 결론까지 모니터링하고 결과를 보고한다. 실패 시 원인 로그를 확인해 가능한 범위에서 수정·재푸시 후 다시 모니터링한다.
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만
+- 예외(worktree 한정): 하네스 WP(Work Package) worktree 안에서의 커밋은 자율 — 푸시·PR 생성은 여전히 사용자 확인 후에만. **왜**: worktree 내 커밋은 로컬·가역적이라 저장소 밖으로 나가는 행위만 게이트하면 충분 ([`.agents/workflows/implement-agent-task.md`](.agents/workflows/implement-agent-task.md) §Process 7)
 
 ### pre-commit hook (저마찰)
 
