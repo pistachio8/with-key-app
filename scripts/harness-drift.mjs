@@ -5,6 +5,7 @@ import {
   loadKnownTaskIds,
   validateTask,
   detectStaleStatus,
+  detectUnblockCandidates,
 } from "./harness-lib.mjs";
 
 const tasks = loadMigrationTasks();
@@ -39,6 +40,8 @@ const warnings = tasks.flatMap((task) =>
   })),
 );
 
+const unblockCandidates = detectUnblockCandidates(tasks);
+
 const status = violations.length === 0 ? "PASS" : "FAIL";
 
 console.log(`# Harness Drift Report
@@ -48,6 +51,7 @@ console.log(`# Harness Drift Report
 - Checked tasks: ${tasks.length}
 - Violations: ${violations.length}
 - Stale-status warnings: ${warnings.length}
+- Unblock candidates: ${unblockCandidates.length}
 
 ## Checks
 
@@ -58,6 +62,7 @@ console.log(`# Harness Drift Report
 - Source Files path existence
 - Target Files path existence
 - (warn) Status todo/in_progress 인데 WP 브랜치 머지됨 — stale status
+- (warn) blocked task 의 task: blocker 전부 done — 해제 후보
 
 ## Findings
 `);
@@ -78,6 +83,17 @@ WP 브랜치가 머지됐는데 Status 가 아직 todo/in_progress 인 task. 머
 `);
   for (const warning of warnings) {
     console.log(`- [${warning.task}] ${warning.message}`);
+  }
+}
+
+if (unblockCandidates.length > 0) {
+  console.log(`
+## Unblock Candidates (advisory — exit code 비영향)
+
+blocked task 의 Blocked-by task: 토큰이 전부 done — todo flip 검토 대상. gate/adr/spec/po 토큰이 남은 task 는 대상이 아니다(해제 판단이 사람 몫).
+`);
+  for (const message of unblockCandidates) {
+    console.log(`- ${message}`);
   }
 }
 

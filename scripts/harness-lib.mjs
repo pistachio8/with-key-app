@@ -207,6 +207,36 @@ export function detectStaleStatus(
   ];
 }
 
+// 해제 후보 advisory (비차단 · spec §C2): blocked task 의 Blocked-by task: 토큰이 전부 done 이고
+// 사람-판단 토큰(gate/adr/spec/po)이 하나도 없으면 "todo flip?" 후보로 보고한다.
+// 자동 flip 아님 — 해제 결정은 사람/구현 세션 몫. 사람-판단 토큰이 남아 있는 한 후보가 아니다.
+export function detectUnblockCandidates(tasks) {
+  const statusById = new Map(
+    tasks.map((task) => [task.frontmatter.Task?.toUpperCase(), task.frontmatter.Status]),
+  );
+  return tasks.flatMap((task) => {
+    if (task.frontmatter.Status !== "blocked") {
+      return [];
+    }
+    const tokens = parseBlockers(task.frontmatter["Blocked-by"] || "");
+    const taskTokens = tokens.filter((token) => token.type === "task");
+    if (taskTokens.length === 0 || taskTokens.length !== tokens.length) {
+      return [];
+    }
+    // 활성 목록에 없는 id(archive 은퇴)는 resolved 취급 — 존재 자체는 Tier 1-A 가 보증한다.
+    const allDone = taskTokens.every((token) => {
+      const status = statusById.get(token.value.toUpperCase());
+      return status === undefined || status === "done";
+    });
+    if (!allDone) {
+      return [];
+    }
+    return [
+      `${task.repoPath}: blocked 인데 task: blocker 전부 done — Status todo 로 flip? (자동 flip 아님, 해제 결정은 사람 몫)`,
+    ];
+  });
+}
+
 export const agentResultsPath = path.join(repoRoot, "evals/results/agent-results.json");
 
 // done↔runs 정합 게이트(2026-06-11) 도입 이전에 runs[] 기록 없이 done 전환된 task.

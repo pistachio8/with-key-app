@@ -15,6 +15,7 @@ import {
   loadKnownTaskIds,
   validateTask,
   detectStaleStatus,
+  detectUnblockCandidates,
   extractWorkPackageBranch,
   loadMigrationTasks,
   extractDefinedAcIds,
@@ -390,6 +391,50 @@ test("detectStaleStatus: 브랜치 추출 실패(null) → 경고 0", () => {
     branchOf: () => null,
   });
   assert.deepEqual(warns, []);
+});
+
+// ─────────────── detectUnblockCandidates (해제 후보 advisory — 비차단) ───────────────
+
+function blockedTask(id, blockedBy) {
+  return makeTask({ ...VALID_FM, Task: id, Status: "blocked", "Blocked-by": blockedBy });
+}
+
+test("detectUnblockCandidates: task: blocker 전부 done → 해제 후보 경고", () => {
+  const tasks = [
+    makeTask({ ...VALID_FM, Task: "EVAL-0015", Status: "done" }),
+    blockedTask("EVAL-0016", "[task:EVAL-0015] — G6 선행."),
+  ];
+  const warns = detectUnblockCandidates(tasks);
+  assert.equal(warns.length, 1);
+  assert.ok(/todo 로 flip\?/.test(warns[0]));
+});
+
+test("detectUnblockCandidates: 사람-판단 토큰(gate/adr/spec/po)이 섞이면 침묵", () => {
+  const tasks = [
+    makeTask({ ...VALID_FM, Task: "EVAL-0005", Status: "done" }),
+    blockedTask("EVAL-0007", "[task:EVAL-0005] [gate:G2] — 법무 통과 후."),
+  ];
+  assert.deepEqual(detectUnblockCandidates(tasks), []);
+});
+
+test("detectUnblockCandidates: done 아닌 task: blocker 가 남으면 침묵", () => {
+  const tasks = [
+    blockedTask("EVAL-0017", "[task:EVAL-0014] — x."),
+    blockedTask("EVAL-0018", "[task:EVAL-0017] — G8 선행."),
+    makeTask({ ...VALID_FM, Task: "EVAL-0014", Status: "done" }),
+  ];
+  // 0017 은 blocker(0014)가 done → 후보 1건. 0018 은 0017 이 blocked 라 침묵.
+  assert.equal(detectUnblockCandidates(tasks).length, 1);
+});
+
+test("detectUnblockCandidates: blocked 아닌 task·토큰 없는 task 는 대상 아님", () => {
+  const tasks = [makeTask({ ...VALID_FM, Status: "todo" })];
+  assert.deepEqual(detectUnblockCandidates(tasks), []);
+});
+
+test("detectUnblockCandidates: 활성 목록에 없는 id(archive)는 resolved 취급", () => {
+  const tasks = [blockedTask("EVAL-0030", "[task:EVAL-0001] — archive 된 선행.")];
+  assert.equal(detectUnblockCandidates(tasks).length, 1);
 });
 
 test("extractWorkPackageBranch: 본문 첫 백틱 feat/<slug> 추출", () => {
