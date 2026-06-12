@@ -38,6 +38,8 @@
     "harness:summarize-diff": "node scripts/harness-summarize-diff.mjs",
     "harness:context": "node scripts/harness-context.mjs",
     "harness:goal": "node scripts/harness-goal.mjs",
+    "harness:next": "node scripts/harness-next.mjs",
+    "harness:claim": "node scripts/harness-claim.mjs",
     "harness:finalize": "node scripts/harness-finalize.mjs",
     "harness:test": "node --test scripts/harness-lib.spec.mjs",
     "harness:verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm harness:check && pnpm harness:test",
