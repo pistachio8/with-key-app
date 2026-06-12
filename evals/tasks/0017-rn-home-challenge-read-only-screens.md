@@ -2,14 +2,13 @@
 Task: EVAL-0017
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0014] [task:EVAL-0016] — G5 Expo Router skeleton·G7 read model contract complete 선행.
-Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-rn-migration-rules.md, docs/migration/04-rn-architecture.md
+Status: todo
+Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-rn-migration-rules.md, docs/migration/04-rn-architecture.md, docs/adr/0037-rn-read-model-contract.md
 ---
 
 # EVAL-0017: G8 Home + challenge read-only screens — real Supabase data
 
-> 00 §8 G8. route shell·read contract 준비 후 read-only 사용자 가치 포팅.
+> 00 §8 G8. route shell·read contract 준비 후 read-only 사용자 가치 포팅. **blocked 해제(2026-06-12)**: 선행 EVAL-0014(G5)·EVAL-0016(G7) done — drift 해제 후보 advisory 검토 후 todo flip(선행이 develop 에 머지되어 base 는 develop, read contract 는 ADR-0037).
 
 ## Parent Links
 
