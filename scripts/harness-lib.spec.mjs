@@ -31,6 +31,13 @@ import {
   validateDoneRunParity,
   GRANDFATHERED_DONE,
 } from "./harness-lib.mjs";
+import {
+  buildRunSkeleton,
+  entryHasPlaceholder,
+  flipStatusToDone,
+  findUnresolvedTaskBlockers,
+  decideFinalize,
+} from "./harness-finalize.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
 const REPO = "/repo";
@@ -740,4 +747,76 @@ test("renderGoalPrompt: prettier 표 padding 을 압축 — 렌더 길이가 정
   assert.match(out, /\| 기준 \| 검증 \|/);
   assert.match(out, /\| --- \| --- \|/);
   assert.match(out, /\| 표 padding 압축 \| `pnpm test` \|/);
+});
+
+// ─────────────── harness-finalize (순수 헬퍼 — CLI 는 main guard 로 분리) ───────────────
+
+test("buildRunSkeleton: frontmatter 유래 자동 필드 + <<FILL>> placeholder 3종", () => {
+  const task = makeTask({ ...VALID_FM, Task: "EVAL-0030", Track: "port", Kind: "migration" });
+  assert.deepEqual(buildRunSkeleton(task, "2026-06-12"), {
+    taskId: "EVAL-0030",
+    date: "2026-06-12",
+    track: "port",
+    kind: "migration",
+    status: "done",
+    summary: "<<FILL>>",
+    verification: "<<FILL>>",
+    notes: "<<FILL>>",
+  });
+});
+
+test("entryHasPlaceholder: 중첩 값 포함 <<FILL>> 탐지", () => {
+  assert.equal(entryHasPlaceholder({ verification: { local: "<<FILL>>" } }), true);
+  assert.equal(entryHasPlaceholder({ summary: "done", verification: { local: {} } }), false);
+});
+
+test("flipStatusToDone: frontmatter 블록 안의 Status 줄만 교체 — 본문 Status: 오염 없음", () => {
+  const content = "---\nTask: EVAL-0030\nStatus: in_progress\n---\n# 본문\nStatus: pending 표기";
+  const flipped = flipStatusToDone(content);
+  assert.ok(flipped.includes("\nStatus: done\n"));
+  assert.ok(flipped.includes("Status: pending 표기")); // 본문 무변경
+});
+
+test("findUnresolvedTaskBlockers: done 아닌 task: 선행만 반환, archive(미등재)·done 은 resolved", () => {
+  const statusById = new Map([
+    ["EVAL-0015", "done"],
+    ["EVAL-0017", "blocked"],
+  ]);
+  const task = makeTask({
+    ...VALID_FM,
+    "Blocked-by": "[task:EVAL-0015] [task:EVAL-0017] [task:EVAL-0001] [gate:G2] — 설명.",
+  });
+  assert.deepEqual(findUnresolvedTaskBlockers(task, statusById), ["EVAL-0017"]);
+});
+
+test("findUnresolvedTaskBlockers: Depends-on 은 검사하지 않는다 (soft 순서 의존)", () => {
+  const task = makeTask({ ...VALID_FM, "Depends-on": "[task:EVAL-0017] — 순서." });
+  assert.deepEqual(findUnresolvedTaskBlockers(task, new Map([["EVAL-0017", "blocked"]])), []);
+});
+
+test("decideFinalize: 전제 검사 매트릭스 (spec §C3 step 1)", () => {
+  // in_progress → proceed
+  assert.equal(
+    decideFinalize({ status: "in_progress", entry: undefined, force: false }).action,
+    "proceed",
+  );
+  // done + <<FILL>> entry → resume (--force 불요)
+  assert.equal(
+    decideFinalize({ status: "done", entry: { summary: "<<FILL>>" }, force: false }).action,
+    "resume",
+  );
+  // done + 완전 entry → verify-only (멱등 no-op)
+  assert.equal(
+    decideFinalize({ status: "done", entry: { summary: "ok" }, force: false }).action,
+    "verify-only",
+  );
+  // done + entry 없음 → --force 요구
+  assert.equal(decideFinalize({ status: "done", entry: undefined, force: false }).action, "refuse");
+  assert.equal(decideFinalize({ status: "done", entry: undefined, force: true }).action, "proceed");
+  // todo / blocked → --force 요구
+  assert.equal(decideFinalize({ status: "todo", entry: undefined, force: false }).action, "refuse");
+  assert.equal(
+    decideFinalize({ status: "blocked", entry: undefined, force: true }).action,
+    "proceed",
+  );
 });
