@@ -3,7 +3,7 @@ Task: EVAL-0009
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: G2(법무) 통과 + AnalyticsEvent union(PRD §9.1 1:1) spec 선행·PO 승인. 선행 WP1·WP2(EVAL-0005·0006).
+Blocked-by: [task:EVAL-0005] [task:EVAL-0006] [gate:G2] [spec:analytics-union] [po:analytics-union] — G2(법무) 통과 + AnalyticsEvent union(PRD §9.1 1:1) spec 선행·PO 승인. 선행 WP1·WP2.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

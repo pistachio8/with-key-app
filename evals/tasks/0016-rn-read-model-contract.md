@@ -3,7 +3,7 @@ Task: EVAL-0016
 Track: port
 Kind: migration
 Status: blocked
-Blocked-by: EVAL-0015(G6 shared domain package) complete + ADR/spec if 00 §13.4 D-4 admin hydrate RN contract remains unresolved.
+Blocked-by: [task:EVAL-0015] — G6 shared domain package complete 선행. 00 §13.4 D-4 admin hydrate RN 계약은 ADR-0036 확정으로 해소(adr 토큰 제외).
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md
 ---
 

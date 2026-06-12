@@ -3,7 +3,7 @@ Task: EVAL-0007
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: G2(ⓑ적립 포인트 법무 검토) 통과 — 사용자향 보증금 hold/게이지 노출. 선행 WP1·WP2(EVAL-0005·0006) 구현.
+Blocked-by: [task:EVAL-0005] [task:EVAL-0006] [gate:G2] — G2(ⓑ적립 포인트 법무 검토) 통과 후 사용자향 보증금 hold/게이지 노출. 선행 WP1·WP2 구현 의존.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

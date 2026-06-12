@@ -3,7 +3,7 @@ Task: EVAL-0014
 Track: port
 Kind: migration
 Status: done
-Blocked-by: EVAL-0012(G3 auth PoC) complete — PR #199 머지(2026-06-11)로 해제.
+Blocked-by: [task:EVAL-0012] — G3 auth PoC complete 선행. PR #199 머지(2026-06-11)로 해제.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/04-rn-architecture.md, docs/adr/0033-rn-target-architecture.md
 ---
 

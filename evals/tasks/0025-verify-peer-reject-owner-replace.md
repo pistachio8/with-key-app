@@ -3,7 +3,7 @@ Task: EVAL-0025
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: reaction 저장 모델 spec 선행 — 🟨 익명 반려 = Kudos union 변경(PRD §9.1 1:1) → PO 승인 + 별도 spec(ADR-0032 §게이트·범위 경계, 둘 다 미작성). 선행 EVAL-0020(컬럼).
+Blocked-by: [task:EVAL-0020] [spec:reaction-storage] [po:reaction-storage] — 🟨 익명 반려 = Kudos union 변경(PRD §9.1 1:1) → PO 승인 + 별도 spec(ADR-0032 §게이트·범위 경계, 둘 다 미작성) 선행. 선행 EVAL-0020(컬럼).
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
