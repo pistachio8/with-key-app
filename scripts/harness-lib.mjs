@@ -3,11 +3,48 @@ import path from "node:path";
 
 export const repoRoot = process.cwd();
 export const tasksDir = path.join(repoRoot, "evals/tasks");
+export const archiveTasksDir = path.join(tasksDir, "archive");
+
+// task: 토큰 존재 검사용 id 인덱스 — 활성 evals/tasks/ + archive/ 포함.
+// 왜 archive 포함: 선행 done task 가 나중에 archive 되는 순간 하류 토큰이 CI 를 깨는 회귀 방지.
+// archive 구파일(0001~0003)은 frontmatter 가 없어 파일명 번호에서 id 를 파생한다.
+export function loadKnownTaskIds() {
+  const ids = new Set();
+  for (const dir of [tasksDir, archiveTasksDir]) {
+    if (!existsSync(dir)) {
+      continue;
+    }
+    for (const file of readdirSync(dir)) {
+      const match = file.match(/^(\d{4})-.*\.md$/);
+      if (!match || file.endsWith(".goal.md")) {
+        continue;
+      }
+      const frontmatter = parseFrontmatter(readFileSync(path.join(dir, file), "utf8"));
+      ids.add((frontmatter.Task || `EVAL-${match[1]}`).toUpperCase());
+    }
+  }
+  return ids;
+}
 
 const REQUIRED_FRONTMATTER = ["Task", "Track", "Kind", "Status", "Parent"];
 const TRACKS = new Set(["port", "greenfield"]);
 const KINDS = new Set(["migration", "regression"]);
 const STATUSES = new Set(["todo", "blocked", "in_progress", "done"]);
+
+// ── Blocked-by · Depends-on 토큰 문법 (spec 2026-06-12-harness-finalize-blocked-by-tokens §C1) ──
+// `[type:value] [type:value] — 자유 문장`. 첫 `—`(em dash) 왼쪽에서만 토큰을 추출한다.
+// 왜 첫 — 기준: prose 안의 토큰·EVAL 인용(예: EVAL-0022 의 "EVAL-0006 선례")을 의존으로 오탐하지 않기 위해.
+// 타입 5종 고정 — 현행 13개 task blocker 전수 분류가 이 5종으로 닫힌다. 신규 타입은 spec 갱신으로만.
+export const BLOCKER_TOKEN_TYPES = new Set(["task", "gate", "adr", "spec", "po"]);
+
+export function parseBlockers(line) {
+  const left = String(line ?? "").split("—")[0];
+  const tokens = [];
+  for (const match of left.matchAll(/\[([a-z]+):([^\]]+)\]/g)) {
+    tokens.push({ type: match[1], value: match[2].trim() });
+  }
+  return tokens;
+}
 
 export function loadMigrationTasks() {
   if (!existsSync(tasksDir)) {

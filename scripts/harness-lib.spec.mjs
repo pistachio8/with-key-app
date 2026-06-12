@@ -11,6 +11,8 @@ import {
   extractSection,
   normalizeRepoPath,
   normalizeLinkedPath,
+  parseBlockers,
+  loadKnownTaskIds,
   validateTask,
   detectStaleStatus,
   extractWorkPackageBranch,
@@ -113,6 +115,44 @@ test("normalizeRepoPath: '...' placeholder · 글롭 · 꺾쇠는 제외", () =>
 
 test("normalizeLinkedPath: http(s) 스킴 링크는 제외", () => {
   assert.equal(normalizeLinkedPath("https://example.com/x.md"), null);
+});
+
+// ─────────────── parseBlockers (Blocked-by · Depends-on 토큰 파서) ───────────────
+
+test("parseBlockers: — 왼쪽의 [type:value] 토큰을 순서대로 추출", () => {
+  const tokens = parseBlockers("[task:EVAL-0005] [task:EVAL-0006] [gate:G2] — 법무 통과 후 노출.");
+  assert.deepEqual(tokens, [
+    { type: "task", value: "EVAL-0005" },
+    { type: "task", value: "EVAL-0006" },
+    { type: "gate", value: "G2" },
+  ]);
+});
+
+test("parseBlockers: 첫 — 오른쪽 prose 의 토큰·EVAL 인용은 무시 (EVAL-0022 선례 오탐 방지)", () => {
+  const tokens = parseBlockers(
+    "[task:EVAL-0020] — intra-feature 순서(게이트 아님, EVAL-0006 선례 — [task:EVAL-0099] 인용).",
+  );
+  assert.deepEqual(tokens, [{ type: "task", value: "EVAL-0020" }]);
+});
+
+test("parseBlockers: 토큰 없는 구문법 prose → 빈 배열", () => {
+  assert.deepEqual(parseBlockers("G2(법무) 통과 + EVAL-0005 선행."), []);
+});
+
+test("parseBlockers: dash 없는 토큰-only 줄도 추출", () => {
+  assert.deepEqual(parseBlockers("[task:EVAL-0010]"), [{ type: "task", value: "EVAL-0010" }]);
+});
+
+test("parseBlockers: undefined/빈 입력에 안전", () => {
+  assert.deepEqual(parseBlockers(undefined), []);
+  assert.deepEqual(parseBlockers(""), []);
+});
+
+test("loadKnownTaskIds: 활성 + archive task id 를 모두 포함 (archive 는 파일명 파생)", () => {
+  const ids = loadKnownTaskIds();
+  assert.ok(ids.has("EVAL-0004")); // 활성 frontmatter
+  assert.ok(ids.has("EVAL-0001")); // archive — frontmatter 없음, 파일명 0001- 에서 파생
+  assert.ok(!ids.has("EVAL-9999"));
 });
 
 // ─────────────── validateTask (exists 주입) ───────────────
