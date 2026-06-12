@@ -216,6 +216,23 @@
         }
       },
       "notes": "manual/dev-build smoke(login→home→feed/dashboard/info, seeded 데이터)·RLS negative 실측(비멤버 계정)·iOS/Android safe-area overlap 은 시뮬레이터/실기기 부재로 미실행 — PO·실기기 핸드오프. 테스트는 EVAL-0016 fixture mock 기반 검증까지 수행."
+    },
+    {
+      "taskId": "EVAL-0018",
+      "date": "2026-06-13",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "G9 Challenge lifecycle mutations — RN create/invite/pledge/start 패리티. 신규 mutation 서비스 challenge-lifecycle.ts: createChallenge(그룹 resolve ADR-0012 — 0개→create_group_with_owner·1개 자동·≥2개 선택 요구 → create_challenge RPC(0021/0022) → ownerSigned 시 자가 서명), signPledge(sign_and_maybe_activate 0040 — 0028 pending freeze 보존·멱등), startChallengeWithSignedParticipants(0039, owner-only·active 미전환 시 실패 처리). invite-create.ts: invites RN direct INSERT(RLS invites_insert_owner), 32B base64url 토큰(web generateInviteToken 동일 스펙, crypto.getRandomValues 부재 시 fail-fast — Math.random 폴백 금지). 입력 검증 @withkey/domain challengeInputSchema·uuid(zod SoT), 에러 매핑 web mapSupabaseError 동일 의미(42501→forbidden·P0002→not_found·23505→conflict). 화면 wiring: (flow)/challenge/new placeholder→실 생성 폼(stepper·그룹 선택·동의)→invite 발급(실패는 비치명 부분 성공)→공유/이동, challenge/[id]/pledge web pledge-sheet 패리티(조건·서명 현황·동의), start-challenge-card(web 노출 조건 1:1 — owner·pending·본인 서명), 홈 빈 상태 '챌린지 만들기' CTA. supabase/migrations·packages/domain·apps/web 무변경(소비만). 멀티 에이전트 파이프라인 2호(신규 CLI dogfood): harness:next --json ready 확인→harness:claim(Status 1줄 원자 전이)→goal 렌더(C4 base develop fallback)→implementer→오케스트레이터 독립 재검증→리뷰 fan-out 병렬 2종(mobile-reviewer 신설+typescript-reviewer, Blocker 0)→fixer 6건(nudge 마커 소비 known-debt 주석 정정·pledge setState-after-navigate 제거·users 조회 silent error 메타 로그·invite 실패 안내 실경로 정정·계약 테스트 4건 보강) 반영.",
+      "verification": {
+        "local": {
+          "pnpm harness:verify (typecheck·lint·test·harness:check·harness:test)": "pass — exit 0 ×3 (implementer 후·오케스트레이터 독립 재검증·fixer 후)",
+          "pnpm --filter @withkey/mobile test -- --testPathPattern 'src/.*(challenge-lifecycle|invite-create)'": "pass — 22 tests (구현 18 + 리뷰 보강 4), src/ 앵커 컨벤션(spec §C7)",
+          "pnpm validate:docs": "pass — broken 0"
+        }
+      },
+      "notes": "수동 핸드오프(PO·실기기): ① dev-build smoke create→invite accept→sign→start→PWA 동일 DB 표시 ② 미인가 RLS 실측(비owner create/start·비참가자 sign·비owner invite INSERT — 로컬 supabase 컨테이너 set role anon 세션 segfault 환경 이슈로 skip, 코드 무관) ③ Hermes crypto.getRandomValues 가용성(미지원 시 invite 발급 명시 실패 — expo-crypto polyfill spec 결정 필요). known debt: RN 발 mutation 은 push·analytics(PRD §9.1 challenge_created/signed/activated·invite_sent·group_created) 미발사 + sign_and_maybe_activate 가 start_nudge 마커를 소비해 RN 마지막 서명자 시 owner nudge 소실 — BFF mutation endpoint 또는 RPC nudge 파라미터 후속 결정 대상."
     }
   ]
 }

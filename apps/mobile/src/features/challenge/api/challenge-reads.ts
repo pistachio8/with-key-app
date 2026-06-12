@@ -389,6 +389,98 @@ export async function fetchMyUnsignedChallengeIds(
   return unsigned;
 }
 
+// 챌린지 생성 폼용 owner 그룹 옵션 (web owner-groups-for-challenge-form.ts 패리티).
+// openChallengeId 는 PRD AC-1(그룹당 open 챌린지 1개) 분기용 — 값이 있으면 생성 불가.
+export type OwnerGroupOption = {
+  id: string;
+  name: string | null;
+  createdAt: string;
+  latestChallengeCreatedAt: string | null;
+  openChallengeId: string | null;
+};
+
+const OPEN_STATUSES = new Set<string>(["pending", "accepted", "active"]);
+
+function compareIsoDesc(left: string | null, right: string | null): number {
+  if (left && right) return right.localeCompare(left);
+  if (left) return -1;
+  if (right) return 1;
+  return 0;
+}
+
+/**
+ * 내가 owner 인 그룹 + 그룹별 open(pending|accepted|active) 챌린지 여부 —
+ * 챌린지 생성 폼의 그룹 선택/단일 그룹 자동 매칭(ADR-0012)에 사용한다.
+ * 정렬은 web 과 동일: 최근 챌린지가 있는 그룹 우선, 다음 그룹 생성 내림차순.
+ */
+export async function fetchOwnerGroupsForChallengeForm(
+  userId: string,
+): Promise<OwnerGroupOption[]> {
+  const supabase = getSupabaseClient();
+  const { data: groups, error: groupsErr } = await supabase
+    .from("groups")
+    .select("id, name, created_at")
+    .eq("owner_id", userId)
+    .is("disbanded_at", null);
+  if (groupsErr) {
+    console.error("[fetchOwnerGroupsForChallengeForm] groups read failed", groupsErr);
+    throw new Error(`fetchOwnerGroupsForChallengeForm failed: ${groupsErr.message}`);
+  }
+  const groupRows = (groups ?? []) as unknown as {
+    id: string;
+    name: string | null;
+    created_at: string;
+  }[];
+  if (groupRows.length === 0) return [];
+
+  const { data: challenges, error: chErr } = await supabase
+    .from("challenges")
+    .select("id, group_id, status, created_at")
+    .in(
+      "group_id",
+      groupRows.map((g) => g.id),
+    )
+    .order("created_at", { ascending: false });
+  if (chErr) {
+    console.error("[fetchOwnerGroupsForChallengeForm] challenges read failed", chErr);
+    throw new Error(`fetchOwnerGroupsForChallengeForm failed: ${chErr.message}`);
+  }
+
+  const latestByGroup = new Map<string, string>();
+  const openByGroup = new Map<string, { id: string; createdAt: string }>();
+  for (const row of (challenges ?? []) as unknown as {
+    id: string;
+    group_id: string;
+    status: string;
+    created_at: string;
+  }[]) {
+    const latest = latestByGroup.get(row.group_id);
+    if (!latest || row.created_at.localeCompare(latest) > 0) {
+      latestByGroup.set(row.group_id, row.created_at);
+    }
+    if (OPEN_STATUSES.has(row.status)) {
+      const open = openByGroup.get(row.group_id);
+      if (!open || row.created_at.localeCompare(open.createdAt) > 0) {
+        openByGroup.set(row.group_id, { id: row.id, createdAt: row.created_at });
+      }
+    }
+  }
+
+  return groupRows
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      createdAt: g.created_at,
+      latestChallengeCreatedAt: latestByGroup.get(g.id) ?? null,
+      openChallengeId: openByGroup.get(g.id)?.id ?? null,
+    }))
+    .sort((a, b) => {
+      const recent = compareIsoDesc(a.latestChallengeCreatedAt, b.latestChallengeCreatedAt);
+      if (recent !== 0) return recent;
+      return compareIsoDesc(a.createdAt, b.createdAt);
+    });
+}
+
 /** 서명 대기(pending/accepted) 서약 뷰. challengeId 미지정 시 내 첫 대기 건. */
 export async function fetchPendingPledge(
   userId: string,

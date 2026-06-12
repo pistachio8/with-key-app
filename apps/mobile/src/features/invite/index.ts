@@ -5,5 +5,6 @@ export {
   type InviteErrorCode,
   type InviteRedirect,
 } from "./api/invite-service";
+export { buildInviteShareUrl, createInvite, type CreateInviteResult } from "./api/invite-create";
 export { stashPendingInviteToken, takePendingInviteToken } from "./api/invite-token-stash";
 export { PostAuthRedirect } from "./components/post-auth-redirect";
