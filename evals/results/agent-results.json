@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "description": "with-key agent eval baseline — append-only. 새 run은 runs[] 끝에만 추가, 기존 항목 수정 금지.",
+  "description": "with-key agent eval baseline — append-only. 새 run은 runs[] 끝에만 추가, 기존 항목 수정 금지. 단 harness:finalize 가 만든 skeleton 의 <<FILL>> placeholder 는 같은 PR 안(머지 전)에서 채우는 것만 허용.",
   "tasks": [
     {
       "id": "EVAL-0001",
