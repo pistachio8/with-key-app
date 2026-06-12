@@ -11,6 +11,7 @@ import {
   loadAgentResults,
   agentResultsPath,
   parseBlockers,
+  flipFrontmatterStatus,
 } from "./harness-lib.mjs";
 
 // runs[] skeleton — 내용(summary·verification)은 구현 세션만 쓸 수 있으므로 <<FILL>> 로 형태만 보장.
@@ -23,6 +24,8 @@ export function buildRunSkeleton(task, date) {
     track: task.frontmatter.Track,
     kind: task.frontmatter.Kind,
     status: "done",
+    // 시도 횟수 — 재시도 후 성공이면 채움 시점에 실제 값으로 갱신 (spec orchestration-phase2 §C3, oneShot 대체).
+    attempts: 1,
     summary: "<<FILL>>",
     verification: "<<FILL>>",
     notes: "<<FILL>>",
@@ -33,24 +36,10 @@ export function entryHasPlaceholder(entry) {
   return JSON.stringify(entry).includes("<<FILL>>");
 }
 
-// frontmatter 블록(첫 --- ~ 다음 ---) 안의 Status 줄만 done 으로 바꾼다 — 본문 "Status:" 오염 방지.
-// CRLF 파일도 처리하고 줄끝 \r 을 보존한다. 변경이 없으면 원문 그대로 — 호출부가 no-op 을 에러로 승격.
+// frontmatter Status → done. 전이 프리미티브는 harness-lib(flipFrontmatterStatus)와 공유 —
+// claim(todo→in_progress)과 같은 코드 경로라 동작이 갈라지지 않는다.
 export function flipStatusToDone(content) {
-  const lines = content.split("\n");
-  const stripEol = (line) => line.replace(/\r$/, "");
-  if (stripEol(lines[0].replace(/^﻿/, "")) !== "---") {
-    return content;
-  }
-  for (let index = 1; index < lines.length; index += 1) {
-    if (stripEol(lines[index]) === "---") {
-      break;
-    }
-    if (/^Status:/.test(lines[index])) {
-      lines[index] = `Status: done${lines[index].endsWith("\r") ? "\r" : ""}`;
-      break;
-    }
-  }
-  return lines.join("\n");
+  return flipFrontmatterStatus(content, "done");
 }
 
 // Blocked-by 의 done 아닌 task: 선행 — --force 로도 우회 불가 (spec §C3).

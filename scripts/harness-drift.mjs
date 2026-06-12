@@ -6,6 +6,7 @@ import {
   validateTask,
   detectStaleStatus,
   detectUnblockCandidates,
+  loadAgentResults,
 } from "./harness-lib.mjs";
 
 const tasks = loadMigrationTasks();
@@ -42,6 +43,17 @@ const warnings = tasks.flatMap((task) =>
 
 const unblockCandidates = detectUnblockCandidates(tasks);
 
+// pass@3 size oracle (advisory · spec orchestration-phase2 §C3): attempts >= 3 이면 성공이어도
+// task 크기 경고. abandoned 는 이미 사람이 분할을 결정한 결과라 대상이 아니다.
+const sizeWarnings = (loadAgentResults().runs ?? [])
+  .filter(
+    (run) => Number.isInteger(run.attempts) && run.attempts >= 3 && run.status !== "abandoned",
+  )
+  .map(
+    (run) =>
+      `${run.taskId}: attempts ${run.attempts} ≥ 3 — pass@3 oracle 신호, task 분할 검토 (D5)`,
+  );
+
 const status = violations.length === 0 ? "PASS" : "FAIL";
 
 console.log(`# Harness Drift Report
@@ -52,6 +64,7 @@ console.log(`# Harness Drift Report
 - Violations: ${violations.length}
 - Stale-status warnings: ${warnings.length}
 - Unblock candidates: ${unblockCandidates.length}
+- Size-oracle warnings: ${sizeWarnings.length}
 
 ## Checks
 
@@ -63,6 +76,7 @@ console.log(`# Harness Drift Report
 - Target Files path existence
 - (warn) Status todo/in_progress 인데 WP 브랜치 머지됨 — stale status
 - (warn) blocked task 의 task: blocker 전부 done — 해제 후보
+- (warn) runs[] attempts ≥ 3 — pass@3 size oracle, task 분할 검토
 
 ## Findings
 `);
@@ -93,6 +107,17 @@ if (unblockCandidates.length > 0) {
 blocked task 의 Blocked-by task: 토큰이 전부 done — todo flip 검토 대상. gate/adr/spec/po 토큰이 남은 task 는 대상이 아니다(해제 판단이 사람 몫).
 `);
   for (const message of unblockCandidates) {
+    console.log(`- ${message}`);
+  }
+}
+
+if (sizeWarnings.length > 0) {
+  console.log(`
+## Size Oracle Warnings (advisory — exit code 비영향)
+
+attempts ≥ 3 인 run — pass@3 oracle(D5) 신호. 성공했어도 task 가 너무 컸다는 뜻이므로 후속 분해 시 참고. 자동 분할 아님.
+`);
+  for (const message of sizeWarnings) {
     console.log(`- ${message}`);
   }
 }

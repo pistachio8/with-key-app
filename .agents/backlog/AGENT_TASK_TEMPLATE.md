@@ -49,6 +49,7 @@ Depends-on: [task:EVAL-XXXX] — <intra-feature 순서 설명>   # 선택. 게�
 ```bash
 pnpm typecheck && pnpm lint && pnpm test -- <scope>
 # 해당 시: pnpm test -- <capability>   (capability eval)
+# jest testPathPattern 은 src/ 앵커로 (예: src/.*foo) — worktree 디렉토리명 오염 방지 (spec orchestration-phase2 §C7)
 ```
 
 ## Expected Output Summary

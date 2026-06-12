@@ -9,6 +9,7 @@ import {
   validateAcTraceability,
   loadAgentResults,
   validateDoneRunParity,
+  validateRunAttempts,
 } from "./harness-lib.mjs";
 
 // Tier 1-A: Agent Task frontmatter·경로 추적성 + Blocked-by/Depends-on 토큰 문법.
@@ -28,9 +29,14 @@ const goalErrors =
 
 // Tier 1-D: done↔runs 정합 — Status done 인 task 는 agent-results.json runs[] 기록이 있어야 한다.
 // 무기록 done(가짜 완료)이 회귀 baseline 을 비우는 것을 차단한다. 도입 이전 done 은 GRANDFATHERED_DONE.
-const runParityErrors = validateDoneRunParity(tasks, loadAgentResults());
+const agentResults = loadAgentResults();
+const runParityErrors = validateDoneRunParity(tasks, agentResults);
 
-const errors = [...taskErrors, ...acErrors, ...goalErrors, ...runParityErrors];
+// Tier 1-E: runs[] attempts — 신규 엔트리는 양의 정수 필수, oneShot 잔존 금지 (oneShot 대체).
+// pass@3 oracle 의 기계 판정 입력 — 비검증 필드(oneShot)가 조용히 누락된 실증의 재발 방지.
+const attemptsErrors = validateRunAttempts(agentResults);
+
+const errors = [...taskErrors, ...acErrors, ...goalErrors, ...runParityErrors, ...attemptsErrors];
 
 if (errors.length > 0) {
   console.error(`[harness:check] FAIL — ${errors.length} violation(s).`);

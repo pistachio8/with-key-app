@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 export const repoRoot = process.cwd();
@@ -230,31 +231,102 @@ export function detectStaleStatus(
 // 해제 후보 advisory (비차단 · spec §C2): blocked task 의 Blocked-by task: 토큰이 전부 done 이고
 // 사람-판단 토큰(gate/adr/spec/po)이 하나도 없으면 "todo flip?" 후보로 보고한다.
 // 자동 flip 아님 — 해제 결정은 사람/구현 세션 몫. 사람-판단 토큰이 남아 있는 한 후보가 아니다.
-export function detectUnblockCandidates(tasks) {
-  const statusById = new Map(
+function taskStatusById(tasks) {
+  return new Map(
     tasks.map((task) => [task.frontmatter.Task?.toUpperCase(), task.frontmatter.Status]),
   );
+}
+
+function isUnblockCandidate(task, statusById) {
+  if (task.frontmatter.Status !== "blocked") {
+    return false;
+  }
+  const tokens = parseBlockers(task.frontmatter["Blocked-by"] || "");
+  const taskTokens = tokens.filter((token) => token.type === "task");
+  if (taskTokens.length === 0 || taskTokens.length !== tokens.length) {
+    return false;
+  }
+  // 활성 목록에 없는 id(archive 은퇴)는 resolved 취급 — 존재 자체는 Tier 1-A 가 보증한다.
+  return taskTokens.every((token) => {
+    const status = statusById.get(token.value.toUpperCase());
+    return status === undefined || status === "done";
+  });
+}
+
+export function detectUnblockCandidates(tasks) {
+  const statusById = taskStatusById(tasks);
   return tasks.flatMap((task) => {
-    if (task.frontmatter.Status !== "blocked") {
-      return [];
-    }
-    const tokens = parseBlockers(task.frontmatter["Blocked-by"] || "");
-    const taskTokens = tokens.filter((token) => token.type === "task");
-    if (taskTokens.length === 0 || taskTokens.length !== tokens.length) {
-      return [];
-    }
-    // 활성 목록에 없는 id(archive 은퇴)는 resolved 취급 — 존재 자체는 Tier 1-A 가 보증한다.
-    const allDone = taskTokens.every((token) => {
-      const status = statusById.get(token.value.toUpperCase());
-      return status === undefined || status === "done";
-    });
-    if (!allDone) {
+    if (!isUnblockCandidate(task, statusById)) {
       return [];
     }
     return [
       `${task.repoPath}: blocked 인데 task: blocker 전부 done — Status todo 로 flip? (자동 flip 아님, 해제 결정은 사람 몫)`,
     ];
   });
+}
+
+// ── 오케스트레이션 큐 (spec 2026-06-12-harness-orchestration-phase2 §C1·§C2) ──
+// READY 정의는 scan-signals 와 동일: Depends-on 의 task: 토큰이 전부 done.
+// 판정 SoT 를 여기 한 곳에 둔다 — drift advisory·withkey-todo 스캐너와 로직이 갈라지지 않게.
+export function resolveReadyTasks(tasks) {
+  const statusById = taskStatusById(tasks);
+  const ready = [];
+  const waiting = [];
+  const inProgress = [];
+  const unblockCandidates = [];
+
+  for (const task of tasks) {
+    const id = task.frontmatter.Task;
+    const status = task.frontmatter.Status;
+    if (status === "in_progress") {
+      inProgress.push(id);
+      continue;
+    }
+    if (status === "blocked") {
+      if (isUnblockCandidate(task, statusById)) {
+        unblockCandidates.push(id);
+      }
+      continue;
+    }
+    if (status !== "todo") {
+      continue;
+    }
+    const deps = parseBlockers(task.frontmatter["Depends-on"] || "")
+      .filter((token) => token.type === "task")
+      .map((token) => ({
+        id: token.value,
+        // 활성 목록에 없는 id 는 archive 은퇴 — finalize·unblock 후보와 같은 원칙으로 resolved 취급.
+        status: statusById.get(token.value.toUpperCase()) ?? "done",
+      }));
+    const entry = { id, status, deps, wpBranch: extractWorkPackageBranch(task) };
+    if (deps.every((dep) => dep.status === "done")) {
+      ready.push(entry);
+    } else {
+      waiting.push(entry);
+    }
+  }
+  return { ready, waiting, inProgress, unblockCandidates };
+}
+
+// frontmatter 블록(첫 --- ~ 다음 ---) 안의 Status 줄만 교체 — 본문 "Status:" 오염 방지.
+// CRLF 줄끝 \r 보존. 변경이 없으면 원문 그대로 — 호출부가 no-op 을 에러로 승격한다.
+// claim(todo→in_progress)과 finalize(→done)가 공유하는 단일 전이 프리미티브.
+export function flipFrontmatterStatus(content, nextStatus) {
+  const lines = content.split("\n");
+  const stripEol = (line) => line.replace(/\r$/, "");
+  if (stripEol(lines[0].replace(/^﻿/, "")) !== "---") {
+    return content;
+  }
+  for (let index = 1; index < lines.length; index += 1) {
+    if (stripEol(lines[index]) === "---") {
+      break;
+    }
+    if (/^Status:/.test(lines[index])) {
+      lines[index] = `Status: ${nextStatus}${lines[index].endsWith("\r") ? "\r" : ""}`;
+      break;
+    }
+  }
+  return lines.join("\n");
 }
 
 export const agentResultsPath = path.join(repoRoot, "evals/results/agent-results.json");
@@ -312,6 +384,43 @@ export function validateDoneRunParity(tasks, results, { grandfathered = GRANDFAT
           `${task.repoPath}: runs[] entry for ${id} has <<FILL>> placeholder — summary·verification 을 채우고 notes 불요 시 필드를 삭제하라`,
         );
       }
+    }
+    return errors;
+  });
+}
+
+// attempts 게이트(spec 2026-06-12-harness-orchestration-phase2 §C3) 도입 이전의 runs[] 엔트리.
+// 소급 기록을 만들지 않기 위한 명시 예외 — taskId 기준이라 같은 task 의 미래 재실행 엔트리도
+// 면제되는 작은 구멍이 있지만, append 시점 구분 필드가 없는 현 스키마에서 수용한다(POC).
+export const GRANDFATHERED_ATTEMPTS = new Set([
+  "EVAL-0006",
+  "EVAL-0012",
+  "EVAL-0013",
+  "EVAL-0014",
+  "EVAL-0016",
+  "EVAL-0017",
+  "EVAL-0021",
+  "EVAL-0022",
+]);
+
+// runs[] attempts 검증: 신규 엔트리는 attempts(양의 정수) 필수, oneShot 잔존 금지.
+// 왜 oneShot 금지: oneShot === (attempts === 1) 로 의미 포함 — 이중 기록은 한쪽만 갱신되는 drift 를 부른다.
+export function validateRunAttempts(results, { grandfathered = GRANDFATHERED_ATTEMPTS } = {}) {
+  return (results.runs ?? []).flatMap((run, index) => {
+    const id = typeof run.taskId === "string" ? run.taskId.toUpperCase() : `runs[${index}]`;
+    if (grandfathered.has(id)) {
+      return [];
+    }
+    const errors = [];
+    if (!Number.isInteger(run.attempts) || run.attempts < 1) {
+      errors.push(
+        `agent-results.json runs[] ${id}: attempts 는 양의 정수 필수 (현재 ${JSON.stringify(run.attempts)}) — spec 2026-06-12-harness-orchestration-phase2 §C3`,
+      );
+    }
+    if ("oneShot" in run) {
+      errors.push(
+        `agent-results.json runs[] ${id}: oneShot 은 attempts 로 대체됨 — 신규 엔트리에서 제거하라`,
+      );
     }
     return errors;
   });
@@ -613,14 +722,30 @@ function slugFromRepoPath(repoPath) {
   return base.replace(/^\d+-/, "").replace(/\.md$/, "");
 }
 
+// 브랜치 실존 확인 — 로컬 ref + origin/* remote-tracking ref 만 본다(네트워크 fetch 없음).
+// 왜 fetch 안 함: goal 렌더는 결정론·오프라인이 원칙 — 같은 입력이 다른 출력을 내면 안 된다 (spec §C4).
+export function defaultBranchExists(branch) {
+  const probe = (ref) =>
+    spawnSync("git", ["show-ref", "--verify", "--quiet", ref], { stdio: "ignore" }).status === 0;
+  return probe(`refs/heads/${branch}`) || probe(`refs/remotes/origin/${branch}`);
+}
+
 // 선행 task(Blocked-by)의 Work Package 브랜치를 찾아 worktree base 로 쓴다.
-// 파일시스템 비의존 테스트를 위해 renderGoalPrompt 에 주입 가능(validateTask 패턴).
-function defaultLookupBranch(evalId) {
-  const predecessor = findTask(evalId);
+// 머지 후 삭제된 브랜치는 null → develop fallback (spec §C4 — EVAL-0017 에서 죽은 base 렌더 실측).
+// 파일시스템·git 비의존 테스트를 위해 renderGoalPrompt 와 본 함수 모두 의존을 주입 가능(validateTask 패턴).
+export function defaultLookupBranch(
+  evalId,
+  { findTaskFn = findTask, branchExists = defaultBranchExists } = {},
+) {
+  const predecessor = findTaskFn(evalId);
   if (!predecessor) {
     return null;
   }
-  return firstFeatBranch(extractSection(predecessor.content, "Parent Links"));
+  const branch = firstFeatBranch(extractSection(predecessor.content, "Parent Links"));
+  if (!branch || !branchExists(branch)) {
+    return null;
+  }
+  return branch;
 }
 
 export function renderGoalPrompt(task, { lookupBranch = defaultLookupBranch } = {}) {

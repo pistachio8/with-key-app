@@ -30,6 +30,10 @@ import {
   GOAL_PROMPT_CHAR_LIMIT,
   validateDoneRunParity,
   GRANDFATHERED_DONE,
+  resolveReadyTasks,
+  flipFrontmatterStatus,
+  validateRunAttempts,
+  defaultLookupBranch,
 } from "./harness-lib.mjs";
 import {
   buildRunSkeleton,
@@ -39,6 +43,7 @@ import {
   decideFinalize,
   runFinalize,
 } from "./harness-finalize.mjs";
+import { runClaim } from "./harness-claim.mjs";
 
 // ── validateTask 격리용 task 빌더 (exists 주입 → 파일시스템 비의존) ──
 const REPO = "/repo";
@@ -782,7 +787,7 @@ test("renderGoalPrompt: prettier 표 padding 을 압축 — 렌더 길이가 정
 
 // ─────────────── harness-finalize (순수 헬퍼 — CLI 는 main guard 로 분리) ───────────────
 
-test("buildRunSkeleton: frontmatter 유래 자동 필드 + <<FILL>> placeholder 3종", () => {
+test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <<FILL>> placeholder 3종", () => {
   const task = makeTask({ ...VALID_FM, Task: "EVAL-0030", Track: "port", Kind: "migration" });
   assert.deepEqual(buildRunSkeleton(task, "2026-06-12"), {
     taskId: "EVAL-0030",
@@ -790,6 +795,7 @@ test("buildRunSkeleton: frontmatter 유래 자동 필드 + <<FILL>> placeholder 
     track: "port",
     kind: "migration",
     status: "done",
+    attempts: 1,
     summary: "<<FILL>>",
     verification: "<<FILL>>",
     notes: "<<FILL>>",
@@ -977,4 +983,149 @@ test("runFinalize: 동일 taskId 복수 entry 중 하나라도 <<FILL>> 이면 r
   });
   assert.equal(code, 1);
   assert.equal(io.writes.results, null); // 변경 없이 안내만
+});
+
+// ─────────────── resolveReadyTasks (orchestration-phase2 §C1) ───────────────
+
+function queueTask(id, status, extra = {}) {
+  return makeTask({ ...VALID_FM, Task: id, Status: status, ...extra });
+}
+
+test("resolveReadyTasks: deps 없는 todo → READY, Depends-on 미완 → WAITING(미완 status 포함)", () => {
+  const { ready, waiting } = resolveReadyTasks([
+    queueTask("EVAL-0030", "todo"),
+    queueTask("EVAL-0031", "todo", { "Depends-on": "[task:EVAL-0032] — 순서." }),
+    queueTask("EVAL-0032", "todo"),
+  ]);
+  assert.deepEqual(
+    ready.map((e) => e.id),
+    ["EVAL-0030", "EVAL-0032"],
+  );
+  assert.equal(waiting.length, 1);
+  assert.deepEqual(waiting[0].deps, [{ id: "EVAL-0032", status: "todo" }]);
+});
+
+test("resolveReadyTasks: Depends-on 전부 done·archive 은퇴(미등재) → READY (resolved 취급)", () => {
+  const { ready } = resolveReadyTasks([
+    queueTask("EVAL-0031", "todo", { "Depends-on": "[task:EVAL-0032] [task:EVAL-0001] — 선행." }),
+    queueTask("EVAL-0032", "done"),
+  ]);
+  assert.deepEqual(
+    ready.map((e) => e.id),
+    ["EVAL-0031"],
+  );
+});
+
+test("resolveReadyTasks: in_progress·unblock 후보 분류 — gate 토큰 잔존은 후보 아님", () => {
+  const { inProgress, unblockCandidates, ready } = resolveReadyTasks([
+    queueTask("EVAL-0030", "in_progress"),
+    queueTask("EVAL-0031", "blocked", { "Blocked-by": "[task:EVAL-0033] — 선행." }),
+    queueTask("EVAL-0032", "blocked", { "Blocked-by": "[task:EVAL-0033] [gate:G2] — 법무." }),
+    queueTask("EVAL-0033", "done"),
+  ]);
+  assert.deepEqual(inProgress, ["EVAL-0030"]);
+  assert.deepEqual(unblockCandidates, ["EVAL-0031"]); // gate 잔존 EVAL-0032 제외
+  assert.deepEqual(
+    ready.map((e) => e.id),
+    [],
+  ); // done·blocked 는 ready 아님
+});
+
+// ─────────────── flipFrontmatterStatus · runClaim (orchestration-phase2 §C2) ───────────────
+
+test("flipFrontmatterStatus: claim 방향(→in_progress) — frontmatter Status 만 교체", () => {
+  const content = "---\nTask: EVAL-0030\nStatus: todo\n---\n# 본문\nStatus: pending 표기";
+  const flipped = flipFrontmatterStatus(content, "in_progress");
+  assert.ok(flipped.includes("\nStatus: in_progress\n"));
+  assert.ok(flipped.includes("Status: pending 표기")); // 본문 무변경
+});
+
+function claimTask(id, status, extra = {}) {
+  return {
+    ...makeTask({ ...VALID_FM, Task: id, Status: status, ...extra }),
+    absolutePath: `/repo/evals/tasks/${id.toLowerCase()}.md`,
+    repoPath: `evals/tasks/${id.toLowerCase()}.md`,
+    content: `---\nTask: ${id}\nTrack: port\nKind: migration\nStatus: ${status}\nParent: docs/PRD.md\n---\n# 본문`,
+  };
+}
+
+test("runClaim: READY todo → Status 줄만 in_progress 로 교체, exit 0", () => {
+  let written = null;
+  const code = runClaim({
+    id: "eval-0030",
+    tasks: [claimTask("EVAL-0030", "todo")],
+    writeTaskFile: (_, content) => (written = content),
+  });
+  assert.equal(code, 0);
+  assert.ok(written.includes("Status: in_progress"));
+  assert.ok(written.includes("# 본문")); // 다른 내용 무변경
+});
+
+test("runClaim: blocked·done·in_progress·미존재 → exit 1, 파일 무변경", () => {
+  for (const status of ["blocked", "done", "in_progress"]) {
+    let written = null;
+    const extra = status === "blocked" ? { "Blocked-by": "[task:EVAL-0031] — 선행." } : {};
+    const code = runClaim({
+      id: "EVAL-0030",
+      tasks: [claimTask("EVAL-0030", status, extra)],
+      writeTaskFile: (_, content) => (written = content),
+    });
+    assert.equal(code, 1, `status=${status} 는 거부`);
+    assert.equal(written, null);
+  }
+  assert.equal(runClaim({ id: "EVAL-9999", tasks: [], writeTaskFile: () => {} }), 1);
+});
+
+test("runClaim: WAITING todo (Depends-on 미완) → exit 1 — ready 집합과 일치 (spec §C2)", () => {
+  let written = null;
+  const code = runClaim({
+    id: "EVAL-0030",
+    tasks: [
+      claimTask("EVAL-0030", "todo", { "Depends-on": "[task:EVAL-0031] — 순서." }),
+      claimTask("EVAL-0031", "todo"),
+    ],
+    writeTaskFile: (_, content) => (written = content),
+  });
+  assert.equal(code, 1);
+  assert.equal(written, null);
+});
+
+// ─────────────── validateRunAttempts (orchestration-phase2 §C3) ───────────────
+
+test("validateRunAttempts: grandfather 엔트리는 attempts 부재·oneShot 잔존 허용", () => {
+  const results = { runs: [{ taskId: "EVAL-0017", status: "done", oneShot: true }] };
+  assert.deepEqual(validateRunAttempts(results), []);
+});
+
+test("validateRunAttempts: 신규 엔트리 attempts 부재·0·문자열·oneShot 잔존 → 에러", () => {
+  const bad = (run) => validateRunAttempts({ runs: [{ taskId: "EVAL-0030", ...run }] }).length;
+  assert.equal(bad({}), 1); // 부재
+  assert.equal(bad({ attempts: 0 }), 1); // 0
+  assert.equal(bad({ attempts: "1" }), 1); // 문자열
+  assert.equal(bad({ attempts: 1, oneShot: true }), 1); // oneShot 잔존
+});
+
+test("validateRunAttempts: attempts 양의 정수 통과 — abandoned 엔트리 포함", () => {
+  const results = {
+    runs: [
+      { taskId: "EVAL-0030", status: "done", attempts: 2 },
+      { taskId: "EVAL-0031", status: "abandoned", attempts: 3 },
+    ],
+  };
+  assert.deepEqual(validateRunAttempts(results), []);
+});
+
+// ─────────────── defaultLookupBranch (orchestration-phase2 §C4) ───────────────
+
+test("defaultLookupBranch: 브랜치 실존 시 반환 · 머지-삭제(부재) 시 null → develop fallback", () => {
+  const predecessor = {
+    content: "## Parent Links\n- Work Package: feat/rn-base (G3)\n\n## Goal\n끝",
+  };
+  const deps = { findTaskFn: () => predecessor, branchExists: () => true };
+  assert.equal(defaultLookupBranch("EVAL-0001", deps), "feat/rn-base");
+  assert.equal(defaultLookupBranch("EVAL-0001", { ...deps, branchExists: () => false }), null);
+  assert.equal(
+    defaultLookupBranch("EVAL-0001", { findTaskFn: () => undefined, branchExists: () => true }),
+    null,
+  );
 });
