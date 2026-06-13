@@ -10,14 +10,14 @@ status: draft
 
 RN(React Native) 앱의 사진 인증 쓰기 경로(`submitActionLog`)를 노출하는 BFF(Backend-for-Frontend) 계약을 확정한다. [00-rn-conversion-plan §13.4 D-7](../../migration/00-rn-conversion-plan.md)이 spec 으로 지정한 decision debt 이며, [EVAL-0019](../../../evals/tasks/0019-rn-native-action-log-mvp.md)(G10 native action log MVP)의 `Blocked-by` 조건이다.
 
-핵심 결정은 **Fat BFF** — RN 은 사진(multipart) + 입력값을 단일 `POST /api/action-log` 로 보내고, 서버가 AI 일기 생성 → `action_logs` insert → Storage 업로드 → photo_path RPC → push/analytics 부수효과까지 **하나의 트랜잭션 경계에서** 수행한다. web 의 기존 `submitActionLog` Server Action 본문을 `submitActionLogCore(supabase, user, formData)` 공유 함수로 추출해 web Server Action 과 BFF route 가 **같은 코어를 호출**한다 — 이것이 web↔RN drift 를 막는 단일 출처(SoT)다.
+핵심 결정은 **Fat BFF** — RN 은 사진(multipart) + 입력값을 단일 `POST /api/action-log` 로 보내고, 서버가 AI 일기 생성 → `action_logs` insert → Storage 업로드 → photo_path RPC → push/analytics 부수효과까지 **단일 요청 처리 경계(비파괴 다단계 + best-effort cleanup, DB 트랜잭션 아님)에서** 수행한다. web 의 기존 `submitActionLog` Server Action 본문을 `submitActionLogCore(supabase, user, formData)` 공유 함수로 추출해 web Server Action 과 BFF route 가 **같은 코어를 호출**한다 — 이것이 web↔RN drift 를 막는 단일 출처(SoT)다.
 
 본 spec 이 머지된 뒤 EVAL-0019 구현 PR(코어 추출 + BFF route + RN service/UI)이 따라온다.
 
 ## Why
 
 - **OpenAI 키가 BFF 를 강제한다.** `submitActionLog` 의 거의 전부가 RN 토큰 RLS 로 가능하다 — `al_insert_self_active`(0028, 본인·active·기간·참가자 강제) · `ap_insert_self`(0011, 본인 경로 Storage INSERT) · `update_action_log_photo_path`(0011, `authenticated` grant). RLS 로 **불가능한 본질은 `generateDiary`(OpenAI secret) 하나뿐**이다. push·analytics·verify 는 service-role 이라 서버 유지(EVAL-0018 D-2/D-3 과 동일). 그래서 lifecycle mutation(EVAL-0018)은 RPC-direct 였지만 `submitActionLog` 는 BFF 다.
-- **단일 트랜잭션 경계가 명시 요구다.** [00 §9 #13](../../migration/00-rn-conversion-plan.md)은 "Storage write, AI, analytics, push side effect 를 한 트랜잭션 경계로 유지"를 못박는다. 클라이언트가 단계를 쪼개 오케스트레이션하면 사진 고아(orphan) 정리 책임이 RN 으로 넘어가고 복구가 복잡해진다.
+- **단일 요청 처리 경계가 명시 요구다.** [00 §9 #13](../../migration/00-rn-conversion-plan.md)은 "Storage write, AI, analytics, push side effect 를 한 트랜잭션 경계로 유지"를 못박는다. 여기서 "트랜잭션 경계"는 DB 원자성이 아니라 **한 요청이 부수효과 전체와 실패 정리(cleanup)를 책임지는 경계**를 뜻한다. 클라이언트가 단계를 쪼개 오케스트레이션하면 사진 고아(orphan) 정리 책임이 RN 으로 넘어가고 복구가 복잡해진다.
 - **drift 위험을 코드 구조로 차단해야 한다.** web 과 RN 이 KST 일자 계산·doneCount·AI fallback·cleanup 로직을 각자 구현하면 패리티 snapshot 이 비싸지고 동작이 어긋난다. 같은 코어 함수 + 같은 zod 응답 계약이면 패리티가 by construction 으로 보장된다.
 - **기존 BFF 표면과 정합해야 한다.** read 경로는 이미 [ADR-0036](../../adr/0036-rn-admin-hydrate-bff-contract.md) `GET /api/feed`(Bearer)로 정립됐고, write 경로도 같은 Bearer 인증 · transport-중립 계약 · domain zod 검증 패턴을 따라야 한다.
 
@@ -57,23 +57,23 @@ RN(React Native) 앱의 사진 인증 쓰기 경로(`submitActionLog`)를 노출
 
 ### 결정 요약 (그릴링 11)
 
-| #   | 결정        | 선택                                                                                     |
-| --- | ----------- | ---------------------------------------------------------------------------------------- |
-| 1   | BFF 두께    | **Fat BFF** — 서버가 AI→insert→upload→RPC→push/analytics 전부, 단일 트랜잭션 경계        |
-| 2   | transport   | **multipart/form-data** — web FormData 필드 동일 (base64 ✗, ~33% 팽창)                   |
-| 3   | 코드 SoT    | web 본문 **통째 추출** → `submitActionLogCore(supabase, user, formData)`, client 만 주입 |
-| 4   | 응답        | **ActionResult 봉투 passthrough + 파생 HTTP status** + `@withkey/domain` zod 계약 승격   |
-| 5   | endpoint    | **`POST /api/action-log`** (flat·단수, challengeId 는 body)                              |
-| 6   | memo        | 계약 optional 유지, **RN MVP UI 는 AI 경로만** (memo defer, BFF 변경 0)                  |
-| 7   | 사진 교체   | **제외** — `replaceActionPhoto` 는 별도 보안 경계, 0019 non-goal                         |
-| 8   | 중복 제출   | **UI-only + `retry:0` 강제 + 넉넉한 타임아웃** (서버 idempotency key ✗ = migration)      |
-| 9   | pending UI  | **web 미러** — 컨트롤 disable + 버튼 `ActivityIndicator` + "인증 중...", dim 없음        |
-| 10  | 캐시 무효화 | **verbatim 유지** — RN→PWA freshness 에 유리, RN-only no-op 무해                         |
-| 11  | 검증        | 5겹 (아래 Verification)                                                                  |
+| #   | 결정        | 선택                                                                                                                          |
+| --- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | BFF 두께    | **Fat BFF** — 서버가 AI→insert→upload→RPC→push/analytics 전부, 단일 요청 처리 경계                                            |
+| 2   | transport   | **multipart/form-data** — web FormData 필드 동일 (base64 ✗, ~33% 팽창)                                                        |
+| 3   | 코드 SoT    | web 본문 **통째 추출** → `submitActionLogCore(supabase, user, formData)`, client 주입 + 캐시 tail caller별                    |
+| 4   | 응답        | **ActionResult 봉투 passthrough + 파생 HTTP status** + `@withkey/domain` zod 계약 승격                                        |
+| 5   | endpoint    | **`POST /api/action-log`** (flat·단수, challengeId 는 body)                                                                   |
+| 6   | memo        | 계약 optional 유지, **RN MVP UI 는 AI 경로만** (memo defer, BFF 변경 0)                                                       |
+| 7   | 사진 교체   | **제외** — `replaceActionPhoto` 는 별도 보안 경계, 0019 non-goal                                                              |
+| 8   | 중복 제출   | **UI-only + `retry:0` 강제 + 넉넉한 타임아웃** (서버 idempotency key ✗ = migration)                                           |
+| 9   | pending UI  | **web 미러** — 컨트롤 disable + 버튼 `ActivityIndicator` + "인증 중...", dim 없음                                             |
+| 10  | 캐시 무효화 | `revalidatePath` 는 코어 유지(양 컨텍스트), **`updateTag` 는 Route Handler 금지** → web=`updateTag`(RYOW)·BFF=`revalidateTag` |
+| 11  | 검증        | 5겹 (아래 Verification)                                                                                                       |
 
 ### C1. 공유 코어 — `submitActionLogCore`
 
-web `_actions.ts` 의 `submitActionLog` 본문(파싱 → membership/active/기간 선제 체크 → KST priorLogs/doneCount 산출 → AI 일기 or memo → `action_logs` insert → 2-step 사진 업로드 + `update_action_log_photo_path` RPC + 실패 시 `deletePhoto` cleanup → `track()` → `after()` push/verify → `revalidatePath`/`updateTag`)을 **그대로** 옮기고, 유일하게 `createClient()` 호출만 제거해 `supabase` 를 인자로 받는다.
+web `_actions.ts` 의 `submitActionLog` 본문(파싱 → membership/active/기간 선제 체크 → KST priorLogs/doneCount 산출 → AI 일기 or memo → `action_logs` insert → 2-step 사진 업로드 + `update_action_log_photo_path` RPC + 실패 시 `deletePhoto` cleanup → `track()` → `after()` push/verify → `revalidatePath`)을 코어로 옮긴다. 코어가 받는 것은 `supabase` client(주입)와 인증된 `user` 이고, **인증·client 생성·`updateTag` 캐시 tail 은 코어 밖(caller)에 둔다**.
 
 ```ts
 // apps/web/src/lib/action-log/submit-core.ts  ("server-only")
@@ -82,11 +82,27 @@ export async function submitActionLogCore(
   user: { id: string; email?: string | null },
   formData: FormData,
 ): Promise<ActionResult<SubmitResult>> {
-  /* 기존 본문 verbatim */
+  /* 기존 본문 — createClient()·withUser·updateTag 제외, revalidatePath 는 포함 */
 }
 ```
 
+호출자 재배선(각 컨텍스트의 차이):
+
+```ts
+// web wrapper — 기존 withUser·createClient 유지 후 코어 호출, updateTag(RYOW)는 wrapper 가 담당
+export const submitActionLog = withUser<FormData, SubmitResult>(async (user, fd) => {
+  const r = await submitActionLogCore(await createClient(), user, fd);
+  updateTag(`user-${user.id}-home-feed`); // Server Action 전용 — read-your-own-writes 즉시 갱신
+  return r;
+});
+// BFF route — getUser(token) 직접(ADR-0022 getAuthedUser dedupe 는 단일 호출이라 불필요),
+//             Route Handler 금지인 updateTag 대신 revalidateTag 사용
+const r = await submitActionLogCore(supabase, user, await request.formData());
+revalidateTag(`user-${user.id}-home-feed`);
+```
+
 - **왜 client 주입인가**: web 은 cookie 세션 client, BFF 는 Bearer token client(`createBearerClient`)로 호출 client 만 다르고 나머지 로직은 동일하다. 주입으로 분기 없이 한 본문을 공유한다.
+- **왜 `updateTag` 만 분리하나**: Next 16 `updateTag` 는 **Server Action 전용 — Route Handler 호출 시 런타임 throw**(`node_modules/next/dist/docs/.../updateTag.md` "It cannot be used in Route Handlers"). 따라서 코어에 두면 BFF 경로가 깨진다. `revalidatePath` 는 양 컨텍스트에서 호출 가능(Route Handler 에선 next-visit 시 revalidate)하므로 코어에 남긴다. BFF 는 동일 무효화를 `revalidateTag`(Route Handler 지원)로 수행한다.
 - **왜 RLS 경로인가(admin 아님)**: 메인 경로의 모든 쓰기(insert·Storage·RPC)는 주입된 user client 로 실행되어 RLS 가 강제된다. ADR-0036 §2(Bearer 경로도 RLS, admin 대체 금지) 준수. 코어 메인 경로에 `adminClient` 없음 — admin 은 `replaceActionPhoto`(범위 밖)와 verify `after()` 내부에만 존재한다.
 
 ### C2. BFF route — `POST /api/action-log`
@@ -116,21 +132,50 @@ export async function POST(request: Request) {
 
 ### C3. domain 계약 — `submitActionLogResponseSchema`
 
-`SubmitResult`(현재 `_actions.ts` 로컬 타입)와 `ErrorCode`(현재 `apps/web/src/lib/actions/response.ts`)를 `packages/domain/src/write-contracts/action-log.ts` 로 승격하고, `{ok:true,data}` / `{ok:false,error,issues}` discriminated union 의 zod 스키마를 둔다. `feedResponseSchema`(read-contracts) 패턴과 동일하다.
+`SubmitResult`(현재 `_actions.ts` 로컬 타입)와 `ErrorCode`(현재 `apps/web/src/lib/actions/response.ts` 의 7 리터럴: `unauthorized`·`forbidden`·`invalid_input`·`not_found`·`conflict`·`rate_limited`·`upstream_error`)를 `packages/domain/src/write-contracts/action-log.ts` 로 **verbatim 승격**하고, discriminated union(`ok`) zod 스키마를 둔다. `feedResponseSchema`(read-contracts) 패턴과 동일하다.
+
+```ts
+// packages/domain/src/write-contracts/action-log.ts
+const errorCode = z.enum([
+  "unauthorized",
+  "forbidden",
+  "invalid_input",
+  "not_found",
+  "conflict",
+  "rate_limited",
+  "upstream_error",
+]);
+const issues = z.record(z.string(), z.array(z.string()).optional()).optional(); // response.ts ActionFailure.issues 미러
+export const submitActionLogResponseSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), data: submitResultSchema }),
+  z.object({ ok: z.literal(false), error: errorCode, issues }),
+]);
+```
 
 - **왜 domain 인가**: BFF 응답이 타입되는 스키마와 RN 이 parse 하는 스키마가 한 곳이어야 계약이 단일하다. domain 은 순수(네트워크 코드 미포함)라 web·RN·BFF 가 모두 의존 가능하다.
+- `ErrorCode` 를 domain 으로 옮긴 뒤 `response.ts` 는 domain 에서 re-export 해 web 의 기존 import 를 깨지 않는다(surgical).
 
 ### C4. RN service — `submit-action-log.ts`
 
-`apps/mobile/src/features/action-log/api/submit-action-log.ts` 가 native 압축 사진 + 입력으로 `FormData` 를 만들어 `bffPostFormData("/api/action-log", fd)` 호출 → `submitActionLogResponseSchema.parse(body)` → `ok`/`error` 분기. `expo-image-manipulator` 로 1920px/JPEG 0.85 압축(web `prepareForUpload` 패리티)을 **전송 전** 수행해 사진이 압축된 상태로 BFF 에 도착한다(Vercel ~4.5MB body 한도 회피).
+`apps/mobile/src/features/action-log/api/submit-action-log.ts` 가 native 압축 사진 + 입력으로 `FormData` 를 만들어 `bffPostFormData("/api/action-log", fd)` 호출 → `submitActionLogResponseSchema.parse(body)` → `ok`/`error` 분기.
 
-`bffPostFormData`(신규, `bff-client.ts`)는 GET 용 `bffGetJson` 과 달리 **4xx 에도 body 를 읽어 반환**한다(`invalid_input`+issues, `forbidden` 같은 정상 실패를 throw 가 아닌 값으로 전달). 네트워크 오류·body 없는 5xx 만 `BffRequestError`.
+**업로드 정책 패리티(web `prepareForUpload`)**: `expo-image-manipulator` 로 **전송 전** ① long-edge 1920px clamp ② JPEG quality 0.85 ③ HEIC/HEIF 입력은 JPEG 로 변환 ④ 결과 5MB 초과 시 거부(버킷 `file_size_limit` 5MB·`uploadPhoto` `MAX_PHOTO_BYTES` 와 동일 상한). 압축본은 통상 <1MB 라 Vercel Serverless Function 의 request body 기본 한도(~4.5MB, [FUNCTION_PAYLOAD_TOO_LARGE](https://vercel.com/docs/errors/FUNCTION_PAYLOAD_TOO_LARGE))를 넘지 않는다. 압축 실패 시 web 과 동일하게 원본 fallback(버킷 정책이 최종 거부).
+
+`bffPostFormData`(신규, `bff-client.ts`)는 GET 용 `bffGetJson`(`!ok` 면 throw)과 달리 **봉투를 값으로 반환**한다 — status→동작 계약:
+
+| 응답                                                                                         | 동작                                  |
+| -------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 200 + JSON body                                                                              | 봉투 값 반환(`ok:true`)               |
+| 4xx + JSON body (401 `unauthorized`·422 `invalid_input`+issues·403 `forbidden`·404·409 포함) | 봉투 값 반환(`ok:false`) — throw 아님 |
+| body 없음 · JSON parse 실패 · 5xx(`upstream_error` 봉투 제외) · 네트워크 오류                | `BffRequestError(status)` throw       |
+
+→ 401 도 route 가 `{ok:false,error:"unauthorized"}` 봉투(C2)로 주므로 "4xx body-읽기" 규칙에 일관되게 포함된다. 5xx 중 `upstream_error` 봉투가 실리면 값으로, 빈 body 5xx 는 throw 로 분기.
 
 ### C5. RN UI — 제출/pending (web 미러)
 
 - native 촬영/선택: `expo-camera`/`expo-image-picker`, permission denied · 재시도 UI(AC `native photo flow`).
 - pending: `busy`(mutation pending + 압축) 동안 폼 컨트롤 disable + 제출 버튼 `ActivityIndicator` + 라벨 "인증 중...". full-screen dim 오버레이는 web·mobile 어디에도 없어 도입하지 않는다(scope creep 회피). 버튼 disable 이 더블탭(중복 제출)을 막는다.
-- 중복 제출: TanStack `useMutation` `retry: 0` **강제**(자동 재시도가 RN 을 web 보다 나쁘게 만드는 유일 요인) + fetch 타임아웃을 AI 4.5s + 업로드보다 넉넉히.
+- 중복 제출: TanStack `useMutation` `retry: 0` **강제**(자동 재시도가 RN 을 web 보다 나쁘게 만드는 유일 요인) + fetch 타임아웃 **≥ 30s**(직렬 경로 = AI 최대 4.5s + 압축 사진 업로드 RTT + insert/RPC; 이보다 짧으면 서버 성공 후 client abort → 사용자 수동 재시도로 중복). 서버 부분 성공 후 client timeout 시 봉투를 못 받는 잔여 위험은 `retry:0`+버튼 disable 로 web 과 동일 risk class 유지(Alternatives 4).
 
 ### Data flow
 
@@ -147,9 +192,10 @@ BFF route: bearerTokenFrom → createBearerClient → getUser(token)
            ↳ RPC 실패 시 deletePhoto cleanup (photoAttached=false 비파괴)
         ⑥ track() action_logged/ai_generated (never-throw)
         ⑦ after(): dispatchActionCompletedNotification + verify signals
-        ⑧ revalidatePath + updateTag
+        ⑧ revalidatePath (코어; 양 컨텍스트)
    → ActionResult<SubmitResult> 봉투
-BFF: NextResponse.json(result, {status: statusFor})
+BFF: revalidateTag(user-${id}-home-feed) → NextResponse.json(result, {status: statusFor})
+     (web wrapper 는 updateTag — Route Handler 금지라 caller별 분기)
 RN: submitActionLogResponseSchema.parse → ok ? 성공 모달/슬라이더/컨페티 : error 매핑
 ```
 
@@ -197,7 +243,9 @@ pnpm validate:docs
 
 **패리티 by construction**: web action·BFF route 가 같은 코어 호출 + RN 이 BFF 응답이 타입된 같은 스키마 parse → 단일 계약·단일 코어라 표면별 행동 중복 단언 불필요.
 
-**수동/device(위조 금지)**: native 사진 permission flow · secret boundary(EAS 번들에 `OPENAI_API_KEY`/`sb_secret_*` 부재) · 실 AI fallback · KST doneCount parity(첫 인증 증가/2차 미증가) · RN·PWA feed signed private photo 표시 → PO·실기기 핸드오프.
+**P95 latency 실측**: BFF 경로는 `getUser(token)` GoTrue 왕복(~50~200ms) + AI 최대 4.5s + Storage 업로드가 직렬이라, PRD §5.3(P95 5s)·Vercel function timeout 을 실 API·실기기로 측정한다(feed BFF 와 동일한 getUser 패턴이나 submit 은 heavy 경로).
+
+**수동/device(위조 금지)**: native 사진 permission flow · secret boundary(EAS 번들에 `OPENAI_API_KEY`/`sb_secret_*` 부재) · 실 AI fallback · KST doneCount parity(첫 인증 증가/2차 미증가) · RN·PWA feed signed private photo 표시 · BFF 제출 후 PWA feed 갱신(`revalidatePath` Route Handler 는 next-visit revalidate) → PO·실기기 핸드오프.
 
 ## Rollout
 
@@ -223,6 +271,7 @@ pnpm validate:docs
 
 - **ADR**: Architecture Decision Record — 되돌리기 비용이 큰 결정 기록.
 - **BFF**: Backend-for-Frontend — RN ↔ Supabase 사이 보안 경계 서버. 여기선 `apps/web` Next API route.
+- **봉투(envelope)**: 성공/실패를 `{ok, data}` / `{ok:false, error, issues}` 한 형태로 감싼 응답 구조(`ActionResult`). web client·BFF·RN 이 같은 봉투를 본다.
 - **Bearer**: `Authorization: Bearer <Supabase access token>` 인증. cookie 세션이 없는 RN 요청에 사용.
 - **decision debt(D-N)**: Phase 진입 전 결정이 필요한 항목. D-7 = `submitActionLog` BFF 계약.
 - **drift**: web 과 RN 구현이 시간이 지나며 어긋나는 현상.
