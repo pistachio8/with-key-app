@@ -3,7 +3,7 @@ spec: 2026-06-13-d-7-submit-action-log-bff
 title: D-7 submitActionLog BFF 계약
 author: pistachio8
 date: 2026-06-13
-status: draft
+status: accepted
 ---
 
 ## Summary
