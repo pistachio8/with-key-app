@@ -3,7 +3,7 @@ spec: 2026-06-13-harness-orchestration-phase3
 title: 하네스 오케스트레이션 Phase 3 — 게이트까지 달리는 백로그 드라이버
 author: pistachio8
 date: 2026-06-13
-status: draft
+status: accepted
 ---
 
 ## Summary
