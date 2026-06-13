@@ -31,6 +31,7 @@ import {
   validateDoneRunParity,
   GRANDFATHERED_DONE,
   resolveReadyTasks,
+  resolveHumanGateBlocked,
   flipFrontmatterStatus,
   validateRunAttempts,
   defaultLookupBranch,
@@ -1029,6 +1030,71 @@ test("resolveReadyTasks: in_progress·unblock 후보 분류 — gate 토큰 잔�
     ready.map((e) => e.id),
     [],
   ); // done·blocked 는 ready 아님
+});
+
+// ─────────────── resolveHumanGateBlocked (orchestration-phase3 §C1) ───────────────
+
+test("resolveHumanGateBlocked: task 의존 done·비-task 게이트 잔존 → 채널 노출(토큰 동봉)", () => {
+  const out = resolveHumanGateBlocked([
+    makeTask({ ...VALID_FM, Task: "EVAL-0005", Status: "done" }),
+    makeTask({ ...VALID_FM, Task: "EVAL-0006", Status: "done" }),
+    blockedTask("EVAL-0007", "[task:EVAL-0005] [task:EVAL-0006] [gate:G2] — 법무 통과 후."),
+  ]);
+  assert.deepEqual(out, [{ id: "EVAL-0007", gates: ["gate:G2"] }]);
+});
+
+test("resolveHumanGateBlocked: 비-task 토큰 복수(spec·po)를 전부 동봉", () => {
+  const out = resolveHumanGateBlocked([
+    makeTask({ ...VALID_FM, Task: "EVAL-0020", Status: "done" }),
+    blockedTask(
+      "EVAL-0025",
+      "[task:EVAL-0020] [spec:reaction-storage] [po:reaction-storage] — 🟨 익명 반려.",
+    ),
+  ]);
+  assert.deepEqual(out, [
+    { id: "EVAL-0025", gates: ["spec:reaction-storage", "po:reaction-storage"] },
+  ]);
+});
+
+test("resolveHumanGateBlocked: 순수 task blocker(비-task 0개) 는 제외 — unblockCandidate 영역", () => {
+  const out = resolveHumanGateBlocked([
+    makeTask({ ...VALID_FM, Task: "EVAL-0015", Status: "done" }),
+    blockedTask("EVAL-0016", "[task:EVAL-0015] — G6 선행."),
+  ]);
+  assert.deepEqual(out, []);
+});
+
+test("resolveHumanGateBlocked: task: 의존이 미완이면 제외(상류 task 대기)", () => {
+  const out = resolveHumanGateBlocked([
+    blockedTask("EVAL-0025", "[task:EVAL-0020] [spec:reaction-storage] — 선행."),
+    blockedTask("EVAL-0026", "[task:EVAL-0025] [spec:verify-analytics] — 0025 선행."),
+    makeTask({ ...VALID_FM, Task: "EVAL-0020", Status: "done" }),
+  ]);
+  // 0025 는 task done(0020)·spec 잔존 → 노출. 0026 은 task:0025 blocked → 제외.
+  assert.deepEqual(
+    out.map((e) => e.id),
+    ["EVAL-0025"],
+  );
+});
+
+test("resolveHumanGateBlocked: 활성 목록에 없는 id(archive 은퇴)는 resolved 취급", () => {
+  const out = resolveHumanGateBlocked([
+    blockedTask("EVAL-0030", "[task:EVAL-0001] [gate:G2] — archive 된 선행 + 법무."),
+  ]);
+  assert.deepEqual(out, [{ id: "EVAL-0030", gates: ["gate:G2"] }]);
+});
+
+test("resolveHumanGateBlocked: unblockCandidates 와 상호 배타(비-task 0 vs ≥1)", () => {
+  const tasks = [
+    makeTask({ ...VALID_FM, Task: "EVAL-0033", Status: "done" }),
+    blockedTask("EVAL-0031", "[task:EVAL-0033] — 순수 task."),
+    blockedTask("EVAL-0032", "[task:EVAL-0033] [gate:G2] — 법무."),
+  ];
+  const { unblockCandidates } = resolveReadyTasks(tasks);
+  const humanGate = resolveHumanGateBlocked(tasks).map((e) => e.id);
+  assert.deepEqual(unblockCandidates, ["EVAL-0031"]);
+  assert.deepEqual(humanGate, ["EVAL-0032"]);
+  assert.equal(humanGate.filter((id) => unblockCandidates.includes(id)).length, 0);
 });
 
 // ─────────────── flipFrontmatterStatus · runClaim (orchestration-phase2 §C2) ───────────────

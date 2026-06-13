@@ -308,6 +308,44 @@ export function resolveReadyTasks(tasks) {
   return { ready, waiting, inProgress, unblockCandidates };
 }
 
+// humanGateBlocked 채널 (spec 2026-06-13-harness-orchestration-phase3 §C1):
+// blocked 인데 task: blocker 는 전부 done(또는 archive 은퇴)이고 비-task 게이트(gate·adr·spec·po)가
+// ≥1 남은 task. isUnblockCandidate(전부 task·전부 done)의 정확한 여집합 — 두 채널은
+// 비-task 토큰 0개 vs ≥1개로 상호 배타라 겹치지 않는다.
+// 왜 별도 채널: 사람 게이트로 막힌 task 가 ready/unblockCandidates/inProgress 셋 모두에 안 떠
+// 드라이버가 "backlog 비었음"으로 거짓 보고하던 것을(초안 Blocker) 노출로 바꾼다.
+function isHumanGateBlocked(task, statusById) {
+  if (task.frontmatter.Status !== "blocked") {
+    return false;
+  }
+  const tokens = parseBlockers(task.frontmatter["Blocked-by"] || "");
+  if (!tokens.some((token) => token.type !== "task")) {
+    return false; // 순수 task blocker → unblockCandidate 영역
+  }
+  // 활성 목록에 없는 id(archive 은퇴)는 resolved 취급 — isUnblockCandidate 와 동일 원칙.
+  return tokens
+    .filter((token) => token.type === "task")
+    .every((token) => {
+      const status = statusById.get(token.value.toUpperCase());
+      return status === undefined || status === "done";
+    });
+}
+
+// 엔트리에 잔존 비-task 토큰을 `type:value` 문자열로 실어, 드라이버가 task 파일을 다시 안 읽고
+// agent-doable(spec·adr) / 사람 전용(gate·po) 을 분류한다(spec §C3, 리뷰 M1 해소).
+export function resolveHumanGateBlocked(tasks) {
+  const statusById = taskStatusById(tasks);
+  return tasks.flatMap((task) => {
+    if (!isHumanGateBlocked(task, statusById)) {
+      return [];
+    }
+    const gates = parseBlockers(task.frontmatter["Blocked-by"] || "")
+      .filter((token) => token.type !== "task")
+      .map((token) => `${token.type}:${token.value}`);
+    return [{ id: task.frontmatter.Task, gates }];
+  });
+}
+
 // frontmatter 블록(첫 --- ~ 다음 ---) 안의 Status 줄만 교체 — 본문 "Status:" 오염 방지.
 // CRLF 줄끝 \r 보존. 변경이 없으면 원문 그대로 — 호출부가 no-op 을 에러로 승격한다.
 // claim(todo→in_progress)과 finalize(→done)가 공유하는 단일 전이 프리미티브.
