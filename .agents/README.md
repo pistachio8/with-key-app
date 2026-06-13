@@ -19,6 +19,7 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 | Agent Task 구현   | [workflows/implement-agent-task.md](workflows/implement-agent-task.md)             |
 | 리뷰              | [workflows/review-agent-task.md](workflows/review-agent-task.md)                   |
 | 검증 수정         | [workflows/fix-verification.md](workflows/fix-verification.md)                     |
+| backlog 전진      | [workflows/orchestrate-backlog.md](workflows/orchestrate-backlog.md)               |
 
 ## 디렉토리
 
@@ -28,7 +29,7 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 - `skills/withkey-{migration,backend,frontend}-reviewer/` — Claude 전용 `.claude/agents/*-reviewer.md`의 Codex skill 변환본
 - `backlog/` — Work Package·Agent Task 템플릿·Traceability
 - `qa/` — dogfood QA·release 체크리스트
-- `workflows/` — 도구 중립 절차 SoT(9)
+- `workflows/` — 도구 중립 절차 SoT(10)
 - 자기유지(정책·drift·changelog·config): [harness/HARNESS_MAINTENANCE.md](harness/HARNESS_MAINTENANCE.md)
 
 ## 검증 (도구 무관 CLI)
