@@ -2,7 +2,7 @@
 Task: EVAL-0019
 Track: port
 Kind: migration
-Status: in_progress
+Status: done
 Parent: docs/PRD.md, docs/stories/2026-06-02-photo-verification-job-stories.md, docs/stories/2026-06-02-photo-verification-test-scenarios.md, docs/migration/00-rn-conversion-plan.md
 ---
 
