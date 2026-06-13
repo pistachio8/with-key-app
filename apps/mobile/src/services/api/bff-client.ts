@@ -56,10 +56,15 @@ export async function bffGetJson(path: string): Promise<unknown> {
  *
  * status → 동작 계약:
  *   - JSON 객체 body(2xx·4xx·봉투 실린 5xx) → 봉투 값 반환(throw 아님)
- *   - body 없음 · JSON parse 실패 · 빈 body 5xx · 네트워크 오류 → BffRequestError(status) throw
+ *   - body 없음 · JSON parse 실패 · 빈 body 5xx · 네트워크/타임아웃 → BffRequestError(status) throw
  *
  * Content-Type 은 설정하지 않는다 — RN fetch 가 FormData 에 multipart boundary 를 자동 부여한다.
+ * 타임아웃은 30s(SUBMIT_TIMEOUT_MS) — AI 최대 4.5s + 사진 업로드 RTT + insert/RPC 직렬 경로보다
+ * 넉넉히 잡아, 서버 성공 후 client 가 먼저 abort 해 사용자가 수동 재시도(중복 제출)하는 risk 를 줄인다
+ * (D-7 spec C5 — retry 없음 + 넉넉한 타임아웃; 자동 재시도 로직은 두지 않는다).
  */
+const SUBMIT_TIMEOUT_MS = 30_000;
+
 export async function bffPostFormData(path: string, body: FormData): Promise<unknown> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.auth.getSession();
@@ -68,16 +73,21 @@ export async function bffPostFormData(path: string, body: FormData): Promise<unk
     throw new BffRequestError(401, "no active session for BFF request");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(`${bffBaseUrl()}${path}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body,
+      signal: controller.signal,
     });
   } catch {
-    // 네트워크 오류 — status 없음(0). 본문/토큰은 로그에 싣지 않는다.
+    // 네트워크 오류·타임아웃(abort) — status 없음(0). 본문/토큰은 로그에 싣지 않는다.
     throw new BffRequestError(0, `BFF POST ${path} network error`);
+  } finally {
+    clearTimeout(timeout);
   }
 
   // 봉투를 값으로 읽는다. parse 실패/비객체 body 는 봉투가 없는 것 → status 보존 throw.

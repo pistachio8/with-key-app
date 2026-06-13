@@ -79,6 +79,7 @@ describe("bffPostFormData (D-7 status→동작 계약)", () => {
       method: "POST",
       headers: { Authorization: "Bearer token-1" },
       body: fd,
+      signal: expect.anything(),
     });
   });
 
