@@ -102,42 +102,49 @@ export default function ChallengeActionScreen() {
 
   const pickPhoto = useCallback(async (source: "camera" | "library") => {
     setPhotoNotice(null);
-    const permission =
-      source === "camera"
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setPhotoNotice(
+    try {
+      const permission =
         source === "camera"
-          ? "카메라 권한이 필요해요. 설정에서 허용한 뒤 다시 시도해 주세요."
-          : "사진 보관함 권한이 필요해요. 설정에서 허용한 뒤 다시 시도해 주세요.",
-      );
-      return;
-    }
-    const picked =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
-    const asset = picked.canceled ? null : picked.assets[0];
-    if (!asset) return;
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoNotice(
+          source === "camera"
+            ? "카메라 권한이 필요해요. 설정에서 허용한 뒤 다시 시도해 주세요."
+            : "사진 보관함 권한이 필요해요. 설정에서 허용한 뒤 다시 시도해 주세요.",
+        );
+        return;
+      }
+      const picked =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 })
+          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
+      const asset = picked.canceled ? null : picked.assets[0];
+      if (!asset) return;
 
-    setStatus("preparing");
-    const prepared = await preparePhotoForUpload({
-      uri: asset.uri,
-      width: asset.width,
-      height: asset.height,
-      fileName: asset.fileName,
-    });
-    setStatus("idle");
-    if (!prepared.ok) {
-      setPhotoNotice(
-        prepared.reason === "too_large"
-          ? "사진이 너무 커요. 다른 사진을 선택해 주세요."
-          : "사진 처리에 실패했어요. 다시 시도해 주세요.",
-      );
-      return;
+      setStatus("preparing");
+      const prepared = await preparePhotoForUpload({
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        fileName: asset.fileName,
+      });
+      setStatus("idle");
+      if (!prepared.ok) {
+        setPhotoNotice(
+          prepared.reason === "too_large"
+            ? "사진이 너무 커요. 다른 사진을 선택해 주세요."
+            : "사진 처리에 실패했어요. 다시 시도해 주세요.",
+        );
+        return;
+      }
+      setPhoto(prepared.photo);
+    } catch {
+      // 카메라/보관함 호출 실패(하드웨어·시스템 제한 등) — void 호출이 rejection 을 삼켜
+      // 무반응이 되지 않도록 사용자에 피드백한다. 사진 본문/오류 상세는 로그 금지.
+      setStatus("idle");
+      setPhotoNotice("사진을 불러오지 못했어요. 다시 시도해 주세요.");
     }
-    setPhoto(prepared.photo);
   }, []);
 
   const onSubmit = useCallback(async () => {

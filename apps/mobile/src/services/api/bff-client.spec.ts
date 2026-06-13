@@ -125,6 +125,17 @@ describe("bffPostFormData (D-7 status→동작 계약)", () => {
     });
   });
 
+  it("5xx 라도 upstream_error 봉투가 실리면 값으로 반환한다 (빈 body 5xx 와 분기)", async () => {
+    const envelope = { ok: false, error: "upstream_error" };
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.resolve(envelope),
+    });
+
+    await expect(bffPostFormData("/api/action-log", new FormData())).resolves.toEqual(envelope);
+  });
+
   it("비객체 body 는 BffRequestError", async () => {
     mockFetch.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(null) });
 

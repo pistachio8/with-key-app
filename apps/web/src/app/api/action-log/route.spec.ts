@@ -92,4 +92,12 @@ describe("POST /api/action-log", () => {
     const res = await POST(makeRequest());
     expect(res.status).toBe(status);
   });
+
+  it("코어가 예기치 못한 예외를 던지면 502 + upstream_error 봉투(HTML 500 아님)", async () => {
+    mocks.submitActionLogCore.mockRejectedValue(new Error("boom"));
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(502);
+    await expect(res.json()).resolves.toMatchObject({ ok: false, error: "upstream_error" });
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+  });
 });

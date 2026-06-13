@@ -4,6 +4,7 @@
 // 원본 submitActionLog 행동 테스트를 코어로 이전 — createClient/withUser 우회 없이 코어를 직접 호출.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { KEYWORD_POOL_VERSION } from "@withkey/domain";
 
 const mocks = vi.hoisted(() => ({
   user: {
@@ -212,7 +213,12 @@ describe("submitActionLogCore", () => {
     expect(mocks.track).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "action_logged",
-        props: expect.objectContaining({ photoAttached: false, photoSize: 0 }),
+        // poolVersion(KEYWORD_POOL_VERSION) inject 보존 — 분석 무결성 가드레일(§키워드 풀).
+        props: expect.objectContaining({
+          photoAttached: false,
+          photoSize: 0,
+          poolVersion: KEYWORD_POOL_VERSION,
+        }),
       }),
       { userId: mocks.user.id },
     );

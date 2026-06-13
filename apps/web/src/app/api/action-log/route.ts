@@ -48,7 +48,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const result = await submitActionLogCore(supabase, user, await request.formData());
+  let result: Awaited<ReturnType<typeof submitActionLogCore>>;
+  try {
+    result = await submitActionLogCore(supabase, user, await request.formData());
+  } catch (cause) {
+    // 잘못된 multipart 본문·예기치 못한 코어 throw — 봉투 계약을 지켜 upstream_error 로 응답한다.
+    // Next 기본 HTML 500 은 RN bffPostFormData 의 JSON 봉투 계약(C4)을 깬다. 본문/토큰은 로그 금지.
+    console.error("[api/action-log] failed", { cause });
+    return NextResponse.json({ ok: false, error: "upstream_error" }, { status: 502 });
+  }
 
   // updateTag 는 Route Handler 금지(Server Action 전용) → 동일 무효화를 revalidateTag 로.
   // Next 16 revalidateTag 는 (tag, profile) 2-인자 — "max" 는 stale-while-revalidate(next-visit
