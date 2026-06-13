@@ -7,9 +7,9 @@ import {
   type ChallengeDetailView,
   type FeedItemView,
 } from "@withkey/domain";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { useSession } from "@/features/auth";
 import { ChallengeScaffold, fetchChallengeDetail, StartChallengeCard } from "@/features/challenge";
@@ -29,6 +29,7 @@ type FeedScreenData = {
 export default function ChallengeFeedScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0]! : params.id;
+  const router = useRouter();
   const { session } = useSession();
   const viewerId = session?.user.id ?? null;
 
@@ -105,29 +106,42 @@ export default function ChallengeFeedScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          contentContainerStyle={styles.listContent}
-          data={feed}
-          keyExtractor={(item) => item.id}
-          ItemSeparatorComponent={Separator}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>아직 인증이 없어요. 첫 번째 인증을 올려보세요.</Text>
-          }
-          ListHeaderComponent={
-            phase === "running" ? <TodaySummary detail={detail} feed={feed} now={now} /> : null
-          }
-          refreshControl={
-            <RefreshControl onRefresh={() => void refresh()} refreshing={refreshing} />
-          }
-          renderItem={({ item }) => (
-            <FeedCard
-              item={item}
-              participantCount={detail.participantCount}
-              timestampLabel={formatFeedTimestamp(item.createdAt, now)}
-              viewerId={viewerId}
-            />
+        <View style={styles.feedWrap}>
+          <FlatList
+            contentContainerStyle={styles.listContent}
+            data={feed}
+            keyExtractor={(item) => item.id}
+            ItemSeparatorComponent={Separator}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>아직 인증이 없어요. 첫 번째 인증을 올려보세요.</Text>
+            }
+            ListHeaderComponent={
+              phase === "running" ? <TodaySummary detail={detail} feed={feed} now={now} /> : null
+            }
+            refreshControl={
+              <RefreshControl onRefresh={() => void refresh()} refreshing={refreshing} />
+            }
+            renderItem={({ item }) => (
+              <FeedCard
+                item={item}
+                participantCount={detail.participantCount}
+                timestampLabel={formatFeedTimestamp(item.createdAt, now)}
+                viewerId={viewerId}
+              />
+            )}
+          />
+          {/* 진행 중일 때만 인증 진입 — active 가 아니면 서버가 거부하므로 노출도 하지 않는다. */}
+          {phase === "running" && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="인증하기"
+              onPress={() => router.push({ pathname: "/challenge/[id]/action", params: { id } })}
+              style={({ pressed }) => [styles.actionFab, pressed && styles.fabPressed]}
+            >
+              <Text style={styles.actionFabLabel}>+ 인증하기</Text>
+            </Pressable>
           )}
-        />
+        </View>
       )}
     </ChallengeScaffold>
   );
@@ -168,6 +182,31 @@ function Separator() {
 }
 
 const styles = StyleSheet.create({
+  feedWrap: {
+    flex: 1,
+  },
+  actionFab: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    bottom: 20,
+    elevation: 4,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    position: "absolute",
+    right: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+  },
+  fabPressed: {
+    opacity: 0.85,
+  },
+  actionFabLabel: {
+    color: colors.inverse,
+    fontSize: 15,
+    fontWeight: "800",
+  },
   listContent: {
     paddingBottom: 32,
     paddingHorizontal: 16,

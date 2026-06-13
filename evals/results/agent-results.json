@@ -233,6 +233,26 @@
         }
       },
       "notes": "수동 핸드오프(PO·실기기): ① dev-build smoke create→invite accept→sign→start→PWA 동일 DB 표시 ② 미인가 RLS 실측(비owner create/start·비참가자 sign·비owner invite INSERT — 로컬 supabase 컨테이너 set role anon 세션 segfault 환경 이슈로 skip, 코드 무관) ③ Hermes crypto.getRandomValues 가용성(미지원 시 invite 발급 명시 실패 — expo-crypto polyfill spec 결정 필요). known debt: RN 발 mutation 은 push·analytics(PRD §9.1 challenge_created/signed/activated·invite_sent·group_created) 미발사 + sign_and_maybe_activate 가 start_nudge 마커를 소비해 RN 마지막 서명자 시 owner nudge 소실 — BFF mutation endpoint 또는 RPC nudge 파라미터 후속 결정 대상."
+    },
+    {
+      "taskId": "EVAL-0019",
+      "date": "2026-06-13",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "G10 Native action log MVP — 사진 인증 BFF 경로(D-7 spec C1-C5). C1 공유 코어: submitActionLogCore(supabase 주입·user) 를 apps/web/src/lib/action-log/submit-core.ts 로 추출 — web _actions.ts submitActionLog 은 cookie client 주입 + updateTag tail wrapper, BFF route 는 Bearer client 주입 + revalidateTag(tag,\"max\") 로 단일 본문(KST·doneCount·AI fallback·2-step photo upload·orphan cleanup·push·revalidatePath)을 공유 → web↔RN drift by construction 차단. C2 BFF route apps/web/src/app/api/action-log/route.ts: Bearer 검증(getUser) → 코어 → ActionResult 봉투 passthrough + statusFor HTTP 매핑(forbidden→403·invalid_input→422 등). C3 domain write-contracts/action-log.ts: submitResultSchema·errorCodeSchema·submitActionLogResponseSchema 승격(ErrorCode 를 domain SoT 로, response.ts 는 re-export). C4 RN: services/api/bffPostFormData(4xx 봉투 no-throw·5xx/네트워크 throw·30s 타임아웃) + features/action-log/api/submit-action-log.ts(multipart FormData → submitActionLogResponseSchema.parse). C5 RN UI: action.tsx(활동·키워드 shuffle 최대 3·reroll·expo-image-picker 촬영/선택+권한·expo-image-manipulator 1920px/JPEG 0.85 압축·pending disable+ActivityIndicator·성공/실패), challenge feed running FAB 진입점, app.config.ts 권한 플러그인. 공유 fixture evals/fixtures/write-contracts/action-log.ts 를 domain·BFF route·RN eval 이 공용. supabase/migrations 무변경(기존 정책·RPC 소비만).",
+      "verification": {
+        "local": {
+          "pnpm -r typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm -r lint": "pass — domain·web·mobile exit 0",
+          "pnpm -r test": "pass — exit 0 (web 710 · domain 198 · mobile 153)",
+          "pnpm --filter @withkey/mobile test -- action-log": "pass — 19 suites / 153 tests (submit-action-log boundary eval · upload-policy 정책 · bffPostFormData 계약)",
+          "pnpm harness:check": "pass — 0 violations",
+          "pnpm validate:docs": "pass — broken 0 / 211 refs"
+        }
+      },
+      "notes": "수동 핸드오프(PO·실기기, 위조 금지): native 촬영/보관함 권한 거부·재시도 UX, 실 AI 일기 생성·fallback, KST doneCount parity(첫 인증 증가/2차 미증가), RN·PWA feed signed private photo 표시, BFF 제출 후 PWA feed 갱신(revalidateTag next-visit), secret boundary(EAS 번들 OPENAI_API_KEY/sb_secret 부재), P95 latency(getUser + AI 4.5s + 업로드 직렬) — EAS Dev Build 필요(시뮬레이터/실기기 부재로 자동 불가). 결정: expo-camera 미도입(image-picker launchCamera 로 촬영+권한 포괄), memo 직접 입력 일기 RN UI defer(계약은 optional 유지). base 브랜치는 chore/d-7-spec-accepted(= develop + accepted spec) — goal 파일의 feat/rn-challenge-lifecycle 는 D-7 accepted 이전 stale 뷰."
     }
   ]
 }

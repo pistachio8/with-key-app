@@ -2,8 +2,7 @@
 Task: EVAL-0019
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0018] — G9 challenge lifecycle mutations complete 선행. 00 §13.4 D-7 submitActionLog BFF contract spec 은 미해소 시 추가 선행(조건부 — 토큰 제외, D-7 spec 착수 확정 시 spec 토큰 추가).
+Status: done
 Parent: docs/PRD.md, docs/stories/2026-06-02-photo-verification-job-stories.md, docs/stories/2026-06-02-photo-verification-test-scenarios.md, docs/migration/00-rn-conversion-plan.md
 ---
 

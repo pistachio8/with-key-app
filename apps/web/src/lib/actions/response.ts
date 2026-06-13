@@ -1,16 +1,12 @@
 import type { ZodError } from "zod";
+import type { ErrorCode } from "@withkey/domain";
 
 /**
  * Machine error codes. UI maps these to Korean copy via `makeUserMessage()`.
+ * SoT 는 @withkey/domain write-contracts/action-log (D-7) — BFF·RN 과 단일 계약을 위해
+ * 승격했고, 여기선 re-export 해 web 의 기존 `@/lib/actions/response` import 를 보존한다.
  */
-export type ErrorCode =
-  | "unauthorized" // 세션 없음 또는 만료
-  | "forbidden" // RLS 거부 또는 비소유
-  | "invalid_input" // Zod 또는 DB check/FK 실패
-  | "not_found" // 대상 row 없음 (PGRST116)
-  | "conflict" // unique 위반
-  | "rate_limited" // 외부 서비스 429 (예: Supabase OTP 이메일 쿨다운)
-  | "upstream_error"; // AI / 외부 서비스 장애 / 알 수 없음
+export type { ErrorCode };
 
 export type ActionSuccess<T> = { ok: true; data: T };
 export type ActionFailure = {
