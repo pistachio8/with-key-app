@@ -48,3 +48,50 @@ export async function bffGetJson(path: string): Promise<unknown> {
   }
   return response.json();
 }
+
+/**
+ * Bearer 인증 multipart POST (D-7 spec C4). GET 용 bffGetJson(!ok 면 throw)과 달리
+ * **ActionResult 봉투를 값으로 반환**한다 — 4xx 도 `{ok:false,error,issues}` 봉투를 주므로
+ * throw 하지 않고 호출자(service)가 zod 계약으로 parse 한 뒤 `.ok` 분기한다.
+ *
+ * status → 동작 계약:
+ *   - JSON 객체 body(2xx·4xx·봉투 실린 5xx) → 봉투 값 반환(throw 아님)
+ *   - body 없음 · JSON parse 실패 · 빈 body 5xx · 네트워크 오류 → BffRequestError(status) throw
+ *
+ * Content-Type 은 설정하지 않는다 — RN fetch 가 FormData 에 multipart boundary 를 자동 부여한다.
+ */
+export async function bffPostFormData(path: string, body: FormData): Promise<unknown> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (error || !token) {
+    throw new BffRequestError(401, "no active session for BFF request");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${bffBaseUrl()}${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body,
+    });
+  } catch {
+    // 네트워크 오류 — status 없음(0). 본문/토큰은 로그에 싣지 않는다.
+    throw new BffRequestError(0, `BFF POST ${path} network error`);
+  }
+
+  // 봉투를 값으로 읽는다. parse 실패/비객체 body 는 봉투가 없는 것 → status 보존 throw.
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch {
+    throw new BffRequestError(
+      response.status,
+      `BFF POST ${path} non-JSON body (${response.status})`,
+    );
+  }
+  if (parsed === null || typeof parsed !== "object") {
+    throw new BffRequestError(response.status, `BFF POST ${path} empty body (${response.status})`);
+  }
+  return parsed;
+}
