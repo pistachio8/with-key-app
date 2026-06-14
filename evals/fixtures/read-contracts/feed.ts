@@ -15,6 +15,8 @@ export const FEED_RESPONSE = [
     keywords: ["러닝", "아침"],
     kudosByEmoji: { "🔥": 2, "💪": 0, "👏": 1 },
     viewerKudos: ["🔥"],
+    peerRejectCount: 0,
+    viewerRejected: false,
     createdAt: "2026-05-02T03:00:00Z",
   },
   {
@@ -26,6 +28,8 @@ export const FEED_RESPONSE = [
     keywords: ["홈트"],
     kudosByEmoji: { "🔥": 0, "💪": 0, "👏": 0 },
     viewerKudos: [],
+    peerRejectCount: 0,
+    viewerRejected: false,
     createdAt: "2026-05-01T03:00:00Z",
   },
 ];

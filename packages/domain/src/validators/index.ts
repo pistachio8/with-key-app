@@ -5,5 +5,6 @@ export * from "./feedback";
 export * from "./group";
 export * from "./invite";
 export * from "./kudos";
+export * from "./peer-rejection";
 export * from "./push";
 export * from "./user";

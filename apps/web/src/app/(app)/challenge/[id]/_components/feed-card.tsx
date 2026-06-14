@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { KudosEmoji } from "@withkey/domain";
 import { KudosBar } from "./kudos-bar";
+import { PeerRejectButton } from "./peer-reject-button";
 
 interface FeedCardProps {
   authorName: string;
@@ -17,6 +18,10 @@ interface FeedCardProps {
   kudosByEmoji: Readonly<Partial<Record<KudosEmoji, number>>>;
   viewerKudos?: ReadonlyArray<KudosEmoji>;
   onKudos: (emoji: KudosEmoji) => void;
+  // 🟨 익명 피어 반려(ADR-0038). 카운트만 — 누가 눌렀는지는 미노출. 본인 인증엔 미렌더(본인 반려 불가).
+  peerRejectCount?: number;
+  viewerRejected?: boolean;
+  onPeerReject?: () => void;
   disabled?: boolean;
   // 솔로(1명)면 Kudos footer 미렌더. 본인 인증에 본인 Kudos 금지 (PRD §7.3 AC-4) 호응.
   participantCount: number;
@@ -37,6 +42,9 @@ export function FeedCard({
   kudosByEmoji,
   viewerKudos = [],
   onKudos,
+  peerRejectCount = 0,
+  viewerRejected = false,
+  onPeerReject,
   disabled = false,
   participantCount,
   isSelfAuthor = false,
@@ -45,6 +53,8 @@ export function FeedCard({
   isEnded = false,
 }: FeedCardProps) {
   const showKudos = participantCount >= 2;
+  // 🟨 반려는 그룹(≥2)에서 타인 인증에만. 본인 인증은 반려 불가(미렌더). 종료 후에도 48h 내 가능(RPC 가 시간창 강제).
+  const showPeerReject = participantCount >= 2 && !isSelfAuthor && onPeerReject != null;
   const [imageFailed, setImageFailed] = useState(false);
   const hasImage = Boolean(photoSignedUrl) && !imageFailed;
 
@@ -129,6 +139,16 @@ export function FeedCard({
             onToggle={onKudos}
             disabled={disabled}
           />
+        ) : null}
+        {showPeerReject && onPeerReject ? (
+          // 🟨 익명 반려는 종료 후에도 48h 내 가능 → isEnded 로 disable 하지 않는다(RPC 가 시간창 강제).
+          <div className="mt-1 flex justify-end">
+            <PeerRejectButton
+              count={peerRejectCount}
+              active={viewerRejected}
+              onToggle={onPeerReject}
+            />
+          </div>
         ) : null}
       </Card>
     </article>

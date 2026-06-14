@@ -2,6 +2,8 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getKudosCountsForLog } from "@/lib/db/reads/kudos-counts";
 import { getViewerKudosForLog } from "@/lib/db/reads/kudos-viewer";
+import { getPeerRejectCountForLog } from "@/lib/db/reads/peer-rejection-counts";
+import { getViewerPeerRejectionForLog } from "@/lib/db/reads/peer-rejection-viewer";
 import { getActionLogHydrate } from "@/lib/db/reads/action-log-hydrate";
 import { getActionLogPhotoSignedUrl } from "@/lib/db/reads/photo-signed-url";
 import {
@@ -77,11 +79,14 @@ async function hydrateFeedItems(
       const hydrate = await getActionLogHydrate(id, viewerId);
       if (!hydrate) return null;
 
-      const [photoSignedUrl, counts, viewerKudos] = await Promise.all([
-        getActionLogPhotoSignedUrl(hydrate.photoPath, viewerId),
-        getKudosCountsForLog(id),
-        getViewerKudosForLog(id, viewerId),
-      ]);
+      const [photoSignedUrl, counts, viewerKudos, peerRejectCount, viewerRejected] =
+        await Promise.all([
+          getActionLogPhotoSignedUrl(hydrate.photoPath, viewerId),
+          getKudosCountsForLog(id),
+          getViewerKudosForLog(id, viewerId),
+          getPeerRejectCountForLog(id),
+          getViewerPeerRejectionForLog(id, viewerId),
+        ]);
 
       return {
         id: hydrate.id,
@@ -92,6 +97,8 @@ async function hydrateFeedItems(
         keywords: hydrate.keywords,
         kudosByEmoji: counts ?? emptyKudosByEmoji(),
         viewerKudos,
+        peerRejectCount,
+        viewerRejected,
         createdAt: hydrate.createdAt,
       } satisfies FeedItemView;
     }),
