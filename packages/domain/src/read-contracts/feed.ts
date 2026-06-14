@@ -14,6 +14,10 @@ export type FeedItemView = {
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Record<KudosEmoji, number>>;
   viewerKudos: ReadonlyArray<KudosEmoji>;
+  // 🟨 익명 피어 반려(ADR-0038). 카운트만 — 누가 눌렀는지는 절대 싣지 않는다(익명성).
+  // viewerRejected 는 본인 행 존재 여부(본인의 read-your-writes·토글 표시용).
+  peerRejectCount: number;
+  viewerRejected: boolean;
   createdAt: string;
 };
 
@@ -33,6 +37,8 @@ export const feedItemViewSchema: z.ZodType<FeedItemView> = z.object({
   keywords: z.array(z.string()),
   kudosByEmoji: kudosByEmojiSchema,
   viewerKudos: z.array(kudosEmojiSchema),
+  peerRejectCount: z.number(),
+  viewerRejected: z.boolean(),
   createdAt: z.string(),
 });
 

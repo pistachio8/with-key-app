@@ -2,7 +2,7 @@
 Task: EVAL-0025
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0020] — EVAL-0020(검증 status 컬럼 0045) 구현 선행, intra-feature 순서(게이트 아님). ADR-0038 accepted + PO 승인(2026-06-14)으로 reaction 저장 게이트 해소.
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---

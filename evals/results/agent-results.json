@@ -253,6 +253,27 @@
         }
       },
       "notes": "수동 핸드오프(PO·실기기, 위조 금지): native 촬영/보관함 권한 거부·재시도 UX, 실 AI 일기 생성·fallback, KST doneCount parity(첫 인증 증가/2차 미증가), RN·PWA feed signed private photo 표시, BFF 제출 후 PWA feed 갱신(revalidateTag next-visit), secret boundary(EAS 번들 OPENAI_API_KEY/sb_secret 부재), P95 latency(getUser + AI 4.5s + 업로드 직렬) — EAS Dev Build 필요(시뮬레이터/실기기 부재로 자동 불가). 결정: expo-camera 미도입(image-picker launchCamera 로 촬영+권한 포괄), memo 직접 입력 일기 RN UI defer(계약은 optional 유지). base 브랜치는 chore/d-7-spec-accepted(= develop + accepted spec) — goal 파일의 feat/rn-challenge-lifecycle 는 D-7 accepted 이전 stale 뷰."
+    },
+    {
+      "taskId": "EVAL-0025",
+      "date": "2026-06-14",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "WP5 🟨 익명 피어 반려 — ADR-0038(accepted, PO 승인) 구현. 그룹장 단독 판정을 그룹의 익명 다수결로 대체. (1) migration 0048_peer_rejections: kudos 와 분리된 신규 peer_rejections 테이블(action_log_id·voter_id·UNIQUE(action_log_id,voter_id)) + RLS(SELECT 본인 행만 voter_id=auth.uid(), write 정책 없음→클라 deny) + toggle_peer_rejection SECURITY DEFINER RPC(본인 반려 거부·서약 참가자 자격·48h 윈도우 coalesce(closed_at,end_at)+48h·토글 멱등·본인 제외 과반 count>(N-1)/2 시 action_logs.auto_verify_status passed↔peer_rejected 단일 쌍 전이·그룹장 일반 1표). (2) @withkey/domain: peer-rejection validator(input·toggle result 스키마). (3) 익명 집계 read 2종(kudos-counts/kudos-viewer 동형): getPeerRejectCountForLog(head count 만·voter_id 미노출) · getViewerPeerRejectionForLog(viewerId 3곳 — cache arg·cacheTag·SQL filter). challenge-feed hydrate 에 배선(ADR-0024 Layer1 이후). (4) FeedItemView 계약 확장(peerRejectCount·viewerRejected) + 공유 fixture 갱신. (5) togglePeerRejection Server Action(RPC 호출·tag invalidation·작성자 home-feed revalidate) — kudos 와 달리 isChallengeOver 가드 없음(48h 내 종료 후 토글 허용). (6) UI: peer-reject-button(🟨 1탭·익명·count) + FeedCard(본인 인증 미렌더) + ChallengeFeed(discriminated optimistic·48h 미차단). (7) doneCount: current-challenges 개인 doneCount·verifiedToday 만 peer_rejected 제외, pot/penalty 추정은 정산 RPC(0044, 미변경)와 정합 유지 — 정산측 제외는 EVAL-0008 후속. analytics parity(PRD §9.1) 무변경(kudos union 불변·반려 이벤트는 EVAL-0026).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm lint": "pass — domain·web·mobile exit 0",
+          "pnpm test (unit)": "pass — web 714 / mobile 154 (challenge-feed.spec 🟨 optimistic·rollback·self-hidden 포함)",
+          "pnpm --filter @withkey/web test:integration peer-reject (로컬 supabase, 0048 적용)": "pass — 6/6 (자기 반려 거부·본인 제외 과반 전이·토글 복원·익명성 RLS 타인 voter_id 비노출·클라 직접 write 거부 RPC only·48h 윈도우 종료)",
+          "supabase db reset (로컬)": "pass — 0001–0048 클린 적용, 0048 applying 확인",
+          "pnpm harness:check": "pass — 0 violations",
+          "pnpm validate:docs": "pass — broken 0 / 212 refs"
+        }
+      },
+      "notes": "수동 핸드오프(PO·CI, 위조 금지): ① migration 0048 의 linked Supabase 적용 — CI 통합 테스트·db:types --linked 는 linked 기준이라 0048 미적용 시 peer-reject 통합이 PGRST202/205 로 fail(로컬은 env override 로 검증 완료). production apply 는 ADR-0038 §게이트대로 후속(θ·G2 무관·단방향). ② 🟨 1탭 UI 모바일 viewport 실기기/DevTools 수동 확인. 범위 결정(drift report): doneCount read 는 peer_rejected 제외하되 pot/penalty 추정·정산 RPC(0044)는 미변경 — read↔정산 정합 유지, 정산측 peer_rejected 제외는 EVAL-0008(역방향 의존) 후속. countsTowardDone 의 failed/enforce read-wiring 은 EVAL-0022 Non-goal 이라 제외(peer_rejected 만 명시 제외). supabase.ts 는 gen types --local 전체 churn(1323줄) 회피 위해 peer_rejections·toggle_peer_rejection 두 블록만 committed 파일에 surgical 삽입. 로컬 stack: onlyBuiltDependencies 가 supabase postinstall 차단 → 바이너리 1회 수동 설치, 메인 repo stack 정지 후 worktree stack 기동(포트 공유)."
     }
   ]
 }
