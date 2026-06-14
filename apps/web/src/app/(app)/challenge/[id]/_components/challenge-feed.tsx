@@ -3,7 +3,7 @@
 import { useCallback, useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import { FeedCard } from "./feed-card";
-import { toggleKudos } from "../_actions";
+import { toggleKudos, togglePeerRejection } from "../_actions";
 import { makeUserMessage, FALLBACK_ERROR_MESSAGE } from "@/lib/actions/error-messages";
 import type { FeedItemView } from "@/lib/db/reads/challenge-feed";
 import type { KudosEmoji } from "@withkey/domain";
@@ -21,13 +21,19 @@ type Props = {
   isEnded: boolean;
 };
 
-type OptimisticAction = {
-  logId: string;
-  emoji: KudosEmoji;
-};
+type OptimisticAction =
+  | { kind: "kudos"; logId: string; emoji: KudosEmoji }
+  | { kind: "peerReject"; logId: string };
 
 const messageFor = makeUserMessage({
   forbidden: "자기 인증에는 응원을 보낼 수 없어요.",
+});
+
+// 🟨 반려 실패 메시지(ADR-0038). 자기 반려는 UI 에서 미렌더라 도달하지 않고, 남는 forbidden 은
+// 주로 "정산 전 48h 창 종료" 또는 "서약 참가자 아님". not_found 는 삭제된 인증.
+const peerRejectMessageFor = makeUserMessage({
+  forbidden: "지금은 이 인증을 반려할 수 없어요.",
+  not_found: "인증을 찾을 수 없어요.",
 });
 
 function applyToggle(
@@ -36,6 +42,15 @@ function applyToggle(
 ): FeedItemWithLabel[] {
   return items.map((item) => {
     if (item.id !== action.logId) return item;
+
+    if (action.kind === "peerReject") {
+      const wasRejected = item.viewerRejected;
+      return {
+        ...item,
+        viewerRejected: !wasRejected,
+        peerRejectCount: Math.max(0, item.peerRejectCount + (wasRejected ? -1 : 1)),
+      };
+    }
 
     const hadKudos = item.viewerKudos.includes(action.emoji);
     const viewerKudos = hadKudos
@@ -66,8 +81,7 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
       if (isEnded) return;
 
       startTransition(async () => {
-        const action = { logId, emoji };
-        applyOptimistic(action);
+        applyOptimistic({ kind: "kudos", logId, emoji });
 
         try {
           const result = await toggleKudos({ actionLogId: logId, emoji });
@@ -83,6 +97,30 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
       });
     },
     [applyOptimistic, viewerId, isEnded],
+  );
+
+  // 🟨 익명 피어 반려 토글(ADR-0038). 본인 인증은 반려 불가(early return). kudos 와 달리 isEnded
+  // 로 막지 않는다 — 종료 후에도 48h 내 토글 가능(RPC 가 시간창·자격·과반을 한 트랜잭션으로 강제).
+  const handlePeerReject = useCallback(
+    (logId: string, authorId: string) => {
+      if (authorId === viewerId) return;
+
+      startTransition(async () => {
+        applyOptimistic({ kind: "peerReject", logId });
+
+        try {
+          const result = await togglePeerRejection({ actionLogId: logId });
+          if (!result.ok) {
+            toast.error(peerRejectMessageFor(result.error));
+            return;
+          }
+        } catch (error) {
+          console.error("[ChallengeFeed] togglePeerRejection failed", error);
+          toast.error(FALLBACK_ERROR_MESSAGE);
+        }
+      });
+    },
+    [applyOptimistic, viewerId],
   );
 
   if (optimisticItems.length === 0) {
@@ -105,6 +143,9 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
             kudosByEmoji={item.kudosByEmoji}
             viewerKudos={item.viewerKudos}
             onKudos={(emoji) => handleKudos(item.id, item.authorId, emoji)}
+            peerRejectCount={item.peerRejectCount}
+            viewerRejected={item.viewerRejected}
+            onPeerReject={() => handlePeerReject(item.id, item.authorId)}
             disabled={item.authorId === viewerId || isEnded}
             participantCount={participantCount}
             isSelfAuthor={item.authorId === viewerId}

@@ -4,49 +4,19 @@ import {
   dayIndexOf,
   challengePhase,
   remainingDays,
-  type ChallengePhase,
   type ChallengeStatus,
   weekBucketsFromDayKeys,
   computeAccruedPot,
   confirmedPenalty,
   type CutoffContext,
   type CutoffPhase,
+  type GroupChallengeView,
 } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type GroupChallengeView = {
-  groupId: string;
-  groupName: string | null;
-  // D-016: 마스킹·표시용 필드만 RSC 까지 내려보냄.
-  // `account_number_encrypted` 컬럼은 의도적으로 SELECT 화이트리스트에서 제외 —
-  // 평문 복호화는 `revealAccountNumber` Server Action 한 경로로만.
-  bankCode: string | null;
-  accountHolder: string | null;
-  accountNumberLast4: string | null;
-  challenge: {
-    id: string;
-    title: string;
-    goalCount: number;
-    durationDays: number;
-    penaltyAmount: number;
-    status: ChallengeStatus;
-    // status + end_at 파생 phase (ADR-0027). 표시·자격 분기는 status 가 아니라 phase 로.
-    phase: ChallengePhase;
-    startAt: string | null;
-    endAt: string | null;
-    doneCount: number;
-    daysLeft: number;
-    potTotal: number;
-    // 내 확정 벌금(끝난 주 미달 합·단조). 홈 "내 벌금" stat 용. (spec C0·C3)
-    myConfirmedPenalty: number;
-    // 코호트 분리(솔로 1 / 그룹 ≥2) — PR-2.
-    participantCount: number;
-    // 그룹 멤버이지만 이미 시작된 챌린지 코호트에는 없을 수 있다.
-    userIsParticipant: boolean;
-    // 모킹업 §2-B 홈 stats/list — 오늘 본인 인증 여부. KST 자정 기준.
-    verifiedToday: boolean;
-  } | null;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { GroupChallengeView };
 
 const DEFAULT_CURRENT_STATUSES = [
   "pending",
@@ -132,15 +102,24 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
   // 하루 N개 피드도 인증은 1회 — KST 자정 기준 distinct day count.
   // potTotal(누적금)은 미달자 판정을 위해 "참가자별" distinct day 가 필요하므로 본인 로그만이
   // 아니라 전체 참가자 로그를 조회한다(RLS al_select_member: 그룹 멤버면 SELECT 허용).
-  // 본인 doneCount/verifiedToday 는 같은 조회에서 user_id === userId 로 파생.
   const dayKeysByChallengeUser = new Map<string, Map<string, Set<string>>>();
+  // 본인 doneCount/verifiedToday 는 🟨 피어 반려(peer_rejected)된 인증을 제외한 별도 집합으로 파생(ADR-0038).
+  // pot/penalty 추정은 정산 RPC(0044)와 정합 유지 위해 full 집합(dayKeysByChallengeUser)을 그대로 쓴다 —
+  // 정산 측 peer_rejected 제외는 EVAL-0008 후속(역방향 의존). failed/enforce read-wiring 은 EVAL-0022(Non-goal).
+  const myDoneDayKeysByChallenge = new Map<string, Set<string>>();
   const todayKstKey = toKstDayKey(new Date());
   const { data: allLogs } = await supabase
     .from("action_logs")
-    .select("challenge_id, user_id, created_at")
+    .select("challenge_id, user_id, created_at, auto_verify_status")
     .in("challenge_id", challengeIds);
   for (const row of allLogs ?? []) {
-    const r = row as { challenge_id: string; user_id: string; created_at: string };
+    const r = row as {
+      challenge_id: string;
+      user_id: string;
+      created_at: string;
+      auto_verify_status: string | null;
+    };
+    const dayKey = toKstDayKey(r.created_at);
     let byUser = dayKeysByChallengeUser.get(r.challenge_id);
     if (!byUser) {
       byUser = new Map<string, Set<string>>();
@@ -151,7 +130,16 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
       s = new Set<string>();
       byUser.set(r.user_id, s);
     }
-    s.add(toKstDayKey(r.created_at));
+    s.add(dayKey);
+
+    if (r.user_id === userId && r.auto_verify_status !== "peer_rejected") {
+      let mine = myDoneDayKeysByChallenge.get(r.challenge_id);
+      if (!mine) {
+        mine = new Set<string>();
+        myDoneDayKeysByChallenge.set(r.challenge_id, mine);
+      }
+      mine.add(dayKey);
+    }
   }
 
   const participantIdsByChallenge = new Map<string, string[]>();
@@ -187,6 +175,8 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
     const participantIds = participantIdsByChallenge.get(c.id) ?? [];
     const daysByUser = dayKeysByChallengeUser.get(c.id);
     const myDayKeys = daysByUser?.get(userId);
+    // doneCount/verifiedToday 는 🟨 peer_rejected 제외 집합(ADR-0038). pot/penalty 는 full(myDayKeys) 유지.
+    const myDoneDayKeys = myDoneDayKeysByChallenge.get(c.id);
 
     // 주 단위 누적 — 끝난 주만 합산(spec C3·C4). 시작된 챌린지만.
     // 주의: 이 read 는 cacheLife("minutes") 다. now baking 의 stale 은 주 경계 자정 직후
@@ -234,13 +224,13 @@ async function fetchCurrentChallengesInner(userId: string): Promise<GroupChallen
         phase,
         startAt: c.start_at,
         endAt: c.end_at,
-        doneCount: myDayKeys?.size ?? 0,
+        doneCount: myDoneDayKeys?.size ?? 0,
         daysLeft,
         potTotal,
         myConfirmedPenalty,
         participantCount: participantIds.length,
         userIsParticipant: myParticipantChallengeIds.has(c.id),
-        verifiedToday: myDayKeys?.has(todayKstKey) ?? false,
+        verifiedToday: myDoneDayKeys?.has(todayKstKey) ?? false,
       },
     };
   });

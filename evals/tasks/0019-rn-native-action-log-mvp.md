@@ -2,8 +2,7 @@
 Task: EVAL-0019
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: EVAL-0018(G9 challenge lifecycle mutations) complete + spec — 00 §13.4 D-7 submitActionLog BFF contract accepted if still unresolved.
+Status: done
 Parent: docs/PRD.md, docs/stories/2026-06-02-photo-verification-job-stories.md, docs/stories/2026-06-02-photo-verification-test-scenarios.md, docs/migration/00-rn-conversion-plan.md
 ---
 

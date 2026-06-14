@@ -130,7 +130,7 @@ with-key/
 | **② 마이그레이션 capability** | "이 기능을 RN으로 옮겨라" task를 에이전트가 1-shot으로 해내나 | 결정론 + 모델 보조 | **pass@3 ≥ 목표** |
 
 - **①이 진짜 안전장치다.** ②는 하네스(에이전트 자동화)의 신뢰성을 재는 것이고, ①은 *제품*이 안 깨졌는지를 잰다. 둘 다 같은 `evals/` 인프라에 쌓는다.
-- 기존 task 0001~0003(Server Action·AI fallback·RLS)은 ②의 선례 형식이다. 마이그레이션 task는 `0004-` 부터 append(스펙 수정 금지, README "Gotcha"). `0004`는 Phase 0 인벤토리 freeze이고(route/action/read 매트릭스를 [00 plan §13](./00-rn-conversion-plan.md)에 고정), 기능 포팅 task(`0005+`)는 그 §13을 Parent 인벤토리로 인용한다.
+- 기존 task 0001~0003(Server Action·AI fallback·RLS)은 ②의 선례 형식이다(2026-06-11 `evals/tasks/archive/`로 보관 — PWA baseline 미실행, RN 전환으로 효용 소멸). 마이그레이션 task는 `0004-` 부터 append(스펙 수정 금지, README "Gotcha"). `0004`는 Phase 0 인벤토리 freeze이고(route/action/read 매트릭스를 [00 plan §13](./00-rn-conversion-plan.md)에 고정), 기능 포팅 task(`0005+`)는 그 §13을 Parent 인벤토리로 인용한다.
 
 ### 5.2 보존 eval을 어떤 채점자로 거나
 
@@ -155,7 +155,7 @@ with-key/
 
 ### 5.4 마이그레이션 eval task 템플릿
 
-기존 [0001 task](../../evals/tasks/0001-server-action-create-kudos.md) 형식을 마이그레이션용으로 확장한다. `evals/tasks/000N-rn-<feature>.md` 형태로 추가한다(기능 포팅은 `0005-`부터; `0004`는 인벤토리 freeze).
+기존 [0001 task](../../evals/tasks/archive/0001-server-action-create-kudos.md) 형식을 마이그레이션용으로 확장한다. `evals/tasks/000N-rn-<feature>.md` 형태로 추가한다(기능 포팅은 `0005-`부터; `0004`는 인벤토리 freeze).
 
 ```markdown
 # EVAL-000N: RN 포팅 — <feature> (예: 챌린지 생성)

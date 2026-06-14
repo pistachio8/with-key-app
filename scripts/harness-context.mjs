@@ -3,6 +3,7 @@ import {
   describeFile,
   findTask,
   formatPathList,
+  loadKnownTaskIds,
   loadMigrationTasks,
   validateTask,
 } from "./harness-lib.mjs";
@@ -25,7 +26,7 @@ if (!task) {
   process.exit(1);
 }
 
-const errors = validateTask(task);
+const errors = validateTask(task, { knownTaskIds: loadKnownTaskIds() });
 if (errors.length > 0) {
   console.error(`[harness:context] Task is invalid: ${task.frontmatter.Task}`);
   for (const error of errors) {

@@ -475,6 +475,42 @@ export type Database = {
           },
         ];
       };
+      peer_rejections: {
+        Row: {
+          action_log_id: string;
+          created_at: string;
+          id: string;
+          voter_id: string;
+        };
+        Insert: {
+          action_log_id: string;
+          created_at?: string;
+          id?: string;
+          voter_id: string;
+        };
+        Update: {
+          action_log_id?: string;
+          created_at?: string;
+          id?: string;
+          voter_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "peer_rejections_action_log_id_fkey";
+            columns: ["action_log_id"];
+            isOneToOne: false;
+            referencedRelation: "action_logs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "peer_rejections_voter_id_fkey";
+            columns: ["voter_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       point_ledger: {
         Row: {
           challenge_id: string | null;
@@ -722,6 +758,14 @@ export type Database = {
           participant_count: number;
           start_at: string;
           status: string;
+        }[];
+      };
+      toggle_peer_rejection: {
+        Args: { p_action_log_id: string };
+        Returns: {
+          peer_reject_count: number;
+          status: string;
+          viewer_rejected: boolean;
         }[];
       };
       truncate_test_data: { Args: never; Returns: undefined };

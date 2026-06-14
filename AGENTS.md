@@ -50,7 +50,7 @@ PWA→RN 전환 작업은 AI 하네스를 따른다. 머시너리(템플릿·워
 ### §아키텍처
 
 - 클라이언트→서버 쓰기는 `_actions.ts`(Server Action)로 일원화. **왜**: 인증/검증/로깅 단일 경로 보장
-- `src/app/api/*` Route Handler는 외부 콜백 전용(예: Web Push 콜백). **왜**: 일반 쓰기 경로와 책임 분리
+- `src/app/api/*` Route Handler는 외부 콜백(예: Web Push 콜백) + RN BFF(Bearer 인증) 전용 ([ADR-0036](docs/adr/0036-rn-admin-hydrate-bff-contract.md)). PWA 클라이언트는 BFF endpoint 호출 금지 — web 은 RSC + Server Action 유지. **왜**: 일반 쓰기 경로와 책임 분리, BFF 는 RN 전용 표면
 - `useEffect` + `fetch` 쓰기 경로 금지. SWR · React Query 도입 금지. **왜**: POC 범위 초과, RSC(React Server Component) + server fetch가 기본
 - route colocation 유지 — feature 컴포넌트·액션은 해당 route `_components/`·`_actions.ts`에 둔다. `src/features/` 신설 금지. **왜**: 화면 30개 이하 POC 단계에서 추상화 추가는 미숙
 
@@ -165,6 +165,7 @@ pnpm validate:docs  # 문서 내부 링크 깨짐
 - PR 베이스는 `develop`. main 직접 PR은 release 시점에만
 - PR 생성 후에는 CI/checks 상태를 성공 또는 실패 결론까지 모니터링하고 결과를 보고한다. 실패 시 원인 로그를 확인해 가능한 범위에서 수정·재푸시 후 다시 모니터링한다.
 - `git` 계정은 `pistachio8` 고정. 자동 커밋·푸시는 사용자 확인 후에만
+- 예외(worktree 한정): 하네스 WP(Work Package) worktree 안에서의 커밋은 자율 — 푸시·PR 생성은 여전히 사용자 확인 후에만. **왜**: worktree 내 커밋은 로컬·가역적이라 저장소 밖으로 나가는 행위만 게이트하면 충분 ([`.agents/workflows/implement-agent-task.md`](.agents/workflows/implement-agent-task.md) §Process 7)
 
 ### pre-commit hook (저마찰)
 

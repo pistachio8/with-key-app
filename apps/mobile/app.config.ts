@@ -101,6 +101,14 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
         },
       ],
       "expo-secure-store",
+      // 사진 인증(EVAL-0019) — 촬영/보관함 권한 안내 문구. 권한 거부 시 화면이 재시도 UI 를 띄운다.
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "사진 인증을 위해 사진 보관함 접근이 필요해요.",
+          cameraPermission: "사진 인증을 위해 카메라 사용이 필요해요.",
+        },
+      ],
       // Kakao 네이티브 SDK (ADR-0034 결정 1) — native app key 는 공개 가능 키
       // (카카오 콘솔에서 Android keyhash·iOS bundle id 로 사용처 제한).
       // plugin 이 빈 키를 거부하므로 env 가 있을 때만 포함 — 키 없는 빌드는 Kakao
@@ -128,6 +136,9 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
     extra: {
       appVariant: variant,
       universalLinkDomain: variantConfig.universalLinkDomain,
+      // BFF(Bearer) base URL 명시 override (ADR-0036 — transport-중립 계약).
+      // 미지정 시 런타임은 `https://${universalLinkDomain}` 폴백(web = PWA + BFF 겸임).
+      bffBaseUrl: process.env.EXPO_PUBLIC_BFF_BASE_URL,
     },
   };
 };

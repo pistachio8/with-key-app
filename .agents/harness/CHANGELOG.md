@@ -2,6 +2,10 @@
 
 > 하네스 머시너리 변경 이력. 모든 harness workflow가 변경 시 1줄 추가한다.
 
+## 0.4 — 2026-06-11
+
+- **P0 게이트 3종**: ① CI quick job에 `harness:check`+`harness:test` hard-fail step 추가(기존엔 로컬 수동 호출 전용 — task-only PR도 quick이 항상 돌므로 배치 공백 없음). ② done↔runs 정합 게이트(Tier 1-D) — `Status: done` task는 `agent-results.json` `runs[]`에 동일 taskId 기록 ≥1건 필수, 도입 이전 무기록 done 11건은 `GRANDFATHERED_DONE` 명시 면제(소급 기록 비생성). ③ 레거시 0001~0003 pending baseline을 `evals/tasks/archive/`로 보관(PWA baseline 미실행·RN 전환으로 효용 소멸), `tasks[]` status→archived(`runs[]` append-only 계약 무영향). meta-eval=**strengthen**(게이트 신설·검증 범위 확대 — 약화 항목 없음).
+
 ## 0.3 — 2026-06-05
 
 - G1-θ false-flag 임계 θ **잠정확정·주입**(PO conservative): `config/harness.config.example.json` `false_flag_rate.theta=0.01`·`judge`(phash 해밍 6/10 · EXIF/스크린샷 단독 차단 안 함) 주입, `active=false` 유지(실측 G1 PoC open). EVAL-0022 `blocked→todo` 활성(`Blocked-by`→`Depends-on`, intra-feature 순서·게이트 아님). spec `2026-06-05-false-flag-threshold-theta` 신설, PRD §7 Q1·DECISION_NEEDED `G1-θ`(partial) 동기. meta-eval=**neutral**(임계 주입·게이트 미flip — active threshold 약화 아님).

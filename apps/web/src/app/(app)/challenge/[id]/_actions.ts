@@ -6,6 +6,10 @@ import { z } from "zod";
 import {
   kudosInputSchema,
   type KudosInput,
+  peerRejectionInputSchema,
+  peerRejectionToggleResultSchema,
+  type PeerRejectionInput,
+  type PeerRejectionToggleResult,
   isChallengeOver,
   type ChallengeStatus,
 } from "@withkey/domain";
@@ -120,6 +124,50 @@ export const toggleKudos = withUser<KudosInput, KudosResult>(
     }
 
     return success({ toggled: "added" });
+  },
+);
+
+// 🟨 익명 피어 반려 토글(ADR-0038 / EVAL-0025). kudos 와 별개 — 익명 다수결로 맥락적 사기를 거른다.
+//
+// kudos 와 달리 isChallengeOver 가드를 두지 않는다 — 반려 유효 구간은 "종료 + 48h"(정산 전)이라
+// 종료 후에도 토글이 가능해야 한다(AC-peer-reject-3). 시간창·본인 반려 거부·서약 참가자 자격·과반
+// 전이는 전부 toggle_peer_rejection RPC 가 한 트랜잭션으로 닫는다(DEFINER) — 클라는 actionLogId 만 보낸다.
+export const togglePeerRejection = withUser<PeerRejectionInput, PeerRejectionToggleResult>(
+  async (user, input): Promise<ActionResult<PeerRejectionToggleResult>> => {
+    const parsed = peerRejectionInputSchema.safeParse(input);
+    if (!parsed.success) return validationFailure(parsed.error);
+    const actionLogId = parsed.data.actionLogId;
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("toggle_peer_rejection", {
+      p_action_log_id: actionLogId,
+    });
+    if (error) return failure(mapSupabaseError(error));
+    const row = data?.[0];
+    if (!row) return failure("upstream_error");
+
+    // read-your-writes: 본인 viewer state + 카운트 즉시 invalidate, 타인 다음 fetch SWR fresh.
+    updateTag(`user-${user.id}-peer-reject-${actionLogId}`);
+    updateTag(`peer-reject-count-${actionLogId}`);
+    revalidateTag(`peer-reject-count-${actionLogId}`, "max");
+
+    // 과반 전이(passed↔peer_rejected)는 작성자의 doneCount(진행 표시)에 영향 → 작성자 home-feed 무효화.
+    const { data: log, error: logErr } = await supabase
+      .from("action_logs")
+      .select("user_id")
+      .eq("id", actionLogId)
+      .maybeSingle();
+    if (logErr) console.error("[togglePeerRejection] author lookup failed", logErr);
+    if (log?.user_id) revalidateTag(`user-${log.user_id}-home-feed`, "max");
+
+    // RPC 반환(snake_case)을 domain zod SoT 로 검증 — 예상 밖 status·shape 면 upstream_error.
+    const parsedResult = peerRejectionToggleResultSchema.safeParse({
+      peerRejectCount: row.peer_reject_count,
+      viewerRejected: row.viewer_rejected,
+      status: row.status,
+    });
+    if (!parsedResult.success) return failure("upstream_error");
+    return success(parsedResult.data);
   },
 );
 

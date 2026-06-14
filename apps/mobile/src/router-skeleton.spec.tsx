@@ -1,7 +1,7 @@
 // G5 Expo Router skeleton 테스트 (EVAL-0014) — TS-rn-router-1~4 흡수(05 D10).
 // auth gate(미인증→/login, 인증→login 우회)·route param 검증·legacy alias·
 // 00 §8/§10 G5 route file 존재를 renderRouter(실제 src/app 트리) + fs 로 검증한다.
-import { renderRouter, screen } from "expo-router/testing-library";
+import { renderRouter, screen, waitFor } from "expo-router/testing-library";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -38,6 +38,20 @@ jest.mock("@/services/supabase/client", () => ({
   registerAppStateAutoRefresh: () => () => {},
 }));
 
+// invite stash/accept IO 격리 — orchestration 자체는 invite-deep-link.spec 이 검증 (EVAL-0013)
+jest.mock("@/features/invite/api/invite-token-stash", () => ({
+  stashPendingInviteToken: jest.fn().mockResolvedValue(undefined),
+  takePendingInviteToken: jest.fn().mockResolvedValue(null),
+}));
+
+jest.mock("@/features/invite/api/invite-service", () => ({
+  acceptInvite: jest.fn().mockResolvedValue({
+    ok: true,
+    groupId: "group-1",
+    redirect: { kind: "home" },
+  }),
+}));
+
 const AUTHED = {
   session: { user: { email: "tester@fromwith.app" } },
   isLoading: false,
@@ -66,10 +80,11 @@ describe("auth gate", () => {
     expect(screen).toHavePathname("/login");
   });
 
-  it("인증 사용자가 /login 진입 시 /home 으로 우회한다", () => {
+  it("인증 사용자가 /login 진입 시 /home 으로 우회한다", async () => {
     mockUseSession.mockReturnValue(AUTHED);
     renderAppRouter("/login");
-    expect(screen).toHavePathname("/home");
+    // EVAL-0013: 우회 전 invite stash 조회(async)가 끼어들어 즉시 단언 불가
+    await waitFor(() => expect(screen).toHavePathname("/home"));
   });
 
   it("인증 사용자는 /home 에 도달한다", () => {
@@ -102,12 +117,13 @@ describe("route params", () => {
     expect(screen).toHavePathname("/home");
   });
 
-  it("미인증도 /invite/[token] preview 에 도달한다 (public)", () => {
+  it("미인증도 /invite/[token] 에 착지한다 (public — auth gate 미적용)", async () => {
     mockUseSession.mockReturnValue(UNAUTHED);
     renderAppRouter("/invite/sample-invite-token");
+    // 동기 시점에는 (auth) group 이라 gate 차단 없이 invite 화면이 뜬다.
     expect(screen).toHavePathname("/invite/sample-invite-token");
-    // pathname 만으로는 화면 분기를 못 가르므로 valid preview 콘텐츠까지 단언
-    expect(screen.getByText("초대장")).toBeTruthy();
+    // EVAL-0013: 이후 token stash → /login 라우팅 (orchestration 상세는 invite-deep-link.spec)
+    await waitFor(() => expect(screen).toHavePathname("/login"));
   });
 });
 

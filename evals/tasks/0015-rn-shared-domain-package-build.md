@@ -3,7 +3,7 @@ Task: EVAL-0015
 Track: port
 Kind: migration
 Status: done
-Blocked-by: EVAL-0010(RN monorepo foundation) complete.
+Blocked-by: [task:EVAL-0010] — RN monorepo foundation complete 선행.
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md
 ---
 

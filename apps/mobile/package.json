@@ -17,6 +17,7 @@
     "testMatch": [
       "**/*.spec.@(ts|tsx)"
     ],
+    "testTimeout": 20000,
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     }
@@ -30,6 +31,8 @@
     "expo-build-properties": "~55.0.14",
     "expo-constants": "~55.0.16",
     "expo-dev-client": "~55.0.35",
+    "expo-image-manipulator": "~55.0.17",
+    "expo-image-picker": "~55.0.20",
     "expo-linking": "~55.0.15",
     "expo-router": "~55.0.16",
     "expo-secure-store": "~55.0.14",

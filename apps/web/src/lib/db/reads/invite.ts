@@ -1,21 +1,11 @@
 // src/lib/db/reads/invite.ts
 import "server-only";
+import type { InvitePreview } from "@withkey/domain";
 import { adminClient } from "@/lib/supabase/admin";
 
-export type InvitePreview = {
-  groupId: string;
-  groupName: string | null;
-  expiresAt: string;
-  expired: boolean;
-  full: boolean;
-  // pending 챌린지가 있으면 1줄 요약을 같이 내려줌 — 친구가 참여 전에 조건 확인 가능.
-  pendingChallenge: {
-    title: string;
-    goalCount: number;
-    penaltyAmount: number;
-    durationDays: number;
-  } | null;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// RN·web 모두 RPC `get_invite_preview` 전환 예정(ADR-0036 §4 후속 task) — 그때 admin 우회 제거.
+export type { InvitePreview };
 
 // invites RLS 는 오너 SELECT 전용 → service_role 로 최소 필드만 조회.
 // 조회 자체가 민감 정보 유출이 되지 않도록 token 을 찾지 못하면 null 로 대체한다.

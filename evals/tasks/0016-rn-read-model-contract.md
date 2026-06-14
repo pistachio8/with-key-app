@@ -2,14 +2,13 @@
 Task: EVAL-0016
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: EVAL-0015(G6 shared domain package) complete + ADR/spec if 00 §13.4 D-4 admin hydrate RN contract remains unresolved.
-Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md
+Status: done
+Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/02-rn-migration-harness.md, docs/migration/04-rn-architecture.md, docs/adr/0036-rn-admin-hydrate-bff-contract.md
 ---
 
 # EVAL-0016: G7 Read model contract — Home/challenge/group/recap/me RN-safe boundaries
 
-> 00 §8 G7. 화면 데이터 소비 전 계약 고정. Next cache/cookie/admin hydrate 가정을 RN으로 이월 금지.
+> 00 §8 G7. 화면 데이터 소비 전 계약 고정. Next cache/cookie/admin hydrate 가정을 RN으로 이월 금지. **blocked 해제(2026-06-12)**: 선행 EVAL-0015(G6) done + D-4 admin hydrate RN 계약 ADR-0036 확정 — drift 해제 후보 advisory 검토 후 todo flip(선행이 develop 에 머지되어 base 는 develop).
 
 ## Parent Links
 

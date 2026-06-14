@@ -2,22 +2,19 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getKudosCountsForLog } from "@/lib/db/reads/kudos-counts";
 import { getViewerKudosForLog } from "@/lib/db/reads/kudos-viewer";
+import { getPeerRejectCountForLog } from "@/lib/db/reads/peer-rejection-counts";
+import { getViewerPeerRejectionForLog } from "@/lib/db/reads/peer-rejection-viewer";
 import { getActionLogHydrate } from "@/lib/db/reads/action-log-hydrate";
 import { getActionLogPhotoSignedUrl } from "@/lib/db/reads/photo-signed-url";
-import { listVisibleActionLogIds } from "@/lib/db/reads/list-visible-action-log-ids";
-import { KUDOS_EMOJIS, type KudosEmoji } from "@withkey/domain";
+import {
+  listVisibleActionLogIds,
+  readVisibleActionLogIds,
+} from "@/lib/db/reads/list-visible-action-log-ids";
+import { KUDOS_EMOJIS, type KudosEmoji, type FeedItemView } from "@withkey/domain";
 
-export type FeedItemView = {
-  id: string;
-  authorId: string;
-  authorName: string;
-  photoSignedUrl: string | null;
-  summary: string;
-  keywords: ReadonlyArray<string>;
-  kudosByEmoji: Readonly<Record<KudosEmoji, number>>;
-  viewerKudos: ReadonlyArray<KudosEmoji>;
-  createdAt: string;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts — BFF `GET /api/feed` 응답 스키마와
+// 동일 타입 (EVAL-0016 · ADR-0036 §1 · ADR-0037). 기존 호출처 호환을 위해 re-export 유지.
+export type { FeedItemView };
 
 // Phase 4 분해 후 deprecated: 자식 read 함수들은 자체적으로 supabase client 를 생성한다.
 // Layer 1 은 user client(RLS), hydrate 단계(Layer 2/3)는 adminClient (ADR-0024).
@@ -51,34 +48,61 @@ export const fetchChallengeFeed = cache(
     _options: Options = {},
   ): Promise<FeedItemView[]> => {
     const ids = await listVisibleActionLogIds(challengeId, viewerId);
-    if (ids.length === 0) return [];
+    return hydrateFeedItems(ids, viewerId);
+  },
+);
 
-    // 각 id 별로 hydrate + photo + counts + viewer kudos 병렬 fetch.
-    const items = await Promise.all(
-      ids.map(async (id) => {
-        const hydrate = await getActionLogHydrate(id, viewerId);
-        if (!hydrate) return null;
+// Bearer(BFF /api/feed) 경로 — RN 전용 (ADR-0036 §1·§2, EVAL-0016 에서 모양 확정).
+// Layer 1 을 호출자가 주입한 token 기반 RLS user client 로 실행한다(admin 대체 금지).
+// cookie 전제의 `use cache: private`(listVisibleActionLogIds inner)는 Route Handler 에서
+// 불가하므로 비캐시 Layer 1 — RN 측 캐싱은 TanStack Query 담당. hydrate 단계의
+// public cache 는 web 과 그대로 공유된다.
+export async function fetchChallengeFeedForViewerClient(
+  viewerClient: SupabaseClient,
+  challengeId: string,
+  viewerId: string,
+): Promise<FeedItemView[]> {
+  const ids = await readVisibleActionLogIds(viewerClient, challengeId);
+  return hydrateFeedItems(ids, viewerId);
+}
 
-        const [photoSignedUrl, counts, viewerKudos] = await Promise.all([
+// Layer 2/3 합성 — Layer 1 이 거른 ID 안에서만 admin hydrate 를 호출한다 (ADR-0024 contract).
+async function hydrateFeedItems(
+  ids: ReadonlyArray<string>,
+  viewerId: string,
+): Promise<FeedItemView[]> {
+  if (ids.length === 0) return [];
+
+  // 각 id 별로 hydrate + photo + counts + viewer kudos 병렬 fetch.
+  const items = await Promise.all(
+    ids.map(async (id) => {
+      const hydrate = await getActionLogHydrate(id, viewerId);
+      if (!hydrate) return null;
+
+      const [photoSignedUrl, counts, viewerKudos, peerRejectCount, viewerRejected] =
+        await Promise.all([
           getActionLogPhotoSignedUrl(hydrate.photoPath, viewerId),
           getKudosCountsForLog(id),
           getViewerKudosForLog(id, viewerId),
+          getPeerRejectCountForLog(id),
+          getViewerPeerRejectionForLog(id, viewerId),
         ]);
 
-        return {
-          id: hydrate.id,
-          authorId: hydrate.authorId,
-          authorName: hydrate.authorName,
-          photoSignedUrl,
-          summary: hydrate.summary,
-          keywords: hydrate.keywords,
-          kudosByEmoji: counts ?? emptyKudosByEmoji(),
-          viewerKudos,
-          createdAt: hydrate.createdAt,
-        } satisfies FeedItemView;
-      }),
-    );
+      return {
+        id: hydrate.id,
+        authorId: hydrate.authorId,
+        authorName: hydrate.authorName,
+        photoSignedUrl,
+        summary: hydrate.summary,
+        keywords: hydrate.keywords,
+        kudosByEmoji: counts ?? emptyKudosByEmoji(),
+        viewerKudos,
+        peerRejectCount,
+        viewerRejected,
+        createdAt: hydrate.createdAt,
+      } satisfies FeedItemView;
+    }),
+  );
 
-    return items.filter((item): item is FeedItemView => item !== null);
-  },
-);
+  return items.filter((item): item is FeedItemView => item !== null);
+}

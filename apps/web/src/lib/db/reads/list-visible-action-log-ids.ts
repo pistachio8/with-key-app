@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getVisibilityVersion } from "@/lib/db/reads/visibility-version";
 
@@ -9,6 +10,24 @@ import { getVisibilityVersion } from "@/lib/db/reads/visibility-version";
 //
 // inner: 'use cache: private' + cacheTag — viewer cookies 의존 가능.
 // outer: visibility_version 을 inject 한 뒤 inner 호출.
+
+// Layer 1 쿼리 본체 — RLS user client 로만 호출한다(인가 경계, admin 대체 금지 — ADR-0036 §2).
+// Bearer 경로(BFF /api/feed)는 cookie 도, `use cache: private` 도 쓸 수 없어
+// (Route Handler 에서 private cache 불가 — next docs use-cache-private) 이 함수를 직접 쓴다.
+export async function readVisibleActionLogIds(
+  supabase: SupabaseClient,
+  challengeId: string,
+): Promise<ReadonlyArray<string>> {
+  const { data, error } = await supabase
+    .from("action_logs")
+    .select("id, created_at")
+    .eq("challenge_id", challengeId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map((row) => row.id as string);
+}
+
 async function fetchListInner(
   challengeId: string,
   viewerId: string,
@@ -19,14 +38,7 @@ async function fetchListInner(
   cacheLife("minutes");
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("action_logs")
-    .select("id, created_at")
-    .eq("challenge_id", challengeId)
-    .order("created_at", { ascending: false });
-
-  if (error || !data) return [];
-  return data.map((row) => row.id as string);
+  return readVisibleActionLogIds(supabase, challengeId);
 }
 
 export async function listVisibleActionLogIds(

@@ -11,46 +11,14 @@ import {
   elapsedWeeks,
   pickMvpIds,
   type CutoffContext,
+  type RecapGroupView,
+  type RecapMemberView,
+  type RecapView,
 } from "@withkey/domain";
 
-export type RecapMemberView = {
-  id: string;
-  displayName: string;
-  doneCount: number;
-  achieved: boolean;
-  isMvp: boolean;
-};
-
-export type RecapGroupView = {
-  id: string;
-  name: string;
-  ownerId: string;
-  bankCode: string | null;
-  accountHolder: string | null;
-  accountNumberLast4: string | null;
-};
-
-export type RecapView = {
-  challengeId: string;
-  title: string;
-  goalCount: number;
-  durationDays: number;
-  penaltyAmount: number;
-  startAt: string | null;
-  endAt: string | null;
-  status: "active" | "closed";
-  viewerId: string;
-  viewerAchieved: boolean;
-  viewerDoneCount: number;
-  viewerPerHeadPenalty: number;
-  // 영수증 주차 요약 — viewer 기준. cutoff 안에 끝난 주 수 / 그중 달성한 주 수.
-  viewerElapsedWeeks: number;
-  viewerAchievedWeeks: number;
-  // PRD §10 / 모킹업 §11 — 정산 시점 그룹 계좌 lazy prompt 에 필요.
-  group: RecapGroupView | null;
-  members: ReadonlyArray<RecapMemberView>;
-  anyoneAchieved: boolean;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { RecapGroupView, RecapMemberView, RecapView };
 
 type ChallengeRow = {
   id: string;

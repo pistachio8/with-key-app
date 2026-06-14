@@ -4,7 +4,8 @@ Task: EVAL-<feature>-<slug>
 Track: port | greenfield          # D2 — PR 템플릿·헤더에 강제 노출
 Kind: migration | regression       # migration=닫히는 work-unit, regression=영속 baseline
 Status: todo | blocked | in_progress | done
-Blocked-by: <해제조건, 예: G1-PoC θ 확정>   # blocked 일 때만
+Blocked-by: [task:EVAL-XXXX] [gate:G2] — <사람용 해제조건 설명>   # blocked 일 때만. — 왼쪽 [type:value] 토큰 ≥1, 타입 5종: task|gate|adr|spec|po
+Depends-on: [task:EVAL-XXXX] — <intra-feature 순서 설명>   # 선택. 게이트 아님(Status todo 가능) — 순서 의존만
 ---
 
 # <Task ID>: <한 줄 결과>
@@ -48,6 +49,7 @@ Blocked-by: <해제조건, 예: G1-PoC θ 확정>   # blocked 일 때만
 ```bash
 pnpm typecheck && pnpm lint && pnpm test -- <scope>
 # 해당 시: pnpm test -- <capability>   (capability eval)
+# jest testPathPattern 은 src/ 앵커로 (예: src/.*foo) — worktree 디렉토리명 오염 방지 (spec orchestration-phase2 §C7)
 ```
 
 ## Expected Output Summary

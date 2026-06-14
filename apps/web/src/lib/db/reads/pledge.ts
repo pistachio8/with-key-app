@@ -1,14 +1,9 @@
+import type { PledgeView } from "@withkey/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type PledgeView = {
-  id: string;
-  title: string;
-  goalCount: number;
-  durationDays: number;
-  penaltyAmount: number;
-  members: ReadonlyArray<{ id: string; displayName: string; signed: boolean }>;
-  mySigned: boolean;
-};
+// view-model 계약 SoT 는 @withkey/domain read-contracts (EVAL-0016 · ADR-0037).
+// 본 모듈은 추출 소스 — 기존 호출처 호환을 위해 re-export 유지.
+export type { PledgeView };
 
 export async function fetchPendingPledge(
   userId: string,

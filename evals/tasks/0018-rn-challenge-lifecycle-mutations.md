@@ -2,14 +2,13 @@
 Task: EVAL-0018
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: EVAL-0017(G8 read-only screens) complete.
+Status: done
 Parent: docs/PRD.md, docs/migration/00-rn-conversion-plan.md, docs/migration/03-rn-migration-rules.md, docs/migration/04-rn-architecture.md
 ---
 
 # EVAL-0018: G9 Challenge lifecycle mutations — create/invite/pledge/start parity
 
-> 00 §8 G9. 핵심 챌린지 lifecycle write 포팅, PWA/RN DB 호환성 증명.
+> 00 §8 G9. 핵심 챌린지 lifecycle write 포팅, PWA/RN DB 호환성 증명. **blocked 해제(2026-06-12)**: 선행 EVAL-0017(G8 read-only screens) done — `pnpm harness:next` unblock 후보 보고 검토 후 todo flip(선행 WP 가 develop 에 머지되어 base 는 develop fallback, 파이프라인 2호 dogfood).
 
 ## Parent Links
 
