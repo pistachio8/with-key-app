@@ -555,27 +555,29 @@ push_subscriptions
 
 > 2026-05-14 UI 리비전: `action_started` · `feed_view` 의 **발사 위치**가 sub-route 로 변경됐으나 schema(이벤트 이름·속성) 자체는 무변경. `src/lib/analytics/schema.ts` 는 PR0~PR7 동안 손대지 않음. SoT 는 `analyticsEventSchema` 유니온.
 
-| 이벤트                 | 발생 시점                                                     | 주요 속성                                                                                    |
-| ---------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `user_signed_up`       | 가입 완료                                                     | provider, invitedBy                                                                          |
-| `group_created`        | 그룹 생성                                                     | groupId, memberTarget                                                                        |
-| `invite_sent`          | 초대 링크 생성                                                | groupId                                                                                      |
-| `invite_opened`        | 링크 열림                                                     | groupId, fromOrganicUser                                                                     |
-| `challenge_created`    | 챌린지 생성                                                   | challengeId, penaltyAmount, goalCount                                                        |
-| `challenge_signed`     | 서명 완료                                                     | challengeId, userId                                                                          |
-| `challenge_activated`  | 그룹장 명시 시작 → active                                     | challengeId, signToActiveMs, participantCount                                                |
-| `action_started`       | 챌린지 상세 FAB 카메라 클릭 (challenge action sub-route 진입) | challengeId                                                                                  |
-| `keywords_shown`       | 키워드 칩 랜덤 노출                                           | activityType, shownKeywords[], source(`initial` \| `reroll`)                                 |
-| `keywords_reroll`      | "다시 뽑기" 탭                                                | activityType, rerollCount                                                                    |
-| `keyword_selected`     | 칩 탭 (선택/해제)                                             | keyword, selectedCount, activityType, action(`add` \| `remove`)                              |
-| `memo_fallback_opened` | "직접 쓰고 싶어요" 링크 열림                                  | -                                                                                            |
-| `action_logged`        | 인증 제출                                                     | challengeId, activityType, selectedKeywords[], keywordCount, hasMemo, rerollCount, photoSize |
-| `ai_generated`         | AI 일기 성공                                                  | actionLogId, latencyMs, fallback, keywordCoverage (포함된 키워드 수/선택 수)                 |
-| `feed_view`            | 챌린지 상세 인증 피드 탭 활성화 (`/challenge/[id]`)           | unreadCount                                                                                  |
-| `kudos_given`          | 응원 발송                                                     | emoji, feedItemId                                                                            |
-| `notification_sent`    | 알림 발송                                                     | type (start / deadline / friend_action / kudos_received / goal_unreachable), week (goal_unreachable 만) |
-| `notification_opened`  | 알림 탭                                                       | type                                                                                         |
-| `penalty_displayed`    | 마감 임박 카드 노출                                           | amount                                                                                       |
+| 이벤트                 | 발생 시점                                                     | 주요 속성                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_signed_up`       | 가입 완료                                                     | provider, invitedBy                                                                                                                                                  |
+| `group_created`        | 그룹 생성                                                     | groupId, memberTarget                                                                                                                                                |
+| `invite_sent`          | 초대 링크 생성                                                | groupId                                                                                                                                                              |
+| `invite_opened`        | 링크 열림                                                     | groupId, fromOrganicUser                                                                                                                                             |
+| `challenge_created`    | 챌린지 생성                                                   | challengeId, penaltyAmount, goalCount                                                                                                                                |
+| `challenge_signed`     | 서명 완료                                                     | challengeId, userId                                                                                                                                                  |
+| `challenge_activated`  | 그룹장 명시 시작 → active                                     | challengeId, signToActiveMs, participantCount                                                                                                                        |
+| `action_started`       | 챌린지 상세 FAB 카메라 클릭 (challenge action sub-route 진입) | challengeId                                                                                                                                                          |
+| `keywords_shown`       | 키워드 칩 랜덤 노출                                           | activityType, shownKeywords[], source(`initial` \| `reroll`)                                                                                                         |
+| `keywords_reroll`      | "다시 뽑기" 탭                                                | activityType, rerollCount                                                                                                                                            |
+| `keyword_selected`     | 칩 탭 (선택/해제)                                             | keyword, selectedCount, activityType, action(`add` \| `remove`)                                                                                                      |
+| `memo_fallback_opened` | "직접 쓰고 싶어요" 링크 열림                                  | -                                                                                                                                                                    |
+| `action_logged`        | 인증 제출                                                     | challengeId, activityType, selectedKeywords[], keywordCount, hasMemo, rerollCount, photoSize                                                                         |
+| `ai_generated`         | AI 일기 성공                                                  | actionLogId, latencyMs, fallback, keywordCoverage (포함된 키워드 수/선택 수)                                                                                         |
+| `feed_view`            | 챌린지 상세 인증 피드 탭 활성화 (`/challenge/[id]`)           | unreadCount                                                                                                                                                          |
+| `kudos_given`          | 응원 발송                                                     | emoji, feedItemId                                                                                                                                                    |
+| `notification_sent`    | 알림 발송                                                     | type (start / deadline / friend_action / kudos_received / goal_unreachable / verify_anomaly), week (goal_unreachable·verify_anomaly), anomalyReason (verify_anomaly) |
+| `notification_opened`  | 알림 탭                                                       | type                                                                                                                                                                 |
+| `auto_verify_result`   | 사진 자동검증 판정(모든 제출)                                 | actionLogId, challengeId, status, phashDup, exifMissing, screenshot, score, enforced                                                                                 |
+| `peer_reject`          | 피어 반려 토글(익명, user_id=null)                            | actionLogId, challengeId, rejectCount, status, action                                                                                                                |
+| `penalty_displayed`    | 마감 임박 카드 노출                                           | amount                                                                                                                                                               |
 
 ### 9.2 Week 2에 답해야 할 질문과 이벤트 매핑
 

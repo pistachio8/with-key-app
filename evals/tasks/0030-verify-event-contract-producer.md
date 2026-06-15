@@ -2,7 +2,7 @@
 Task: EVAL-0030
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/superpowers/specs/2026-06-15-verify-analytics-events.md, docs/superpowers/plans/2026-06-15-eval-0026-verify-ops-analytics.md
 ---
 

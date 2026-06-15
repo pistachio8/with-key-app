@@ -154,7 +154,7 @@ export const togglePeerRejection = withUser<PeerRejectionInput, PeerRejectionTog
     // 과반 전이(passed↔peer_rejected)는 작성자의 doneCount(진행 표시)에 영향 → 작성자 home-feed 무효화.
     const { data: log, error: logErr } = await supabase
       .from("action_logs")
-      .select("user_id")
+      .select("user_id, challenge_id")
       .eq("id", actionLogId)
       .maybeSingle();
     if (logErr) console.error("[togglePeerRejection] author lookup failed", logErr);
@@ -167,6 +167,21 @@ export const togglePeerRejection = withUser<PeerRejectionInput, PeerRejectionTog
       status: row.status,
     });
     if (!parsedResult.success) return failure("upstream_error");
+
+    // C2 — 익명 peer_reject emit. options.userId 미전달 → events.user_id=null(반려자 비식별).
+    // RPC 반환만으로 완성(추가 read 없음). 본문 미로깅 — id·count·status·action 만.
+    if (log?.challenge_id) {
+      void track({
+        name: "peer_reject",
+        props: {
+          actionLogId,
+          challengeId: log.challenge_id as string,
+          rejectCount: parsedResult.data.peerRejectCount,
+          status: parsedResult.data.status,
+          action: parsedResult.data.viewerRejected ? "add" : "remove",
+        },
+      });
+    }
     return success(parsedResult.data);
   },
 );

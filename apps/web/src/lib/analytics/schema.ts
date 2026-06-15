@@ -127,6 +127,33 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
     }),
   }),
   z.object({
+    name: z.literal("auto_verify_result"),
+    props: z.object({
+      actionLogId: uuid,
+      challengeId: uuid,
+      status: z.enum(["passed", "failed", "manual_review"]),
+      phashDup: z.boolean(),
+      exifMissing: z.boolean(),
+      screenshot: z.boolean(),
+      // advisorySignalScore — 현재 0~2(advisory 신호 2개: exifMissing·screenshot). max 미고정은
+      // 의도(spec C1 — θ 튜닝 해상도 보존). 신호 추가 시 이 주석으로 범위 추적.
+      score: z.number().int().min(0).nullable(),
+      modelVersion: z.string(),
+      enforced: z.boolean(),
+    }),
+  }),
+  z.object({
+    name: z.literal("peer_reject"),
+    props: z.object({
+      actionLogId: uuid,
+      challengeId: uuid,
+      rejectCount: z.number().int().min(0),
+      // domain peerRejectionToggleResultSchema(validators/peer-rejection.ts) 와 동일 5값 — 의도된 미러.
+      status: z.enum(["passed", "peer_rejected", "failed", "manual_review", "pending"]),
+      action: z.enum(["add", "remove"]),
+    }),
+  }),
+  z.object({
     name: z.literal("penalty_displayed"),
     props: z.object({ amount: z.number().int() }),
   }),

@@ -166,6 +166,10 @@ vi.mock("@/lib/db/reads/phash-duplicates", () => ({
   findActionLogPhashDuplicates: vi.fn(),
 }));
 
+// C1 — judge UPDATE 직후 auto_verify_result emit. track 은 fire-and-forget 라 호출만 검증.
+const trackMock = vi.fn();
+vi.mock("@/lib/analytics/track", () => ({ track: (...a: unknown[]) => trackMock(...a) }));
+
 import { findActionLogPhashDuplicates } from "@/lib/db/reads/phash-duplicates";
 import { judgeAndRecordVerifyStatus } from "./judge";
 
@@ -192,6 +196,7 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
     updateArgs.length = 0;
     eqCalls.length = 0;
     updateError = null;
+    trackMock.mockClear();
     vi.mocked(findActionLogPhashDuplicates).mockReset();
   });
 
@@ -200,6 +205,7 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
 
     const decision = await judgeAndRecordVerifyStatus({
       actionLogId: "log-1",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       userId: "me",
       groupId: "g-1",
       signals: cleanSignals,
@@ -221,6 +227,7 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
 
     const decision = await judgeAndRecordVerifyStatus({
       actionLogId: "log-1",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       userId: "me",
       groupId: "g-1",
       signals: cleanSignals,
@@ -234,6 +241,7 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
   it("signals=null(계산 오류) → 중복 조회 없이 manual_review graceful 기록", async () => {
     const decision = await judgeAndRecordVerifyStatus({
       actionLogId: "log-1",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       userId: "me",
       groupId: "g-1",
       signals: null,
@@ -252,11 +260,61 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
     await expect(
       judgeAndRecordVerifyStatus({
         actionLogId: "log-1",
+        challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
         userId: "me",
         groupId: "g-1",
         signals: cleanSignals,
         config: theta,
       }),
     ).rejects.toEqual({ message: "db down" });
+    // UPDATE 실패는 throw 로 즉시 종료 — emit 미발생(이벤트↔컬럼 일관: 컬럼도 status 못 남김).
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("판정 후 auto_verify_result 를 emit 한다 (challengeId·enforced 포함)", async () => {
+    await judgeAndRecordVerifyStatus({
+      actionLogId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      groupId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      signals: null, // 손상 이미지 → manual_review, score:null
+      config: { phashFailMax: 6, phashReviewMax: 10, enforce: false },
+    });
+    expect(trackMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "auto_verify_result",
+        props: expect.objectContaining({
+          challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          status: "manual_review",
+          score: null,
+          enforced: false,
+        }),
+      }),
+    );
+  });
+
+  it("passed 판정도 emit 한다 — 수치 score·phashDup=false·enforced=true (C1 모든 제출)", async () => {
+    vi.mocked(findActionLogPhashDuplicates).mockResolvedValue(dupResult([]));
+    await judgeAndRecordVerifyStatus({
+      actionLogId: "log-1",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      userId: "me",
+      groupId: "g-1",
+      signals: { ...cleanSignals, exifPresent: true }, // 완전 청정 → score 0·exifMissing false
+      config: thetaEnforced, // enforce=true → enforced:true
+    });
+    expect(trackMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "auto_verify_result",
+        props: expect.objectContaining({
+          status: "passed",
+          phashDup: false,
+          exifMissing: false,
+          screenshot: false,
+          score: 0,
+          enforced: true,
+        }),
+      }),
+    );
   });
 });
