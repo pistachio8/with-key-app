@@ -274,6 +274,26 @@
         }
       },
       "notes": "수동 핸드오프(PO·CI, 위조 금지): ① migration 0048 의 linked Supabase 적용 — CI 통합 테스트·db:types --linked 는 linked 기준이라 0048 미적용 시 peer-reject 통합이 PGRST202/205 로 fail(로컬은 env override 로 검증 완료). production apply 는 ADR-0038 §게이트대로 후속(θ·G2 무관·단방향). ② 🟨 1탭 UI 모바일 viewport 실기기/DevTools 수동 확인. 범위 결정(drift report): doneCount read 는 peer_rejected 제외하되 pot/penalty 추정·정산 RPC(0044)는 미변경 — read↔정산 정합 유지, 정산측 peer_rejected 제외는 EVAL-0008(역방향 의존) 후속. countsTowardDone 의 failed/enforce read-wiring 은 EVAL-0022 Non-goal 이라 제외(peer_rejected 만 명시 제외). supabase.ts 는 gen types --local 전체 churn(1323줄) 회피 위해 peer_rejections·toggle_peer_rejection 두 블록만 committed 파일에 surgical 삽입. 로컬 stack: onlyBuiltDependencies 가 supabase postinstall 차단 → 바이너리 1회 수동 설치, 메인 repo stack 정지 후 worktree stack 기동(포트 공유)."
+    },
+    {
+      "taskId": "EVAL-0030",
+      "date": "2026-06-15",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "WP6 WP1 (EVAL-0030) — 자동검증·피어반려 AnalyticsEvent 계약 + producer emit. spec 2026-06-15-verify-analytics-events C1·C2·C4 구현. (C1) 신규 auto_verify_result: judge.ts judgeAndRecordVerifyStatus 시그니처에 challengeId 추가 + auto_verify_status UPDATE 직후 모든 제출(passed 포함) void track emit — props actionLogId·challengeId·status(passed/failed/manual_review)·phashDup(decision.reason same_user_reuse/same_group_reuse/near_duplicate 파생, 전역 cross-user·signal_error·clean 제외)·exifMissing·screenshot·score(advisorySignalScore 0~2, signals=null→null)·modelVersion(JUDGE_MODEL_VERSION)·enforced(config.enforce). submit-core.ts after() 콜사이트에 challengeId: parsed.input.challengeId 주입. (C2) 신규 익명 peer_reject: togglePeerRejection author lookup select 를 user_id→\"user_id, challenge_id\" 확장 + safeParse 직후 void track emit(options.userId 미전달 → events.user_id=null, 반려자 비식별). props actionLogId·challengeId·rejectCount·status(RPC raw 5값)·action(viewer_rejected→add/remove). RPC 반환만으로 완성(추가 read 없음). (C4) PRD §9.1 표에 auto_verify_result·peer_reject 2행 추가 + notification_sent type 목록에 verify_anomaly 명시(union/zod emit 은 EVAL-0031). parity 3-of-3(track.ts union·schema.ts zod·schema-union-parity.spec.ts fixture) 동시 갱신. (C5) 본문 미로깅 — props 는 id·bool·수치·enum·modelVersion 만, 사진 URL·phash 문자열·일기 본문 부재(grep 확인). supabase/migrations·RLS 무변경(기존 events 테이블 track() service_role 소비만).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm lint": "pass — domain·web·mobile exit 0",
+          "pnpm --filter web test (unit)": "pass — 116 files / 722 tests (judge auto_verify_result emit challengeId·enforced·score:null · togglePeerRejection add/remove·peer_rejected raw status·익명 options undefined·invalid uuid 거부·본문 미로깅 grep · parity auto_verify_result·peer_reject fixture)",
+          "C5 본문 미로깅 grep (git diff origin/develop -- analytics·verify/judge.ts·_actions.ts)": "pass — diff 추가 props 에 photo/phash 문자열·url·memo·keyword 텍스트 부재(phashDup boolean 제외)",
+          "pnpm validate:docs": "pass — broken 0 / 212 refs",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "notes": "후속(EVAL-0031 WP2): notification_sent verify_anomaly union/zod parity + loadVerifyOpsConfig + dispatchVerifyAnomalyNotification(events dedup·shadow 게이트) + deadline-push cron rate 산정. 본 WP1 은 PRD §9.1 에 verify_anomaly 를 텍스트로만 선반영(plan Task 3 Step 2 'WP2 와 공유 — 여기서 함께 명시', §9.1 SoT 는 analyticsEventSchema 유니온이라 doc-ahead 무해). 수동 핸드오프(dogfood 실측·위조 금지): 사진 제출→events auto_verify_result 1건(passed 포함), 반려 토글→peer_reject(user_id=null), passed→peer_rejected 전이는 이벤트 시퀀스(직전 passed→이번 peer_rejected)로 관측(spec C2). base=feat/rn-verify-ops(origin/develop, PR #232 spec 머지 포함). worktree 자율 커밋 3건(C1 fe57f2a·C2 ff7f849·C4 c3b3d13), 푸시·PR 은 사용자 확인 후."
     }
   ]
 }
