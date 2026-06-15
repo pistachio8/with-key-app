@@ -8,6 +8,8 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 
 ## 작업 종류 → workflow 매핑
 
+> 전체 순서를 한 번에: [workflows/full-pipeline.md](workflows/full-pipeline.md) — PM 스킬부터 무인 `/goal` 구현까지 엮은 런북. 아래 표는 단계별 SoT.
+
 | 작업              | workflow                                                                           |
 | ----------------- | ---------------------------------------------------------------------------------- |
 | PRD 생성/정규화   | [workflows/create-prd.md](workflows/create-prd.md)                                 |
@@ -29,7 +31,7 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 - `skills/withkey-{migration,backend,frontend}-reviewer/` — Claude 전용 `.claude/agents/*-reviewer.md`의 Codex skill 변환본
 - `backlog/` — Work Package·Agent Task 템플릿·Traceability
 - `qa/` — dogfood QA·release 체크리스트
-- `workflows/` — 도구 중립 절차 SoT(10)
+- `workflows/` — 도구 중립 절차 SoT(10) + 전체 순서 런북([full-pipeline.md](workflows/full-pipeline.md))
 - 자기유지(정책·drift·changelog·config): [harness/HARNESS_MAINTENANCE.md](harness/HARNESS_MAINTENANCE.md)
 
 ## 검증 (도구 무관 CLI)
