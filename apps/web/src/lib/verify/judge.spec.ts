@@ -267,6 +267,8 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
         config: theta,
       }),
     ).rejects.toEqual({ message: "db down" });
+    // UPDATE 실패는 throw 로 즉시 종료 — emit 미발생(이벤트↔컬럼 일관: 컬럼도 status 못 남김).
+    expect(trackMock).not.toHaveBeenCalled();
   });
 
   it("판정 후 auto_verify_result 를 emit 한다 (challengeId·enforced 포함)", async () => {
@@ -286,6 +288,31 @@ describe("judgeAndRecordVerifyStatus — service_role write", () => {
           status: "manual_review",
           score: null,
           enforced: false,
+        }),
+      }),
+    );
+  });
+
+  it("passed 판정도 emit 한다 — 수치 score·phashDup=false·enforced=true (C1 모든 제출)", async () => {
+    vi.mocked(findActionLogPhashDuplicates).mockResolvedValue(dupResult([]));
+    await judgeAndRecordVerifyStatus({
+      actionLogId: "log-1",
+      challengeId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      userId: "me",
+      groupId: "g-1",
+      signals: { ...cleanSignals, exifPresent: true }, // 완전 청정 → score 0·exifMissing false
+      config: thetaEnforced, // enforce=true → enforced:true
+    });
+    expect(trackMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "auto_verify_result",
+        props: expect.objectContaining({
+          status: "passed",
+          phashDup: false,
+          exifMissing: false,
+          screenshot: false,
+          score: 0,
+          enforced: true,
         }),
       }),
     );

@@ -287,7 +287,7 @@
         "local": {
           "pnpm typecheck": "pass — domain·web·mobile exit 0",
           "pnpm lint": "pass — domain·web·mobile exit 0",
-          "pnpm --filter web test (unit)": "pass — 116 files / 722 tests (judge auto_verify_result emit challengeId·enforced·score:null · togglePeerRejection add/remove·peer_rejected raw status·익명 options undefined·invalid uuid 거부·본문 미로깅 grep · parity auto_verify_result·peer_reject fixture)",
+          "pnpm --filter web test (unit)": "pass — 116 files / 723 tests (judge auto_verify_result emit challengeId·enforced·score:null · togglePeerRejection add/remove·peer_rejected raw status·익명 options undefined·invalid uuid 거부·본문 미로깅 grep · parity auto_verify_result·peer_reject fixture)",
           "C5 본문 미로깅 grep (git diff origin/develop -- analytics·verify/judge.ts·_actions.ts)": "pass — diff 추가 props 에 photo/phash 문자열·url·memo·keyword 텍스트 부재(phashDup boolean 제외)",
           "pnpm validate:docs": "pass — broken 0 / 212 refs",
           "pnpm harness:check": "pass — 0 violations"
