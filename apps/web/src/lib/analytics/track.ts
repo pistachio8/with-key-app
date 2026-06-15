@@ -82,15 +82,23 @@ export type AnalyticsEvent =
   | {
       name: "notification_sent";
       props: {
-        type: "start" | "deadline" | "friend_action" | "kudos_received" | "goal_unreachable";
+        type:
+          | "start"
+          | "deadline"
+          | "friend_action"
+          | "kudos_received"
+          | "goal_unreachable"
+          | "verify_anomaly";
         challengeId: string;
         suppressed: boolean;
         outcome: "sent" | "cleaned" | "failed" | "suppressed";
         // kudos_received 만 채움 (ADR-0017). start/deadline/friend_action 발송에는 의미 없음.
         actionLogId?: string;
         actorUserId?: string;
-        // goal_unreachable 만 채움 — (challenge,user,week) 단위 dedup 키. 주차 1-based.
+        // goal_unreachable·verify_anomaly 가 채움 — dedup 키(주차). 1-based.
         week?: number;
+        // verify_anomaly 만 채움 — failed_rate(자동검증) vs reject_rate(그룹 갈등).
+        anomalyReason?: "failed_rate" | "reject_rate";
       };
     }
   | {
