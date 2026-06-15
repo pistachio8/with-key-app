@@ -143,6 +143,17 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
     }),
   }),
   z.object({
+    name: z.literal("peer_reject"),
+    props: z.object({
+      actionLogId: uuid,
+      challengeId: uuid,
+      rejectCount: z.number().int().min(0),
+      // domain peerRejectionToggleResultSchema(validators/peer-rejection.ts) 와 동일 5값 — 의도된 미러.
+      status: z.enum(["passed", "peer_rejected", "failed", "manual_review", "pending"]),
+      action: z.enum(["add", "remove"]),
+    }),
+  }),
+  z.object({
     name: z.literal("penalty_displayed"),
     props: z.object({ amount: z.number().int() }),
   }),

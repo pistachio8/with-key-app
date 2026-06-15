@@ -111,6 +111,16 @@ export type AnalyticsEvent =
         enforced: boolean; // config.enforce. shadow면 failed라도 doneCount 미제외
       };
     }
+  | {
+      name: "peer_reject";
+      props: {
+        actionLogId: string; // uuid — 반려 대상
+        challengeId: string; // uuid
+        rejectCount: number; // RPC peer_reject_count (총 반려 수)
+        status: "passed" | "peer_rejected" | "failed" | "manual_review" | "pending"; // RPC status raw
+        action: "add" | "remove"; // viewer_rejected 파생
+      };
+    }
   | { name: "penalty_displayed"; props: { amount: number } };
 
 type TrackOptions = { userId?: string };
