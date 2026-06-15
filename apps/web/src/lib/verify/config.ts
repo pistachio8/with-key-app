@@ -41,3 +41,30 @@ export function loadVerifyConfig(env: VerifyEnvSource = process.env): VerifyConf
     VERIFY_ENFORCE: env.VERIFY_ENFORCE || undefined,
   });
 }
+
+// 운영 이상 알림 임계 — θ(판정)와 별개. AC-owner-load-3. 값은 PO/운영 env.
+// θ 스키마와 분리한 이유: θ 는 자동검증 판정 임계(false-flag)이고, 이 노브는
+// 운영 알림 트리거(주차 failed/reject 비율)다 — 둘은 서로 다른 결정·다른 주체(spec C3).
+const verifyOpsEnvSchema = z
+  .object({
+    VERIFY_OPS_FAILED_RATE: z.coerce.number().min(0).max(1).default(0.3),
+    VERIFY_OPS_REJECT_RATE: z.coerce.number().min(0).max(1).default(0.3),
+    // 최소 표본 — 1/1=100% 같은 노이즈 알림 방지.
+    VERIFY_OPS_MIN_SAMPLE: z.coerce.number().int().min(1).default(3),
+  })
+  .transform((env) => ({
+    failedRate: env.VERIFY_OPS_FAILED_RATE,
+    rejectRate: env.VERIFY_OPS_REJECT_RATE,
+    minSample: env.VERIFY_OPS_MIN_SAMPLE,
+  }));
+
+export type VerifyOpsConfig = z.output<typeof verifyOpsEnvSchema>;
+
+export function loadVerifyOpsConfig(env: VerifyEnvSource = process.env): VerifyOpsConfig {
+  // 빈 문자열은 미설정과 동일하게 default 로 폴백한다(loadVerifyConfig 와 동일 관행).
+  return verifyOpsEnvSchema.parse({
+    VERIFY_OPS_FAILED_RATE: env.VERIFY_OPS_FAILED_RATE || undefined,
+    VERIFY_OPS_REJECT_RATE: env.VERIFY_OPS_REJECT_RATE || undefined,
+    VERIFY_OPS_MIN_SAMPLE: env.VERIFY_OPS_MIN_SAMPLE || undefined,
+  });
+}

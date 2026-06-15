@@ -3,10 +3,18 @@ import { adminClient } from "@/lib/supabase/admin";
 import {
   dispatchDeadlineNotification,
   dispatchGoalUnreachableNotification,
+  dispatchVerifyAnomalyNotification,
 } from "@/lib/push/dispatch";
+import {
+  loadVerifyConfig,
+  loadVerifyOpsConfig,
+  type VerifyConfig,
+  type VerifyOpsConfig,
+} from "@/lib/verify";
 import {
   toKstDayKey,
   dayIndexOf,
+  weekIndexOf,
   unreachableParticipants,
   type CutoffContext,
 } from "@withkey/domain";
@@ -87,9 +95,22 @@ export async function POST(req: Request): Promise<Response> {
   // 회복 불가(이번 주 달성 불가) 전환 통지 — running 챌린지 참가자별 (challenge,user,week) 1회.
   // give-up(인증 중단)은 제출이 없어 결과 모달로 못 잡으므로 일 경계 cron 이 감지·통지(dispatch 가 dedup).
   let unreachableNotified = 0;
+  let anomalyNotified = 0;
+  // config 로드는 running 루프 밖으로 hoist — 루프마다 zod.parse(process.env) 재실행 방지.
+  // 운영자가 VERIFY_OPS_*/VERIFY_ENFORCE 를 잘못 입력하면 zod 가 throw — 그 실패가 같은 루프의
+  // goal_unreachable 통지까지 막지 않도록 격리한다(auto-close try/catch 패턴과 동일). 파싱 실패
+  // 시 verify_anomaly 만 skip, 회복 불가 통지는 정상 수행. config null 이면 rate 블록을 건너뛴다.
+  let opsConfig: VerifyOpsConfig | null = null;
+  let verifyConfig: VerifyConfig | null = null;
+  try {
+    opsConfig = loadVerifyOpsConfig();
+    verifyConfig = loadVerifyConfig();
+  } catch (cfgErr) {
+    console.error("[deadline-push] verify config 파싱 실패 — verify_anomaly 알림 skip", cfgErr);
+  }
   const { data: running } = await admin
     .from("challenges")
-    .select("id, goal_count, duration_days, penalty_amount, start_at")
+    .select("id, goal_count, duration_days, penalty_amount, start_at, groups!inner(owner_id)")
     .eq("status", "active")
     .gt("end_at", new Date(now).toISOString())
     .not("start_at", "is", null);
@@ -113,7 +134,7 @@ export async function POST(req: Request): Promise<Response> {
     if (participantIds.length === 0) continue;
     const { data: logs } = await admin
       .from("action_logs")
-      .select("user_id, created_at")
+      .select("user_id, created_at, auto_verify_status")
       .eq("challenge_id", ch.id as string);
     const targets = unreachableParticipants(logs ?? [], participantIds, ctx, {
       goalCount: ch.goal_count as number,
@@ -128,6 +149,43 @@ export async function POST(req: Request): Promise<Response> {
       });
       if (summary.recipientCount > 0) unreachableNotified += 1;
     }
+
+    // 검증 이상 신호 — 현재 주차 failed_rate / reject_rate 임계 초과 시 오너 알림(AC-owner-load-3).
+    // 주의: 이 운영 트리거 rate 는 action_logs.auto_verify_status 컬럼 직접 집계다.
+    //   spec C2 가 말한 분석 반려율(분모=challenge_activated.participantCount, events 재구성)과는
+    //   별개 정의 — 운영 알림 트리거 ≠ 분석 지표. 두 수치를 동일시하지 말 것.
+    const currentWeek = weekIndexOf(todayDayIndex);
+    const weekLogs = (logs ?? []).filter(
+      (l) => weekIndexOf(dayIndexOf(toKstDayKey(l.created_at as string), startKey)) === currentWeek,
+    );
+    const sample = weekLogs.length;
+    const ownerId = (Array.isArray(ch.groups) ? ch.groups[0] : ch.groups)?.owner_id as
+      | string
+      | undefined;
+    if (opsConfig && verifyConfig && ownerId && sample >= opsConfig.minSample) {
+      const failed = weekLogs.filter((l) => l.auto_verify_status === "failed").length;
+      const rejected = weekLogs.filter((l) => l.auto_verify_status === "peer_rejected").length;
+      // failed_rate: shadow(enforce=false)에선 미발사 — would-be failed 는 차단 없어 그룹 혼란.
+      if (verifyConfig.enforce && failed / sample > opsConfig.failedRate) {
+        const s = await dispatchVerifyAnomalyNotification({
+          challengeId: ch.id as string,
+          ownerUserId: ownerId,
+          week: currentWeek,
+          anomalyReason: "failed_rate",
+        });
+        if (s.recipientCount > 0) anomalyNotified += 1;
+      }
+      // reject_rate: enforce 무관 항상 발사 — 피어 반려는 사람의 실제 결정.
+      if (rejected / sample > opsConfig.rejectRate) {
+        const s = await dispatchVerifyAnomalyNotification({
+          challengeId: ch.id as string,
+          ownerUserId: ownerId,
+          week: currentWeek,
+          anomalyReason: "reject_rate",
+        });
+        if (s.recipientCount > 0) anomalyNotified += 1;
+      }
+    }
   }
 
   return NextResponse.json({
@@ -136,6 +194,7 @@ export async function POST(req: Request): Promise<Response> {
     dispatched,
     closed,
     unreachableNotified,
+    anomalyNotified,
   });
 }
 
