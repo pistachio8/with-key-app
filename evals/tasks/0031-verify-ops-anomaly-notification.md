@@ -2,8 +2,7 @@
 Task: EVAL-0031
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0022] [task:EVAL-0025] [spec:verify-analytics] [po:verify-analytics] — 0026 부모 WP와 동일 게이트 상속. notification_sent verify_anomaly enum 확장은 PRD §9.1 union 1:1 spec + PO 승인 선행.
+Status: todo
 Depends-on: [task:EVAL-0030] — WP1 이벤트 계약·union 표면 확정 선행(intra-feature 순서, 게이트 아님).
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/superpowers/specs/2026-06-15-verify-analytics-events.md, docs/superpowers/plans/2026-06-15-eval-0026-verify-ops-analytics.md
 ---

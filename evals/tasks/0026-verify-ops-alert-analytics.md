@@ -2,8 +2,7 @@
 Task: EVAL-0026
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0022] [task:EVAL-0025] [spec:verify-analytics] [po:verify-analytics] — 자동검증·반려 이벤트는 PRD §9.1 union 1:1 spec + PO 승인 선행(가드레일 §AnalyticsEvent). 선행 EVAL-0022(판정)·EVAL-0025(반려) 산출.
+Status: todo
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

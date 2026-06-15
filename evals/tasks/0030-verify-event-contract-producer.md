@@ -2,8 +2,7 @@
 Task: EVAL-0030
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0022] [task:EVAL-0025] [spec:verify-analytics] [po:verify-analytics] — 0026 부모 WP와 동일 게이트 상속. PRD §9.1 union 1:1 spec + PO 승인 선행(가드레일 §AnalyticsEvent).
+Status: todo
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/superpowers/specs/2026-06-15-verify-analytics-events.md, docs/superpowers/plans/2026-06-15-eval-0026-verify-ops-analytics.md
 ---
 
