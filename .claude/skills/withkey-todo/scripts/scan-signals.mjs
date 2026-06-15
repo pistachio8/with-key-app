@@ -27,6 +27,17 @@ const sh = (cmd) => {
 };
 const EVAL_RE = /EVAL-\d{4}/g;
 const trunc = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + "…" : s || "");
+const parseFm = (raw) => {
+  const fm = {};
+  const m = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (m) {
+    for (const line of m[1].split("\n")) {
+      const i = line.indexOf(":");
+      if (i > 0) fm[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
+    }
+  }
+  return fm;
+};
 
 function section(title) {
   console.log(`\n=== ${title} ===`);
@@ -71,6 +82,43 @@ for (const line of log.split("\n")) {
   for (const id of sm[2].match(EVAL_RE) || []) (shipped[id] ||= []).push(sm[1]);
 }
 
+// ── 2.5 원격 동기 상태 (origin/develop) ─────────────────────────────────
+// 로컬 클론이 stale 하면 task frontmatter 도 git log 도 과거 시점이다. 다른 세션/
+// 머신에서 작업해 머지된 경우(실례: EVAL-0016/PR#213 — 머지 3분 뒤 stale 클론이
+// done task 를 P1 로 추천) 로컬 신호만으로는 구조적으로 못 잡는다. fetch 후
+// origin/develop 와의 차이를 신호에 합류시킨다. backlog SoT 는 develop 에서 전진한다.
+section("REMOTE SYNC (origin/develop)");
+sh("git fetch origin develop --quiet");
+const behind = sh("git rev-list --count HEAD..origin/develop");
+const remoteStatus = {}; // EVAL id → origin/develop 기준 Status (backlog 에서 로컬 교정용)
+if (behind === "0") {
+  console.log("up to date with origin/develop");
+} else if (behind === "") {
+  console.log("(fetch/rev-list 실패 — offline? 로컬 신호만 사용. stale 추천 가능성 유의)");
+} else {
+  console.log(
+    `local is ${behind} commit(s) behind origin/develop — backlog 는 원격 기준으로 교정함`,
+  );
+  const remoteLog = sh("git log --oneline HEAD..origin/develop");
+  console.log("remote-ahead commits:");
+  console.log(remoteLog);
+  // 원격에만 있는 feat/fix 커밋도 drift 후보 탐지(shipped)에 합류.
+  for (const line of remoteLog.split("\n")) {
+    const sm = line.match(/^(\S+)\s+(.*)$/);
+    if (!sm || !/^(feat|fix)[(:]/.test(sm[2])) continue;
+    for (const id of sm[2].match(EVAL_RE) || []) (shipped[id] ||= []).push(`${sm[1]}(remote)`);
+  }
+  // 원격에서 바뀐 task 파일의 frontmatter Status 를 읽어 backlog 출력 시 로컬값을 덮는다.
+  const changedTasks = sh("git diff --name-only HEAD origin/develop -- evals/tasks");
+  for (const f of changedTasks.split("\n").filter((f) => f.endsWith(".md"))) {
+    const raw = sh(`git show origin/develop:${f}`);
+    if (!raw) continue;
+    const fm = parseFm(raw);
+    const id = fm.task || `EVAL-${path.basename(f).slice(0, 4)}`;
+    if (fm.status) remoteStatus[id] = fm.status.toLowerCase().replace(/\s+/g, "_");
+  }
+}
+
 section("EVAL TASK BACKLOG (evals/tasks/*.md)");
 const tasksDir = path.join(root, "evals", "tasks");
 if (existsSync(tasksDir)) {
@@ -80,20 +128,31 @@ if (existsSync(tasksDir)) {
     .filter((f) => f.endsWith(".md"))
     .sort()) {
     const raw = readFileSync(path.join(tasksDir, file), "utf8");
-    const fm = {};
-    const m = raw.match(/^---\n([\s\S]*?)\n---/);
-    if (m) {
-      for (const line of m[1].split("\n")) {
-        const i = line.indexOf(":");
-        if (i > 0) fm[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
-      }
-    }
+    const fm = parseFm(raw);
     const id = fm.task || `EVAL-${file.slice(0, 4)}`;
     const titleLine = raw.split("\n").find((l) => l.startsWith("# "));
     const title = titleLine ? titleLine.replace(/^#\s*/, "") : "";
-    const status = (fm.status || "other").toLowerCase().replace(/\s+/g, "_");
-    tasks.push({ id, title, status, dep: fm["depends-on"] || "", blk: fm["blocked-by"] || "" });
+    let status = (fm.status || "other").toLowerCase().replace(/\s+/g, "_");
+    // origin/develop 가 backlog SoT — 원격에서 Status 가 전진했으면 로컬값을 덮는다.
+    let corrected = "";
+    if (remoteStatus[id] && remoteStatus[id] !== status) {
+      corrected = `local=${status} → origin/develop=${remoteStatus[id]}`;
+      status = remoteStatus[id];
+    }
+    tasks.push({
+      id,
+      title,
+      status,
+      corrected,
+      dep: fm["depends-on"] || "",
+      blk: fm["blocked-by"] || "",
+    });
     statusById[id] = status;
+  }
+  const correctedTasks = tasks.filter((t) => t.corrected);
+  if (correctedTasks.length) {
+    console.log(`\n[remote-corrected — 로컬 frontmatter 가 stale, 아래는 origin/develop 기준]`);
+    for (const t of correctedTasks) console.log(`- ${t.id}: ${t.corrected}`);
   }
   // todo 의 depends-on 에서 EVAL id 를 뽑아 현재 status 로 해석 → 모든 dep 가 done 이면 READY,
   // 아니면 WAITING. "todo ≠ 즉시 착수 가능" 의 가장 틀리기 쉬운 추론을 코드로 전진 배치.

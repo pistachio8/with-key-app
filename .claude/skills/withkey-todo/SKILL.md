@@ -52,6 +52,16 @@ The output has six sections. What each is telling you:
   that's this tool, not project work.
 - **RECENT COMMITS** — what just happened and what's mid-stream (repeated `fix`,
   `forward-fix`, EVAL references). Tells you what NOT to re-propose.
+- **REMOTE SYNC** — the scanner fetches `origin/develop` and reports how far the
+  local clone is behind. The backlog SoT (`evals/tasks` frontmatter) advances on
+  develop, so a stale clone silently recommends already-merged work (real case:
+  EVAL-0016 was merged in PR #213 three minutes before a scan, and the local
+  clone still said `Status: todo`). When behind, the scanner lists remote-ahead
+  commits, folds their `feat`/`fix` EVAL ids into drift detection, and overrides
+  stale local task Statuses with the `origin/develop` value (surfaced as a
+  `[remote-corrected]` block in the backlog section). If this section says
+  fetch failed (offline), treat every recommendation as possibly stale and say
+  so in the output.
 - **EVAL TASK BACKLOG** — the real backlog, bucketed by Status. For each `todo`,
   the scanner resolves its dependencies into a `deps: EVAL-XXXX[status] →
 READY/WAITING` line: **READY** = every dependency is `done` (startable now);
@@ -67,8 +77,11 @@ READY/WAITING` line: **READY** = every dependency is `done` (startable now);
   an EVAL-XXXX marked todo). Open one only if a candidate hinges on its detail.
 
 If the scanner can't run (not in the repo root, Node missing), fall back to the
-raw commands: `git status --porcelain`, `git log --oneline -30`, and read
-`evals/tasks/*.md` frontmatter directly.
+raw commands: `git fetch origin develop` + `git rev-list --count
+HEAD..origin/develop` (stale check first), then `git status --porcelain`,
+`git log --oneline -30`, and read `evals/tasks/*.md` frontmatter directly —
+from `origin/develop` (`git show origin/develop:evals/tasks/<file>`) if the
+clone is behind.
 
 ## Step 2 — Cross-reference and ground each candidate
 
@@ -93,6 +106,11 @@ list is separated from a data dump.
   reading the commit subject: if it's a real shipment, surface a small
   "status drift 정정" reconciliation item (don't propose redoing the work); if
   it's only an "활성/backlog" commit, ignore it — the task really is open.
+- **Confirm P1 candidates against merged PRs.** Local-log drift detection can't
+  see work done in another session or machine. Before finalizing a P1 item, run
+  one `gh pr list --state merged --search "<EVAL-id>" --limit 3` (or check the
+  `[remote-corrected]` / remote-ahead commits from the scanner) — if a merged PR
+  already shipped the task, propose a status-drift 정정 instead of the work.
 - **Every item cites a real signal.** A file path that exists, a commit hash, an
   `EVAL-XXXX` id, a spec filename. If you can't cite it, don't list it — no
   invented work, no hallucinated paths. This is the one rule that makes the list
