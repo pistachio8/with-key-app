@@ -233,6 +233,7 @@ export async function submitActionLogCore(
             });
             await judgeAndRecordVerifyStatus({
               actionLogId: data.id,
+              challengeId: parsed.input.challengeId,
               userId: user.id,
               groupId: ch.group_id,
               signals,

@@ -97,6 +97,20 @@ export type AnalyticsEvent =
       name: "notification_opened";
       props: { type: "start" | "deadline" | "friend_action"; challengeId: string };
     }
+  | {
+      name: "auto_verify_result";
+      props: {
+        actionLogId: string; // uuid
+        challengeId: string; // uuid — 콜사이트 주입
+        status: "passed" | "failed" | "manual_review"; // 판정기 출력(peer_rejected 없음)
+        phashDup: boolean; // 동일 user/group near-match 존재 (decision.reason 파생)
+        exifMissing: boolean; // advisory
+        screenshot: boolean; // advisory
+        score: number | null; // advisorySignalScore(signals). signals=null(손상)→null
+        modelVersion: string; // JUDGE_MODEL_VERSION
+        enforced: boolean; // config.enforce. shadow면 failed라도 doneCount 미제외
+      };
+    }
   | { name: "penalty_displayed"; props: { amount: number } };
 
 type TrackOptions = { userId?: string };

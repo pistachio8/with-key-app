@@ -1,12 +1,13 @@
 import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
+import { track } from "@/lib/analytics/track";
 import {
   findActionLogPhashDuplicates,
   type PhashDedupScope,
 } from "@/lib/db/reads/phash-duplicates";
 import { loadVerifyConfig, type VerifyConfig } from "./config";
 import type { PhashMatch } from "./phash";
-import type { VerifySignals } from "./signals";
+import { advisorySignalScore, type VerifySignals } from "./signals";
 
 // θ 임계 자동검증 판정(EVAL-0022) — EVAL-0021 신호 → status 매핑을 완성한다.
 // 매핑 SoT 는 false-flag-threshold-theta spec §판정 매핑:
@@ -141,6 +142,8 @@ export function classifyPhashMatches(args: {
  */
 export async function judgeAndRecordVerifyStatus(args: {
   actionLogId: string;
+  /** auto_verify_result emit 용 — judge 는 status 만 보지만 이벤트는 challenge 차원이 필요. */
+  challengeId: string;
   userId: string;
   groupId: string;
   signals: VerifySignals | null;
@@ -195,5 +198,28 @@ export async function judgeAndRecordVerifyStatus(args: {
       enforce: config.enforce,
     });
   }
+
+  // C1 — 모든 제출(passed 포함) emit. false-flag rate 는 분모(전체)가 필요하다.
+  // phashDup = "동일 user/group near-match 존재"(spec C1). decision.reason 파생.
+  // global_near_match(cross-user 전역)·signal_error·clean 은 제외 — 전역은 생판 남 충돌이라
+  // dup 으로 세면 안 된다(judgeVerifyStatus 매핑 3). 본문(사진) 미로깅 — 메타만.
+  const phashDup =
+    decision.reason === "same_user_reuse" ||
+    decision.reason === "same_group_reuse" ||
+    decision.reason === "near_duplicate";
+  void track({
+    name: "auto_verify_result",
+    props: {
+      actionLogId: args.actionLogId,
+      challengeId: args.challengeId,
+      status: decision.status,
+      phashDup,
+      exifMissing: args.signals ? !args.signals.exifPresent : false,
+      screenshot: args.signals ? args.signals.screenshot.suspected : false,
+      score: args.signals ? advisorySignalScore(args.signals) : null,
+      modelVersion: JUDGE_MODEL_VERSION,
+      enforced: config.enforce,
+    },
+  });
   return decision;
 }

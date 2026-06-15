@@ -107,6 +107,20 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       challengeId: "11111111-1111-4111-8111-111111111111",
     },
   },
+  auto_verify_result: {
+    name: "auto_verify_result",
+    props: {
+      actionLogId: "11111111-1111-4111-8111-111111111111",
+      challengeId: "22222222-2222-4222-8222-222222222222",
+      status: "passed",
+      phashDup: false,
+      exifMissing: false,
+      screenshot: false,
+      score: 0,
+      modelVersion: "verify-judge-theta-v1",
+      enforced: false,
+    },
+  },
   penalty_displayed: { name: "penalty_displayed", props: { amount: 3000 } },
   account_copied: {
     name: "account_copied",
