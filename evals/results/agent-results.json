@@ -294,6 +294,24 @@
         }
       },
       "notes": "후속(EVAL-0031 WP2): notification_sent verify_anomaly union/zod parity + loadVerifyOpsConfig + dispatchVerifyAnomalyNotification(events dedup·shadow 게이트) + deadline-push cron rate 산정. 본 WP1 은 PRD §9.1 에 verify_anomaly 를 텍스트로만 선반영(plan Task 3 Step 2 'WP2 와 공유 — 여기서 함께 명시', §9.1 SoT 는 analyticsEventSchema 유니온이라 doc-ahead 무해). 수동 핸드오프(dogfood 실측·위조 금지): 사진 제출→events auto_verify_result 1건(passed 포함), 반려 토글→peer_reject(user_id=null), passed→peer_rejected 전이는 이벤트 시퀀스(직전 passed→이번 peer_rejected)로 관측(spec C2). base=feat/rn-verify-ops(origin/develop, PR #232 spec 머지 포함). worktree 자율 커밋 3건(C1 fe57f2a·C2 ff7f849·C4 c3b3d13), 푸시·PR 은 사용자 확인 후."
+    },
+    {
+      "taskId": "EVAL-0031",
+      "date": "2026-06-15",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "WP6 WP2 (EVAL-0031) — 운영 이상 알림 verify_anomaly. spec 2026-06-15-verify-analytics-events C3 + plan WP2 Task 4~7 구현. (G1) notification_sent.type 에 verify_anomaly enum 추가 + anomalyReason?(failed_rate/reject_rate)·week? optional, parity 3-of-3(track.ts union·schema.ts zod·schema-union-parity.spec.ts verify_anomaly variant) 동시 갱신. (G2) loadVerifyOpsConfig — θ(loadVerifyConfig) 와 분리한 운영 임계 env 노브 verifyOpsEnvSchema(VERIFY_OPS_FAILED_RATE/REJECT_RATE 0.3·MIN_SAMPLE 3 기본, 빈 문자열→default 폴백), index.ts re-export, .env.example 서버 전용 주석. (G3) dispatchVerifyAnomalyNotification — dedup 키 (challengeId, week, anomalyReason) events contains 조회(user_id 의도적 미포함: 챌린지당 오너 1명이라 유일), deadline 옵트인 재사용(D2)·오너 1명 수신(D1), notification_sent{type:verify_anomaly} 를 ownerUserId 로 emit, goal_unreachable 패턴 복제(migration 없음). (G4) deadline-push cron running 루프: config hoist 루프 밖, running select 에 groups!inner(owner_id) + logs select 에 auto_verify_status 추가, 현재 주차(weekIndexOf) weekLogs rate 산정 — failed_rate 는 verifyConfig.enforce=true 만(shadow 게이트), reject_rate 는 enforce 무관 항상, 둘 다 sample>=minSample 가드(0-나누기·노이즈 방지). 운영 트리거 rate(auto_verify_status 컬럼 집계) ≠ 분석 반려율(events 재구성) 주석 명시. 본문 미로깅 — props 는 id·bool·수치·enum 만.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm lint": "pass — domain·web·mobile exit 0",
+          "pnpm --filter web test": "pass — 116 files / 733 tests (config loadVerifyOpsConfig 기본 0.3/0.3/3·env coerce override·빈문자열 폴백 · dispatch verify_anomaly dedup·deadline 옵트인 off skip·ownerUserId emit · deadline-push reject_rate 발사+failed_rate shadow 미발사·enforce=true failed 발사·sample<minSample 미발사 · parity verify_anomaly variant)",
+          "pnpm harness:check": "pass — 0 violations (28 migration tasks, 34 citation files vs 39 PRD AC ids)"
+        }
+      },
+      "notes": "리뷰: backend-reviewer Blocker/HIGH 0 (Minor 3 — ch.groups array 케이스 미테스트·anomalyReason flat optional(dispatch 가 항상 채워 호출하므로 dedup undefined 위험 없음)·sample 분모 pending 포함, 모두 plan SoT 의도로 수용). 수동 핸드오프(dogfood 실측·위조 금지): reject_rate 임계 초과→오너 알림 1회 + events notification_sent{type:verify_anomaly, anomalyReason:reject_rate, week} 1건, 같은 (challengeId,week,reason) 재초과→dedup 미발송; failed_rate 는 VERIFY_ENFORCE=true 에서만 발송(shadow 에선 auto_verify_result{enforced:false} 로만 관측). 임계 env(VERIFY_OPS_*) 값은 PO/운영 확정. base=feat/rn-verify-ops(origin/develop 0a16d85, WP1 EVAL-0030 머지 포함). worktree 자율 커밋, 푸시·PR 은 사용자 확인 후."
     }
   ]
 }

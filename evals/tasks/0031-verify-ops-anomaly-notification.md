@@ -2,7 +2,7 @@
 Task: EVAL-0031
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0030] — WP1 이벤트 계약·union 표면 확정 선행(intra-feature 순서, 게이트 아님).
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/superpowers/specs/2026-06-15-verify-analytics-events.md, docs/superpowers/plans/2026-06-15-eval-0026-verify-ops-analytics.md
 ---
