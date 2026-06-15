@@ -9,7 +9,8 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 # EVAL-0026: 운영 알림 + AnalyticsEvent — failed·반려율 임계 초과 시 그룹 알림 + 검증 이벤트
 
-> WP6 (`feat/rn-verify-ops`). **spec blocked** — 자동검증·반려 이벤트는 PRD §9.1 union 1:1 spec 선행(ES §게이트). WP5(EVAL-0025) → WP6. 알림은 θ 무관, 이벤트 union 변경이 spec 게이트.
+> WP6 (`feat/rn-verify-ops`) **부모 WP**. **spec blocked** — 자동검증·반려 이벤트는 PRD §9.1 union 1:1 spec 선행(ES §게이트). WP5(EVAL-0025) → WP6. 알림은 θ 무관, 이벤트 union 변경이 spec 게이트.
+> 게이트 해소 후 두 서브 task로 분해됨: **EVAL-0030**(WP1 이벤트 계약 + producer) · **EVAL-0031**(WP2 운영 이상 알림). 구현 착수는 서브 task에서 진행한다.
 
 ## Parent Links
 
