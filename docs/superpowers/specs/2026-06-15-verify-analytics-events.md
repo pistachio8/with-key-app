@@ -40,7 +40,7 @@ status: draft
 
 **없음.** 이벤트는 기존 `events` 테이블에 `track()`(service_role)로 적재한다. 자동검증 status enum·반려 reaction 저장은 선행 작업(EVAL-0020·0022·0025, migration 0045)에서 이미 완료됐고 본 spec은 스키마를 건드리지 않는다.
 
-운영 알림 dedup 컬럼이 필요하면(아래 D3) 후속 구현 WP에서 migration 1건이 추가될 수 있으나, 그 결정은 구현 WP의 ADR/migration 영역으로 미룬다.
+운영 알림 dedup 컬럼이 필요하면(아래 C3) 후속 구현 WP에서 migration 1건이 추가될 수 있으나, 그 결정은 구현 WP의 ADR/migration 영역으로 미룬다.
 
 ### 외부 서비스
 
