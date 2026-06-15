@@ -79,6 +79,7 @@ import {
   dispatchActionCompletedNotification,
   dispatchGoalUnreachableNotification,
   dispatchStartNotification,
+  dispatchVerifyAnomalyNotification,
 } from "./dispatch";
 
 // -----------------------------------------------------------------------------
@@ -370,5 +371,63 @@ describe("dispatchGoalUnreachableNotification", () => {
     expect(ev.props.week).toBe(1);
     expect(ev.props.outcome).toBe("sent");
     expect((trackCalls[0].options as { userId?: string }).userId).toBe("user-a");
+  });
+});
+
+describe("dispatchVerifyAnomalyNotification", () => {
+  const args = {
+    challengeId: CHALLENGE_ID,
+    ownerUserId: "owner-a",
+    week: 1,
+    anomalyReason: "reject_rate" as const,
+  };
+
+  it("같은 (challengeId, week, anomalyReason) prior 존재 시 skip (events dedup)", async () => {
+    tablePlans.push({ table: "events", rows: [{ id: "prior" }] });
+    const r = await dispatchVerifyAnomalyNotification(args);
+    expect(r.recipientCount).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
+    expect(trackCalls).toHaveLength(0);
+  });
+
+  it("deadline 옵트인 off 면 skip (D2)", async () => {
+    tablePlans.push({ table: "events", rows: [] });
+    tablePlans.push({
+      table: "users",
+      rows: { notification_prefs: { start: true, deadline: false, kudos: false } },
+    });
+    const r = await dispatchVerifyAnomalyNotification(args);
+    expect(r.recipientCount).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
+  });
+
+  it("미발송 + 옵트인 시 push + track(type=verify_anomaly, anomalyReason, week, ownerUserId)", async () => {
+    tablePlans.push({ table: "events", rows: [] });
+    tablePlans.push({
+      table: "users",
+      rows: { notification_prefs: { start: true, deadline: true, kudos: false } },
+    });
+    tablePlans.push({
+      table: "push_subscriptions",
+      rows: [{ user_id: "owner-a", endpoint: "ep-owner", p256dh: "p", auth: "a" }],
+    });
+
+    const r = await dispatchVerifyAnomalyNotification(args);
+
+    expect(r.recipientCount).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.objectContaining({ endpoint: "ep-owner" }),
+      expect.objectContaining({ title: "검증 이상 신호" }),
+    );
+    expect(trackCalls).toHaveLength(1);
+    const ev = trackCalls[0].event as {
+      props: { type: string; anomalyReason: string; week: number; outcome: string };
+    };
+    expect(ev.props.type).toBe("verify_anomaly");
+    expect(ev.props.anomalyReason).toBe("reject_rate");
+    expect(ev.props.week).toBe(1);
+    expect(ev.props.outcome).toBe("sent");
+    expect((trackCalls[0].options as { userId?: string }).userId).toBe("owner-a");
   });
 });
