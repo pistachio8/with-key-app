@@ -23,7 +23,12 @@ export {
   type VerifySignals,
 } from "./signals";
 export { recordVerifySignals } from "./record";
-export { loadVerifyConfig, type VerifyConfig } from "./config";
+export {
+  loadVerifyConfig,
+  loadVerifyOpsConfig,
+  type VerifyConfig,
+  type VerifyOpsConfig,
+} from "./config";
 export {
   judgeVerifyStatus,
   countsTowardDone,
