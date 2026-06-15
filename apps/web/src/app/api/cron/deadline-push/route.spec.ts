@@ -148,9 +148,13 @@ beforeEach(() => {
   process.env.CRON_SECRET = "supersecret";
 });
 
-// verify_anomaly 테스트가 process.env.VERIFY_ENFORCE 를 set 하므로 누수 방지(다른 테스트 오염 차단).
+// verify_anomaly 테스트가 process.env 를 직접 읽으므로(@/lib/verify 미mock) 누수 방지 —
+// VERIFY_ENFORCE 뿐 아니라 VERIFY_OPS_* 도 정리해 다른 테스트의 기본값 가정을 보호한다.
 afterEach(() => {
   delete process.env.VERIFY_ENFORCE;
+  delete process.env.VERIFY_OPS_FAILED_RATE;
+  delete process.env.VERIFY_OPS_REJECT_RATE;
+  delete process.env.VERIFY_OPS_MIN_SAMPLE;
 });
 
 // -----------------------------------------------------------------------------
@@ -349,6 +353,39 @@ describe("POST /api/cron/deadline-push — 검증 이상 신호 (verify_anomaly 
 
     await POST(req("Bearer supersecret"));
 
+    expect(dispatchVerifyAnomalyNotification).not.toHaveBeenCalled();
+  });
+
+  it("이전 주차 peer_rejected 로그는 현재 주차 rate 분모/분자에서 제외 (주차 필터 회귀 방어)", async () => {
+    // start 9일 전 → today=day10, 현재 주차=week2(14일 챌린지). weekIndexOf: 1~7=주1, 8~14=주2.
+    const start = new Date(Date.now() - 9 * 86_400_000).toISOString();
+    const thisWeek = new Date().toISOString(); // day10 → week2
+    const lastWeek = new Date(Date.now() - 7 * 86_400_000).toISOString(); // day3 → week1
+    runningPlan.rows = [
+      {
+        id: "c-anom",
+        goal_count: 14,
+        duration_days: 14,
+        penalty_amount: 3000,
+        start_at: start,
+        groups: { owner_id: "owner-x" },
+      },
+    ];
+    participantsPlan.rows = [{ user_id: "u0" }, { user_id: "u1" }, { user_id: "u2" }];
+    actionLogsPlan.rows = [
+      // 현재 주차(week2) 3건 전부 passed → reject_rate 0.
+      { user_id: "u0", created_at: thisWeek, auto_verify_status: "passed" },
+      { user_id: "u1", created_at: thisWeek, auto_verify_status: "passed" },
+      { user_id: "u2", created_at: thisWeek, auto_verify_status: "passed" },
+      // 이전 주차(week1) 3건 전부 peer_rejected — 주차 필터가 없으면 새어들어 3/6=0.5>0.3 오발사.
+      { user_id: "u0", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+      { user_id: "u1", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+      { user_id: "u2", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+    ];
+
+    await POST(req("Bearer supersecret"));
+
+    // 현재 주차만 집계 → sample=3·rejected=0 → 미발사. 필터 누락 시 prior-week 가 새어 오발사 → 이 테스트가 잡는다.
     expect(dispatchVerifyAnomalyNotification).not.toHaveBeenCalled();
   });
 });
