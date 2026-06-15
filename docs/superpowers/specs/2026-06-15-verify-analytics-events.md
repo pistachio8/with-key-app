@@ -3,7 +3,7 @@ spec: 2026-06-15-verify-analytics-events
 title: 자동검증·피어 반려 AnalyticsEvent + 운영 알림 이벤트 계약 (WP6)
 author: pistachio8
 date: 2026-06-15
-status: draft
+status: accepted
 ---
 
 ## Summary
