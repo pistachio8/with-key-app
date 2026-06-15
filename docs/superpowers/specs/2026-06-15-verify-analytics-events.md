@@ -26,13 +26,13 @@ status: draft
 ### 변경 경로
 
 - 신규: `docs/superpowers/specs/2026-06-15-verify-analytics-events.md` (본 문서)
-- 수정(후속 구현 WP에서): `apps/web/src/lib/analytics/track.ts` · `schema.ts` · `schema-union-parity.spec.ts` · `docs/PRD.md` §9.1 표 · `lib/verify/record.ts` · `apps/web/src/app/(app)/challenge/[id]/_actions.ts` · 운영 알림 경로
+- 수정(후속 구현 WP에서): `apps/web/src/lib/analytics/track.ts` · `schema.ts` · `schema-union-parity.spec.ts` · `docs/PRD.md` §9.1 표 · `lib/verify/judge.ts` · `apps/web/src/app/(app)/challenge/[id]/_actions.ts` · 운영 알림 경로
 
 ### src/ 영향
 
 이벤트 emit 지점은 기존 파일에 한정한다(신규 폴더·네이밍 컨벤션 없음).
 
-- `lib/verify/record.ts` — 자동검증 결과 기록 직후 `auto_verify_result` emit.
+- `lib/verify/judge.ts` (`judgeAndRecordVerifyStatus`) — `auto_verify_status` UPDATE 직후 `auto_verify_result` emit. (`record.ts`는 신호만 적재하므로 emit 지점 아님.)
 - `app/(app)/challenge/[id]/_actions.ts` — 피어 반려 토글 액션에서 `peer_reject` emit.
 - 운영 알림 경로(owner_nudge 패턴 재사용) — 알림 발송 시 `notification_sent { type:"verify_anomaly" }` emit.
 
@@ -50,7 +50,7 @@ status: draft
 
 ### C1. `auto_verify_result` — 자동검증 판정 결과 (신규 이벤트)
 
-판정기(`lib/verify/judge.ts`)가 status를 확정해 `lib/verify/record.ts`가 기록하는 직후, **모든 제출에서**(passed 포함) emit한다.
+판정기 `lib/verify/judge.ts`의 `judgeAndRecordVerifyStatus`가 `auto_verify_status`를 UPDATE한 직후(이 함수가 `JudgeDecision{status}` 반환), **모든 제출에서**(passed 포함) emit한다. status를 쓰는 곳은 이 함수뿐이다 — `record.ts:recordVerifySignals`는 신호(phash·score)만 적재하고 status는 의도적으로 미변경하므로 emit 지점이 아니다.
 
 ```ts
 | { name: "auto_verify_result"; props: {
@@ -60,12 +60,14 @@ status: draft
     phashDup: boolean;     // 동일 user/group near-match 존재
     exifMissing: boolean;  // advisory 신호
     screenshot: boolean;   // advisory 신호
-    score: number | null;  // auto_verify_score 원시값. 신호 계산 불가(손상 이미지)면 null → manual_review
+    score: number | null;  // = advisorySignalScore(signals). signals=null(손상 이미지)이면 null → manual_review
     modelVersion: string;  // JUDGE_MODEL_VERSION
-    enforced: boolean;     // VERIFY_ENFORCE. shadow 모드면 failed라도 doneCount 미제외
+    enforced: boolean;     // config.enforce(VERIFY_ENFORCE). shadow 모드면 failed라도 doneCount 미제외
   } }
 ```
 
+- **모든 props가 emit 지점에 가용**: `judgeAndRecordVerifyStatus`는 `signals`·`config`·`userId`·`groupId`를 인자로 받고 `decision.status`를 반환하므로 `score`(`advisorySignalScore(args.signals)`)·`enforced`(`config.enforce`)·`modelVersion`(`JUDGE_MODEL_VERSION`)·status가 전부 채워진다.
+- **`challengeId`는 콜사이트에서 주입** — 현 `judgeAndRecordVerifyStatus` 시그니처는 `groupId`만 받고 `challengeId`는 없다. emit 시 콜사이트(인증 제출 플로우, `challengeId` 보유)가 함께 넘긴다(시그니처에 `challengeId` 추가 또는 emit을 콜사이트로 끌어올림 — 구현 WP 결정).
 - **status에 `peer_rejected` 없음** — `peer_rejected`는 판정기 출력이 아니라 피어 다수결 결과다(`judge.ts`의 `AutoVerifyStatus` 정의와 일치). 반려 결과는 C2에서 다룬다.
 - **모든 판정 emit인 이유**: false-flag rate는 `failed/전체`라 분모가 필요하고, "passed인데 EXIF 누락·screenshot이던 경계 신호" 분포는 passed에서만 관측된다. non-passed만 남기면 이 분모·경계 분포를 잃는다.
 - **score 원시값인 이유**: G1 PoC 임계(θ) 튜닝은 분포 전체를 봐야 한다. band로 묶으면 구간 경계를 미리 정해야 하고 해상도가 깎인다. score는 phash 거리·신호 점수라 사생활 정보가 아니다.
@@ -76,18 +78,19 @@ status: draft
 
 ```ts
 | { name: "peer_reject"; props: {
-    actionLogId: string;     // uuid — 반려 대상 인증 로그
-    challengeId: string;     // uuid
-    rejectCount: number;     // 토글 반영 후 현재 반려 수
-    eligibleVoters: number;  // 본인 제외 분모(과반 기준)
-    reachedMajority: boolean;// 이번 토글이 과반을 넘겨 peer_rejected가 됐는지
-    action: "add" | "remove";
+    actionLogId: string;        // uuid — 반려 대상 인증 로그
+    challengeId: string;        // uuid
+    rejectCount: number;        // = RPC peer_reject_count (토글 반영 후 현재 반려 수)
+    currentlyRejected: boolean; // = (RPC status === 'peer_rejected') (현재 과반 도달 상태)
+    action: "add" | "remove";   // = RPC viewer_rejected 파생 (true→add, false→remove)
   } }
 ```
 
-- **익명인 이유**: EVAL-0025·migration §5.B가 반려 reaction을 "집계만, 식별자 비노출"로 정했다. 분석 이벤트도 같은 원칙을 따라 일관성을 지킨다. 그룹 갈등 신호는 `rejectCount/eligibleVoters` 비율·`reachedMajority`로 충분히 관측된다. (개인 단위 악용 탐지는 본 spec 범위 밖 — Out of scope.)
-- **토글마다 emit인 이유**: `action: add/remove` + `reachedMajority`로 반려 누적·복원(과반 미달 시 토글로 복원)의 동학을 추적한다. 결과 1건만 남기면 복원·재반려 패턴을 잃는다.
-- **`eligibleVoters`는 본인 제외 분모**다. 과반 기준이 "본인 제외 참가자 과반"이므로 `participantCount`(전체)와 의미가 달라 별도 이름을 쓴다.
+- **props는 `toggle_peer_rejection` RPC 반환에 1:1로 맞춘다** — RPC는 `(peer_reject_count, viewer_rejected, status)` 3개만 반환한다(`0048_peer_rejections.sql:60`). 이 3개로 채울 수 있는 값만 props에 둔다. 따라서 emit은 migration·추가 read 없이 액션이 이미 받은 RPC row만으로 완성된다.
+- **`eligibleVoters`(본인 제외 분모)는 두지 않는다** — RPC가 N-1을 내부 계산만 하고 반환하지 않기 때문(반환 확장 = 0048 재정의 migration, 본 spec의 "migration 없음"과 충돌). 반려율 분모는 분석에서 `challenge_activated.participantCount`로 재구성한다.
+- **`currentlyRejected`는 전이가 아닌 현재 상태**다 — RPC `status`는 토글 후 현재 상태(`passed`/`peer_rejected`)만 주고 "이번 토글이 전이시켰는지"는 주지 않는다. 전이는 분석에서 이벤트 시퀀스(직전 `currentlyRejected:false` → 이번 `true`)로 도출한다.
+- **익명인 이유**: EVAL-0025·migration §5.B가 반려 reaction을 "집계만, 식별자 비노출"로 정했다. 분석 이벤트도 같은 원칙을 따른다. 그룹 갈등 신호는 `rejectCount` 추이·`currentlyRejected`로 관측한다. (개인 단위 악용 탐지는 본 spec 범위 밖 — Out of scope.)
+- **토글마다 emit인 이유**: `action: add/remove`로 반려 누적·복원(과반 미달 시 토글로 복원)의 동학을 추적한다. 결과 1건만 남기면 복원·재반려 패턴을 잃는다.
 
 ### C3. `verify_anomaly` — 운영 알림 (기존 `notification_sent` enum 확장)
 
@@ -142,7 +145,7 @@ pnpm harness:check
 ### 시나리오
 
 - **정상(자동검증)**: 인증 제출 → 판정 passed → `auto_verify_result {status:"passed", score, enforced}` 1건. failed/manual_review도 동일 1건.
-- **정상(반려)**: 반려 토글 add → `peer_reject {action:"add", reachedMajority:false}`; 과반 도달 토글 → `reachedMajority:true`; 복원(remove) → `action:"remove"`.
+- **정상(반려)**: 반려 토글 add → `peer_reject {action:"add", currentlyRejected:false}`; 과반 도달 → `currentlyRejected:true`; 복원(remove) → `action:"remove"`, 과반 미달이면 `currentlyRejected:false`.
 - **정상(운영 알림)**: 반려율 임계 초과 → 그룹 알림 1회 + `notification_sent {type:"verify_anomaly", anomalyReason:"reject_rate"}`; 같은 주 재초과 → `week` dedup으로 미발송.
 - **엣지**: 손상 이미지 → status `manual_review`, `score:null`(여전히 카운트). shadow 모드(`enforced:false`)에서 failed → 이벤트는 남되 doneCount 미제외.
 - **실패 경로**: payload에 사진/일기 본문 없음 확인. parity 누락(union만 추가, zod 누락) 시 테스트 실패로 차단.
