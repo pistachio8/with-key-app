@@ -71,6 +71,8 @@ status: draft
 - **status에 `peer_rejected` 없음** — `peer_rejected`는 판정기 출력이 아니라 피어 다수결 결과다(`judge.ts`의 `AutoVerifyStatus` 정의와 일치). 반려 결과는 C2에서 다룬다.
 - **모든 판정 emit인 이유**: false-flag rate는 `failed/전체`라 분모가 필요하고, "passed인데 EXIF 누락·screenshot이던 경계 신호" 분포는 passed에서만 관측된다. non-passed만 남기면 이 분모·경계 분포를 잃는다.
 - **score 원시값인 이유**: G1 PoC 임계(θ) 튜닝은 분포 전체를 봐야 한다. band로 묶으면 구간 경계를 미리 정해야 하고 해상도가 깎인다. score는 phash 거리·신호 점수라 사생활 정보가 아니다.
+- **`manual_review`는 단일 emit로 충분**: MVP엔 사람 검토 큐가 없고(PRD Q8) `manual_review`는 항상 doneCount 인정(`judge.ts:countsTowardDone`)이라 후속 해소가 없다. 즉 judge 시점 1회 emit가 전체 수명주기다(해소 이벤트 불필요).
+- **컬럼과의 중복은 의도적**: `status`·`score`·`modelVersion`은 `action_logs`(0045)에도 영속되지만, 이벤트는 PRD §9.1의 단일 분석 surface(`events`)를 자기완결로 유지하려고 함께 싣는다. 이벤트가 컬럼 대비 **새로 더하는 값**은 신호 분해(`phashDup`·`exifMissing`·`screenshot`)와 `enforced`(판정 시점 config)다 — 이건 컬럼에 없다(score는 집계만 됨).
 
 ### C2. `peer_reject` — 피어 반려 토글 (신규 이벤트, 익명)
 
@@ -80,16 +82,17 @@ status: draft
 | { name: "peer_reject"; props: {
     actionLogId: string;        // uuid — 반려 대상 인증 로그
     challengeId: string;        // uuid
-    rejectCount: number;        // = RPC peer_reject_count (토글 반영 후 현재 반려 수)
-    currentlyRejected: boolean; // = (RPC status === 'peer_rejected') (현재 과반 도달 상태)
-    action: "add" | "remove";   // = RPC viewer_rejected 파생 (true→add, false→remove)
+    rejectCount: number;     // = RPC peer_reject_count (총 반려 수, status 무관)
+    status: "passed" | "peer_rejected" | "failed" | "manual_review" | "pending";  // = RPC status (토글 후, judge.ts AutoVerifyDbStatus)
+    action: "add" | "remove";// = RPC viewer_rejected 파생 (true→add, false→remove)
   } }
 ```
 
-- **props는 `toggle_peer_rejection` RPC 반환에 1:1로 맞춘다** — RPC는 `(peer_reject_count, viewer_rejected, status)` 3개만 반환한다(`0048_peer_rejections.sql:60`). 이 3개로 채울 수 있는 값만 props에 둔다. 따라서 emit은 migration·추가 read 없이 액션이 이미 받은 RPC row만으로 완성된다.
+- **props는 `toggle_peer_rejection` RPC 반환을 그대로 싣는다** — RPC는 `(peer_reject_count, viewer_rejected, status)` 3개만 반환한다(`0048_peer_rejections.sql:60`). 세 값을 1:1로 옮길 뿐이라, emit은 migration·추가 read 없이 액션이 이미 받은 RPC row만으로 완성된다.
+- **`status`는 파생 boolean이 아니라 RPC가 준 문자열 그대로다** — RPC의 status 전이는 `passed ↔ peer_rejected` 단일 쌍이고, 이미 `failed`/`manual_review`인 로그는 피어가 과반 반려해도 status가 안 바뀐다(`0048:148-156`의 `where auto_verify_status='passed'` 가드). 따라서 "과반 도달"을 boolean으로 파생하면 failed 로그에서 침묵으로 false가 된다 → raw status를 그대로 싣어 그 함정을 피하고, passed→peer_rejected 전이는 이벤트 시퀀스(직전 `passed` → 이번 `peer_rejected`)로 읽는다.
 - **`eligibleVoters`(본인 제외 분모)는 두지 않는다** — RPC가 N-1을 내부 계산만 하고 반환하지 않기 때문(반환 확장 = 0048 재정의 migration, 본 spec의 "migration 없음"과 충돌). 반려율 분모는 분석에서 `challenge_activated.participantCount`로 재구성한다.
-- **`currentlyRejected`는 전이가 아닌 현재 상태**다 — RPC `status`는 토글 후 현재 상태(`passed`/`peer_rejected`)만 주고 "이번 토글이 전이시켰는지"는 주지 않는다. 전이는 분석에서 이벤트 시퀀스(직전 `currentlyRejected:false` → 이번 `true`)로 도출한다.
-- **익명인 이유**: EVAL-0025·migration §5.B가 반려 reaction을 "집계만, 식별자 비노출"로 정했다. 분석 이벤트도 같은 원칙을 따른다. 그룹 갈등 신호는 `rejectCount` 추이·`currentlyRejected`로 관측한다. (개인 단위 악용 탐지는 본 spec 범위 밖 — Out of scope.)
+- **한계(명시)**: 이미 `failed`/`manual_review`인 로그에 피어 과반이 도달했는지는 events만으로 정밀 측정 불가다(N 미반환 + status 비전이). 이게 분석에 꼭 필요해지면 RPC가 `v_n`/majority flag를 반환하도록 확장(=migration) — 별도 spec으로 승격한다.
+- **익명인 이유**: EVAL-0025·migration §5.B가 반려 reaction을 "집계만, 식별자 비노출"로 정했다. 분석 이벤트도 같은 원칙을 따른다(`peer_rejections.voter_id`는 저장되지만 read 비노출이라, 이벤트 `user_id=null`은 저장 모델과 일관). 그룹 갈등 신호는 `rejectCount` 추이·`status`로 관측한다. (개인 단위 악용 탐지는 본 spec 범위 밖 — Out of scope.)
 - **토글마다 emit인 이유**: `action: add/remove`로 반려 누적·복원(과반 미달 시 토글로 복원)의 동학을 추적한다. 결과 1건만 남기면 복원·재반려 패턴을 잃는다.
 
 ### C3. `verify_anomaly` — 운영 알림 (기존 `notification_sent` enum 확장)
@@ -99,14 +102,17 @@ status: draft
 ```ts
 // notification_sent.props 변경분
 type: ... | "verify_anomaly"          // enum 값 추가
-anomalyReason?: "failed_rate" | "reject_rate"  // verify_anomaly만 채움(type-특화 optional)
-// week?: number — goal_unreachable과 동일하게 주간 dedup 키로 재사용
+anomalyReason?: "failed_rate" | "reject_rate"  // verify_anomaly일 때 required (다른 type엔 미사용)
+week?: number  // verify_anomaly일 때 required — dedup 키 (goal_unreachable과 동일 필드 재사용)
+// actionLogId·actorUserId 는 verify_anomaly 에서 미사용
 ```
 
 - **별도 이벤트 대신 enum 확장인 이유**: 알림 발송 사실은 이미 `notification_sent`가 책임진다. 독립 이벤트를 만들면 발송 사실이 중복된다(union 표면 최소화).
 - **`anomalyReason` optional 추가인 이유**: `failed_rate`(자동검증 오판 신호)와 `reject_rate`(그룹 갈등 신호)는 운영 대응이 다르므로 분석에서 구분돼야 한다. `actionLogId`·`week`처럼 type-특화 optional 패턴을 따른다.
 - **알림 트리거의 정량값(rate·threshold·window)은 analytics에 남기지 않는다** — 이는 Option A(2 이벤트 + enum 확장)의 의도된 트레이드오프다. 정량 트리거가 분석에 필요해지면 별도 spec으로 승격한다.
 - **owner_nudge 패턴 재사용**: 1회 발송 보장(dedup 컬럼 + `for update` lock)은 0040(ADR-0028)을 따른다. 운영 임계는 **θ와 별개**인 env 노브(예: `VERIFY_OPS_FAILED_RATE`·`VERIFY_OPS_REJECT_RATE`); 본 spec은 노브 존재만 명시하고 값은 PO/운영이 정한다.
+- **dedup 키 = `(challengeId, week, anomalyReason)`**: 챌린지 단위 + 주차 단위 + 사유별로 1회. 주차 재사용은 앱의 주간 cadence(penalty accrual)와 정렬돼 재악화(한 주 가라앉았다 다음 주 재발)를 한 번 더 잡는다. 같은 주에 두 사유가 모두 임계를 넘으면 **독립 알림 2건**.
+- **발사 조건(shadow 게이트)**: `anomalyReason:"failed_rate"`는 `config.enforce=true`일 때만 발사한다 — shadow 모드의 would-be failed는 실제 차단이 없어 그룹에 알리면 혼란이고, 내부 튜닝은 `auto_verify_result{enforced:false}` 이벤트로 본다. `anomalyReason:"reject_rate"`는 enforce와 무관하게 항상 발사한다(피어 반려는 θ·enforce 무관한 사람의 실제 결정).
 
 ### C4. parity & 문서 동기화 (계약 강제 메커니즘)
 
@@ -116,7 +122,9 @@ anomalyReason?: "failed_rate" | "reject_rate"  // verify_anomaly만 채움(type-
 2. `schema.ts` `analyticsEventSchema` discriminated union — zod 런타임 검증.
 3. `schema-union-parity.spec.ts` fixtures — union의 모든 `name`에 대해 fixture를 요구(`Record<AnalyticsEvent["name"], …>`)하므로 union에 추가하면 fixture도 강제되고, fixture는 zod로 검증돼 parity가 깨지면 테스트가 실패한다.
 
-추가로 **PRD §9.1 표**에 `auto_verify_result`·`peer_reject` 행을 추가하고 `notification_sent` type에 `verify_anomaly`를 명시한다(표 = SoT, 1:1).
+추가로 **PRD §9.1 표**에 `auto_verify_result`·`peer_reject` 행을 추가하고 `notification_sent` type에 `verify_anomaly`를 명시한다.
+
+**SoT 계층(혼란 방지)**: 위 3곳(TS union ↔ zod ↔ fixture)이 **필드 단위 정밀 SoT**이며 CI parity 테스트가 강제한다. PRD §9.1 표는 **존재 단위 요약 미러**(이벤트 이름 + 주요 속성, PO 검토용·수기 유지) — PRD 자신도 §9.1 line 556에서 "SoT는 analyticsEventSchema 유니온"이라 명시한다. 가드레일의 "union ↔ 표 1:1"은 _이벤트 존재_ parity지 필드 동일성이 아니다(표는 요약이라 props 전체가 아니라 주요 속성만 넣는다).
 
 ### C5. 본문 미로깅 가드
 
@@ -145,9 +153,10 @@ pnpm harness:check
 ### 시나리오
 
 - **정상(자동검증)**: 인증 제출 → 판정 passed → `auto_verify_result {status:"passed", score, enforced}` 1건. failed/manual_review도 동일 1건.
-- **정상(반려)**: 반려 토글 add → `peer_reject {action:"add", currentlyRejected:false}`; 과반 도달 → `currentlyRejected:true`; 복원(remove) → `action:"remove"`, 과반 미달이면 `currentlyRejected:false`.
-- **정상(운영 알림)**: 반려율 임계 초과 → 그룹 알림 1회 + `notification_sent {type:"verify_anomaly", anomalyReason:"reject_rate"}`; 같은 주 재초과 → `week` dedup으로 미발송.
-- **엣지**: 손상 이미지 → status `manual_review`, `score:null`(여전히 카운트). shadow 모드(`enforced:false`)에서 failed → 이벤트는 남되 doneCount 미제외.
+- **정상(반려)**: 반려 토글 add → `peer_reject {action:"add", status:"passed"}`; 과반 도달 → `status:"peer_rejected"`; 복원(remove) → `action:"remove"`, 과반 미달 복원이면 `status:"passed"`. (이미 `failed`/`manual_review`인 로그면 status는 그대로 유지 — 0048 전이 가드.)
+- **정상(운영 알림)**: 반려율 임계 초과 → 그룹 알림 1회 + `notification_sent {type:"verify_anomaly", anomalyReason:"reject_rate", week}`; 같은 (challengeId, week, reason) 재초과 → dedup으로 미발송.
+- **엣지(shadow 게이트)**: `enforce=false`(shadow)에서 failed_rate 임계 초과 → 그룹 알림 **미발송**(`auto_verify_result{enforced:false}` 이벤트로만 관측). 반대로 reject_rate는 shadow에서도 발사.
+- **엣지**: 손상 이미지 → status `manual_review`, `score:null`(여전히 카운트). shadow 모드에서 failed → `auto_verify_result`는 `enforced:false`로 남되 doneCount 미제외.
 - **실패 경로**: payload에 사진/일기 본문 없음 확인. parity 누락(union만 추가, zod 누락) 시 테스트 실패로 차단.
 
 ## Rollout
