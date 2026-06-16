@@ -2,7 +2,7 @@
 Task: EVAL-0026
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
@@ -10,6 +10,7 @@ Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0032-settlem
 
 > WP6 (`feat/rn-verify-ops`) **부모 WP**. **spec blocked** — 자동검증·반려 이벤트는 PRD §9.1 union 1:1 spec 선행(ES §게이트). WP5(EVAL-0025) → WP6. 알림은 θ 무관, 이벤트 union 변경이 spec 게이트.
 > 게이트 해소 후 두 서브 task로 분해됨: **EVAL-0030**(WP1 이벤트 계약 + producer) · **EVAL-0031**(WP2 운영 이상 알림). 구현 착수는 서브 task에서 진행한다.
+> **done(2026-06-15)**: 두 서브 task 모두 머지 완료(EVAL-0030 = PR #233, EVAL-0031 = PR #235). 부모 WP 구현 범위 종료 — 상태를 done 으로 정정.
 
 ## Parent Links
 
