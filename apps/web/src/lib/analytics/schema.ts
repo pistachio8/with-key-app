@@ -108,15 +108,24 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("notification_sent"),
     props: z.object({
-      type: z.enum(["start", "deadline", "friend_action", "kudos_received", "goal_unreachable"]),
+      type: z.enum([
+        "start",
+        "deadline",
+        "friend_action",
+        "kudos_received",
+        "goal_unreachable",
+        "verify_anomaly",
+      ]),
       challengeId: uuid,
       suppressed: z.boolean(),
       outcome: z.enum(["sent", "cleaned", "failed", "suppressed"]),
       // kudos_received 만 채움. start/deadline/friend_action 발송에는 의미 없음.
       actionLogId: uuid.optional(),
       actorUserId: uuid.optional(),
-      // goal_unreachable 만 채움 — (challenge,user,week) dedup 키. 주차 1-based.
+      // goal_unreachable·verify_anomaly 가 채움 — dedup 키(주차). 1-based.
       week: z.number().int().min(1).optional(),
+      // verify_anomaly 만 채움 — failed_rate(자동검증) vs reject_rate(그룹 갈등).
+      anomalyReason: z.enum(["failed_rate", "reject_rate"]).optional(),
     }),
   }),
   z.object({
@@ -124,6 +133,33 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
     props: z.object({
       type: z.enum(["start", "deadline", "friend_action"]),
       challengeId: uuid,
+    }),
+  }),
+  z.object({
+    name: z.literal("auto_verify_result"),
+    props: z.object({
+      actionLogId: uuid,
+      challengeId: uuid,
+      status: z.enum(["passed", "failed", "manual_review"]),
+      phashDup: z.boolean(),
+      exifMissing: z.boolean(),
+      screenshot: z.boolean(),
+      // advisorySignalScore — 현재 0~2(advisory 신호 2개: exifMissing·screenshot). max 미고정은
+      // 의도(spec C1 — θ 튜닝 해상도 보존). 신호 추가 시 이 주석으로 범위 추적.
+      score: z.number().int().min(0).nullable(),
+      modelVersion: z.string(),
+      enforced: z.boolean(),
+    }),
+  }),
+  z.object({
+    name: z.literal("peer_reject"),
+    props: z.object({
+      actionLogId: uuid,
+      challengeId: uuid,
+      rejectCount: z.number().int().min(0),
+      // domain peerRejectionToggleResultSchema(validators/peer-rejection.ts) 와 동일 5값 — 의도된 미러.
+      status: z.enum(["passed", "peer_rejected", "failed", "manual_review", "pending"]),
+      action: z.enum(["add", "remove"]),
     }),
   }),
   z.object({

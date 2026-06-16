@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type AdminResponse<T = unknown> = { data: T; error: unknown };
 
@@ -16,7 +16,10 @@ const closePlan: { rows: Array<{ id: string }>; error?: unknown } = {
 // 회복 불가 스캔 — running 챌린지 SELECT(.gt/.not) 결과 + 참가자 + 로그.
 const runningPlan: { rows: Array<Record<string, unknown>>; error?: unknown } = { rows: [] };
 const participantsPlan: { rows: Array<{ user_id: string }>; error?: unknown } = { rows: [] };
-const actionLogsPlan: { rows: Array<{ user_id: string; created_at: string }>; error?: unknown } = {
+const actionLogsPlan: {
+  rows: Array<{ user_id: string; created_at: string; auto_verify_status?: string | null }>;
+  error?: unknown;
+} = {
   rows: [],
 };
 const dispatchedMap: Record<string, boolean> = {};
@@ -98,10 +101,13 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 const dispatchDeadlineNotification = vi.fn();
 const dispatchGoalUnreachableNotification = vi.fn();
+const dispatchVerifyAnomalyNotification = vi.fn();
 vi.mock("@/lib/push/dispatch", () => ({
   dispatchDeadlineNotification: (...args: unknown[]) => dispatchDeadlineNotification(...args),
   dispatchGoalUnreachableNotification: (...args: unknown[]) =>
     dispatchGoalUnreachableNotification(...args),
+  dispatchVerifyAnomalyNotification: (...args: unknown[]) =>
+    dispatchVerifyAnomalyNotification(...args),
 }));
 
 import { POST, GET } from "./route";
@@ -136,8 +142,19 @@ beforeEach(() => {
   dispatchDeadlineNotification.mockResolvedValue(undefined);
   dispatchGoalUnreachableNotification.mockReset();
   dispatchGoalUnreachableNotification.mockResolvedValue({ recipientCount: 1, quietHours: false });
+  dispatchVerifyAnomalyNotification.mockReset();
+  dispatchVerifyAnomalyNotification.mockResolvedValue({ recipientCount: 1, quietHours: false });
   from.mockClear();
   process.env.CRON_SECRET = "supersecret";
+});
+
+// verify_anomaly 테스트가 process.env 를 직접 읽으므로(@/lib/verify 미mock) 누수 방지 —
+// VERIFY_ENFORCE 뿐 아니라 VERIFY_OPS_* 도 정리해 다른 테스트의 기본값 가정을 보호한다.
+afterEach(() => {
+  delete process.env.VERIFY_ENFORCE;
+  delete process.env.VERIFY_OPS_FAILED_RATE;
+  delete process.env.VERIFY_OPS_REJECT_RATE;
+  delete process.env.VERIFY_OPS_MIN_SAMPLE;
 });
 
 // -----------------------------------------------------------------------------
@@ -259,6 +276,117 @@ describe("POST /api/cron/deadline-push — 회복 불가 스캔", () => {
     const body = await res.json();
     expect(body.unreachableNotified).toBe(0);
     expect(dispatchGoalUnreachableNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/cron/deadline-push — 검증 이상 신호 (verify_anomaly · AC-owner-load-3)", () => {
+  // start 2일 전 → today=day3, week1. 로그 created_at=now 면 모두 현재 주차 표본.
+  function anomalyChallenge(): Record<string, unknown> {
+    return {
+      id: "c-anom",
+      goal_count: 7,
+      duration_days: 7,
+      penalty_amount: 3000,
+      start_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+      groups: { owner_id: "owner-x" },
+    };
+  }
+  function logsWithStatus(statuses: string[]) {
+    const nowIso = new Date().toISOString();
+    return statuses.map((s, i) => ({
+      user_id: `u${i}`,
+      created_at: nowIso,
+      auto_verify_status: s,
+    }));
+  }
+
+  it("reject_rate 임계 초과 → reject_rate 알림 1회, failed_rate 는 shadow(enforce=false) 라 미호출", async () => {
+    runningPlan.rows = [anomalyChallenge()];
+    participantsPlan.rows = [
+      { user_id: "u0" },
+      { user_id: "u1" },
+      { user_id: "u2" },
+      { user_id: "u3" },
+    ];
+    // 표본 4건: peer_rejected 2 (0.5>0.3) · failed 2 (0.5>0.3 이나 enforce=false 라 shadow).
+    actionLogsPlan.rows = logsWithStatus(["peer_rejected", "peer_rejected", "failed", "failed"]);
+
+    const res = await POST(req("Bearer supersecret"));
+    expect(res.status).toBe(200);
+
+    expect(dispatchVerifyAnomalyNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        challengeId: "c-anom",
+        ownerUserId: "owner-x",
+        anomalyReason: "reject_rate",
+        week: 1,
+      }),
+    );
+    expect(dispatchVerifyAnomalyNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({ anomalyReason: "failed_rate" }),
+    );
+  });
+
+  it("enforce=true 면 failed_rate 도 발사 (shadow 게이트 해제)", async () => {
+    process.env.VERIFY_ENFORCE = "true";
+    runningPlan.rows = [anomalyChallenge()];
+    participantsPlan.rows = [
+      { user_id: "u0" },
+      { user_id: "u1" },
+      { user_id: "u2" },
+      { user_id: "u3" },
+    ];
+    actionLogsPlan.rows = logsWithStatus(["failed", "failed", "passed", "passed"]);
+
+    await POST(req("Bearer supersecret"));
+
+    expect(dispatchVerifyAnomalyNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ anomalyReason: "failed_rate", week: 1 }),
+    );
+  });
+
+  it("표본 < minSample(3) 면 임계 100% 라도 알림 없음 (노이즈 방지)", async () => {
+    runningPlan.rows = [anomalyChallenge()];
+    participantsPlan.rows = [{ user_id: "u0" }, { user_id: "u1" }];
+    // 2건 모두 peer_rejected (rate 1.0) 지만 sample 2 < 3 → 미발사.
+    actionLogsPlan.rows = logsWithStatus(["peer_rejected", "peer_rejected"]);
+
+    await POST(req("Bearer supersecret"));
+
+    expect(dispatchVerifyAnomalyNotification).not.toHaveBeenCalled();
+  });
+
+  it("이전 주차 peer_rejected 로그는 현재 주차 rate 분모/분자에서 제외 (주차 필터 회귀 방어)", async () => {
+    // start 9일 전 → today=day10, 현재 주차=week2(14일 챌린지). weekIndexOf: 1~7=주1, 8~14=주2.
+    const start = new Date(Date.now() - 9 * 86_400_000).toISOString();
+    const thisWeek = new Date().toISOString(); // day10 → week2
+    const lastWeek = new Date(Date.now() - 7 * 86_400_000).toISOString(); // day3 → week1
+    runningPlan.rows = [
+      {
+        id: "c-anom",
+        goal_count: 14,
+        duration_days: 14,
+        penalty_amount: 3000,
+        start_at: start,
+        groups: { owner_id: "owner-x" },
+      },
+    ];
+    participantsPlan.rows = [{ user_id: "u0" }, { user_id: "u1" }, { user_id: "u2" }];
+    actionLogsPlan.rows = [
+      // 현재 주차(week2) 3건 전부 passed → reject_rate 0.
+      { user_id: "u0", created_at: thisWeek, auto_verify_status: "passed" },
+      { user_id: "u1", created_at: thisWeek, auto_verify_status: "passed" },
+      { user_id: "u2", created_at: thisWeek, auto_verify_status: "passed" },
+      // 이전 주차(week1) 3건 전부 peer_rejected — 주차 필터가 없으면 새어들어 3/6=0.5>0.3 오발사.
+      { user_id: "u0", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+      { user_id: "u1", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+      { user_id: "u2", created_at: lastWeek, auto_verify_status: "peer_rejected" },
+    ];
+
+    await POST(req("Bearer supersecret"));
+
+    // 현재 주차만 집계 → sample=3·rejected=0 → 미발사. 필터 누락 시 prior-week 가 새어 오발사 → 이 테스트가 잡는다.
+    expect(dispatchVerifyAnomalyNotification).not.toHaveBeenCalled();
   });
 });
 

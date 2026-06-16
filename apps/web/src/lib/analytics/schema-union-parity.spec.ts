@@ -107,6 +107,30 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
       challengeId: "11111111-1111-4111-8111-111111111111",
     },
   },
+  auto_verify_result: {
+    name: "auto_verify_result",
+    props: {
+      actionLogId: "11111111-1111-4111-8111-111111111111",
+      challengeId: "22222222-2222-4222-8222-222222222222",
+      status: "passed",
+      phashDup: false,
+      exifMissing: false,
+      screenshot: false,
+      score: 0,
+      modelVersion: "verify-judge-theta-v1",
+      enforced: false,
+    },
+  },
+  peer_reject: {
+    name: "peer_reject",
+    props: {
+      actionLogId: "11111111-1111-4111-8111-111111111111",
+      challengeId: "22222222-2222-4222-8222-222222222222",
+      rejectCount: 1,
+      status: "passed",
+      action: "add",
+    },
+  },
   penalty_displayed: { name: "penalty_displayed", props: { amount: 3000 } },
   account_copied: {
     name: "account_copied",
@@ -178,5 +202,23 @@ describe("notification_sent friend_action variant", () => {
       },
     };
     expect(analyticsEventSchema.parse(fixture)).toEqual(fixture);
+  });
+});
+
+describe("notification_sent verify_anomaly variant (EVAL-0026)", () => {
+  it("type=verify_anomaly + anomalyReason + week 채운 fixture 통과", () => {
+    const fixture: AnalyticsEvent = {
+      name: "notification_sent",
+      props: {
+        type: "verify_anomaly",
+        challengeId: "11111111-1111-4111-8111-111111111111",
+        suppressed: false,
+        outcome: "sent",
+        anomalyReason: "reject_rate",
+        week: 1,
+      },
+    };
+    const r = analyticsEventSchema.safeParse(fixture);
+    expect(r.success, JSON.stringify(r, null, 2)).toBe(true);
   });
 });

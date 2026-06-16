@@ -299,6 +299,90 @@ export async function dispatchGoalUnreachableNotification(args: {
   return { recipientCount: targets.length, quietHours };
 }
 
+// C3 — 검증 이상 신호 알림(AC-owner-load-3). 오너 1명 수신(D1), deadline 옵트인 재사용(D2).
+// dedup 은 events 조회((challengeId, week, anomalyReason) 1회) — 신규 컬럼 불필요(goal_unreachable 패턴).
+// shadow 게이트(failed_rate enforce-only)는 호출자(cron)가 판단 — 이 함수는 받은 reason 을 발송만 한다.
+export async function dispatchVerifyAnomalyNotification(args: {
+  challengeId: string;
+  ownerUserId: string;
+  week: number;
+  anomalyReason: "failed_rate" | "reject_rate";
+}): Promise<DispatchSummary> {
+  const { challengeId, ownerUserId, week, anomalyReason } = args;
+  const quietHours = isQuietHoursKST();
+  const admin = adminClient();
+
+  // dedup 키는 spec C3 대로 (challengeId, week, anomalyReason) 3개 — user_id 의도적 미포함.
+  // goal_unreachable 은 per-participant 라 .eq("user_id") 가 필요했지만 verify_anomaly 는
+  // per-challenge(오너 1명)라 challenge·week·reason 만으로 유일. 챌린지당 오너가 1명이므로
+  // 같은 키에 다른 user_id row 가 생길 수 없다.
+  const { data: prior } = await admin
+    .from("events")
+    .select("id")
+    .eq("name", "notification_sent")
+    .contains("props", { type: "verify_anomaly", challengeId, week, anomalyReason })
+    .limit(1);
+  if ((prior ?? []).length > 0) return { recipientCount: 0, quietHours };
+
+  // 옵트인 (deadline 키 재사용 — 운영 리마인더 계열, goal_unreachable 과 동일).
+  const { data: owner } = await admin
+    .from("users")
+    .select("notification_prefs")
+    .eq("id", ownerUserId)
+    .maybeSingle();
+  const prefs = notificationPrefsSchema.safeParse(owner?.notification_prefs);
+  if (!prefs.success || !prefs.data.deadline) return { recipientCount: 0, quietHours };
+
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("user_id, endpoint, p256dh, auth")
+    .eq("user_id", ownerUserId);
+  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
+    userId: s.user_id as string,
+    endpoint: s.endpoint as string,
+    p256dh: s.p256dh as string,
+    auth: s.auth as string,
+  }));
+  if (targets.length === 0) return { recipientCount: 0, quietHours };
+
+  const targetUrl = `/challenge/${challengeId}/dashboard`;
+  const body =
+    anomalyReason === "failed_rate"
+      ? "자동 검증 실패가 늘고 있어요 · 확인이 필요해요"
+      : "멤버 반려가 늘고 있어요 · 확인이 필요해요";
+  const payload: PushPayload = {
+    title: "검증 이상 신호",
+    body,
+    url: targetUrl,
+    type: "penalty_added",
+    category: "penalty",
+    targetUrl,
+    challengeId,
+  };
+
+  await Promise.allSettled(
+    targets.map(async (target) => {
+      const outcome: Outcome = quietHours ? "suppressed" : await safeSend(target, payload);
+      void track(
+        {
+          name: "notification_sent",
+          props: {
+            type: "verify_anomaly",
+            challengeId,
+            week,
+            anomalyReason,
+            suppressed: quietHours,
+            outcome,
+          },
+        },
+        { userId: ownerUserId },
+      );
+    }),
+  );
+
+  return { recipientCount: targets.length, quietHours };
+}
+
 // ADR-0016 / ADR-0017 / plan 2026-05-22-kudos-received-notification
 // 내 인증글에 다른 사용자가 kudos INSERT 시 작성자에게 1:1 push 발송.
 // DELETE 는 호출자가 차단(toggleKudos 의 INSERT 분기만 호출). closed/pending 챌린지는 skip.
