@@ -11,6 +11,7 @@ import {
   validateDoneRunParity,
   validateRunAttempts,
 } from "./harness-lib.mjs";
+import { loadManifest, validateManifestTargets } from "./harness-route-lib.mjs";
 
 // Tier 1-A: Agent Task frontmatter·경로 추적성 + Blocked-by/Depends-on 토큰 문법.
 const tasks = loadMigrationTasks();
@@ -36,7 +37,18 @@ const runParityErrors = validateDoneRunParity(tasks, agentResults);
 // pass@3 oracle 의 기계 판정 입력 — 비검증 필드(oneShot)가 조용히 누락된 실증의 재발 방지.
 const attemptsErrors = validateRunAttempts(agentResults);
 
-const errors = [...taskErrors, ...acErrors, ...goalErrors, ...runParityErrors, ...attemptsErrors];
+// Tier 1-F: route-manifest 포인터 정합 — 요청 라우터가 가리키는 워크플로 파일이 실존하나(ADR-0031 drift 표면).
+// route-manifest 는 markdown 워크플로를 가리키는 얇은 index 라, 대상이 이동·삭제되면 끊긴다.
+const manifestErrors = validateManifestTargets(loadManifest());
+
+const errors = [
+  ...taskErrors,
+  ...acErrors,
+  ...goalErrors,
+  ...runParityErrors,
+  ...attemptsErrors,
+  ...manifestErrors,
+];
 
 if (errors.length > 0) {
   console.error(`[harness:check] FAIL — ${errors.length} violation(s).`);
