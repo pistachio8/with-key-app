@@ -3,13 +3,13 @@ Task: EVAL-0009
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: [task:EVAL-0005] [task:EVAL-0006] [gate:G2] [spec:analytics-union] [po:analytics-union] — G2(법무) 통과 + AnalyticsEvent union(PRD §9.1 1:1) spec 선행·PO 승인. 선행 WP1·WP2.
+Blocked-by: [task:EVAL-0005] [task:EVAL-0006] [gate:G2] — G2(법무) 통과 후 union 머지·사용자향 노출. AnalyticsEvent 계약 spec(analytics-union, accepted) + PO 승인 완료(2026-06-18). 선행 WP1·WP2.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 
 # EVAL-0009: 포인트 사용·잔액 화면 + 정산 AnalyticsEvent
 
-> WP5 (`feat/rn-points-use`). **G2 + 이벤트 spec blocked** — 노출은 법무 후, 신규 이벤트는 PRD §9.1 spec + PO 승인 선행(`track.ts`는 spec-required). 데이터·RPC는 EVAL-0005·0006 의존.
+> WP5 (`feat/rn-points-use`). **G2 blocked** — 노출·union 머지는 법무(G2) 후. 신규 이벤트 계약은 spec(analytics-union, accepted) + PO 승인 완료(`track.ts`는 spec-required). 데이터·RPC는 EVAL-0005·0006 의존.
 
 ## Parent Links
 
@@ -21,7 +21,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 ## Goal
 
-포인트 사용·조회 경로 완성. 완료 시: 환급 포인트가 다음 보증금으로 사용, 잔액·이력 화면 존재, 현금화 미노출(closed-loop), `settlement_triggered`·`settlement_auto`·`points_balance_view`가 PRD §9.1 union과 1:1로 발생.
+포인트 사용·조회 경로 완성. 완료 시: 환급 포인트가 다음 보증금으로 사용, 잔액·이력 화면 존재, 현금화 미노출(closed-loop), `settlement_completed`(`trigger: manual | auto` discriminant)·`points_balance_view` 2종이 PRD §9.1 union과 1:1로 발생.
 
 ## Source Files to Inspect
 
@@ -37,7 +37,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 ## Target Files
 
 - `apps/web/src/app/(app)/me` — 포인트 잔액·이력 조회 화면
-- `apps/web/src/lib/analytics/track.ts` — `settlement_triggered`·`settlement_auto`·`points_balance_view` 이벤트(PRD §9.1 union과 1:1, spec-required)
+- `apps/web/src/lib/analytics/track.ts` — `settlement_completed`(`trigger` discriminant)·`points_balance_view` 이벤트(PRD §9.1 union과 1:1, spec-required)
 - `apps/web/src/lib/db/reads`
 - `docs/superpowers/specs/` — AnalyticsEvent union 변경 spec (선행 산출물)
 
@@ -46,14 +46,14 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 - 포인트 closed-loop — 현금화/인출 미노출. `AC-points-use-1` (`TS-points-use-1`).
 - 다음 보증금 사용 시 `deposit_hold`가 잔액 차감. (Later) 구독 할인·앱 내 보상. `AC-points-use-2` (`TS-points-use-2`).
 - 잔액·이력 화면 — 원장 기반(`SUM(delta)` + 이력 행). `AC-points-use-3`.
-- AnalyticsEvent 3종: `settlement_triggered`·`settlement_auto`(`AC-settle-trigger-4`) + `points_balance_view`(`AC-deposit-gauge-3`). **PRD §9.1과 1:1** — 임의 추가 금지, spec + PO 승인 선행.
+- AnalyticsEvent 2종: `settlement_completed`(`trigger: manual | auto` discriminant, `AC-settle-trigger-4`) + `points_balance_view`(`AC-deposit-gauge-3`). **PRD §9.1과 1:1** — 임의 추가 금지, spec(analytics-union, accepted) + PO 승인 완료.
 - Zod ↔ TS union parity 테스트(`track.ts` 가드레일).
 
 ## Non-goals
 
 - 정산 RPC·트리거 구현 — EVAL-0006·0008 (본 task는 사용·조회·이벤트).
 - 구독 할인 결제 연동 — POC 범위 밖.
-- **활성 노출 + union 머지** — G2 + spec/PO 승인 후.
+- **활성 노출 + union 머지** — G2(법무) 통과 후. (spec·PO 승인은 완료.)
 
 ## Acceptance Criteria
 
@@ -77,7 +77,7 @@ pnpm harness:check
 
 ## Expected Output Summary
 
-포인트 사용 흐름(다음 보증금), 잔액·이력 화면 위치, AnalyticsEvent 3종 union 정합, 현금화 차단, G2·spec 전 보류 범위를 한국어로 요약한다.
+포인트 사용 흐름(다음 보증금), 잔액·이력 화면 위치, AnalyticsEvent 2종(`settlement_completed`·`points_balance_view`) union 정합, 현금화 차단, G2 전 보류 범위를 한국어로 요약한다.
 
 ## Harness Impact Questions
 
@@ -85,6 +85,6 @@ pnpm harness:check
 
 ## Stop Condition
 
-- G2 + spec/PO 승인 후 AC green + 화면 수동 확인 + `pnpm harness:check` 통과.
-- blocked 동안: 화면·parity 테스트·spec 초안 가능, union 머지·노출 보류.
+- G2(법무) 통과 후 AC green + 화면 수동 확인 + `pnpm harness:check` 통과. (spec·PO 승인은 완료.)
+- blocked 동안: 화면·parity 테스트 작성 가능(spec 계약 확정), union 머지·노출은 G2 후 보류.
 - pass@3 실패 → 포인트 사용 / 잔액 화면 / 이벤트로 split(컨텍스트 1회 점검 후).
