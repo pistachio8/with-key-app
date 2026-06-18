@@ -3,7 +3,7 @@ spec: 2026-06-17-harness-orchestration-phase4-inline-tick
 title: 하네스 오케스트레이션 Phase 4 — 단일-tick inline 무인 conductor (항상 리뷰 + 결정론 backstop)
 author: pistachio8
 date: 2026-06-17
-status: draft
+status: accepted
 ---
 
 ## Summary
