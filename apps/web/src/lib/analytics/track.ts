@@ -1,5 +1,5 @@
 // PRD §9.1 이벤트 스키마와 1:1. 임의 추가 금지 (PO 승인).
-import type { ActivityType } from "@withkey/domain";
+import type { ActivityType, FeedbackCategory } from "@withkey/domain";
 import { adminClient } from "@/lib/supabase/admin";
 import { analyticsEventSchema } from "./schema";
 
@@ -129,7 +129,11 @@ export type AnalyticsEvent =
         action: "add" | "remove"; // viewer_rejected 파생
       };
     }
-  | { name: "penalty_displayed"; props: { amount: number } };
+  | { name: "penalty_displayed"; props: { amount: number } }
+  | {
+      name: "feedback_submitted";
+      props: { category: FeedbackCategory; photo_count: number };
+    };
 
 type TrackOptions = { userId?: string };
 
