@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { CheckCircle2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   ALLOWED_PHOTO_MIME,
   FEEDBACK_CATEGORIES,
+  MAX_FEEDBACK_PHOTOS,
   MAX_PHOTO_BYTES,
   type FeedbackCategory,
 } from "@withkey/domain";
@@ -33,50 +34,77 @@ const MAX_BODY = 1000;
 // HEIC/HEIF 는 입력으로 받고 prepareForUpload 가 JPEG 으로 변환한다 (action-form 과 동일).
 const ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif";
 
+type Picked = { file: File; url: string };
+
 function isAllowedFile(file: File): boolean {
   if (!file.type) return false;
   if ((ALLOWED_PHOTO_MIME as readonly string[]).includes(file.type)) return true;
   return /^image\/hei[cf]$/i.test(file.type);
 }
 
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+}
+
 export function FeedbackForm() {
   const [category, setCategory] = useState<FeedbackCategory>("bug");
   const [body, setBody] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Picked[]>([]);
   const [preparing, setPreparing] = useState(false);
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function clearPhoto() {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null);
-    setPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
+  // 언마운트 cleanup 은 최신 photos 를 ref 로 본다 — 빈 deps closure 가 초기값만 잡는 stale 회피.
+  const photosRef = useRef<Picked[]>([]);
+  photosRef.current = photos;
+  useEffect(
+    () => () => {
+      for (const p of photosRef.current) URL.revokeObjectURL(p.url);
+    },
+    [],
+  );
 
-  async function onPickPhoto(next: File | null) {
-    if (!next) return;
-    if (next.size > MAX_PHOTO_BYTES) {
-      toast.error("사진은 5MB 이하만 올릴 수 있어요.");
-      clearPhoto();
-      return;
-    }
-    if (!isAllowedFile(next)) {
-      toast.error("지원하지 않는 이미지 형식이에요.");
-      clearPhoto();
-      return;
-    }
+  async function onPickPhotos(list: FileList | null) {
+    if (!list) return;
+    const room = MAX_FEEDBACK_PHOTOS - photos.length;
+    if (room <= 0) return;
     setPreparing(true);
     try {
-      const prepared = await prepareForUpload(next);
-      if (preview) URL.revokeObjectURL(preview);
-      setFile(prepared);
-      setPreview(URL.createObjectURL(prepared));
+      const next: Picked[] = [];
+      for (const f of Array.from(list).slice(0, room)) {
+        if (f.size > MAX_PHOTO_BYTES) {
+          toast.error("사진은 5MB 이하만 올릴 수 있어요.");
+          continue;
+        }
+        if (!isAllowedFile(f)) {
+          toast.error("지원하지 않는 이미지 형식이에요.");
+          continue;
+        }
+        const prepared = await prepareForUpload(f);
+        next.push({ file: prepared, url: URL.createObjectURL(prepared) });
+      }
+      if (next.length > 0) setPhotos((prev) => [...prev, ...next]);
     } finally {
       setPreparing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  function removePhoto(i: number) {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[i].url);
+      return prev.filter((_, idx) => idx !== i);
+    });
+  }
+
+  function resetForm() {
+    for (const p of photos) URL.revokeObjectURL(p.url);
+    setPhotos([]);
+    setBody("");
+    setCategory("bug");
+    setDone(false);
   }
 
   function submit() {
@@ -84,7 +112,7 @@ export function FeedbackForm() {
       const fd = new FormData();
       fd.append("category", category);
       fd.append("body", body);
-      if (file) fd.append("photo", file);
+      for (const p of photos) fd.append("photos", p.file);
 
       const res = await submitFeedback(fd);
       if (!res.ok) {
@@ -95,7 +123,8 @@ export function FeedbackForm() {
         );
         return;
       }
-      clearPhoto();
+      for (const p of photos) URL.revokeObjectURL(p.url);
+      setPhotos([]);
       setDone(true);
     });
   }
@@ -107,14 +136,24 @@ export function FeedbackForm() {
         <p className="t-h2">전달됐어요</p>
         <p className="t-body text-muted-foreground">소중한 의견 감사합니다. 꼼꼼히 읽어볼게요.</p>
         {/* base-ui Button 은 asChild 미지원 — link-as-button 은 buttonVariants 패턴 (not-found.tsx 동형) */}
-        <Link href="/me" className={cn(buttonVariants({ variant: "outline" }), "mt-2")}>
-          마이페이지로 돌아가기
-        </Link>
+        <div className="mt-2 flex flex-col items-center gap-2">
+          <Link href="/me" className={buttonVariants({ variant: "outline" })}>
+            마이페이지로 돌아가기
+          </Link>
+          <button
+            type="button"
+            onClick={resetForm}
+            className="t-caption text-muted-foreground underline"
+          >
+            하나 더 보내기
+          </button>
+        </div>
       </div>
     );
   }
 
   const submittable = body.trim().length > 0 && !pending && !preparing;
+  const canAddMore = photos.length < MAX_FEEDBACK_PHOTOS;
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,38 +202,53 @@ export function FeedbackForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="t-caption">사진 (선택)</span>
-        {preview ? (
-          <div className="relative w-fit">
-            {/* 로컬 blob 미리보기 — next/image 최적화 대상 아님 */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="첨부 사진 미리보기" className="max-h-48 rounded-lg" />
+        <span className="t-caption">사진 (선택 · 최대 {MAX_FEEDBACK_PHOTOS}장)</span>
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(92px,1fr))]">
+          {photos.map((p, i) => (
+            <div key={p.url} className="relative aspect-square">
+              {/* 로컬 blob 미리보기 — next/image 최적화 대상 아님 */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.url}
+                alt={`첨부 사진 ${i + 1}`}
+                className="h-full w-full rounded-[14px] object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => removePhoto(i)}
+                aria-label="사진 제거"
+                className="bg-foreground/70 text-background absolute top-1.5 right-1.5 rounded-full p-1"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+              <span className="bg-foreground/70 text-background t-caption absolute bottom-1.5 left-1.5 rounded px-1">
+                {formatSize(p.file.size)}
+              </span>
+            </div>
+          ))}
+          {canAddMore && (
             <button
               type="button"
-              onClick={clearPhoto}
-              aria-label="사진 제거"
-              className="bg-foreground/70 text-background absolute top-1.5 right-1.5 rounded-full p-1"
+              data-testid="feedback-photo-add"
+              disabled={preparing}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-input text-muted-foreground flex aspect-square flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed"
             >
-              <X className="size-4" aria-hidden="true" />
+              <ImagePlus className="size-5" aria-hidden="true" />
+              <span className="t-caption">
+                {preparing ? "처리 중" : `${photos.length}/${MAX_FEEDBACK_PHOTOS}`}
+              </span>
             </button>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={preparing}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImagePlus className="size-4" aria-hidden="true" />
-            {preparing ? "사진 처리 중..." : "사진 첨부"}
-          </Button>
-        )}
+          )}
+        </div>
         <input
           ref={fileInputRef}
           type="file"
+          data-testid="feedback-photo-input"
           accept={ACCEPT}
+          multiple
           className="hidden"
-          onChange={(e) => void onPickPhoto(e.target.files?.[0] ?? null)}
+          onChange={(e) => void onPickPhotos(e.target.files)}
         />
       </div>
 
