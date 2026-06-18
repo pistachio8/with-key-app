@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
 import type { ZodError } from "zod";
-import { feedbackSchema, type FeedbackInput } from "@withkey/domain";
+import { feedbackSchema, MAX_FEEDBACK_PHOTOS, type FeedbackInput } from "@withkey/domain";
 import { withUser } from "@/lib/auth/with-user";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
@@ -12,14 +12,15 @@ import { adminClient } from "@/lib/supabase/admin";
 import {
   deleteFeedbackPhoto,
   getFeedbackPhotoSignedUrl,
-  uploadFeedbackPhoto,
+  uploadFeedbackPhotos,
 } from "@/lib/storage/feedback-photos";
 import { notifyFeedbackToSlack } from "@/lib/slack/notify";
+import { track } from "@/lib/analytics/track";
 
 function parseFormData(
   formData: FormData,
 ):
-  | { ok: true; input: FeedbackInput; file: File | null }
+  | { ok: true; input: FeedbackInput; files: File[] }
   | { ok: false; error: ZodError<FeedbackInput> } {
   const raw = {
     category: String(formData.get("category") ?? ""),
@@ -28,9 +29,13 @@ function parseFormData(
   const parsed = feedbackSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error };
 
-  const maybeFile = formData.get("photo");
-  const file = maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
-  return { ok: true, input: parsed.data, file };
+  // 멀티 사진은 "photos" 로 받고, 구 단일 "photo" 키도 흡수(하위호환). 최대 MAX 장.
+  const photos = formData.getAll("photos");
+  const single = formData.get("photo");
+  const files = [...photos, ...(single ? [single] : [])]
+    .filter((v): v is File => v instanceof File && v.size > 0)
+    .slice(0, MAX_FEEDBACK_PHOTOS);
+  return { ok: true, input: parsed.data, files };
 }
 
 // spec C4 — 사진 업로드 선행: INSERT-only RLS 라 insert 후 photo_path UPDATE 경로가 없다.
@@ -43,23 +48,15 @@ export const submitFeedback = withUser<FormData, { ok: true }>(
     const supabase = await createClient();
     const feedbackId = randomUUID();
 
-    let photoPath: string | null = null;
-    if (parsed.file) {
-      const upload = await uploadFeedbackPhoto({
+    // 비파괴 — 실패한 장은 건너뛰고 성공 path 만 모은다(본문은 무조건 저장).
+    let photoPaths: string[] = [];
+    if (parsed.files.length > 0) {
+      photoPaths = await uploadFeedbackPhotos({
         userId: user.id,
         feedbackId,
-        file: parsed.file,
+        files: parsed.files,
         client: supabase,
       });
-      if (upload.ok) {
-        photoPath = upload.path;
-      } else {
-        // 비파괴 폴백 — 본문만 저장하고 제출은 성공시킨다.
-        console.warn("[submitFeedback] uploadFeedbackPhoto failed", {
-          feedbackId,
-          reason: upload.reason,
-        });
-      }
     }
 
     const { error } = await supabase.from("feedback").insert({
@@ -67,12 +64,15 @@ export const submitFeedback = withUser<FormData, { ok: true }>(
       user_id: user.id,
       category: parsed.input.category,
       body: parsed.input.body,
-      photo_path: photoPath,
+      photo_path: photoPaths[0] ?? null, // deprecated 하위호환 — photo_paths[0] 미러
+      photo_paths: photoPaths,
     });
 
     if (error) {
       // orphan object 정리 (best-effort) — 업로드 선행의 트레이드오프 (ADR-0035).
-      if (photoPath) await deleteFeedbackPhoto(user.id, photoPath, supabase);
+      if (photoPaths.length > 0) {
+        await Promise.all(photoPaths.map((p) => deleteFeedbackPhoto(user.id, p, supabase)));
+      }
       return failure(mapSupabaseError(error));
     }
 
@@ -84,11 +84,20 @@ export const submitFeedback = withUser<FormData, { ok: true }>(
       email: user.email,
     };
     after(async () => {
+      // analytics 는 Slack 노출과 독립 — slack 경로가 던져도 photo_count 는 남긴다.
+      void track(
+        {
+          name: "feedback_submitted",
+          props: { category: parsed.input.category, photo_count: photoPaths.length },
+        },
+        { userId: user.id },
+      );
       try {
-        const photoUrl = photoPath
-          ? await getFeedbackPhotoSignedUrl(photoPath, adminClient())
-          : null;
-        await notifyFeedbackToSlack({ ...slackInput, photoUrl });
+        const admin = adminClient();
+        const urls = (
+          await Promise.all(photoPaths.map((p) => getFeedbackPhotoSignedUrl(p, admin)))
+        ).filter((u): u is string => !!u);
+        await notifyFeedbackToSlack({ ...slackInput, photoUrls: urls });
       } catch (e) {
         // notifyFeedbackToSlack 은 never-throw 지만 signed URL 생성 실패까지 방어.
         console.error("[submitFeedback] slack notify failed", e);
