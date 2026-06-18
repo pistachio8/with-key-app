@@ -987,6 +987,21 @@ test("runFinalize: 동일 taskId 복수 entry 중 하나라도 <<FILL>> 이면 r
   assert.equal(io.writes.results, null); // 변경 없이 안내만
 });
 
+test("runFinalize: summary·verification 채워도 review <<FILL>> 잔존이면 거부 (Phase 4 §C2)", () => {
+  const io = finalizeIo();
+  const code = runFinalize({
+    ...io,
+    tasks: [finalizeTask("done")],
+    results: {
+      runs: [
+        { taskId: "EVAL-0030", summary: "요약", verification: { local: {} }, review: "<<FILL>>" },
+      ],
+    },
+  });
+  assert.equal(code, 1); // review 미기재 → entryHasPlaceholder 가 잡아 finalize 거부
+  assert.equal(io.writes.results, null); // 변경 없이 안내만
+});
+
 // ─────────────── resolveReadyTasks (orchestration-phase2 §C1) ───────────────
 
 function queueTask(id, status, extra = {}) {
