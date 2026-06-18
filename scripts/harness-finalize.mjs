@@ -14,8 +14,9 @@ import {
   flipFrontmatterStatus,
 } from "./harness-lib.mjs";
 
-// runs[] skeleton — 내용(summary·verification)은 구현 세션만 쓸 수 있으므로 <<FILL>> 로 형태만 보장.
+// runs[] skeleton — 내용(summary·verification·review)은 구현 세션만 쓸 수 있으므로 <<FILL>> 로 형태만 보장.
 // verification 은 기존 runs 관례인 { "local": { "<명령>": "<결과>" } } object 로 교체해 채운다.
+// review 는 { "reviewers": [...], "criticalHigh": <n>, "verdict": "pass" | "fixed" } 로 교체 (Phase 4 §C2 — 리뷰 누락 차단).
 // notes 는 선택 — 불요 시 채우는 시점에 필드를 삭제한다(잔존 <<FILL>> 은 Tier 1-D 에러).
 export function buildRunSkeleton(task, date) {
   return {
@@ -28,6 +29,7 @@ export function buildRunSkeleton(task, date) {
     attempts: 1,
     summary: "<<FILL>>",
     verification: "<<FILL>>",
+    review: "<<FILL>>",
     notes: "<<FILL>>",
   };
 }
@@ -153,7 +155,7 @@ export function runFinalize({
   const finalEntries = appended ? [...entries, appended] : entries;
   if (finalEntries.some((item) => entryHasPlaceholder(item))) {
     log(
-      `[finalize] runs[] entry 에 <<FILL>> 잔존 — evals/results/agent-results.json 의 summary·verification 을 채우고(notes 불요 시 필드 삭제) pnpm harness:finalize ${normalized} 를 재실행하라`,
+      `[finalize] runs[] entry 에 <<FILL>> 잔존 — evals/results/agent-results.json 의 summary·verification·review 를 채우고(notes 불요 시 필드 삭제) pnpm harness:finalize ${normalized} 를 재실행하라`,
     );
     return 1;
   }

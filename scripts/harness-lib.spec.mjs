@@ -788,7 +788,7 @@ test("renderGoalPrompt: prettier 표 padding 을 압축 — 렌더 길이가 정
 
 // ─────────────── harness-finalize (순수 헬퍼 — CLI 는 main guard 로 분리) ───────────────
 
-test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <<FILL>> placeholder 3종", () => {
+test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <<FILL>> placeholder 4종 (summary·verification·review·notes)", () => {
   const task = makeTask({ ...VALID_FM, Task: "EVAL-0030", Track: "port", Kind: "migration" });
   assert.deepEqual(buildRunSkeleton(task, "2026-06-12"), {
     taskId: "EVAL-0030",
@@ -799,6 +799,7 @@ test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <
     attempts: 1,
     summary: "<<FILL>>",
     verification: "<<FILL>>",
+    review: "<<FILL>>",
     notes: "<<FILL>>",
   });
 });
