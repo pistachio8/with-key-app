@@ -11,3 +11,7 @@ export const feedbackSchema = z.object({
   body: z.string().trim().min(1).max(1000),
 });
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
+
+// 사진 첨부 최대 장수 — feedback.photo_paths check(array_length <= 3) 및 Slack 멀티 노출과 동기.
+// ADR-0035 amendment(2026-06-18): 최초 1장 → 3장.
+export const MAX_FEEDBACK_PHOTOS = 3;

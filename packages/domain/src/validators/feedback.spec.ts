@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FEEDBACK_CATEGORIES, feedbackSchema } from "./feedback";
+import { FEEDBACK_CATEGORIES, feedbackSchema, MAX_FEEDBACK_PHOTOS } from "./feedback";
 
 describe("feedbackSchema", () => {
   it("accepts a valid input", () => {
@@ -38,5 +38,11 @@ describe("feedbackSchema", () => {
   it("FEEDBACK_CATEGORIES matches the DB check constraint set", () => {
     // migration 0047 의 check (category in ('bug','feature','other')) 와 1:1
     expect(FEEDBACK_CATEGORIES).toEqual(["bug", "feature", "other"]);
+  });
+});
+
+describe("MAX_FEEDBACK_PHOTOS", () => {
+  it("사진 최대 장수는 3", () => {
+    expect(MAX_FEEDBACK_PHOTOS).toBe(3);
   });
 });
