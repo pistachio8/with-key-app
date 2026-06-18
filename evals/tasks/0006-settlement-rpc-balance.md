@@ -54,7 +54,7 @@ Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settleme
 
 - 사용자향 트리거 UI/cron 배선 — WP4/EVAL-0008.
 - 보증금 hold UI·게이지 — WP3/EVAL-0007.
-- AnalyticsEvent(`settlement_triggered` 등) — WP5/EVAL-0009 (PRD §9.1 union spec 선행).
+- AnalyticsEvent(`settlement_completed` 등) — WP5/EVAL-0009 (PRD §9.1 union spec(analytics-union, accepted) 선행).
 - production apply — G2 후.
 
 ## Acceptance Criteria

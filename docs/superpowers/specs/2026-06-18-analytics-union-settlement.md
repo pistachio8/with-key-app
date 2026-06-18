@@ -3,7 +3,7 @@ spec: 2026-06-18-analytics-union-settlement
 title: 정산·잔액 AnalyticsEvent union 계약 (EVAL-0009, spec:analytics-union)
 author: pistachio8
 date: 2026-06-18
-status: draft
+status: accepted
 ---
 
 ## Summary
