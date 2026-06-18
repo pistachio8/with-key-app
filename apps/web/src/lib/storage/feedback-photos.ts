@@ -80,6 +80,32 @@ export async function uploadFeedbackPhoto(args: {
   return { ok: true, path };
 }
 
+// 멀티 사진 — 같은 feedbackId 로 N장 업로드. 실패한 장은 건너뛰고 성공 path 만 순서대로 반환(비파괴).
+export async function uploadFeedbackPhotos(args: {
+  userId: string;
+  feedbackId: string;
+  files: File[];
+  client?: SupabaseClient;
+}): Promise<string[]> {
+  const supabase = args.client ?? (await createClient());
+  const paths: string[] = [];
+  for (const file of args.files) {
+    const res = await uploadFeedbackPhoto({
+      userId: args.userId,
+      feedbackId: args.feedbackId,
+      file,
+      client: supabase,
+    });
+    if (res.ok) paths.push(res.path);
+    else
+      console.warn("[uploadFeedbackPhotos] skip", {
+        feedbackId: args.feedbackId,
+        reason: res.reason,
+      });
+  }
+  return paths;
+}
+
 export async function getFeedbackPhotoSignedUrl(
   path: string | null | undefined,
   client: SupabaseClient,
