@@ -6,7 +6,6 @@ const BASE = {
   body: "제출 버튼이 안 눌려요",
   userId: "11111111-1111-1111-1111-111111111111",
   email: "u@test.local",
-  photoUrl: null,
 };
 
 describe("buildFeedbackPayload", () => {
@@ -18,11 +17,19 @@ describe("buildFeedbackPayload", () => {
     expect(text).toContain("u@test.local");
   });
 
-  it("includes the photo link only when photoUrl is set", () => {
-    expect(JSON.stringify(buildFeedbackPayload(BASE))).not.toContain("사진");
-    expect(
-      JSON.stringify(buildFeedbackPayload({ ...BASE, photoUrl: "https://signed.example/x" })),
-    ).toContain("https://signed.example/x");
+  it("사진 여러 장을 'N장:' + 각 URL 줄로 노출", () => {
+    const { text } = buildFeedbackPayload({
+      ...BASE,
+      photoUrls: ["https://s/a.jpg", "https://s/b.jpg"],
+    });
+    expect(text).toContain("사진 2장:");
+    expect(text).toContain("https://s/a.jpg");
+    expect(text).toContain("https://s/b.jpg");
+  });
+
+  it("사진이 없으면 사진 줄을 넣지 않는다", () => {
+    expect(buildFeedbackPayload(BASE).text).not.toContain("사진");
+    expect(buildFeedbackPayload({ ...BASE, photoUrls: [] }).text).not.toContain("사진");
   });
 });
 

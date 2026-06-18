@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const USER_ID = "11111111-1111-1111-1111-111111111111";
 
 const insert = vi.fn<(row: object) => Promise<{ error: unknown }>>();
-const uploadFeedbackPhoto = vi.fn();
+const uploadFeedbackPhotos = vi.fn();
 const deleteFeedbackPhoto = vi.fn();
 const getFeedbackPhotoSignedUrl = vi.fn();
 const notifyFeedbackToSlack = vi.fn();
@@ -31,7 +31,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}) }));
 
 vi.mock("@/lib/storage/feedback-photos", () => ({
-  uploadFeedbackPhoto: (...a: unknown[]) => uploadFeedbackPhoto(...a),
+  uploadFeedbackPhotos: (...a: unknown[]) => uploadFeedbackPhotos(...a),
   deleteFeedbackPhoto: (...a: unknown[]) => deleteFeedbackPhoto(...a),
   getFeedbackPhotoSignedUrl: (...a: unknown[]) => getFeedbackPhotoSignedUrl(...a),
 }));
@@ -52,7 +52,7 @@ function makeFormData(over: Partial<Record<"category" | "body", string>> = {}, p
 
 beforeEach(() => {
   insert.mockReset().mockResolvedValue({ error: null });
-  uploadFeedbackPhoto.mockReset();
+  uploadFeedbackPhotos.mockReset().mockResolvedValue([]);
   deleteFeedbackPhoto.mockReset();
   getFeedbackPhotoSignedUrl.mockReset().mockResolvedValue(null);
   notifyFeedbackToSlack.mockReset().mockResolvedValue(undefined);
@@ -68,6 +68,7 @@ describe("submitFeedback", () => {
         category: "bug",
         body: "버그 신고",
         photo_path: null,
+        photo_paths: [],
         id: expect.any(String),
       }),
     );
@@ -81,33 +82,61 @@ describe("submitFeedback", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("falls back to body-only when photo upload fails (non-destructive)", async () => {
-    uploadFeedbackPhoto.mockResolvedValue({ ok: false, reason: "mime" });
-    const photo = new File(["x"], "a.jpg", { type: "image/jpeg" });
-    const res = await submitFeedback(makeFormData({}, photo));
-    expect(res.ok).toBe(true);
-    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ photo_path: null }));
-  });
-
-  it("stores photo_path when upload succeeds", async () => {
-    uploadFeedbackPhoto.mockResolvedValue({ ok: true, path: `${USER_ID}/fb-abc.jpg` });
+  it("falls back to body-only when every photo upload fails (non-destructive)", async () => {
+    uploadFeedbackPhotos.mockResolvedValue([]);
     const photo = new File(["x"], "a.jpg", { type: "image/jpeg" });
     const res = await submitFeedback(makeFormData({}, photo));
     expect(res.ok).toBe(true);
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ photo_path: `${USER_ID}/fb-abc.jpg` }),
+      expect.objectContaining({ photo_path: null, photo_paths: [] }),
     );
   });
 
-  it("removes the orphan object when insert fails after upload", async () => {
-    uploadFeedbackPhoto.mockResolvedValue({ ok: true, path: `${USER_ID}/fb-abc.jpg` });
+  it("stores photo_path + photo_paths when upload succeeds", async () => {
+    uploadFeedbackPhotos.mockResolvedValue([`${USER_ID}/fb-abc.jpg`]);
+    const photo = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    const res = await submitFeedback(makeFormData({}, photo));
+    expect(res.ok).toBe(true);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photo_path: `${USER_ID}/fb-abc.jpg`,
+        photo_paths: [`${USER_ID}/fb-abc.jpg`],
+      }),
+    );
+  });
+
+  it("photos 여러 장을 photo_paths 로 저장한다 (photo_path = 첫 장)", async () => {
+    uploadFeedbackPhotos.mockResolvedValue([`${USER_ID}/fb-a.jpg`, `${USER_ID}/fb-b.jpg`]);
+    const fd = new FormData();
+    fd.append("category", "bug");
+    fd.append("body", "사진 두 장 테스트");
+    fd.append("photos", new File([new Uint8Array([1])], "a.png", { type: "image/png" }));
+    fd.append("photos", new File([new Uint8Array([2])], "b.png", { type: "image/png" }));
+
+    const res = await submitFeedback(fd);
+    expect(res.ok).toBe(true);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photo_path: `${USER_ID}/fb-a.jpg`,
+        photo_paths: [`${USER_ID}/fb-a.jpg`, `${USER_ID}/fb-b.jpg`],
+      }),
+    );
+  });
+
+  it("removes every orphan object when insert fails after upload", async () => {
+    uploadFeedbackPhotos.mockResolvedValue([`${USER_ID}/fb-a.jpg`, `${USER_ID}/fb-b.jpg`]);
     insert.mockResolvedValue({ error: { code: "23514" } });
     const photo = new File(["x"], "a.jpg", { type: "image/jpeg" });
     const res = await submitFeedback(makeFormData({}, photo));
     expect(res.ok).toBe(false);
     expect(deleteFeedbackPhoto).toHaveBeenCalledWith(
       USER_ID,
-      `${USER_ID}/fb-abc.jpg`,
+      `${USER_ID}/fb-a.jpg`,
+      expect.anything(),
+    );
+    expect(deleteFeedbackPhoto).toHaveBeenCalledWith(
+      USER_ID,
+      `${USER_ID}/fb-b.jpg`,
       expect.anything(),
     );
     expect(notifyFeedbackToSlack).not.toHaveBeenCalled();

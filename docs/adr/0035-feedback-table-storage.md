@@ -65,3 +65,13 @@ dogfood 기간에 사용자 건의·버그 리포트가 카톡·구두로 흩어
 - (인지 기록 — 본 ADR 범위 밖) `truncate_test_data` 가 `point_ledger`·`settlements` 를 정리하지 않는 **기존 잠복 결함**을 재발행 과정에서 확인했다. 본 migration 은 0012 동작을 1:1 보존하므로 그 결함을 고치지 않는다 — 별도 forward-fix migration 이 필요하다.
 - BE_SCHEMA(§2 인벤토리·§5.11 컬럼·§7 RLS·§12 Changelog)와 `apps/web/.env.example`(`SLACK_FEEDBACK_WEBHOOK_URL` 서버 전용)이 본 ADR 과 같은 PR 에서 동기화된다.
 - Server Action(`submitFeedback`)·storage 헬퍼(`feedback-photos.ts`)·Slack notify(`slack/notify.ts`)·UI(`/me/feedback`)는 EVAL-0028·0029 가 본 결정을 SoT 로 구현한다.
+
+## Amendment — 2026-06-18 (migration 0049)
+
+**변경:** 사진 첨부 1장 → **최대 3장**. 첨부된 사진 **전부**를 Slack #qa 에 노출(기존 1장 → N장).
+
+**근거:** 버그 리포트에서 여러 화면/단계 캡처를 한 번에 받으면 트리아지 정보량이 커진다. 열람 화면(트랙 B)은 여전히 만들지 않으므로 사진의 실시간 소비자는 #qa 뿐 — 따라서 멀티 사진은 Slack 멀티 노출과 한 쌍으로만 의미가 있다.
+
+**유지되는 결정:** feedback INSERT-only RLS, 본인 SELECT 미개방, owner-scoped `feedback-photos` 버킷, id 선생성 + 업로드 선행. 본 amendment 는 결정 1번(열람 화면 없음)을 **반전하지 않는다**.
+
+**구현:** `feedback.photo_paths text[]`(≤3, 0049), `uploadFeedbackPhotos`, `buildFeedbackPayload` 의 `photoUrls: string[]`.
