@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACTIVITY_TYPES, feedbackCategorySchema, MAX_FEEDBACK_PHOTOS } from "@withkey/domain";
+import { ACTIVITY_TYPES } from "@withkey/domain";
 
 const activityType = z.enum(ACTIVITY_TYPES);
 const uuid = z.string().uuid();
@@ -165,12 +165,5 @@ export const analyticsEventSchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("penalty_displayed"),
     props: z.object({ amount: z.number().int() }),
-  }),
-  z.object({
-    name: z.literal("feedback_submitted"),
-    props: z.object({
-      category: feedbackCategorySchema,
-      photo_count: z.number().int().min(0).max(MAX_FEEDBACK_PHOTOS),
-    }),
   }),
 ]);

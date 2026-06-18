@@ -15,7 +15,6 @@ import {
   uploadFeedbackPhotos,
 } from "@/lib/storage/feedback-photos";
 import { notifyFeedbackToSlack } from "@/lib/slack/notify";
-import { track } from "@/lib/analytics/track";
 
 function parseFormData(
   formData: FormData,
@@ -84,14 +83,6 @@ export const submitFeedback = withUser<FormData, { ok: true }>(
       email: user.email,
     };
     after(async () => {
-      // analytics 는 Slack 노출과 독립 — slack 경로가 던져도 photo_count 는 남긴다.
-      void track(
-        {
-          name: "feedback_submitted",
-          props: { category: parsed.input.category, photo_count: photoPaths.length },
-        },
-        { userId: user.id },
-      );
       try {
         const admin = adminClient();
         const urls = (

@@ -7,7 +7,6 @@ const uploadFeedbackPhotos = vi.fn();
 const deleteFeedbackPhoto = vi.fn();
 const getFeedbackPhotoSignedUrl = vi.fn();
 const notifyFeedbackToSlack = vi.fn();
-const track = vi.fn();
 
 vi.mock("next/server", () => ({
   // after() 콜백을 즉시 실행 — Slack 경로를 동기 검증하기 위함.
@@ -41,10 +40,6 @@ vi.mock("@/lib/slack/notify", () => ({
   notifyFeedbackToSlack: (...a: unknown[]) => notifyFeedbackToSlack(...a),
 }));
 
-vi.mock("@/lib/analytics/track", () => ({
-  track: (...a: unknown[]) => track(...a),
-}));
-
 import { submitFeedback } from "./_actions";
 
 function makeFormData(over: Partial<Record<"category" | "body", string>> = {}, photo?: File) {
@@ -61,7 +56,6 @@ beforeEach(() => {
   deleteFeedbackPhoto.mockReset();
   getFeedbackPhotoSignedUrl.mockReset().mockResolvedValue(null);
   notifyFeedbackToSlack.mockReset().mockResolvedValue(undefined);
-  track.mockReset();
 });
 
 describe("submitFeedback", () => {
@@ -126,10 +120,6 @@ describe("submitFeedback", () => {
         photo_path: `${USER_ID}/fb-a.jpg`,
         photo_paths: [`${USER_ID}/fb-a.jpg`, `${USER_ID}/fb-b.jpg`],
       }),
-    );
-    expect(track).toHaveBeenCalledWith(
-      { name: "feedback_submitted", props: { category: "bug", photo_count: 2 } },
-      { userId: USER_ID },
     );
   });
 

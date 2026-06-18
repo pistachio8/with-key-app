@@ -136,10 +136,6 @@ const fixtures: Record<AnalyticsEvent["name"], AnalyticsEvent> = {
     name: "account_copied",
     props: { groupId: "11111111-1111-4111-8111-111111111111" },
   },
-  feedback_submitted: {
-    name: "feedback_submitted",
-    props: { category: "bug", photo_count: 2 },
-  },
 };
 
 describe("TS union ↔ Zod schema parity", () => {
