@@ -788,7 +788,7 @@ test("renderGoalPrompt: prettier 표 padding 을 압축 — 렌더 길이가 정
 
 // ─────────────── harness-finalize (순수 헬퍼 — CLI 는 main guard 로 분리) ───────────────
 
-test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <<FILL>> placeholder 3종", () => {
+test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <<FILL>> placeholder 4종 (summary·verification·review·notes)", () => {
   const task = makeTask({ ...VALID_FM, Task: "EVAL-0030", Track: "port", Kind: "migration" });
   assert.deepEqual(buildRunSkeleton(task, "2026-06-12"), {
     taskId: "EVAL-0030",
@@ -799,6 +799,7 @@ test("buildRunSkeleton: frontmatter 유래 자동 필드 + attempts 기본 1 + <
     attempts: 1,
     summary: "<<FILL>>",
     verification: "<<FILL>>",
+    review: "<<FILL>>",
     notes: "<<FILL>>",
   });
 });
@@ -983,6 +984,21 @@ test("runFinalize: 동일 taskId 복수 entry 중 하나라도 <<FILL>> 이면 r
     },
   });
   assert.equal(code, 1);
+  assert.equal(io.writes.results, null); // 변경 없이 안내만
+});
+
+test("runFinalize: summary·verification 채워도 review <<FILL>> 잔존이면 거부 (Phase 4 §C2)", () => {
+  const io = finalizeIo();
+  const code = runFinalize({
+    ...io,
+    tasks: [finalizeTask("done")],
+    results: {
+      runs: [
+        { taskId: "EVAL-0030", summary: "요약", verification: { local: {} }, review: "<<FILL>>" },
+      ],
+    },
+  });
+  assert.equal(code, 1); // review 미기재 → entryHasPlaceholder 가 잡아 finalize 거부
   assert.equal(io.writes.results, null); // 변경 없이 안내만
 });
 
