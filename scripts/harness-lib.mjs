@@ -419,7 +419,7 @@ export function validateDoneRunParity(tasks, results, { grandfathered = GRANDFAT
     for (const entry of entries) {
       if (JSON.stringify(entry).includes("<<FILL>>")) {
         errors.push(
-          `${task.repoPath}: runs[] entry for ${id} has <<FILL>> placeholder — summary·verification 을 채우고 notes 불요 시 필드를 삭제하라`,
+          `${task.repoPath}: runs[] entry for ${id} has <<FILL>> placeholder — summary·verification·review 를 채우고 notes 불요 시 필드를 삭제하라`,
         );
       }
     }
