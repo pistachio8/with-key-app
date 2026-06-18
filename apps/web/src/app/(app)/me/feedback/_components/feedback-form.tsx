@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { prepareForUpload } from "@/lib/image/prepare-upload";
 import { submitFeedback } from "../_actions";
 
@@ -57,8 +56,11 @@ export function FeedbackForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 언마운트 cleanup 은 최신 photos 를 ref 로 본다 — 빈 deps closure 가 초기값만 잡는 stale 회피.
+  // ref 갱신은 render 가 아닌 effect 에서(react-hooks/refs) — 마지막 commit 값이 언마운트 시 남는다.
   const photosRef = useRef<Picked[]>([]);
-  photosRef.current = photos;
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
   useEffect(
     () => () => {
       for (const p of photosRef.current) URL.revokeObjectURL(p.url);
