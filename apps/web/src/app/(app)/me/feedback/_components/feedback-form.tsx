@@ -218,7 +218,7 @@ export function FeedbackForm() {
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
-                aria-label="사진 제거"
+                aria-label={`${i + 1}번 사진 제거`}
                 className="bg-foreground/70 text-background absolute top-1.5 right-1.5 rounded-full p-1"
               >
                 <X className="size-4" aria-hidden="true" />
@@ -232,6 +232,7 @@ export function FeedbackForm() {
             <button
               type="button"
               data-testid="feedback-photo-add"
+              aria-label="사진 추가"
               disabled={preparing}
               onClick={() => fileInputRef.current?.click()}
               className="border-input text-muted-foreground flex aspect-square flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed"

@@ -29,7 +29,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   prepareForUpload.mockImplementation(async (f: File) => f);
   submitFeedback.mockResolvedValue({ ok: true, data: { ok: true } });
-  URL.createObjectURL = vi.fn().mockReturnValue("blob:preview");
+  // 호출마다 고유 blob URL — key={p.url} 중복(React key 경고) 회피.
+  let n = 0;
+  URL.createObjectURL = vi.fn(() => `blob:preview-${n++}`);
   URL.revokeObjectURL = vi.fn();
 });
 
@@ -55,7 +57,7 @@ describe("FeedbackForm 멀티 사진", () => {
     render(<FeedbackForm />);
     const input = screen.getByTestId("feedback-photo-input") as HTMLInputElement;
     fireEvent.change(input, { target: { files: [png("a.png")] } });
-    fireEvent.click(await screen.findByLabelText("사진 제거"));
+    fireEvent.click(await screen.findByLabelText("1번 사진 제거"));
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 
