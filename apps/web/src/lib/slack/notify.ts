@@ -15,7 +15,7 @@ export type FeedbackSlackMessage = {
   body: string;
   userId: string;
   email?: string | null;
-  photoUrl?: string | null;
+  photoUrls?: string[];
 };
 
 export function buildFeedbackPayload(msg: FeedbackSlackMessage): { text: string } {
@@ -24,7 +24,11 @@ export function buildFeedbackPayload(msg: FeedbackSlackMessage): { text: string 
     `>${msg.body.replaceAll("\n", "\n>")}`,
     `제출자: ${msg.email ?? "(email 없음)"} (${msg.userId})`,
   ];
-  if (msg.photoUrl) lines.push(`사진: ${msg.photoUrl}`);
+  const urls = msg.photoUrls ?? [];
+  if (urls.length > 0) {
+    lines.push(`사진 ${urls.length}장:`);
+    for (const u of urls) lines.push(u);
+  }
   return { text: lines.join("\n") };
 }
 
