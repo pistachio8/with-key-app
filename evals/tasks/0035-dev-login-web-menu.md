@@ -2,7 +2,7 @@
 Task: EVAL-0035
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0034] — 라우트 확장(email 분기) 완성 선행 — 메뉴가 호출할 email 경로가 동작해야 함.
 Parent: docs/superpowers/specs/2026-06-19-dev-login-mode-design.md, docs/eng-stories/2026-06-19-dev-login-mode.md
 ---

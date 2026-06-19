@@ -386,6 +386,26 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: route handler 는 외부 콜백/dev 인증 보조 표면 가드레일에 부합(신규 app/api/* 표면 안 만들고 기존 app/auth/dev-login 확장 — spec §5.2), Server Action·RSC 경계 무변경, createClient(사용자 publishable key)로 쿠키 교환(admin 은 mint 단계만, route 는 admin 미호출), zod SoT 무관. 보안: 게이트가 isDevLoginEnabled() 단일 진입이라 disabled 시 모든 경로 404, allowlist 는 EVAL-0033 mintDevToken 책임. verifyOtp 실패 메시지만 로깅하고 token_hash·hashed_token 값은 미로깅. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
       "notes": "검증 web 스코프(--filter @withkey/web) — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP(web) 무관. format=token 응답은 NextResponse.json 으로 content-type application/json 자동 설정(테스트 검증). RN 의 Vercel Protection Bypass 헤더는 엣지 담당이라 라우트 코드 불필요(Non-goal). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
+    },
+    {
+      "taskId": "EVAL-0035",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP3 web 숨긴 메뉴. dev-login-menu.tsx 신규('use client') — NEXT_PUBLIC_DEV_LOGIN==='1'(DEV_LOGIN_VISIBLE) 아니면 null 반환(Production tree-shake). DEV_ACCOUNTS 2종(member-active@fromwith.test·balance@fromwith.test, 서버 allowlist 와 동일 집합 — spec §5.5)을 Dialog(sheet.tsx 부재라 dialog primitive 재사용) 안의 Button 목록으로 보여주고, 탭 시 window.location.assign('/auth/dev-login?email=<picked>&next=/home')으로 브라우저 navigation(서버가 쿠키 set+redirect — Server Action 가드레일 비대상). login-screen.tsx 외과적 변경: useRef import 추가, 모듈 상수 DEV_LOGIN_VISIBLE·DEV_LOGIN_TAPS(5), LoginForm 에 devMenuOpen state + devTaps ref + handleLogoTap(5탭→open), 로고 h1 을 DEV_LOGIN_VISIBLE 일 때만 button 래퍼(onClick=handleLogoTap)로 감싸고 아니면 기존 Image 그대로, main 끝에 메뉴를 게이트 렌더(close 시 카운터 리셋). .env.example: DEV_LOGIN_ENABLED·NEXT_PUBLIC_DEV_LOGIN·DEV_LOGIN_EMAILS 3개 주석 추가(기존 단수 DEV_LOGIN_EMAIL=개인 login:link 용과 의미 구분 명시, Preview env scope only). lint 교정: window.location.href= 할당이 react-hooks/immutability(React Compiler)에 '외부 변수 수정'으로 걸려 window.location.assign() 메서드 호출로 교체(open-in-app-modal.tsx 패턴).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0 (window.location.assign 교정 후)",
+          "grep DEV_LOGIN_ENABLED|NEXT_PUBLIC_DEV_LOGIN|DEV_LOGIN_EMAILS .env.example": "4 hits — 3개 주석 추가 확인",
+          "pnpm --filter @withkey/web build": "pass — Compiled successfully, /auth/dev-login 라우트 포함 38 pages",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: route colocation 유지(_components/ 신규 컴포넌트), client 컴포넌트 경계 명확('use client'), window navigation 이라 useEffect+fetch/Server Action 가드레일 비대상(spec §5.3 명시), SWR/React Query 미도입, zod SoT 무관(UI), env 게이트는 NEXT_PUBLIC_DEV_LOGIN(클라 노출 가능 토글이지 시크릿 아님). a11y: 숨긴 제스처를 button 으로 감싸 click-events-have-key-events 회피. tree-shake: DEV_LOGIN_VISIBLE 빌드상수가 false 면 제스처·메뉴 모두 dead-branch. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
+      "notes": "검증 web 스코프 — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP 무관. DEV_ACCOUNTS 표시 목록과 서버 DEV_LOGIN_EMAILS env 는 같은 이메일 집합으로 수동 동기(계정 추가 시 둘 다 갱신 — spec §5.5 의도적 중복). manual E2E(Preview 웹 메뉴 로그인)는 EVAL-0038 사람 게이트. base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
     }
   ]
 }
