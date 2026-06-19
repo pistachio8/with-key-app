@@ -2,7 +2,7 @@
 Task: EVAL-0033
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/specs/2026-06-19-dev-login-mode-design.md, docs/eng-stories/2026-06-19-dev-login-mode.md
 ---
 

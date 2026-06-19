@@ -346,6 +346,26 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: RSC server read 경계 유지(Server Action·api 미변경), zod SoT 무관(표시 파생값), Supabase/RLS 무변경(읽기 컬럼 auto_verify_status 1개 추가만, 사용자 createClient 유지·admin/service-role 미사용), Cache Components 무관. Non-goal 봉인 확인: computeAccruedPot 입력 doneByWeek=full 불변(pot/penalty 회귀 없음), RPC/익명성/48h(0048) 무변경. 도메인 reviewer fan-out 은 미실행(단일 read 파일 surgical 변경) — PR 전 withkey-review 권장.",
       "notes": "수동 핸드오프(dogfood 실측·위조 금지): 통합테스트(peer-reject.spec.ts)는 공유 Supabase 의존이라 로컬 미실행 — CI Integration 잡에서 확인. 실 디바이스 재현: 4인 챌린지 비워크아웃 인증에 과반(>(N-1)/2) 반려 → 챌린지 상세 멤버 현황판 doneCount 즉시 감소 확인. base=develop(6c65a51). 무관 WIP(apps/mobile/package.json)·미커밋 docs 는 본 변경과 분리. 커밋·푸시·PR 은 사용자 확인 후(D6 게이트). 후속(범위 밖): 멤버 doneByWeek 기반 viewer 링/칩도 peer_rejected 반영 필요 시 별도 task(pot 분리 주의)."
+    },
+    {
+      "taskId": "EVAL-0033",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login 모드(카카오 우회 디버깅 로그인) WP1 서버 코어. apps/web/src/lib/auth/dev-login.ts 신규 — 세 책임을 단일 모듈로: ① isDevLoginEnabled() = process.env.DEV_LOGIN_ENABLED==='true', ② devEmails() = DEV_LOGIN_EMAILS 를 ','分 split·trim·filter(Boolean) 한 allowlist, ③ mintDevToken(email) = 게이트 꺼짐→404 / allowlist 불일치→400(admin 호출 전 차단) / adminClient().auth.admin.generateLink({type:'magiclink',email}) → data.properties.hashed_token 반환. status 를 실은 DevLoginError 클래스로 throw(route 가 HTTP 상태로 변환, eslint no-throw-literal 회피). 반환 필드는 hashed_token(token_hash 아님 — generateLink 응답 스키마, dev-login-link.mjs 와 동일, spec §5.1 reviewer 교정). generateLink 에러·hashed_token 부재는 502(spec §8). 토큰 값은 로그 미출력. allowlist-only 가 방어선인 이유: auth-js 에 이메일 존재 확인 API 가 없고 generateLink 가 미존재 이메일을 생성하므로, 통과 가능한 이메일을 seed 된 N 개로 정확 일치 제한해 실유저·임의 이메일 발급을 원천 차단. unit 테스트 dev-login.spec.ts 6건: isDevLoginEnabled 'true'만 true / disabled→404(admin 미호출) / 비allowlist→400(admin 미호출) / allowlist→hashed_token 반환(공백 trim 검증) / generateLink error→502 / hashed_token 부재→502.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0",
+          "pnpm --filter @withkey/web vitest run dev-login": "pass — 1 file / 6 tests (dev-login.spec.ts 신규)",
+          "grep console.log dev-login.ts": "빈 결과 — 토큰 미로깅 AC 충족",
+          "pnpm harness:check": "pass — 0 violations (35 migration tasks)"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: 신규 모듈은 server-only(adminClient 경유 transitive), 라우트·UI·Server Action 경계 무변경(이 WP 는 순수 서버 util), zod SoT 무관, Supabase/RLS 무변경(admin generateLink 만 호출 — 신규 테이블·정책 없음), env 신규 사용(DEV_LOGIN_ENABLED·DEV_LOGIN_EMAILS)은 .env.example 동기화를 EVAL-0035 에서 처리 예정. 시크릿: NEXT_PUBLIC_ 접두 없는 서버 전용 env 만 사용. 도메인 reviewer fan-out 미실행(단일 util 파일 신규) — PR 전 withkey-review 권장.",
+      "notes": "검증은 web 스코프(--filter @withkey/web)로 실행 — recursive pnpm lint 는 apps/mobile 의 사전 존재 import/no-unresolved(expo-image-picker·expo-image-manipulator, 설치돼 있으나 eslint import resolver 가 못 따라감) 2건으로 실패하나 본 WP(web)와 무관. EVAL-0036(RN) 착수 시 별도 확인. base=feat/dev-login-mode(origin/develop 407197b). 커밋·푸시·PR 은 사용자 확인 후(D6). 후속: DEV_LOGIN_USER_IDS getUserById hardening 은 선택적 후속(이 WP 범위 밖)."
     }
   ]
 }
