@@ -56,21 +56,32 @@ export const fetchChallengeDetail = cache(
 
     const { data: logs } = await supabase
       .from("action_logs")
-      .select("user_id, created_at")
+      .select("user_id, created_at, auto_verify_status")
       .eq("challenge_id", challengeId);
     const status = c.status as ChallengeDetailView["status"];
     const startKey = c.start_at ? toKstDayKey(c.start_at) : null;
     // 하루 N개 피드도 인증은 1회 → KST distinct day → 주차 버킷. startKey 없으면(미시작) 빈 집계.
+    // pot/penalty 추정은 정산 RPC(0044) 정합 위해 full 집합 유지 — 정산 측 peer_rejected 제외는 EVAL-0008 후속(역방향).
     const byUserByWeek = startKey
       ? countDoneDaysByUserByWeek(logs ?? [], startKey, c.duration_days)
+      : new Map<string, Map<number, number>>();
+    // 🟨 표시 doneCount 는 peer_rejected 제외(ADR-0038 / EVAL-0032) — 과반 반려가 멤버 현황판에 즉시 반영.
+    // current-challenges.ts 와 동일 패턴(표시 집합 ≠ pot 집합). peer_rejected 외 로그만으로 distinct-day 재집계.
+    const visibleByUserByWeek = startKey
+      ? countDoneDaysByUserByWeek(
+          (logs ?? []).filter((l) => l.auto_verify_status !== "peer_rejected"),
+          startKey,
+          c.duration_days,
+        )
       : new Map<string, Map<number, number>>();
 
     const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
       const u = Array.isArray(p.users) ? p.users[0] : p.users;
+      // doneByWeek(full)은 pot 추정·viewer 링용 그대로. 표시 doneCount 만 peer_rejected 제외 집합에서 합산.
       const doneByWeek = byUserByWeek.get(p.user_id) ?? new Map<number, number>();
-      // doneCount = 전체 distinct day (주차 합). 멤버 strip 표시용 — 기존 의미 유지.
+      const visibleByWeek = visibleByUserByWeek.get(p.user_id);
       let doneCount = 0;
-      for (const n of doneByWeek.values()) doneCount += n;
+      if (visibleByWeek) for (const n of visibleByWeek.values()) doneCount += n;
       return {
         id: p.user_id,
         displayName: u?.display_name ?? "익명",
