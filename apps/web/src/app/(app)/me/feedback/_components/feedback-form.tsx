@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { CheckCircle2, ImagePlus, X } from "lucide-react";
+import {
+  Bug,
+  Check,
+  ImagePlus,
+  Info,
+  MessageCircle,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   ALLOWED_PHOTO_MIME,
@@ -12,21 +21,47 @@ import {
   type FeedbackCategory,
 } from "@withkey/domain";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { prepareForUpload } from "@/lib/image/prepare-upload";
 import { submitFeedback } from "../_actions";
 
-const CATEGORY_LABELS: Record<FeedbackCategory, string> = {
-  bug: "버그 제보",
-  feature: "기능 제안",
-  other: "기타",
+// 분류별 메타 — 라벨·아이콘·가이드(helper)·placeholder. 카피는 작성 화면 SoT 그대로:
+// docs/superpowers/specs/2026-06-18-feedback-redesign-compose.html
+const CATEGORY_META: Record<
+  FeedbackCategory,
+  { label: string; Icon: LucideIcon; helper: ReactNode; placeholder: string }
+> = {
+  bug: {
+    label: "버그 제보",
+    Icon: Bug,
+    helper: (
+      <>
+        <b className="text-foreground font-semibold">무엇이</b>,{" "}
+        <b className="text-foreground font-semibold">언제·어디서</b> 일어났는지 적어주시면 빨리 고칠
+        수 있어요.
+      </>
+    ),
+    placeholder:
+      "예) 챌린지 인증 화면에서 사진을 올리면 화면이 멈춰요. 어제 저녁 인증할 때 그랬어요.",
+  },
+  feature: {
+    label: "기능 제안",
+    Icon: Sparkles,
+    helper: (
+      <>
+        어떤 상황에서 <b className="text-foreground font-semibold">무엇이 있었으면</b> 좋을지
+        알려주세요.
+      </>
+    ),
+    placeholder: "예) 친구를 챌린지에 초대할 때 카카오톡으로 바로 공유할 수 있으면 좋겠어요.",
+  },
+  other: {
+    label: "기타",
+    Icon: MessageCircle,
+    helper: <>칭찬, 불편함, 문의 등 무엇이든 편하게 남겨주세요.</>,
+    placeholder: "예) 앱을 잘 쓰고 있어요! 정산 영수증 디자인이 특히 마음에 들어요.",
+  },
 };
 
 const MAX_BODY = 1000;
@@ -52,6 +87,10 @@ export function FeedbackForm() {
   const [photos, setPhotos] = useState<Picked[]>([]);
   const [preparing, setPreparing] = useState(false);
   const [done, setDone] = useState(false);
+  // 완료 화면 recap 은 제출 시점 값으로 고정 — submit 이 photos 를 비우므로 미리 스냅샷.
+  const [recap, setRecap] = useState<{ category: FeedbackCategory; photoCount: number } | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +145,7 @@ export function FeedbackForm() {
     setPhotos([]);
     setBody("");
     setCategory("bug");
+    setRecap(null);
     setDone(false);
   }
 
@@ -125,6 +165,7 @@ export function FeedbackForm() {
         );
         return;
       }
+      setRecap({ category, photoCount: photos.length });
       for (const p of photos) URL.revokeObjectURL(p.url);
       setPhotos([]);
       setDone(true);
@@ -132,20 +173,38 @@ export function FeedbackForm() {
   }
 
   if (done) {
+    const r = recap ?? { category, photoCount: 0 };
     return (
-      <div className="flex flex-col items-center gap-3 py-10 text-center">
-        <CheckCircle2 className="text-primary size-10" aria-hidden="true" />
+      <div
+        className="flex flex-col items-center py-12 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        {/* 완료 도장 — 기존 .animate-stamp-in 재사용(settlement-receipt 동형, reduced-motion 자동 무력화) */}
+        <span className="animate-stamp-in bg-card ring-border mb-5 grid size-24 place-items-center rounded-full shadow-[0_18px_40px_-16px_var(--brand-success)] ring-1">
+          <Check className="text-brand-success size-12" strokeWidth={3} aria-hidden="true" />
+        </span>
         <p className="t-h2">전달됐어요</p>
-        <p className="t-body text-muted-foreground">소중한 의견 감사합니다. 꼼꼼히 읽어볼게요.</p>
+        <p className="t-body text-muted-foreground mt-2 max-w-[30ch]">
+          소중한 의견 감사합니다. 개발팀이 꼼꼼히 읽어볼게요.
+        </p>
+        <div className="border-border bg-card mt-4 inline-flex items-center gap-2 rounded-full border px-3.5 py-2">
+          <span className="bg-brand-primary-soft t-caption rounded-full px-2 py-0.5 font-bold text-[var(--brand-primary-deep)]">
+            {CATEGORY_META[r.category].label}
+          </span>
+          <span className="t-caption text-foreground font-semibold">
+            {r.photoCount > 0 ? `사진 ${r.photoCount}장 · 접수 완료` : "접수 완료"}
+          </span>
+        </div>
         {/* base-ui Button 은 asChild 미지원 — link-as-button 은 buttonVariants 패턴 (not-found.tsx 동형) */}
-        <div className="mt-2 flex flex-col items-center gap-2">
-          <Link href="/me" className={buttonVariants({ variant: "outline" })}>
+        <div className="mt-7 flex w-full max-w-[320px] flex-col gap-2.5">
+          <Link href="/me" className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
             마이페이지로 돌아가기
           </Link>
           <button
             type="button"
             onClick={resetForm}
-            className="t-caption text-muted-foreground underline"
+            className="t-caption text-muted-foreground py-1"
           >
             하나 더 보내기
           </button>
@@ -156,38 +215,62 @@ export function FeedbackForm() {
 
   const submittable = body.trim().length > 0 && !pending && !preparing;
   const canAddMore = photos.length < MAX_FEEDBACK_PHOTOS;
+  const activeMeta = CATEGORY_META[category];
+  const bodyLen = body.length;
+  const counterTone =
+    bodyLen >= 980
+      ? "text-brand-danger"
+      : bodyLen >= 900
+        ? "text-brand-warn"
+        : "text-muted-foreground";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="feedback-category" className="t-caption">
-          분류
-        </label>
-        <Select
-          id="feedback-category"
-          value={category}
-          onValueChange={(v) => {
-            if (v && (FEEDBACK_CATEGORIES as readonly string[]).includes(v)) {
-              setCategory(v as FeedbackCategory);
-            }
-          }}
-          items={CATEGORY_LABELS}
+    <div className="flex flex-col gap-5">
+      {/* 분류 — 세그먼트 칩 (SoT: 드롭다운 대체) */}
+      <div className="flex flex-col gap-2">
+        <span className="t-caption text-muted-foreground">분류</span>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="건의 분류 선택">
+          {FEEDBACK_CATEGORIES.map((c) => {
+            const { label, Icon } = CATEGORY_META[c];
+            const active = category === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setCategory(c)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-[14px] border-[1.5px] px-2 pt-3 pb-2.5 transition-all active:scale-[0.96]",
+                  active
+                    ? "border-primary bg-brand-primary-soft text-[var(--brand-primary-deep)] shadow-[0_6px_16px_-10px_var(--primary)]"
+                    : "border-input bg-card text-muted-foreground",
+                )}
+              >
+                <Icon className="size-[22px]" strokeWidth={1.7} aria-hidden="true" />
+                <span className="text-[13px] font-semibold tracking-tight">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* 카테고리별 동적 가이드 — 분류 전환 시 교체 */}
+        <div
+          className="bg-muted mt-0.5 flex items-start gap-1.5 rounded-[9px] px-3 py-2.5"
+          role="status"
         >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FEEDBACK_CATEGORIES.map((c) => (
-              <SelectItem key={c} value={c}>
-                {CATEGORY_LABELS[c]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Info
+            className="mt-px size-[15px] shrink-0 text-[var(--brand-primary-deep)]"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          <p className="text-muted-foreground text-[12.5px] leading-[1.45] font-medium">
+            {activeMeta.helper}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="feedback-body" className="t-caption">
+      {/* 내용 */}
+      <div className="flex flex-col gap-2">
+        <label htmlFor="feedback-body" className="t-caption text-muted-foreground">
           내용
         </label>
         <Textarea
@@ -195,16 +278,20 @@ export function FeedbackForm() {
           value={body}
           maxLength={MAX_BODY}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="불편했던 점이나 바라는 점을 적어주세요"
-          className="min-h-36"
+          placeholder={activeMeta.placeholder}
+          className="min-h-[168px]"
         />
-        <p className="t-caption text-muted-foreground self-end">
-          {body.length}/{MAX_BODY}
+        {/* 실시간 글자수 + 경고색 (900~979 warn / 980+ danger) */}
+        <p className={cn("t-caption self-end tabular-nums", counterTone)}>
+          {bodyLen} / {MAX_BODY}
         </p>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="t-caption">사진 (선택 · 최대 {MAX_FEEDBACK_PHOTOS}장)</span>
+      {/* 사진 (최대 3장) — 멀티 타일 그리드 */}
+      <div className="flex flex-col gap-2">
+        <span className="t-caption text-muted-foreground">
+          사진 <span className="font-normal opacity-80">· 선택 · 최대 {MAX_FEEDBACK_PHOTOS}장</span>
+        </span>
         <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(92px,1fr))]">
           {photos.map((p, i) => (
             <div key={p.url} className="relative aspect-square">
@@ -213,7 +300,7 @@ export function FeedbackForm() {
               <img
                 src={p.url}
                 alt={`첨부 사진 ${i + 1}`}
-                className="h-full w-full rounded-[14px] object-cover"
+                className="border-border h-full w-full rounded-[14px] border object-cover"
               />
               <button
                 type="button"
@@ -235,15 +322,18 @@ export function FeedbackForm() {
               aria-label="사진 추가"
               disabled={preparing}
               onClick={() => fileInputRef.current?.click()}
-              className="border-input text-muted-foreground flex aspect-square flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed"
+              className="border-primary/40 bg-brand-primary-soft/40 flex aspect-square flex-col items-center justify-center gap-1 rounded-[14px] border-[1.5px] border-dashed text-[var(--brand-primary-deep)]"
             >
               <ImagePlus className="size-5" aria-hidden="true" />
-              <span className="t-caption">
+              <span className="t-caption font-semibold">
                 {preparing ? "처리 중" : `${photos.length}/${MAX_FEEDBACK_PHOTOS}`}
               </span>
             </button>
           )}
         </div>
+        <p className="text-muted-foreground text-[11.5px] leading-[1.45] font-medium">
+          문제 화면을 캡처해 첨부하면 더 빨리 확인할 수 있어요. JPG · PNG · WEBP · HEIC · 장당 5MB.
+        </p>
         <input
           ref={fileInputRef}
           type="file"
@@ -255,7 +345,20 @@ export function FeedbackForm() {
         />
       </div>
 
-      <Button type="button" disabled={!submittable} onClick={submit}>
+      {/* 신뢰 안내 */}
+      <div className="text-muted-foreground flex items-center gap-2.5 text-[12.5px] font-medium">
+        <span className="bg-brand-success/10 text-brand-success grid size-[22px] shrink-0 place-items-center rounded-full">
+          <Check className="size-3.5" strokeWidth={2} aria-hidden="true" />
+        </span>
+        <span>
+          보내면 <b className="text-foreground font-semibold">개발팀에게 바로 전달</b>돼요. 답변이
+          필요하면 가입하신 이메일로 연락드려요.
+        </span>
+      </div>
+
+      {/* 제출 — 풀폭 primary. 앱 셸의 fixed FAB(bottom-center, z-30)과 겹치지 않게
+          SoT 의 하단 고정 바 대신 인라인 풀폭 버튼으로 적용. */}
+      <Button type="button" className="h-12 w-full" disabled={!submittable} onClick={submit}>
         {pending ? "보내는 중..." : "보내기"}
       </Button>
     </div>
