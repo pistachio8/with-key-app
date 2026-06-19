@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { requestMagicLink, signInWithKakao, useSession, type AuthErrorCode } from "@/features/auth";
+import { DevLoginSheet } from "@/features/auth/dev/dev-login-sheet";
 import { PostAuthRedirect } from "@/features/invite";
 
 const ERROR_MESSAGES: Record<AuthErrorCode, string> = {
@@ -28,6 +29,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState<"kakao" | "magic-link" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // dev-login 숨긴 메뉴 (spec §5.4) — kicker long-press 로 연다. __DEV__ 에서만 렌더.
+  const [devSheetOpen, setDevSheetOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -71,7 +74,9 @@ export default function LoginScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.container}
         >
-          <Text style={styles.kicker}>fromwith</Text>
+          <Text style={styles.kicker} onLongPress={() => setDevSheetOpen(true)}>
+            fromwith
+          </Text>
           <Text style={styles.title}>로그인</Text>
 
           <Pressable
@@ -116,6 +121,7 @@ export default function LoginScreen() {
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {__DEV__ && <DevLoginSheet visible={devSheetOpen} onClose={() => setDevSheetOpen(false)} />}
     </View>
   );
 }

@@ -406,6 +406,26 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: route colocation 유지(_components/ 신규 컴포넌트), client 컴포넌트 경계 명확('use client'), window navigation 이라 useEffect+fetch/Server Action 가드레일 비대상(spec §5.3 명시), SWR/React Query 미도입, zod SoT 무관(UI), env 게이트는 NEXT_PUBLIC_DEV_LOGIN(클라 노출 가능 토글이지 시크릿 아님). a11y: 숨긴 제스처를 button 으로 감싸 click-events-have-key-events 회피. tree-shake: DEV_LOGIN_VISIBLE 빌드상수가 false 면 제스처·메뉴 모두 dead-branch. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
       "notes": "검증 web 스코프 — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP 무관. DEV_ACCOUNTS 표시 목록과 서버 DEV_LOGIN_EMAILS env 는 같은 이메일 집합으로 수동 동기(계정 추가 시 둘 다 갱신 — spec §5.5 의도적 중복). manual E2E(Preview 웹 메뉴 로그인)는 EVAL-0038 사람 게이트. base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
+    },
+    {
+      "taskId": "EVAL-0036",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP4 RN 숨긴 메뉴. dev-login-sheet.tsx 신규(features/auth/dev/) — useState 후 if(!__DEV__) return null(rules-of-hooks 위해 hook 먼저, release dead-code strip). DEV_ACCOUNTS 2종을 RN Modal(transparent slide, backdrop Pressable=onClose + 내부 View onStartShouldSetResponder 로 탭 흡수) 안의 Pressable 목록으로 보여준다. 탭 시 5단계 가드 fetch: ① Constants.expoConfig.extra.devLoginUrl 없으면 Alert+return, ② fetch(`${devLoginUrl}/auth/dev-login?email=&format=token`, {headers:{'x-vercel-protection-bypass': vercelBypass??''}}) — Preview Protection 통과, ③ !res.ok → Alert(HTTP status)+return, ④ content-type 이 application/json 아니면 Alert('비-JSON 응답')+return(SSO HTML 을 JSON.parse 하다 깨지는 경로 차단 §8), ⑤ hashed_token 추출 후 verifyMagicLinkToken(기존 재사용) → 성공 시 SessionProvider 가 세션 변화 받아 화면 이탈, 시트 close. catch 도 Alert. login.tsx 외과적: DevLoginSheet import + devSheetOpen state 1개 + 'fromwith' kicker Text 에 onLongPress + main 끝 __DEV__ 게이트 렌더. app.config.ts: extra 에 ...(variant==='dev' ? {devLoginUrl: EXPO_PUBLIC_DEV_LOGIN_URL, vercelBypass: EXPO_PUBLIC_VERCEL_BYPASS} : {}) — EXPO_PUBLIC_* 는 빌드 시 번들 인라인이라 prod·staging variant 엔 키 자체를 안 둬 토큰 누출 방지(§5.4 frontend-reviewer 교정). toast 라이브러리 부재라 RN Alert 사용.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0 (__DEV__ global 타입 인식)",
+          "eslint dev-login-sheet.tsx · login.tsx · app.config.ts": "pass — exit 0 (변경 파일 직접 lint)",
+          "pnpm --filter @withkey/mobile test": "pass — 19 suites / 154 tests (login.tsx import 추가 회귀 없음)",
+          "grep variant==='dev' app.config.ts": "devLoginUrl·vercelBypass 가 variant==='dev' 블록 내(line 144-147) 확인",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: feature 폴더 신규(features/auth/dev/)는 RN 측 구조라 web 의 src/features 금지 가드레일과 무관(RN 은 features 구조 사용 — EVAL-0012 기존), admin secret 미접근(RN 은 토큰만 받아 기존 verifyMagicLinkToken 으로 교환 — 핵심 불변 §5.6), 비-JSON 응답 가드로 HTML silently parse 차단. 보안: bypass 토큰·devLoginUrl 은 dev variant extra 에만(prod 번들 미포함), __DEV__ render 게이트로 release strip. 토큰 값 미로깅(fetch 실패 메타만 console.error). recursive pnpm lint 는 apps/mobile 의 사전 import/no-unresolved 2건(expo-image-picker·expo-image-manipulator, 본 변경 무관 파일)으로 실패하나 본 WP 신규/변경 파일은 eslint 직접 통과.",
+      "notes": "mobile recursive lint 사전 실패(expo-image-picker·expo-image-manipulator import/no-unresolved, action.tsx·prepare-photo.ts — 내가 안 건드린 파일, EVAL-0006 노트의 expo deps 로컬 이슈 계열)는 본 WP 무관 — 변경 3파일은 eslint 직접 exit 0. frozen install 로 lockfile 동기 확인했으나 해당 사전 lint 이슈는 잔존(node_modules 상태 아님). manual E2E(RN dev client 실기기 로그인)는 EVAL-0038 사람 게이트. EXPO_PUBLIC_DEV_LOGIN_URL·EXPO_PUBLIC_VERCEL_BYPASS·EXPO_PUBLIC_BFF_BASE_URL 등 RN env 는 dev 빌드 시점 주입(ops). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
     }
   ]
 }
