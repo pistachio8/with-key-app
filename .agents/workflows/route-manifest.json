@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "note": "요청 타입 → 기존 워크플로/게이트/스코프 매핑. 절차 본문은 가리키는 markdown 이 SoT (ADR-0031, 본문 복제 금지). 이 파일은 얇은 index 일 뿐. 분류 키워드는 scripts/harness-route-lib.mjs, 오케스트레이터 절차는 route-request.md.",
+  "commonBlockedActions": [
+    "push_without_human_approval",
+    "merge_without_human_approval",
+    "weaken_tests_without_meta_eval",
+    "remove_reviewer_without_meta_eval",
+    "bypass_human_gate"
+  ],
+  "baseContext": ["AGENTS.md", "docs/BE_SCHEMA.md"],
+  "domainContext": {
+    "challenge": ["packages/domain/src/validators/challenge.ts"],
+    "challenge-feed": ["packages/domain/src/read-contracts/feed.ts"],
+    "peer-rejection": [
+      "packages/domain/src/validators/peer-rejection.ts",
+      "apps/web/tests/integration/peer-reject.spec.ts"
+    ],
+    "kudos": ["packages/domain/src/validators/kudos.ts"],
+    "action-log": ["packages/domain/src/validators/action-log.ts"],
+    "settlement": ["packages/domain/src/settlement.ts"],
+    "push": ["packages/domain/src/validators/push.ts"]
+  },
+  "routes": {
+    "bugfix": {
+      "label": "bugfix-with-spec-check",
+      "targetWorkflow": ".agents/workflows/implement-agent-task.md",
+      "taskCreation": ".agents/workflows/create-agent-tasks.md",
+      "entryState": "SPEC_CHECK",
+      "humanGateTokens": ["spec", "adr", "po", "gate"],
+      "maxRepairAttempts": 3,
+      "allowedWriteScopes": ["evals/tasks/**", "apps/**", "packages/**", "supabase/migrations/**"],
+      "blockedActions": []
+    },
+    "feature": {
+      "label": "feature-with-prd-check",
+      "targetWorkflow": ".agents/workflows/create-engineering-stories.md",
+      "taskCreation": ".agents/workflows/create-agent-tasks.md",
+      "entryState": "PRD_CHECK",
+      "humanGateTokens": ["spec", "adr", "po", "gate"],
+      "maxRepairAttempts": 3,
+      "allowedWriteScopes": [
+        "docs/**",
+        "evals/tasks/**",
+        "apps/**",
+        "packages/**",
+        "supabase/migrations/**"
+      ],
+      "blockedActions": []
+    },
+    "improvement": {
+      "label": "improvement-flow",
+      "targetWorkflow": ".agents/workflows/implement-agent-task.md",
+      "taskCreation": ".agents/workflows/create-agent-tasks.md",
+      "entryState": "CURRENT_FLOW_ANALYSIS",
+      "humanGateTokens": ["spec", "po", "gate"],
+      "maxRepairAttempts": 3,
+      "allowedWriteScopes": ["evals/tasks/**", "apps/**", "packages/**"],
+      "blockedActions": []
+    },
+    "prd": {
+      "label": "prd-flow",
+      "targetWorkflow": ".agents/workflows/create-prd.md",
+      "taskCreation": null,
+      "entryState": "CURRENT_PRD_READ",
+      "humanGateTokens": ["po", "gate"],
+      "maxRepairAttempts": 0,
+      "allowedWriteScopes": ["docs/**"],
+      "blockedActions": []
+    },
+    "harness-improvement": {
+      "label": "harness-improvement-flow",
+      "targetWorkflow": ".agents/harness/UPDATE_POLICY.md",
+      "taskCreation": null,
+      "entryState": "FAILURE_PATTERN_ANALYSIS",
+      "humanGateTokens": ["gate", "po"],
+      "gateNote": "meta-eval + human approval 필수 — 테스트 완화·reviewer 제거·human gate 제거·SoT 우선순위 변경은 자동 승인 금지 (.agents/harness/UPDATE_POLICY.md, evals/meta/)",
+      "maxRepairAttempts": 0,
+      "allowedWriteScopes": [".agents/harness/**", "evals/meta/**", "docs/adr/**"],
+      "blockedActions": []
+    },
+    "docs": {
+      "label": "docs-flow",
+      "targetWorkflow": null,
+      "taskCreation": null,
+      "entryState": "DOCS_WRITE",
+      "humanGateTokens": [],
+      "maxRepairAttempts": 1,
+      "allowedWriteScopes": ["docs/**", "**/*.md"],
+      "blockedActions": []
+    },
+    "analysis": {
+      "label": "analysis-flow",
+      "targetWorkflow": null,
+      "taskCreation": null,
+      "entryState": "READ_ONLY_INVESTIGATION",
+      "humanGateTokens": [],
+      "maxRepairAttempts": 0,
+      "allowedWriteScopes": [],
+      "blockedActions": []
+    }
+  }
+}

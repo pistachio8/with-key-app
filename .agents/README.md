@@ -12,6 +12,7 @@ PWA→RN 전환 하네스. 제품(pm) → 분해 spine → Agent Task(`evals/tas
 
 | 작업              | workflow                                                                           |
 | ----------------- | ---------------------------------------------------------------------------------- |
+| 자연어 요청 분류  | [workflows/route-request.md](workflows/route-request.md)                           |
 | PRD 생성/정규화   | [workflows/create-prd.md](workflows/create-prd.md)                                 |
 | Test Scenario     | [workflows/create-test-scenarios.md](workflows/create-test-scenarios.md)           |
 | Job Story         | [workflows/create-job-stories.md](workflows/create-job-stories.md)                 |

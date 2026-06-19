@@ -38,6 +38,9 @@ next-env.d.ts
 # Harness — /goal 파생 뷰(pnpm harness:goal --write). SoT 는 task 파일이라 버전관리 안 함.
 evals/tasks/*.goal.md
 
+# Harness — intake run 기록(pnpm harness:intake). ephemeral 분류 로그라 버전관리 안 함(.gitkeep 만 추적).
+evals/runs/*.json
+
 # Vercel
 .vercel
 
