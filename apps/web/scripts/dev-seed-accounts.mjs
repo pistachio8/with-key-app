@@ -178,15 +178,16 @@ async function seedMemberActive(admin, userId) {
   await insertIgnore(
     admin,
     "action_logs",
-    // 0001 NOT NULL/CHECK 전부 공급(§6.2): photo_url·selected_keywords(1~3)·shown_keywords·
-    // ai_summary(≤150)·prompt_version·activity_type(enum). photo_url 은 placeholder —
-    // storage object 는 seed 하지 않으므로 사진은 렌더되지 않는다(레이아웃·doneCount 디버깅용).
+    // NOT NULL/CHECK 전부 공급: selected_keywords(1~3)·shown_keywords·ai_summary(≤150)·
+    // prompt_version·activity_type(enum). photo 컬럼은 0010 에서 photo_url→photo_path 로
+    // rename + nullable 이라 photo_path: null(사진 없는 로그)로 둔다 — storage object 를
+    // seed 하지 않으므로 placeholder path 는 어차피 렌더 불가(레이아웃·doneCount 디버깅용).
     {
       id: IDS.memberActionLog,
       challenge_id: IDS.memberChallenge,
       user_id: userId,
       activity_type: "running",
-      photo_url: "seed://dev-fixture-placeholder.jpg",
+      photo_path: null,
       selected_keywords: ["뿌듯함", "상쾌함"],
       shown_keywords: ["뿌듯함", "상쾌함", "개운함", "짜릿함"],
       ai_summary: "오늘도 달렸어요. dev fixture 로그입니다.",
@@ -199,6 +200,8 @@ async function seedMemberActive(admin, userId) {
     admin,
     "kudos",
     // fixture 단순화: peer 계정을 만들지 않으므로(§6 grill) 본인 로그에 self-kudos 1개.
+    // RLS kudos_insert_self_not_own 은 self-kudos 를 막지만 service_role 이 우회 — 앱에선
+    // 불가능한 비현실 fixture(카운트만 채움). peer fixture 는 §11 후속.
     { id: IDS.memberKudos, action_log_id: IDS.memberActionLog, user_id: userId, emoji: "🔥" },
     "id",
   );

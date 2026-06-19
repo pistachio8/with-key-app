@@ -24,8 +24,10 @@ export function DevLoginSheet({ visible, onClose }: DevLoginSheetProps) {
 
   const handlePick = async (email: string) => {
     // 값은 dev variant 에서만 app.config extra 에 주입된다(prod 번들엔 없음 — §5.4).
-    const devLoginUrl = Constants.expoConfig?.extra?.devLoginUrl as string | undefined;
-    const vercelBypass = Constants.expoConfig?.extra?.vercelBypass as string | undefined;
+    // house 패턴(bff-client.ts)과 동일하게 typeof 로 좁힌다 — extra 는 untrusted config.
+    const extra = Constants.expoConfig?.extra;
+    const devLoginUrl = typeof extra?.devLoginUrl === "string" ? extra.devLoginUrl : "";
+    const vercelBypass = typeof extra?.vercelBypass === "string" ? extra.vercelBypass : "";
 
     if (!devLoginUrl) {
       Alert.alert("dev 로그인 불가", "EXPO_PUBLIC_DEV_LOGIN_URL 이 없어요 (dev variant 전용).");
@@ -37,7 +39,7 @@ export function DevLoginSheet({ visible, onClose }: DevLoginSheetProps) {
       // Preview Protection 을 bypass 토큰으로 통과 — 이 토큰이 사실상 dev 시크릿 역할(§4·D9).
       const res = await fetch(
         `${devLoginUrl}/auth/dev-login?email=${encodeURIComponent(email)}&format=token`,
-        { headers: { "x-vercel-protection-bypass": vercelBypass ?? "" } },
+        { headers: { "x-vercel-protection-bypass": vercelBypass } },
       );
 
       if (!res.ok) {
