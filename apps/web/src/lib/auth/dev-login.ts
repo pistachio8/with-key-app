@@ -2,11 +2,20 @@ import { adminClient } from "@/lib/supabase/admin";
 
 // 디버깅용 개발자 로그인 모드의 서버 코어 (spec §5.1).
 // 게이트 + allowlist + admin 발급을 단일 모듈에서 담당하고, 라우트는 전송만 한다.
-// Production 에는 DEV_LOGIN_ENABLED 를 넣지 않으므로 mintDevToken 이 404 로 막힌다.
+// Production 에 DEV_LOGIN_ENABLED 를 넣지 않는 것이 1차 방어(생략 규율)이고,
+// VERCEL_ENV hard-deny 가 prod env 오등록까지 막는 2차 방어다 (defense in depth).
 
-/** dev-login 서버 게이트. DEV_LOGIN_ENABLED === 'true' 인 환경에서만 켜진다. */
+/**
+ * dev-login 서버 게이트. 아래 두 조건을 모두 만족해야 켜진다.
+ * 1) DEV_LOGIN_ENABLED === 'true' — Preview env scope 에만 등록 (spec §4·D7).
+ * 2) VERCEL_ENV !== 'production' — prod 에 플래그가 실수로 등록돼도 hard-deny.
+ *
+ * VERCEL_ENV 는 preview/production 을 구분한다(NODE_ENV 는 Vercel 에서 둘 다
+ * 'production' 이라 불가 — diary.ts currentScope 와 동일 근거). 로컬은 VERCEL_ENV
+ * 가 undefined 라 통과하므로 `pnpm dev` 디버깅에는 영향이 없다.
+ */
 export function isDevLoginEnabled(): boolean {
-  return process.env.DEV_LOGIN_ENABLED === "true";
+  return process.env.DEV_LOGIN_ENABLED === "true" && process.env.VERCEL_ENV !== "production";
 }
 
 /**

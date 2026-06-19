@@ -24,6 +24,8 @@ describe("dev-login server core", () => {
 
   describe("isDevLoginEnabled", () => {
     it("is true only when DEV_LOGIN_ENABLED === 'true'", () => {
+      vi.stubEnv("VERCEL_ENV", "preview");
+
       vi.stubEnv("DEV_LOGIN_ENABLED", "true");
       expect(isDevLoginEnabled()).toBe(true);
 
@@ -32,6 +34,18 @@ describe("dev-login server core", () => {
 
       vi.stubEnv("DEV_LOGIN_ENABLED", "");
       expect(isDevLoginEnabled()).toBe(false);
+    });
+
+    it("hard-denies on Vercel production even if DEV_LOGIN_ENABLED === 'true'", () => {
+      vi.stubEnv("DEV_LOGIN_ENABLED", "true");
+      vi.stubEnv("VERCEL_ENV", "production");
+      expect(isDevLoginEnabled()).toBe(false);
+    });
+
+    it("stays enabled on the preview env scope", () => {
+      vi.stubEnv("DEV_LOGIN_ENABLED", "true");
+      vi.stubEnv("VERCEL_ENV", "preview");
+      expect(isDevLoginEnabled()).toBe(true);
     });
   });
 
