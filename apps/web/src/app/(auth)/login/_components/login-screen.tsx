@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -12,11 +12,17 @@ import type { InAppBrowserKind } from "@/lib/auth/in-app-browser";
 import { createClient } from "@/lib/supabase/client";
 import { requestMagicLink } from "../_actions";
 import { OnboardingSlides } from "./onboarding-slides";
+import { DevLoginMenu } from "./dev-login-menu";
 import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
 
 // ADR-0008 — 매직링크 UI 노출 토글. 카카오 OAuth 가 1차 경로, 매직링크는 코드만 남기고
 // UI 진입점만 숨김. Vercel Env 토글로 즉시 fallback 복구.
 const MAGIC_LINK_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MAGIC_LINK === "true";
+
+// dev-login 숨긴 메뉴 게이트 (spec §4·§5.3). Preview env scope 에만 NEXT_PUBLIC_DEV_LOGIN=1.
+// Production 은 미설정이라 로고 탭 제스처·메뉴가 모두 사라진다.
+const DEV_LOGIN_VISIBLE = process.env.NEXT_PUBLIC_DEV_LOGIN === "1";
+const DEV_LOGIN_TAPS = 5;
 
 const messageFor = makeUserMessage({
   upstream_error: "로그인 링크를 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
@@ -46,7 +52,18 @@ function LoginForm({ next, inAppKind, searchString }: LoginFormProps) {
   const [magicPending, startMagicTransition] = useTransition();
   const [kakaoPending, setKakaoPending] = useState(false);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const [devMenuOpen, setDevMenuOpen] = useState(false);
+  const devTaps = useRef(0);
   const hasInvite = Boolean(next);
+
+  // 숨긴 제스처: 로고를 DEV_LOGIN_TAPS 회 탭하면 dev 메뉴를 연다. 메뉴가 닫히면 카운터 리셋.
+  function handleLogoTap() {
+    devTaps.current += 1;
+    if (devTaps.current >= DEV_LOGIN_TAPS) {
+      devTaps.current = 0;
+      setDevMenuOpen(true);
+    }
+  }
 
   const pathname = usePathname();
   // InAppBrowserGuard 의 외부 브라우저 전환 target = 현재 페이지 URL. SSR 단계는 path 만,
@@ -131,15 +148,29 @@ function LoginForm({ next, inAppKind, searchString }: LoginFormProps) {
         className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
       >
         <h1 id="brand-heading" className="flex justify-center">
-          <Image
-            src="/logo-from-with.svg"
-            alt="from.with"
-            width={287}
-            height={56}
-            priority
-            unoptimized
-            className="h-14 w-auto"
-          />
+          {DEV_LOGIN_VISIBLE ? (
+            <button type="button" onClick={handleLogoTap} aria-label="from.with" className="flex">
+              <Image
+                src="/logo-from-with.svg"
+                alt="from.with"
+                width={287}
+                height={56}
+                priority
+                unoptimized
+                className="h-14 w-auto"
+              />
+            </button>
+          ) : (
+            <Image
+              src="/logo-from-with.svg"
+              alt="from.with"
+              width={287}
+              height={56}
+              priority
+              unoptimized
+              className="h-14 w-auto"
+            />
+          )}
         </h1>
         <p className="text-muted-foreground break-keep">
           {hasInvite
@@ -205,6 +236,16 @@ function LoginForm({ next, inAppKind, searchString }: LoginFormProps) {
           )}
         </InAppBrowserGuard>
       </section>
+
+      {DEV_LOGIN_VISIBLE && (
+        <DevLoginMenu
+          open={devMenuOpen}
+          onOpenChange={(o) => {
+            setDevMenuOpen(o);
+            if (!o) devTaps.current = 0;
+          }}
+        />
+      )}
     </main>
   );
 }

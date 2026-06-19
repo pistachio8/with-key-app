@@ -139,6 +139,14 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
       // BFF(Bearer) base URL 명시 override (ADR-0036 — transport-중립 계약).
       // 미지정 시 런타임은 `https://${universalLinkDomain}` 폴백(web = PWA + BFF 겸임).
       bffBaseUrl: process.env.EXPO_PUBLIC_BFF_BASE_URL,
+      // dev-login 모드(spec §5.4·D9) — dev variant 에서만 주입. EXPO_PUBLIC_* 는 빌드 시 번들에
+      // 인라인되므로 prod·staging variant 에는 키 자체를 두지 않아 토큰 문자열 누출을 막는다.
+      ...(variant === "dev"
+        ? {
+            devLoginUrl: process.env.EXPO_PUBLIC_DEV_LOGIN_URL,
+            vercelBypass: process.env.EXPO_PUBLIC_VERCEL_BYPASS,
+          }
+        : {}),
     },
   };
 };

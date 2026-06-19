@@ -346,6 +346,86 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: RSC server read 경계 유지(Server Action·api 미변경), zod SoT 무관(표시 파생값), Supabase/RLS 무변경(읽기 컬럼 auto_verify_status 1개 추가만, 사용자 createClient 유지·admin/service-role 미사용), Cache Components 무관. Non-goal 봉인 확인: computeAccruedPot 입력 doneByWeek=full 불변(pot/penalty 회귀 없음), RPC/익명성/48h(0048) 무변경. 도메인 reviewer fan-out 은 미실행(단일 read 파일 surgical 변경) — PR 전 withkey-review 권장.",
       "notes": "수동 핸드오프(dogfood 실측·위조 금지): 통합테스트(peer-reject.spec.ts)는 공유 Supabase 의존이라 로컬 미실행 — CI Integration 잡에서 확인. 실 디바이스 재현: 4인 챌린지 비워크아웃 인증에 과반(>(N-1)/2) 반려 → 챌린지 상세 멤버 현황판 doneCount 즉시 감소 확인. base=develop(6c65a51). 무관 WIP(apps/mobile/package.json)·미커밋 docs 는 본 변경과 분리. 커밋·푸시·PR 은 사용자 확인 후(D6 게이트). 후속(범위 밖): 멤버 doneByWeek 기반 viewer 링/칩도 peer_rejected 반영 필요 시 별도 task(pot 분리 주의)."
+    },
+    {
+      "taskId": "EVAL-0033",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login 모드(카카오 우회 디버깅 로그인) WP1 서버 코어. apps/web/src/lib/auth/dev-login.ts 신규 — 세 책임을 단일 모듈로: ① isDevLoginEnabled() = process.env.DEV_LOGIN_ENABLED==='true', ② devEmails() = DEV_LOGIN_EMAILS 를 ','分 split·trim·filter(Boolean) 한 allowlist, ③ mintDevToken(email) = 게이트 꺼짐→404 / allowlist 불일치→400(admin 호출 전 차단) / adminClient().auth.admin.generateLink({type:'magiclink',email}) → data.properties.hashed_token 반환. status 를 실은 DevLoginError 클래스로 throw(route 가 HTTP 상태로 변환, eslint no-throw-literal 회피). 반환 필드는 hashed_token(token_hash 아님 — generateLink 응답 스키마, dev-login-link.mjs 와 동일, spec §5.1 reviewer 교정). generateLink 에러·hashed_token 부재는 502(spec §8). 토큰 값은 로그 미출력. allowlist-only 가 방어선인 이유: auth-js 에 이메일 존재 확인 API 가 없고 generateLink 가 미존재 이메일을 생성하므로, 통과 가능한 이메일을 seed 된 N 개로 정확 일치 제한해 실유저·임의 이메일 발급을 원천 차단. unit 테스트 dev-login.spec.ts 6건: isDevLoginEnabled 'true'만 true / disabled→404(admin 미호출) / 비allowlist→400(admin 미호출) / allowlist→hashed_token 반환(공백 trim 검증) / generateLink error→502 / hashed_token 부재→502.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0",
+          "pnpm --filter @withkey/web vitest run dev-login": "pass — 1 file / 6 tests (dev-login.spec.ts 신규)",
+          "grep console.log dev-login.ts": "빈 결과 — 토큰 미로깅 AC 충족",
+          "pnpm harness:check": "pass — 0 violations (35 migration tasks)"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: 신규 모듈은 server-only(adminClient 경유 transitive), 라우트·UI·Server Action 경계 무변경(이 WP 는 순수 서버 util), zod SoT 무관, Supabase/RLS 무변경(admin generateLink 만 호출 — 신규 테이블·정책 없음), env 신규 사용(DEV_LOGIN_ENABLED·DEV_LOGIN_EMAILS)은 .env.example 동기화를 EVAL-0035 에서 처리 예정. 시크릿: NEXT_PUBLIC_ 접두 없는 서버 전용 env 만 사용. 도메인 reviewer fan-out 미실행(단일 util 파일 신규) — PR 전 withkey-review 권장.",
+      "notes": "검증은 web 스코프(--filter @withkey/web)로 실행 — recursive pnpm lint 는 apps/mobile 의 사전 존재 import/no-unresolved(expo-image-picker·expo-image-manipulator, 설치돼 있으나 eslint import resolver 가 못 따라감) 2건으로 실패하나 본 WP(web)와 무관. EVAL-0036(RN) 착수 시 별도 확인. base=feat/dev-login-mode(origin/develop 407197b). 커밋·푸시·PR 은 사용자 확인 후(D6). 후속: DEV_LOGIN_USER_IDS getUserById hardening 은 선택적 후속(이 WP 범위 밖)."
+    },
+    {
+      "taskId": "EVAL-0034",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP2 라우트 확장. apps/web/src/app/auth/dev-login/route.ts 가 세 경로를 처리: ① ?token_hash=... 기존 CLI 경로 보존(verifyOtp+쿠키+redirect), ② ?email=...&next=... → mintDevToken → verifyOtp → Set-Cookie → next redirect(web 메뉴), ③ ?email=...&format=token → mintDevToken → NextResponse.json({hashed_token})(RN 메뉴, 쿠키 미설정 — RN 이 verifyMagicLinkToken 으로 자체 교환). 핵심 선결과제(3 reviewer 공통): 기존 process.env.NODE_ENV==='production' 게이트를 isDevLoginEnabled()(=DEV_LOGIN_ENABLED!=='true' → 404)로 교체. Vercel 은 Preview·Production 빌드 모두 build mode 가 production 이라 기존 게이트가 Preview 를 404 처리해 RN/web 경로를 죽이던 버그 제거(spec §5.2·D7). 토큰 해석 우선순위: token_hash 쿼리 우선, 없고 email 있으면 mintDevToken 으로 발급. mintDevToken 의 DevLoginError.status(404/400)를 HTTP 상태로 매핑하고 그 외는 502. token_hash·email 둘 다 없으면 /login?error=dev_login_missing_params redirect. NODE_ENV 리터럴은 게이트 로직·주석 모두에서 제거(AC grep 빈 결과). unit 테스트 route.spec.ts 6건: disabled→404(mint 미호출) / token_hash→redirect(mint 미호출) / email→mint+verify+redirect / format=token→JSON 200(createClient 미호출) / DevLoginError(400)→400 / 파라미터 없음→login redirect. DevLoginError instanceof 매칭을 위해 mock 이 동일 클래스를 export.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0",
+          "pnpm --filter @withkey/web vitest run dev-login": "pass — 2 files / 12 tests (dev-login.spec 6 + route.spec 6 신규)",
+          "grep NODE_ENV route.ts": "빈 결과 — 게이트 교체 AC 충족",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: route handler 는 외부 콜백/dev 인증 보조 표면 가드레일에 부합(신규 app/api/* 표면 안 만들고 기존 app/auth/dev-login 확장 — spec §5.2), Server Action·RSC 경계 무변경, createClient(사용자 publishable key)로 쿠키 교환(admin 은 mint 단계만, route 는 admin 미호출), zod SoT 무관. 보안: 게이트가 isDevLoginEnabled() 단일 진입이라 disabled 시 모든 경로 404, allowlist 는 EVAL-0033 mintDevToken 책임. verifyOtp 실패 메시지만 로깅하고 token_hash·hashed_token 값은 미로깅. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
+      "notes": "검증 web 스코프(--filter @withkey/web) — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP(web) 무관. format=token 응답은 NextResponse.json 으로 content-type application/json 자동 설정(테스트 검증). RN 의 Vercel Protection Bypass 헤더는 엣지 담당이라 라우트 코드 불필요(Non-goal). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
+    },
+    {
+      "taskId": "EVAL-0035",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP3 web 숨긴 메뉴. dev-login-menu.tsx 신규('use client') — NEXT_PUBLIC_DEV_LOGIN==='1'(DEV_LOGIN_VISIBLE) 아니면 null 반환(Production tree-shake). DEV_ACCOUNTS 2종(member-active@fromwith.test·balance@fromwith.test, 서버 allowlist 와 동일 집합 — spec §5.5)을 Dialog(sheet.tsx 부재라 dialog primitive 재사용) 안의 Button 목록으로 보여주고, 탭 시 window.location.assign('/auth/dev-login?email=<picked>&next=/home')으로 브라우저 navigation(서버가 쿠키 set+redirect — Server Action 가드레일 비대상). login-screen.tsx 외과적 변경: useRef import 추가, 모듈 상수 DEV_LOGIN_VISIBLE·DEV_LOGIN_TAPS(5), LoginForm 에 devMenuOpen state + devTaps ref + handleLogoTap(5탭→open), 로고 h1 을 DEV_LOGIN_VISIBLE 일 때만 button 래퍼(onClick=handleLogoTap)로 감싸고 아니면 기존 Image 그대로, main 끝에 메뉴를 게이트 렌더(close 시 카운터 리셋). .env.example: DEV_LOGIN_ENABLED·NEXT_PUBLIC_DEV_LOGIN·DEV_LOGIN_EMAILS 3개 주석 추가(기존 단수 DEV_LOGIN_EMAIL=개인 login:link 용과 의미 구분 명시, Preview env scope only). lint 교정: window.location.href= 할당이 react-hooks/immutability(React Compiler)에 '외부 변수 수정'으로 걸려 window.location.assign() 메서드 호출로 교체(open-in-app-modal.tsx 패턴).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0 (window.location.assign 교정 후)",
+          "grep DEV_LOGIN_ENABLED|NEXT_PUBLIC_DEV_LOGIN|DEV_LOGIN_EMAILS .env.example": "4 hits — 3개 주석 추가 확인",
+          "pnpm --filter @withkey/web build": "pass — Compiled successfully, /auth/dev-login 라우트 포함 38 pages",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: route colocation 유지(_components/ 신규 컴포넌트), client 컴포넌트 경계 명확('use client'), window navigation 이라 useEffect+fetch/Server Action 가드레일 비대상(spec §5.3 명시), SWR/React Query 미도입, zod SoT 무관(UI), env 게이트는 NEXT_PUBLIC_DEV_LOGIN(클라 노출 가능 토글이지 시크릿 아님). a11y: 숨긴 제스처를 button 으로 감싸 click-events-have-key-events 회피. tree-shake: DEV_LOGIN_VISIBLE 빌드상수가 false 면 제스처·메뉴 모두 dead-branch. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
+      "notes": "검증 web 스코프 — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP 무관. DEV_ACCOUNTS 표시 목록과 서버 DEV_LOGIN_EMAILS env 는 같은 이메일 집합으로 수동 동기(계정 추가 시 둘 다 갱신 — spec §5.5 의도적 중복). manual E2E(Preview 웹 메뉴 로그인)는 EVAL-0038 사람 게이트. base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
+    },
+    {
+      "taskId": "EVAL-0036",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP4 RN 숨긴 메뉴. dev-login-sheet.tsx 신규(features/auth/dev/) — useState 후 if(!__DEV__) return null(rules-of-hooks 위해 hook 먼저, release dead-code strip). DEV_ACCOUNTS 2종을 RN Modal(transparent slide, backdrop Pressable=onClose + 내부 View onStartShouldSetResponder 로 탭 흡수) 안의 Pressable 목록으로 보여준다. 탭 시 5단계 가드 fetch: ① Constants.expoConfig.extra.devLoginUrl 없으면 Alert+return, ② fetch(`${devLoginUrl}/auth/dev-login?email=&format=token`, {headers:{'x-vercel-protection-bypass': vercelBypass??''}}) — Preview Protection 통과, ③ !res.ok → Alert(HTTP status)+return, ④ content-type 이 application/json 아니면 Alert('비-JSON 응답')+return(SSO HTML 을 JSON.parse 하다 깨지는 경로 차단 §8), ⑤ hashed_token 추출 후 verifyMagicLinkToken(기존 재사용) → 성공 시 SessionProvider 가 세션 변화 받아 화면 이탈, 시트 close. catch 도 Alert. login.tsx 외과적: DevLoginSheet import + devSheetOpen state 1개 + 'fromwith' kicker Text 에 onLongPress + main 끝 __DEV__ 게이트 렌더. app.config.ts: extra 에 ...(variant==='dev' ? {devLoginUrl: EXPO_PUBLIC_DEV_LOGIN_URL, vercelBypass: EXPO_PUBLIC_VERCEL_BYPASS} : {}) — EXPO_PUBLIC_* 는 빌드 시 번들 인라인이라 prod·staging variant 엔 키 자체를 안 둬 토큰 누출 방지(§5.4 frontend-reviewer 교정). toast 라이브러리 부재라 RN Alert 사용.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0 (__DEV__ global 타입 인식)",
+          "eslint dev-login-sheet.tsx · login.tsx · app.config.ts": "pass — exit 0 (변경 파일 직접 lint)",
+          "pnpm --filter @withkey/mobile test": "pass — 19 suites / 154 tests (login.tsx import 추가 회귀 없음)",
+          "grep variant==='dev' app.config.ts": "devLoginUrl·vercelBypass 가 variant==='dev' 블록 내(line 144-147) 확인",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: feature 폴더 신규(features/auth/dev/)는 RN 측 구조라 web 의 src/features 금지 가드레일과 무관(RN 은 features 구조 사용 — EVAL-0012 기존), admin secret 미접근(RN 은 토큰만 받아 기존 verifyMagicLinkToken 으로 교환 — 핵심 불변 §5.6), 비-JSON 응답 가드로 HTML silently parse 차단. 보안: bypass 토큰·devLoginUrl 은 dev variant extra 에만(prod 번들 미포함), __DEV__ render 게이트로 release strip. 토큰 값 미로깅(fetch 실패 메타만 console.error). recursive pnpm lint 는 apps/mobile 의 사전 import/no-unresolved 2건(expo-image-picker·expo-image-manipulator, 본 변경 무관 파일)으로 실패하나 본 WP 신규/변경 파일은 eslint 직접 통과.",
+      "notes": "mobile recursive lint 사전 실패(expo-image-picker·expo-image-manipulator import/no-unresolved, action.tsx·prepare-photo.ts — 내가 안 건드린 파일, EVAL-0006 노트의 expo deps 로컬 이슈 계열)는 본 WP 무관 — 변경 3파일은 eslint 직접 exit 0. frozen install 로 lockfile 동기 확인했으나 해당 사전 lint 이슈는 잔존(node_modules 상태 아님). manual E2E(RN dev client 실기기 로그인)는 EVAL-0038 사람 게이트. EXPO_PUBLIC_DEV_LOGIN_URL·EXPO_PUBLIC_VERCEL_BYPASS·EXPO_PUBLIC_BFF_BASE_URL 등 RN env 는 dev 빌드 시점 주입(ops). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
     }
   ]
 }
