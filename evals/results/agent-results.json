@@ -366,6 +366,26 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: 신규 모듈은 server-only(adminClient 경유 transitive), 라우트·UI·Server Action 경계 무변경(이 WP 는 순수 서버 util), zod SoT 무관, Supabase/RLS 무변경(admin generateLink 만 호출 — 신규 테이블·정책 없음), env 신규 사용(DEV_LOGIN_ENABLED·DEV_LOGIN_EMAILS)은 .env.example 동기화를 EVAL-0035 에서 처리 예정. 시크릿: NEXT_PUBLIC_ 접두 없는 서버 전용 env 만 사용. 도메인 reviewer fan-out 미실행(단일 util 파일 신규) — PR 전 withkey-review 권장.",
       "notes": "검증은 web 스코프(--filter @withkey/web)로 실행 — recursive pnpm lint 는 apps/mobile 의 사전 존재 import/no-unresolved(expo-image-picker·expo-image-manipulator, 설치돼 있으나 eslint import resolver 가 못 따라감) 2건으로 실패하나 본 WP(web)와 무관. EVAL-0036(RN) 착수 시 별도 확인. base=feat/dev-login-mode(origin/develop 407197b). 커밋·푸시·PR 은 사용자 확인 후(D6). 후속: DEV_LOGIN_USER_IDS getUserById hardening 은 선택적 후속(이 WP 범위 밖)."
+    },
+    {
+      "taskId": "EVAL-0034",
+      "date": "2026-06-19",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "dev-login WP2 라우트 확장. apps/web/src/app/auth/dev-login/route.ts 가 세 경로를 처리: ① ?token_hash=... 기존 CLI 경로 보존(verifyOtp+쿠키+redirect), ② ?email=...&next=... → mintDevToken → verifyOtp → Set-Cookie → next redirect(web 메뉴), ③ ?email=...&format=token → mintDevToken → NextResponse.json({hashed_token})(RN 메뉴, 쿠키 미설정 — RN 이 verifyMagicLinkToken 으로 자체 교환). 핵심 선결과제(3 reviewer 공통): 기존 process.env.NODE_ENV==='production' 게이트를 isDevLoginEnabled()(=DEV_LOGIN_ENABLED!=='true' → 404)로 교체. Vercel 은 Preview·Production 빌드 모두 build mode 가 production 이라 기존 게이트가 Preview 를 404 처리해 RN/web 경로를 죽이던 버그 제거(spec §5.2·D7). 토큰 해석 우선순위: token_hash 쿼리 우선, 없고 email 있으면 mintDevToken 으로 발급. mintDevToken 의 DevLoginError.status(404/400)를 HTTP 상태로 매핑하고 그 외는 502. token_hash·email 둘 다 없으면 /login?error=dev_login_missing_params redirect. NODE_ENV 리터럴은 게이트 로직·주석 모두에서 제거(AC grep 빈 결과). unit 테스트 route.spec.ts 6건: disabled→404(mint 미호출) / token_hash→redirect(mint 미호출) / email→mint+verify+redirect / format=token→JSON 200(createClient 미호출) / DevLoginError(400)→400 / 파라미터 없음→login redirect. DevLoginError instanceof 매칭을 위해 mock 이 동일 클래스를 export.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0",
+          "pnpm --filter @withkey/web vitest run dev-login": "pass — 2 files / 12 tests (dev-login.spec 6 + route.spec 6 신규)",
+          "grep NODE_ENV route.ts": "빈 결과 — 게이트 교체 AC 충족",
+          "pnpm harness:check": "pass — 0 violations"
+        }
+      },
+      "review": "self-review(main 세션) — 가드레일 점검: route handler 는 외부 콜백/dev 인증 보조 표면 가드레일에 부합(신규 app/api/* 표면 안 만들고 기존 app/auth/dev-login 확장 — spec §5.2), Server Action·RSC 경계 무변경, createClient(사용자 publishable key)로 쿠키 교환(admin 은 mint 단계만, route 는 admin 미호출), zod SoT 무관. 보안: 게이트가 isDevLoginEnabled() 단일 진입이라 disabled 시 모든 경로 404, allowlist 는 EVAL-0033 mintDevToken 책임. verifyOtp 실패 메시지만 로깅하고 token_hash·hashed_token 값은 미로깅. 도메인 reviewer fan-out 미실행 — PR 전 withkey-review 권장.",
+      "notes": "검증 web 스코프(--filter @withkey/web) — recursive lint 의 apps/mobile import/no-unresolved 사전 이슈는 본 WP(web) 무관. format=token 응답은 NextResponse.json 으로 content-type application/json 자동 설정(테스트 검증). RN 의 Vercel Protection Bypass 헤더는 엣지 담당이라 라우트 코드 불필요(Non-goal). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
     }
   ]
 }

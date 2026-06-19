@@ -2,7 +2,7 @@
 Task: EVAL-0034
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0033] — 서버 코어(mintDevToken·isDevLoginEnabled) 완성 선행.
 Parent: docs/superpowers/specs/2026-06-19-dev-login-mode-design.md, docs/eng-stories/2026-06-19-dev-login-mode.md
 ---
