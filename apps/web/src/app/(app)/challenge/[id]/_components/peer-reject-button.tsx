@@ -27,23 +27,21 @@ export function PeerRejectButton({
       aria-label={`이 인증 반려 (익명) ${count}명${active ? " · 내가 반려함" : ""}`}
       onClick={onToggle}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 transition-transform duration-[var(--motion-fast)]",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-transform duration-[var(--motion-fast)]",
         "active:scale-90 disabled:pointer-events-none disabled:opacity-50",
         "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-        active && "bg-muted",
+        // 진행 중 반려=주황(경고 누적). active(본인 반려)면 채움 + bold.
+        // 텍스트는 항상 text-foreground(어두움) — 밝은 주황/크림 위 흰 텍스트는 대비 AA 미달이라 어두운 텍스트로 통일.
+        active
+          ? "bg-brand-warn text-foreground font-bold"
+          : "bg-brand-secondary-soft text-foreground",
       )}
     >
-      <span aria-hidden="true" className="text-[14px] leading-none">
+      <span aria-hidden="true" className="text-[13px] leading-none">
         🟨
       </span>
-      <span
-        className={cn(
-          "text-[11px] tabular-nums",
-          active ? "text-foreground font-bold" : "text-muted-foreground font-normal",
-        )}
-      >
-        {count}
-      </span>
+      <span>반려</span>
+      <span className="tabular-nums">{count}</span>
     </button>
   );
 }

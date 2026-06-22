@@ -151,6 +151,7 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
             isSelfAuthor={item.authorId === viewerId}
             createdAtLabel={item.createdAtLabel}
             isEnded={isEnded}
+            isPeerRejected={item.isPeerRejected}
           />
         </li>
       ))}

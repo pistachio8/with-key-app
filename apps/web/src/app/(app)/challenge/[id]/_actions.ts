@@ -151,6 +151,11 @@ export const togglePeerRejection = withUser<PeerRejectionInput, PeerRejectionTog
     updateTag(`peer-reject-count-${actionLogId}`);
     revalidateTag(`peer-reject-count-${actionLogId}`, "max");
 
+    // 과반 전이(passed↔peer_rejected)는 hydrate(actionlog-${id} 태그) 캐시의 isPeerRejected 에 반영돼야 한다.
+    // peer-reject 는 드문 액션이고 hydrate 는 hours TTL 이라, 전이 없는 토글도 매번 무효화하는 비용은 POC 에서 수용한다.
+    updateTag(`actionlog-${actionLogId}`);
+    revalidateTag(`actionlog-${actionLogId}`, "max");
+
     // 과반 전이(passed↔peer_rejected)는 작성자의 doneCount(진행 표시)에 영향 → 작성자 home-feed 무효화.
     const { data: log, error: logErr } = await supabase
       .from("action_logs")

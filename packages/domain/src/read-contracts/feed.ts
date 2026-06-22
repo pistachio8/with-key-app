@@ -18,6 +18,9 @@ export type FeedItemView = {
   // viewerRejected 는 본인 행 존재 여부(본인의 read-your-writes·토글 표시용).
   peerRejectCount: number;
   viewerRejected: boolean;
+  // 🟨 과반 반려로 무효 처리됨(action_logs.auto_verify_status='peer_rejected').
+  // UI 무효 표시 전용 — status enum 전체가 아니라 boolean 만 노출(외과적, ADR-0038).
+  isPeerRejected: boolean;
   createdAt: string;
 };
 
@@ -39,6 +42,7 @@ export const feedItemViewSchema: z.ZodType<FeedItemView> = z.object({
   viewerKudos: z.array(kudosEmojiSchema),
   peerRejectCount: z.number(),
   viewerRejected: z.boolean(),
+  isPeerRejected: z.boolean(),
   createdAt: z.string(),
 });
 

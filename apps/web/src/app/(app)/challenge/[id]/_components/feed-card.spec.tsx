@@ -97,4 +97,24 @@ describe("FeedCard", () => {
     render(<FeedCard {...baseProps} participantCount={2} onKudos={() => {}} />);
     expect(screen.getAllByRole("button", { name: /응원/ }).length).toBeGreaterThan(0);
   });
+
+  it("isPeerRejected: 빨강 '반려' 우표를 렌더한다", () => {
+    render(<FeedCard {...baseProps} isPeerRejected onKudos={() => {}} />);
+    expect(screen.getByRole("img", { name: "반려" })).toBeTruthy();
+  });
+
+  it("isPeerRejected: 응원(Kudos) 버튼을 렌더하지 않는다", () => {
+    render(<FeedCard {...baseProps} isPeerRejected onKudos={() => {}} />);
+    expect(screen.queryByRole("button", { name: /응원/ })).toBeNull();
+  });
+
+  it("isPeerRejected: 본문 영역에 톤다운(opacity-55) 을 적용한다", () => {
+    const { container } = render(<FeedCard {...baseProps} isPeerRejected onKudos={() => {}} />);
+    expect(container.querySelector(".opacity-55")).toBeTruthy();
+  });
+
+  it("정상 카드(isPeerRejected 미지정)는 반려 우표가 없다", () => {
+    render(<FeedCard {...baseProps} onKudos={() => {}} />);
+    expect(screen.queryByRole("img", { name: "반려" })).toBeNull();
+  });
 });
