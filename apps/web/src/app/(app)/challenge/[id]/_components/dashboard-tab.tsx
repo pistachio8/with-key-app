@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/card";
 import { MemberStrip } from "./member-strip";
 import { WeekChips } from "./week-chips";
 import { WeekRing } from "./week-ring";
-import type { ChallengePhase, WeekChip, CurrentWeekStatus } from "@withkey/domain";
-import type { ChallengeMemberView } from "@/lib/db/reads/challenge-detail";
+import type {
+  ChallengePhase,
+  WeekChip,
+  CurrentWeekStatus,
+  ChallengeMemberView as ChallengeMemberContract,
+} from "@withkey/domain";
 
 interface DashboardTabProps {
   potTotal: number; // 그룹 확정 누적(단조)
@@ -15,7 +19,9 @@ interface DashboardTabProps {
   daysRemaining: number | null;
   phase: ChallengePhase;
   goalCount: number;
-  members: ReadonlyArray<ChallengeMemberView>;
+  // 직렬화 가능한 멤버 계약만 받는다 — 서버 read 의 Map 확장(doneByWeek·visibleDoneByWeek)은
+  // 이 컴포넌트가 쓰지 않으므로 prop 경계에서 제외한다('use client' 전환 시 직렬화 안전).
+  members: ReadonlyArray<ChallengeMemberContract>;
 }
 
 export function DashboardTab({

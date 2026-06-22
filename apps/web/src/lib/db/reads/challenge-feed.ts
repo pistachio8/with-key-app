@@ -99,6 +99,7 @@ async function hydrateFeedItems(
         viewerKudos,
         peerRejectCount,
         viewerRejected,
+        isPeerRejected: hydrate.isPeerRejected,
         createdAt: hydrate.createdAt,
       } satisfies FeedItemView;
     }),

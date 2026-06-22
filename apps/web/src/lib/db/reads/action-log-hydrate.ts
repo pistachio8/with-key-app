@@ -8,6 +8,8 @@ export type ActionLogHydrate = {
   photoPath: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
+  // auto_verify_status==='peer_rejected' 여부. 피드 무효 표시용(ADR-0038).
+  isPeerRejected: boolean;
   createdAt: string;
 };
 
@@ -35,6 +37,7 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
         "ai_summary",
         "selected_keywords",
         "created_at",
+        "auto_verify_status",
         // ADR-0017 의 fk 모호함 회피.
         "users!action_logs_user_id_fkey!inner(display_name)",
       ].join(","),
@@ -51,6 +54,7 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
     ai_summary: string;
     selected_keywords: string[] | null;
     created_at: string;
+    auto_verify_status: string;
     users: { display_name: string | null } | Array<{ display_name: string | null }> | null;
   };
   const author = Array.isArray(row.users) ? row.users[0] : row.users;
@@ -62,6 +66,7 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
     photoPath: row.photo_path,
     summary: row.ai_summary,
     keywords: row.selected_keywords ?? [],
+    isPeerRejected: row.auto_verify_status === "peer_rejected",
     createdAt: row.created_at,
   };
 }

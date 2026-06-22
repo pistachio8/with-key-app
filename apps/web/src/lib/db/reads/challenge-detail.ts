@@ -18,8 +18,10 @@ import { createClient } from "@/lib/supabase/server";
 export type { ChallengeGroupView };
 
 export type ChallengeMemberView = ChallengeMemberContract & {
-  // 주차별 done (week → distinct day count). dashboard H3 viewer 칩·링 계산용 (서버 전용).
+  // 주차별 done (week → distinct day count). pot 추정·정산용 full 집합 (peer_rejected 포함, 서버 전용).
   doneByWeek: ReadonlyMap<number, number>;
+  // 표시용 주차별 done — peer_rejected 제외 (ADR-0038 / EVAL-0039). dashboard viewer 링·칩이 이걸 쓴다 (서버 전용).
+  visibleDoneByWeek: ReadonlyMap<number, number>;
 };
 
 export type ChallengeDetailView = Omit<ChallengeDetailContract, "members"> & {
@@ -77,17 +79,18 @@ export const fetchChallengeDetail = cache(
 
     const members: ChallengeMemberView[] = (parts ?? []).map((p) => {
       const u = Array.isArray(p.users) ? p.users[0] : p.users;
-      // doneByWeek(full)은 pot 추정·viewer 링용 그대로. 표시 doneCount 만 peer_rejected 제외 집합에서 합산.
+      // doneByWeek(full)은 pot 추정용 그대로. 표시 doneCount·viewer 링·칩은 peer_rejected 제외 집합(visibleDoneByWeek)에서.
       const doneByWeek = byUserByWeek.get(p.user_id) ?? new Map<number, number>();
-      const visibleByWeek = visibleByUserByWeek.get(p.user_id);
+      const visibleDoneByWeek = visibleByUserByWeek.get(p.user_id) ?? new Map<number, number>();
       let doneCount = 0;
-      if (visibleByWeek) for (const n of visibleByWeek.values()) doneCount += n;
+      for (const n of visibleDoneByWeek.values()) doneCount += n;
       return {
         id: p.user_id,
         displayName: u?.display_name ?? "익명",
         doneCount,
         signed: p.signed_at != null,
         doneByWeek,
+        visibleDoneByWeek,
       };
     });
 

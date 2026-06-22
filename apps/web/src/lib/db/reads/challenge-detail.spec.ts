@@ -85,4 +85,22 @@ describe("fetchChallengeDetail — 멤버 doneCount 가 peer_rejected 제외 (EV
     const u1 = view?.members.find((m) => m.id === "u1");
     expect(u1?.doneCount).toBe(1);
   });
+
+  // EVAL-0039: 대시보드 "이번 주 진척" 링·"주차 기록" 칩이 쓰는 viewer 표시 집합 검증.
+  it("표시 집합 visibleDoneByWeek 는 peer_rejected 를 제외하고, pot 용 doneByWeek(full)은 보존된다 (EVAL-0039)", async () => {
+    const { fetchChallengeDetail } = await import("./challenge-detail");
+    const view = await fetchChallengeDetail("c1");
+    const u2 = view?.members.find((m) => m.id === "u2");
+    expect(u2).toBeTruthy();
+
+    // 링·칩 표시 집합: peer_rejected(05-03) 제외 → 주차 합 2 (버그 시점엔 full 3 으로 셈)
+    let visible = 0;
+    for (const n of u2?.visibleDoneByWeek.values() ?? []) visible += n;
+    expect(visible).toBe(2);
+
+    // pot/정산 집합(full)은 불변: 3일 그대로 — Non-goal(정산 측 제외는 EVAL-0008 역방향)
+    let full = 0;
+    for (const n of u2?.doneByWeek.values() ?? []) full += n;
+    expect(full).toBe(3);
+  });
 });

@@ -135,5 +135,6 @@ describe("read 계약 보존 스냅샷 — web read == fixture EXPECTED", () => 
     const parsed = feedResponseSchema.parse(FEED_RESPONSE);
     expect(parsed).toHaveLength(2);
     expect(parsed[0].kudosByEmoji["🔥"]).toBe(2);
+    expect(parsed[0].isPeerRejected).toBe(false);
   });
 });
