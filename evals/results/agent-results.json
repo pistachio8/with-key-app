@@ -426,6 +426,29 @@
       },
       "review": "self-review(main 세션) — 가드레일 점검: feature 폴더 신규(features/auth/dev/)는 RN 측 구조라 web 의 src/features 금지 가드레일과 무관(RN 은 features 구조 사용 — EVAL-0012 기존), admin secret 미접근(RN 은 토큰만 받아 기존 verifyMagicLinkToken 으로 교환 — 핵심 불변 §5.6), 비-JSON 응답 가드로 HTML silently parse 차단. 보안: bypass 토큰·devLoginUrl 은 dev variant extra 에만(prod 번들 미포함), __DEV__ render 게이트로 release strip. 토큰 값 미로깅(fetch 실패 메타만 console.error). recursive pnpm lint 는 apps/mobile 의 사전 import/no-unresolved 2건(expo-image-picker·expo-image-manipulator, 본 변경 무관 파일)으로 실패하나 본 WP 신규/변경 파일은 eslint 직접 통과.",
       "notes": "mobile recursive lint 사전 실패(expo-image-picker·expo-image-manipulator import/no-unresolved, action.tsx·prepare-photo.ts — 내가 안 건드린 파일, EVAL-0006 노트의 expo deps 로컬 이슈 계열)는 본 WP 무관 — 변경 3파일은 eslint 직접 exit 0. frozen install 로 lockfile 동기 확인했으나 해당 사전 lint 이슈는 잔존(node_modules 상태 아님). manual E2E(RN dev client 실기기 로그인)는 EVAL-0038 사람 게이트. EXPO_PUBLIC_DEV_LOGIN_URL·EXPO_PUBLIC_VERCEL_BYPASS·EXPO_PUBLIC_BFF_BASE_URL 등 RN env 는 dev 빌드 시점 주입(ops). base=feat/dev-login-mode. 커밋·푸시·PR 사용자 확인 후(D6)."
+    },
+    {
+      "taskId": "EVAL-0039",
+      "date": "2026-06-22",
+      "track": "greenfield",
+      "kind": "regression",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0032(멤버 현황판 doneCount peer_rejected 제외)의 직접 후속 — 같은 챌린지 상세 표면이지만 Non-goal 로 미뤄둔 대시보드 \"이번 주 진척\" 링·\"주차 기록\" 칩이 auto_verify_status=peer_rejected(과반 피어 반려) 인증을 여전히 done 으로 세던 버그. 근본 원인: challenge-detail.ts 가 표시용 visibleByUserByWeek(peer_rejected 제외)를 이미 계산해 멤버 doneCount 에는 반영했지만, 멤버 객체엔 doneByWeek(full·pot용)만 노출하고 표시용 주차 분포는 버렸다. dashboard/page.tsx 가 viewer.doneByWeek(full)를 buildWeekChips·currentWeekStatus 에 그대로 넘겨 링·칩이 반려 포함 카운트로 렌더됨. 수정: ChallengeMemberView 에 visibleDoneByWeek(ReadonlyMap, 표시용·서버 전용) 추가 → 멤버 조립에서 visibleByUserByWeek.get(user)를 담고, dashboard/page.tsx 링·칩 입력을 viewer.visibleDoneByWeek 로 교체. doneByWeek(full)·computeAccruedPot 입력은 불변 — current-challenges.ts·EVAL-0032 의 표시 집합 != pot 집합 패턴 미러. weekly.ts 도메인 함수는 입력 Map 만 교체(시그니처·로직 무변경). 회귀 테스트: challenge-detail.spec.ts 에 visibleDoneByWeek 합=2(peer_rejected 제외)·doneByWeek full 합=3 동시 단언 추가, dashboard-tab.spec.tsx 픽스처에 신규 필수 필드 보강.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0",
+          "pnpm --filter @withkey/web test": "pass — 121 files / 766 tests (challenge-detail.spec EVAL-0039 회귀 1건 추가: visibleDoneByWeek 제외·doneByWeek full 보존 동시 고정 · dashboard-tab.spec 픽스처 green · current-challenges 등 기존 read 테스트 green)",
+          "pnpm harness:check": "pass — 0 violations (36 migration tasks, 43 citation files vs 39 PRD AC ids)"
+        }
+      },
+      "review": {
+        "reviewers": ["frontend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "frontend-reviewer fan-out 결과 클린(Blocker/Major/Minor 0) — pot 불변성(computeAccruedPot 입력 doneByWeek=full)·EVAL-0032 멤버 doneCount 호환·RSC server read 경계·Map 필드 client boundary 미통과·@withkey/domain 계약 미오염(web 로컬 확장 격리)·scope creep 없음 확인. 통합테스트(peer-reject.spec.ts)는 공유 Supabase 의존이라 로컬 미실행 — CI Integration 잡 확인. mobile lint/test 실패는 expo-image-manipulator 미해결·no-tests 로 본 변경과 무관한 pre-existing 노이즈(apps/web·evals 만 변경). 커밋은 WP 브랜치 feat/feed-peer-reject-stamp 에 포함, 푸시·PR 은 사용자 확인 후(D6 게이트)."
     }
   ]
 }

@@ -2,7 +2,7 @@
 Task: EVAL-0039
 Track: greenfield
 Kind: regression
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0032] — EVAL-0032(멤버 현황판 doneCount peer_rejected 제외)의 직접 후속. 같은 표면의 표시 집합 분리를 링·칩으로 확장한다. 기계 읽는 토큰은 task:EVAL-0032 뿐.
 Parent: docs/eng-stories/2026-06-05-photo-verification.md, docs/adr/0038-reaction-storage-model.md, docs/migration/01-rn-mvp-prd.md
 ---

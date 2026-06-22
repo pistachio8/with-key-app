@@ -43,7 +43,8 @@ async function DashboardSection({ params }: { params: Params }) {
   const startKey = detail.startAt ? toKstDayKey(detail.startAt) : null;
   const settleable = phase === "running" || phase === "over" || phase === "closed";
   const viewer = detail.members.find((m) => m.id === user.id);
-  const viewerDoneByWeek = viewer?.doneByWeek ?? new Map<number, number>();
+  // 링·칩은 표시 집합(peer_rejected 제외, EVAL-0039). pot 은 challenge-detail 내부에서 full(doneByWeek)로 별도 계산.
+  const viewerVisibleDoneByWeek = viewer?.visibleDoneByWeek ?? new Map<number, number>();
 
   let weeks: ReturnType<typeof buildWeekChips> = [];
   let currentWeek: ReturnType<typeof currentWeekStatus> = null;
@@ -56,8 +57,8 @@ async function DashboardSection({ params }: { params: Params }) {
       startKey,
     };
     const params = { goalCount: detail.goalCount, penaltyAmount: detail.penaltyAmount };
-    weeks = buildWeekChips(viewerDoneByWeek, ctx, params);
-    currentWeek = currentWeekStatus(viewerDoneByWeek, ctx, params);
+    weeks = buildWeekChips(viewerVisibleDoneByWeek, ctx, params);
+    currentWeek = currentWeekStatus(viewerVisibleDoneByWeek, ctx, params);
   }
 
   return (
