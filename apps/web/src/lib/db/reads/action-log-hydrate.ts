@@ -54,7 +54,7 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
     ai_summary: string;
     selected_keywords: string[] | null;
     created_at: string;
-    auto_verify_status: string | null;
+    auto_verify_status: string;
     users: { display_name: string | null } | Array<{ display_name: string | null }> | null;
   };
   const author = Array.isArray(row.users) ? row.users[0] : row.users;

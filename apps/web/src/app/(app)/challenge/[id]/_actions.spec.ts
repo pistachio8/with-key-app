@@ -44,6 +44,7 @@ vi.mock("@/lib/crypto/account-cipher", () => ({
   },
 }));
 
+import { updateTag, revalidateTag } from "next/cache";
 import { revealAccountNumber, togglePeerRejection } from "./_actions";
 
 const VALID_GROUP = "22222222-2222-4222-8222-222222222222";
@@ -55,6 +56,8 @@ beforeEach(() => {
   maybeSingle.mockReset();
   rpcMock.mockReset();
   trackCalls.length = 0;
+  vi.mocked(updateTag).mockClear();
+  vi.mocked(revalidateTag).mockClear();
 });
 
 describe("revealAccountNumber", () => {
@@ -180,5 +183,16 @@ describe("togglePeerRejection — 익명 peer_reject emit", () => {
       name: "peer_reject",
       props: { status: "peer_rejected", action: "add" },
     });
+  });
+
+  // 과반 전이(passed↔peer_rejected)가 피드에 반영되려면 hydrate(actionlog-${id} 태그) 캐시를
+  // 무효화해야 한다. 이 단언이 없으면 무효화 라인이 제거돼도 테스트가 통과한다(회귀 가드).
+  it("성공 시 actionlog hydrate 캐시를 무효화한다 (과반 전이 반영)", async () => {
+    stubRpc({ peer_reject_count: 3, viewer_rejected: true, status: "peer_rejected" });
+
+    await togglePeerRejection({ actionLogId: VALID_LOG });
+
+    expect(updateTag).toHaveBeenCalledWith(`actionlog-${VALID_LOG}`);
+    expect(revalidateTag).toHaveBeenCalledWith(`actionlog-${VALID_LOG}`, "max");
   });
 });
