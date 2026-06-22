@@ -26,22 +26,8 @@ const baseProps = {
   phase: "running" as const,
   goalCount: 3,
   members: [
-    {
-      id: "u1",
-      displayName: "두두",
-      doneCount: 13,
-      signed: true,
-      doneByWeek: new Map(),
-      visibleDoneByWeek: new Map(),
-    },
-    {
-      id: "u2",
-      displayName: "민지",
-      doneCount: 15,
-      signed: true,
-      doneByWeek: new Map(),
-      visibleDoneByWeek: new Map(),
-    },
+    { id: "u1", displayName: "두두", doneCount: 13, signed: true },
+    { id: "u2", displayName: "민지", doneCount: 15, signed: true },
   ],
 };
 
