@@ -26,7 +26,8 @@ export default function ChallengeDashboardPage({ params }: { params: Params }) {
   );
 }
 
-async function DashboardSection({ params }: { params: Params }) {
+// export 는 EVAL-0039 배선 회귀 테스트(page.spec)용 — Next 라우팅은 default export 만 본다(named 무시).
+export async function DashboardSection({ params }: { params: Params }) {
   const { id } = await params;
   const { user } = await getAuthedUser();
   if (!user) redirect("/login");
