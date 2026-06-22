@@ -17,6 +17,7 @@ export const FEED_RESPONSE = [
     viewerKudos: ["🔥"],
     peerRejectCount: 0,
     viewerRejected: false,
+    isPeerRejected: false,
     createdAt: "2026-05-02T03:00:00Z",
   },
   {
@@ -30,6 +31,7 @@ export const FEED_RESPONSE = [
     viewerKudos: [],
     peerRejectCount: 0,
     viewerRejected: false,
+    isPeerRejected: false,
     createdAt: "2026-05-01T03:00:00Z",
   },
 ];

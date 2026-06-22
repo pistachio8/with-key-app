@@ -38,6 +38,7 @@ const baseItem = {
   viewerKudos: [] as const,
   peerRejectCount: 0,
   viewerRejected: false,
+  isPeerRejected: false,
   createdAt: "2026-04-30T00:00:00Z",
   createdAtLabel: "4월 30일",
 };
