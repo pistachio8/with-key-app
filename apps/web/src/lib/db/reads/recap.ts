@@ -100,6 +100,21 @@ export function buildRecapView(input: {
   };
 }
 
+// 정산 recap 의 인증 집계 SoT — 인증 횟수(표시)·판정(달성/미달)·정산 금액이 모두 이 집합에서 파생된다.
+// 🟨 과반 반려(action_logs.auto_verify_status='peer_rejected')는 done 으로 세지 않는다(ADR-0038 / EVAL-0041).
+// 단일 제외 집합 — challenge-detail.ts 처럼 표시용/pot용을 분리하지 않는다.
+// 왜: EVAL-0040 이 정산 penalty RPC(_settlement_confirmed_penalties)를 peer_rejected 제외로 바꿔,
+// recap 도 같은 집합이어야 화면 penalty 가 실제 정산 RPC 와 일치한다(분리하면 어긋남).
+export function buildVisibleDoneByUserByWeek(
+  logs: ReadonlyArray<{ user_id: string; created_at: string; auto_verify_status: string }>,
+  startKey: string | null,
+  durationDays: number,
+): Map<string, Map<number, number>> {
+  if (!startKey) return new Map<string, Map<number, number>>();
+  const visible = logs.filter((l) => l.auto_verify_status !== "peer_rejected");
+  return countDoneDaysByUserByWeek(visible, startKey, durationDays);
+}
+
 type Options = { client?: SupabaseClient; now?: Date; challengeId?: string };
 
 /**
@@ -161,14 +176,13 @@ export async function fetchRecap(
 
   const { data: logs } = await supabase
     .from("action_logs")
-    .select("user_id, created_at")
+    .select("user_id, created_at, auto_verify_status")
     .eq("challenge_id", challenge.id);
 
   // 하루 N개 피드도 인증은 1회 → KST distinct day → 주차 버킷. start_at 없으면 빈 집계.
+  // 🟨 peer_rejected(과반 반려)는 buildVisibleDoneByUserByWeek 에서 제외 (EVAL-0041).
   const startKey = challenge.start_at ? toKstDayKey(challenge.start_at) : null;
-  const byUserByWeek = startKey
-    ? countDoneDaysByUserByWeek(logs ?? [], startKey, challenge.duration_days)
-    : new Map<string, Map<number, number>>();
+  const byUserByWeek = buildVisibleDoneByUserByWeek(logs ?? [], startKey, challenge.duration_days);
 
   const participants: ParticipantRow[] = (parts ?? []).map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;
