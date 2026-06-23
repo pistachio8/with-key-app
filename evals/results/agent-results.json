@@ -449,6 +449,30 @@
         "verdict": "pass"
       },
       "notes": "frontend-reviewer fan-out 결과 클린(Blocker/Major/Minor 0) — pot 불변성(computeAccruedPot 입력 doneByWeek=full)·EVAL-0032 멤버 doneCount 호환·RSC server read 경계·Map 필드 client boundary 미통과·@withkey/domain 계약 미오염(web 로컬 확장 격리)·scope creep 없음 확인. 통합테스트(peer-reject.spec.ts)는 공유 Supabase 의존이라 로컬 미실행 — CI Integration 잡 확인. mobile lint/test 실패는 expo-image-manipulator 미해결·no-tests 로 본 변경과 무관한 pre-existing 노이즈(apps/web·evals 만 변경). 커밋은 WP 브랜치 feat/feed-peer-reject-stamp 에 포함, 푸시·PR 은 사용자 확인 후(D6 게이트)."
+    },
+    {
+      "taskId": "EVAL-0041",
+      "date": "2026-06-23",
+      "track": "greenfield",
+      "kind": "regression",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0040(정산 penalty RPC peer_rejected 제외)의 화면-read 대응물 — EVAL-0039(대시보드 링·칩)·0040(정산 RPC)에 이은 세 번째 위치. 정산 recap 화면(/challenge/[id]/recap)이 읽는 fetchRecap(recap.ts)이 action_logs 를 auto_verify_status 필터 없이 select 해, 과반 익명 반려(auto_verify_status='peer_rejected') 피드가 countDoneDaysByUserByWeek 집계에 그대로 포함됐다. recap 의 단일 doneByWeek 집합이 세 값을 모두 만들어 인증 횟수(viewerDoneCount)·달성 판정(viewerAchieved/members[].achieved)·정산 금액(viewerPerHeadPenalty)이 전부 peer_rejected 포함 기준으로 표시 → 화면 penalty 가 실제 정산 RPC 와 어긋남. 수정: select 에 auto_verify_status 추가 + 필터·집계를 순수 헬퍼 buildVisibleDoneByUserByWeek(peer_rejected 만 제외)로 추출. 단일 제외 집합 — challenge-detail.ts 의 표시용/pot용 분리를 recap 엔 적용하지 않음(RecapView 계약에 pot 총액 필드 없음·computeAccruedPot 미호출). 근거: EVAL-0040 RPC 가 peer_rejected 단일 제외라 recap 도 같은 집합이어야 화면=정산 일치. 리뷰 후속(4e0bd92): 헬퍼 파라미터 타입 auto_verify_status string|null→string 으로 좁혀 DB 계약(0045 not null)·생성 타입과 정렬. 회귀: recap.spec.ts 에 3건 중 1건 peer_rejected → viewerDoneCount=2·viewerAchieved=false(goal 3)·viewerPerHeadPenalty=3000 단언 3건 추가.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — web·domain·mobile exit 0",
+          "pnpm --filter @withkey/web lint": "pass — exit 0 (모노레포 pnpm lint 의 mobile expo-image-picker·expo-image-manipulator 모듈 해석 fail 은 본 변경 무관·선행 환경 이슈, mobile 파일 0건 수정)",
+          "pnpm test (recap)": "pass — recap.spec.ts 9 (기존 6 + 신규 회귀 3) · web 전체 771 회귀 0",
+          "pnpm harness:check": "pass — 0 violation"
+        },
+        "ci": "PR #260 all green — Lint + Type + Unit · Integration (shared with-key) · Playwright E2E · Vercel"
+      },
+      "review": {
+        "reviewers": ["frontend-reviewer", "backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "도메인 서브에이전트 fan-out 리뷰(frontend·backend) — Blocker/Major 0. 두 리뷰어가 NULL 처리 사실에서 충돌(frontend: null 행 포함이 의도 / backend: 컬럼 NOT NULL 이라 null 없음) → 메인이 소스 교차검증(0045 auto_verify_status text not null default 'passed' · supabase.ts 생성타입 string)으로 backend 정확 확정. backend 가 0050 RPC SQL ↔ recap TS 경로를 1:1 대조해 week 버킷·cutoff·weekGoal·distinct-day·범위가드·peer_rejected 제외 산식 완전 일치 확인 — 단일 제외 집합 결정 건전. Minor 1건(헬퍼 타입 string|null 이 DB 계약보다 넓음)은 follow-up 커밋 4e0bd92 로 string 으로 좁혀 반영. DB/migration/RLS/외부 변경 0(읽기 컬럼 1개 추가만, spec-required 경로 아님). 커밋 3건(6917f7e task·079b422 fix+test·4e0bd92 타입 후속), 브랜치 fix/settlement-penalty-peer-reject(EVAL-0040 PR #257 머지 후 재사용) → PR #260 base develop CI green → 사용자 머지 완료."
     }
   ]
 }
