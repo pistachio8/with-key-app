@@ -473,6 +473,31 @@
         "verdict": "pass"
       },
       "notes": "도메인 서브에이전트 fan-out 리뷰(frontend·backend) — Blocker/Major 0. 두 리뷰어가 NULL 처리 사실에서 충돌(frontend: null 행 포함이 의도 / backend: 컬럼 NOT NULL 이라 null 없음) → 메인이 소스 교차검증(0045 auto_verify_status text not null default 'passed' · supabase.ts 생성타입 string)으로 backend 정확 확정. backend 가 0050 RPC SQL ↔ recap TS 경로를 1:1 대조해 week 버킷·cutoff·weekGoal·distinct-day·범위가드·peer_rejected 제외 산식 완전 일치 확인 — 단일 제외 집합 결정 건전. Minor 1건(헬퍼 타입 string|null 이 DB 계약보다 넓음)은 follow-up 커밋 4e0bd92 로 string 으로 좁혀 반영. DB/migration/RLS/외부 변경 0(읽기 컬럼 1개 추가만, spec-required 경로 아님). 커밋 3건(6917f7e task·079b422 fix+test·4e0bd92 타입 후속), 브랜치 fix/settlement-penalty-peer-reject(EVAL-0040 PR #257 머지 후 재사용) → PR #260 base develop CI green → 사용자 머지 완료."
+    },
+    {
+      "taskId": "EVAL-0040",
+      "date": "2026-06-22",
+      "track": "greenfield",
+      "kind": "regression",
+      "status": "done",
+      "attempts": 1,
+      "summary": "정산 미달분 산정 RPC _settlement_confirmed_penalties(0044)의 done_days CTE 가 auto_verify_status='peer_rejected'(과반 익명 반려) 인증을 '달성한 날'로 세던 버그 — EVAL-0032(멤버 현황판)·0039(대시보드 링·칩)가 web read 에서 한 제외가 정산 RPC 엔 빠져, 반려당한 인증이 done_days 로 집계돼 done<week_goal 판정이 어긋나 반려 멤버가 미달 penalty 를 면제받음(EVAL-0039 Non-goal '정산 pot/penalty 제외=EVAL-0008 후속'이 명시 이연한 항목). 정책 SoT 는 0045 L30 주석(peer_rejected=주간 카운트 제외). 수정: 0044 편집 금지(append-only) → 새 forward migration 0050_settlement_penalty_exclude_peer_rejected.sql 에서 함수 body 를 create or replace 로 재정의하되 done_days 에 'and al.auto_verify_status <> peer_rejected' 한 줄만 추가(0044 대비 diff=주석1+필터1, security definer·set search_path=public·language sql stable·다른 RPC 5종 불변). peer_rejected 만 제외(passed/pending/failed/manual_review 는 기존대로 done — 친구 신뢰 default-passed). EVAL-0041(recap 화면-read)의 선행.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — domain·web·mobile exit 0",
+          "pnpm lint (web·domain)": "pass — clean (mobile lint 만 expo-image-picker·expo-image-manipulator 모듈 해석 fail, mobile 파일 0건 수정·선행 환경 이슈)",
+          "pnpm test": "pass — web 768 + domain 199, 회귀 0 (settlement RPC done_days→penalty 산식은 SQL 전용이라 domain 단위검증은 theater → 행위 회귀는 integration 으로 분리)",
+          "pnpm harness:check": "pass — 0 violation"
+        },
+        "ci": "PR #257 — Integration(shared with-key)가 PR migration 0050 apply 후 _settlement_confirmed_penalties RPC 를 admin(service_role) 직접 호출하는 회귀(tests/integration/settlement-penalty-peer-reject.spec.ts: 1주 goal 3, distinct-day passed 3 중 1 peer_rejected → 버그면 done=3 penalty 0, 수정 후 done=2<3 penalty>0)를 실측. 머지 2026-06-22.",
+        "local-skip": "integration 테스트는 .env.local 필요라 로컬 unit pnpm test 에서 제외 — 로컬 행위 테스트 미실행(정직), CI Integration 이 실측"
+      },
+      "review": {
+        "reviewers": [],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "retroactive finalize(2026-06-23 수행, date 는 실제 작업·머지일 2026-06-22): EVAL-0040 은 2026-06-22 PR #257 로 머지(reviewDecision 공란·GitHub 리뷰 0건, 도메인 sub-agent fan-out 리뷰 미실행) — 검증 기반은 local checks + CI Integration(RPC 행위 측정) + migration gate. ADR 결정(사용자): spec-required(supabase/migrations/**)지만 신규 ADR 없이 ADR-0032 참조로 충분(0050 헤더 주석에 'ADR-0032 §peer_rejected 제외 정책 구현 누락 bugfix' 명시) — 정책은 0045 가 선언, ADR-0032 가 정산 데이터 모델 관장. 테스트 배치 정정: 당초 task 가 settlement.spec.ts(domain) 단언을 지시했으나 computeSettlement 는 confirmedPenalty 를 입력으로만 받아 done_days→penalty 산식 검증이 불가 → RPC admin 직접 호출 integration 테스트로 교체. 오케스트레이션: harness:route 0.5 ambiguous → 사용자 2문항 확인(SQL RPC만/새 task 생성 후 구현) → harness-engineer 가 EVAL-0040 생성 → claim→goal→구현. 커밋 4건(0c54d6a task·265195a fix migration·93571d6 test·cecfc04 task 본문 정정). finalize 는 EVAL-0041 finalize(PR #261 머지) 와 별도 PR — #261 이 먼저 머지돼 develop 갱신 후 fresh finalize."
     }
   ]
 }
