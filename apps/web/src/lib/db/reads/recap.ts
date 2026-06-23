@@ -106,7 +106,7 @@ export function buildRecapView(input: {
 // 왜: EVAL-0040 이 정산 penalty RPC(_settlement_confirmed_penalties)를 peer_rejected 제외로 바꿔,
 // recap 도 같은 집합이어야 화면 penalty 가 실제 정산 RPC 와 일치한다(분리하면 어긋남).
 export function buildVisibleDoneByUserByWeek(
-  logs: ReadonlyArray<{ user_id: string; created_at: string; auto_verify_status: string | null }>,
+  logs: ReadonlyArray<{ user_id: string; created_at: string; auto_verify_status: string }>,
   startKey: string | null,
   durationDays: number,
 ): Map<string, Map<number, number>> {
