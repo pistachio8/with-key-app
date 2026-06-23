@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>from.with · 화면 플로우 (디자이너 공유용)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root {
+    --primary:#8AA4FF; --primary-deep:#6F8DF5; --secondary:#FFD46B; --accent:#BCA6FF;
+    --pink:#FFB6C6; --bg:#F7F8FB; --text:#22262E; --sub:#8B91A1; --white:#fff;
+    --border:#E8EBF0; --border-soft:#EEF0F5; --primary-soft:#E8EDFF; --secondary-soft:#FFF5DA;
+    --danger:#FF6B6B; --warn:#FF8A4E; --success:#52C28C;
+    --invite-bg:#FAF6EF; --invite-ink:#2A221C; --invite-line:#E5D8C2; --invite-accent:#B07A4D; --invite-terra:#C0603A;
+    --wf:#D8DCE6; --wf-soft:#EFF1F6; --wf-ink:#AEB4C2;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  a { color:var(--primary-deep); }
+
+  header.top { position:sticky; top:0; z-index:50; background:rgba(247,248,251,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); padding:14px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  header.top .brand { font-weight:800; font-size:17px; letter-spacing:-.02em; }
+  header.top .brand span { color:var(--primary-deep); }
+  header.top nav { display:flex; gap:6px; flex-wrap:wrap; margin-left:auto; }
+  header.top nav a { font-size:13px; font-weight:600; color:var(--sub); text-decoration:none; padding:6px 11px; border-radius:8px; transition:.15s; }
+  header.top nav a:hover { background:var(--primary-soft); color:var(--primary-deep); }
+
+  main { max-width:1240px; margin:0 auto; padding:36px 24px 96px; }
+  section { margin-top:64px; scroll-margin-top:72px; }
+  section:first-of-type { margin-top:28px; }
+  h1 { font-size:30px; font-weight:800; letter-spacing:-.03em; margin:0 0 6px; }
+  .lede { color:var(--sub); font-size:15px; max-width:820px; margin:0 0 6px; }
+  .meta { color:var(--wf-ink); font-size:12.5px; }
+  h2 { font-size:21px; font-weight:800; letter-spacing:-.02em; margin:0 0 4px; display:flex; align-items:baseline; gap:10px; }
+  h2 .idx { color:var(--primary); font-size:14px; font-weight:800; }
+  h2 + .desc { color:var(--sub); font-size:14px; margin:0 0 22px; }
+
+  .legend { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 0; }
+  .legend .tag { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; background:var(--white); border:1px solid var(--border); border-radius:999px; padding:6px 12px; }
+  .legend .dot { width:10px; height:10px; border-radius:3px; }
+  .d-entry{background:var(--wf-ink)} .d-auth{background:var(--pink)} .d-main{background:var(--primary)}
+  .d-create{background:var(--secondary)} .d-challenge{background:var(--primary-deep)} .d-settle{background:var(--accent)}
+
+  .flowwrap { background:var(--white); border:1px solid var(--border); border-radius:18px; padding:18px; overflow-x:auto; }
+  .mermaid { font-family:Pretendard,sans-serif !important; }
+  .callout { background:var(--secondary-soft); border:1px solid #F0DFA8; border-radius:14px; padding:14px 16px; font-size:13px; margin-top:18px; }
+  .callout b { color:#8a6d1f; }
+
+  .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:16px; background:var(--white); }
+  table { border-collapse:collapse; width:100%; font-size:13px; min-width:760px; }
+  thead th { text-align:left; font-weight:700; color:var(--sub); background:var(--wf-soft); padding:11px 14px; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; }
+  tbody td { padding:11px 14px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:var(--bg); }
+  code.route { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:var(--primary-soft); color:var(--primary-deep); padding:2px 7px; border-radius:6px; white-space:nowrap; }
+  .gate { font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .gate.lock { background:#FFE9EC; color:var(--danger); } .gate.open { background:#E6F7EF; color:var(--success); }
+  .grp { font-size:11px; font-weight:700; color:var(--wf-ink); text-transform:uppercase; letter-spacing:.04em; }
+  .sub-note { color:var(--sub); }
+
+  /* ============ wireframes (hi-fi, code-accurate) ============ */
+  .gallery { display:flex; flex-wrap:wrap; gap:34px 28px; margin-top:6px; }
+  .phone-cap { width:262px; }
+  .phone-cap .cap-h { font-size:14px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:7px; }
+  .phone-cap .cap-h .n { flex:none; width:21px; height:21px; border-radius:6px; background:var(--primary); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center; }
+  .phone-cap .cap-r { font-family:ui-monospace,monospace; font-size:11px; color:var(--wf-ink); margin:3px 0 9px 28px; }
+  .phone { width:262px; height:548px; background:#0e1320; border:1px solid #0e1320; border-radius:30px; padding:7px; box-shadow:0 16px 40px -18px rgba(40,50,80,.4); overflow:hidden; position:relative; }
+  .screen { height:100%; border-radius:24px; background:var(--bg); overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  .phone-cap .cap-d { font-size:11.5px; color:var(--sub); margin:10px 2px 0; line-height:1.45; }
+
+  .sb { height:22px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:2px 16px 0; }
+  .sb b { font-size:10px; color:var(--text); font-weight:800; }
+  .sb .sig { font-size:9px; color:var(--text); }
+
+  .ah { flex:none; height:38px; display:flex; align-items:center; justify-content:space-between; padding:0 13px; background:rgba(255,255,255,.92); border-bottom:1px solid var(--border-soft); backdrop-filter:blur(4px); }
+  .ah .logo { font-size:11px; font-weight:800; color:var(--primary-deep); letter-spacing:0; }
+  .ah .back { font-size:15px; color:var(--text); font-weight:600; width:18px; }
+  .ah .title { font-size:12.5px; font-weight:800; }
+  .ah .ic { display:flex; gap:10px; align-items:center; }
+  .ah .ic .ib { position:relative; width:18px; height:18px; display:grid; place-items:center; font-size:13px; }
+  .ah .ic .ib .nd { position:absolute; top:-1px; right:-1px; width:6px; height:6px; border-radius:50%; background:var(--danger); border:1.5px solid #fff; }
+  .ah .step { font-size:10.5px; color:var(--sub); font-weight:700; font-variant-numeric:tabular-nums; }
+  .ah .act { font-size:10.5px; color:var(--sub); font-weight:600; }
+
+  .body { flex:1; overflow:hidden; padding:12px; display:flex; flex-direction:column; gap:9px; }
+  .body.center { justify-content:center; align-items:center; text-align:center; gap:11px; padding:20px; }
+  .body.between { justify-content:space-between; }
+  .scrollfade { position:absolute; bottom:0; left:0; right:0; height:34px; background:linear-gradient(transparent,var(--bg)); pointer-events:none; }
+
+  .t { letter-spacing:-.01em; color:var(--text); font-weight:800; }
+  .t.xl { font-size:19px; line-height:1.2; } .t.lg { font-size:15.5px; } .t.md { font-size:12.5px; } .t.sm { font-size:11px; }
+  .muted { color:var(--sub); font-size:10px; font-weight:600; }
+  .muted.xs { font-size:9px; } .muted.lh { line-height:1.55; }
+  .card { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:11px; display:flex; flex-direction:column; gap:7px; box-shadow:0 2px 6px -4px rgba(40,50,80,.1); }
+  .card.tight { padding:9px; gap:5px; }
+  .card.paper { background:var(--invite-bg); border-color:var(--invite-line); }
+  .card.warm { background:var(--secondary-soft); border-color:#F0DFA8; }
+  .card.soft { background:var(--primary-soft); border-color:#D6DEFF; }
+  .card.muted { background:var(--wf-soft); border-color:var(--border-soft); }
+  .card.none { padding:0; gap:0; overflow:hidden; }
+
+  .btn { height:34px; border-radius:11px; background:var(--primary); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 6px 14px -6px rgba(111,141,245,.7); }
+  .btn.kakao { background:#FEE500; color:#3C2E22; box-shadow:0 6px 14px -6px rgba(254,229,0,.55); }
+  .btn.ghost { background:var(--white); border:1px solid var(--border); color:var(--text); box-shadow:none; }
+  .btn.danger { background:rgba(255,107,107,.06); border:1px solid rgba(255,107,107,.3); color:var(--danger); box-shadow:none; }
+  .btn.sm { height:27px; font-size:11px; border-radius:9px; box-shadow:none; padding:0 11px; }
+  .btn.block { width:100%; }
+
+  .row { display:flex; gap:7px; } .row.between { justify-content:space-between; align-items:center; } .row.mid { align-items:center; }
+  .chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .chip { font-size:9.5px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--primary-soft); color:var(--primary-deep); white-space:nowrap; }
+  .chip.g { background:var(--wf-soft); color:var(--sub); }
+  .chip.s { background:var(--secondary-soft); color:#8a6d1f; }
+  .chip.pink { background:#FFE3EA; color:#c44a64; }
+  .chip.warn { background:#FFF1E8; color:var(--warn); }
+  .chip.ok { background:#E6F7EF; color:var(--success); }
+  .chip.live { background:var(--primary); color:#fff; }
+  .chip.sel { background:var(--primary); color:#fff; }
+
+  .stat4 { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+  .stat4 .c { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:8px 3px; text-align:center; box-shadow:0 2px 6px -4px rgba(40,50,80,.1); }
+  .stat4 .c b { font-size:15px; font-weight:800; display:block; line-height:1.15; }
+  .stat4 .c.p b{color:var(--primary-deep)} .stat4 .c.ok b{color:var(--success)} .stat4 .c.w b{color:var(--warn)} .stat4 .c.d b{color:var(--sub);font-size:12px}
+  .stat4 .c span { font-size:7.5px; color:var(--sub); font-weight:600; }
+
+  .ava { border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:800; }
+  .ava.s24 { width:24px; height:24px; font-size:9px; } .ava.s20 { width:20px; height:20px; font-size:8px; } .ava.s34 { width:34px; height:34px; font-size:12px; } .ava.s48{width:48px;height:48px;font-size:16px;}
+  .ava.p { background:linear-gradient(135deg,#A8B8FF,#8AA4FF); } .ava.k { background:linear-gradient(135deg,#FFC4D0,#FFB6C6); }
+  .ava.s { background:linear-gradient(135deg,#9AE8C0,#7FE0AE); } .ava.y { background:linear-gradient(135deg,#FFE08A,#FFD46B); color:#6b5200; }
+  .ava.soft { background:var(--primary-soft); color:var(--primary-deep); }
+  .ava.stack { margin-left:-7px; box-shadow:0 0 0 2px #fff; }
+  .avas { display:flex; align-items:center; }
+
+  .pic { border-radius:11px; display:grid; place-items:center; font-size:22px; position:relative; overflow:hidden; }
+  .pic::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.12)); }
+  .pic.r169 { aspect-ratio:16/9; width:100%; }
+  .pic.run { background:linear-gradient(135deg,#FFD9A8,#FF9FB0); } .pic.gym { background:linear-gradient(135deg,#A8C7FF,#8AA4FF); }
+  .pic.yoga { background:linear-gradient(135deg,#C9F0DA,#7FE0AE); } .pic.bike { background:linear-gradient(135deg,#D8C9FF,#BCA6FF); }
+  .pic.swim { background:linear-gradient(135deg,#A8E6FF,#7FCBE0); } .pic.walk { background:linear-gradient(135deg,#FFE3A8,#FFD46B); }
+
+  .input { height:32px; border-radius:10px; background:var(--white); border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 11px; font-size:11px; font-weight:600; color:var(--text); }
+  .input .ph { color:var(--wf-ink); font-weight:500; }
+  .input.dashed { border-style:dashed; }
+  .lbl { font-size:9.5px; font-weight:700; color:var(--sub); }
+  .ta { border-radius:10px; background:var(--white); border:1px solid var(--border); padding:9px 11px; font-size:10.5px; color:var(--wf-ink); flex:1; }
+
+  .tabs { display:flex; gap:3px; background:var(--wf-soft); border-radius:999px; padding:3px; }
+  .tabs .tb { flex:1; text-align:center; font-size:10px; font-weight:800; padding:6px 0; border-radius:999px; color:var(--sub); }
+  .tabs .tb.on { background:var(--white); color:var(--primary-deep); box-shadow:0 2px 5px -3px rgba(40,50,80,.3); }
+
+  .bar { height:6px; border-radius:99px; background:var(--wf-soft); overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#8AA4FF,#6F8DF5); }
+  .bar.s > span { background:linear-gradient(90deg,#FFD46B,#FFB347); }
+  .bar.h15 { height:5px; }
+
+  .stepper { display:flex; align-items:center; gap:7px; }
+  .stepper .pm { width:30px; height:30px; border-radius:9px; border:1px solid var(--border); background:var(--white); display:grid; place-items:center; font-size:14px; color:var(--sub); }
+  .stepper .val { flex:1; text-align:center; background:var(--primary-soft); border-radius:9px; padding:5px 0; }
+  .stepper .val b { font-size:12px; color:var(--primary-deep); display:block; } .stepper .val span { font-size:8px; color:var(--sub); }
+
+  .seg { display:flex; gap:5px; }
+  .seg .o { flex:1; text-align:center; font-size:10px; font-weight:700; padding:7px 0; border-radius:9px; border:1px solid var(--border); background:var(--white); color:var(--sub); }
+  .seg .o.on { border-color:var(--primary); background:var(--primary-soft); color:var(--primary-deep); }
+
+  .donut { width:58px; height:58px; border-radius:50%; display:grid; place-items:center; flex:none; }
+  .donut .hole { width:42px; height:42px; border-radius:50%; background:var(--white); display:grid; place-items:center; }
+  .donut .hole b { font-size:12px; font-weight:800; color:var(--primary-deep); }
+
+  .li { display:flex; align-items:center; gap:8px; }
+  .toggle { width:30px; height:17px; border-radius:999px; position:relative; flex:none; }
+  .toggle.on { background:var(--success); } .toggle.off { background:var(--wf); }
+  .toggle::after { content:""; position:absolute; top:2px; width:13px; height:13px; border-radius:50%; background:#fff; }
+  .toggle.on::after { right:2px; } .toggle.off::after { left:2px; }
+
+  .banner { border-radius:12px; padding:8px 10px; font-size:10px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .banner.info { background:var(--primary-soft); color:var(--primary-deep); } .banner.invsoft { background:rgba(138,164,255,.08); border:1px solid rgba(138,164,255,.25); color:var(--primary-deep); }
+  .banner.paper { background:#F3E9D6; color:var(--invite-accent); }
+  .banner .badge { margin-left:auto; background:var(--primary); color:#fff; width:15px; height:15px; border-radius:50%; font-size:8px; display:grid; place-items:center; }
+
+  .statuscard { background:linear-gradient(135deg,#8AA4FF,#7E97F5); color:#fff; border-radius:14px; padding:13px; display:flex; flex-direction:column; gap:3px; }
+  .statuscard .brand { font-size:8px; font-weight:800; letter-spacing:.08em; opacity:.9; }
+  .statuscard .ttl { font-size:15px; font-weight:800; }
+  .statuscard .sub { font-size:9px; opacity:.92; }
+  .statuscard .top { display:flex; justify-content:space-between; align-items:center; }
+  .statuscard .dday { font-size:10px; font-weight:800; }
+
+  .sharecard { background:linear-gradient(135deg,#8AA4FF 0%,#BCA6FF 50%,#FFB6C6 100%); color:#fff; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:9px; }
+  .sharecard .brand { font-size:8px; font-weight:800; letter-spacing:.06em; opacity:.95; }
+  .sharecard .ttl { font-size:14px; font-weight:800; line-height:1.2; }
+  .sharecard .ft { background:rgba(255,255,255,.95); color:var(--text); border-radius:11px; padding:9px; }
+  .sharecard .ft .row2 { display:flex; justify-content:space-between; align-items:flex-end; margin-top:5px; }
+
+  .kudos { display:flex; gap:9px; margin-top:2px; }
+  .kudos b { font-size:10px; display:flex; align-items:center; gap:3px; color:var(--sub); font-weight:700; }
+  .kudos b.on { color:var(--text); }
+
+  .weeks { display:flex; gap:7px; align-items:flex-end; height:46px; }
+  .weeks .wk { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .weeks .wk .col { width:100%; border-radius:5px 5px 2px 2px; } .weeks .wk .lab { font-size:7.5px; color:var(--sub); font-weight:700; }
+  .weeks .wk.ok .col { background:linear-gradient(180deg,#7FE0AE,#52C28C); } .weeks .wk.now .col { background:linear-gradient(180deg,#8AA4FF,#6F8DF5); } .weeks .wk.no .col { background:var(--wf-soft); }
+
+  .wchips { display:flex; gap:5px; flex-wrap:wrap; }
+  .wchips i { font-size:9px; font-weight:800; padding:4px 9px; border-radius:999px; border:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .wchips i.ach { background:var(--primary-soft); color:var(--primary-deep); border-color:#D6DEFF; }
+  .wchips i.cur { border-style:dashed; border-color:var(--primary); color:var(--primary-deep); }
+  .wchips i.miss { background:#FFF1E8; color:var(--warn); border-color:#FFD9C2; }
+  .wchips i.fut { background:var(--wf-soft); color:var(--wf-ink); }
+
+  .slot { display:flex; gap:4px; }
+  .slot i { flex:1; height:8px; border-radius:3px; background:var(--wf-soft); } .slot i.used { background:linear-gradient(90deg,#8AA4FF,#6F8DF5); }
+
+  .recpaper { background:var(--invite-bg); border-top:1.5px dashed var(--invite-line); border-bottom:1.5px dashed var(--invite-line); padding:12px; font-family:ui-monospace,monospace; }
+  .recpaper .rhead { text-align:center; }
+  .recpaper .logo-w { font-size:10px; font-weight:800; color:var(--invite-accent); letter-spacing:.04em; }
+  .recpaper .rcap { font-size:8.5px; color:var(--invite-accent); }
+  .recpaper .dash { border-top:1px dashed var(--invite-line); margin:7px 0; }
+  .recpaper dl { margin:0; display:flex; flex-direction:column; gap:3px; }
+  .recpaper .dlrow { display:flex; justify-content:space-between; font-size:10px; color:var(--invite-ink); }
+  .recpaper .dlrow b { font-weight:800; }
+  .recpaper .mine { text-align:center; }
+  .recpaper .mine .k { font-size:7.5px; letter-spacing:.12em; color:var(--invite-accent); }
+  .recpaper .mine .v { font-size:18px; font-weight:800; color:var(--invite-ink); }
+  .recpaper .mine .v.miss { color:var(--invite-terra); }
+  .recpaper .crew { font-size:9.5px; color:var(--invite-ink); text-align:center; }
+  .stamp { display:inline-grid; place-items:center; width:34px; height:34px; border:1.5px solid var(--invite-accent); border-radius:50%; color:var(--invite-accent); font-size:6.5px; font-weight:800; transform:rotate(-12deg); opacity:.8; text-align:center; line-height:1; }
+  .galg { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; } .galg .pic { aspect-ratio:1; border-radius:0; font-size:14px; }
+
+  .canvas { min-height:54px; border:1px solid var(--border); border-radius:10px; background:var(--white); position:relative; display:grid; place-items:end stretch; }
+  .canvas svg { width:100%; height:54px; } .canvas .hint { position:absolute; bottom:3px; left:0; right:0; text-align:center; font-size:8px; color:var(--wf-ink); }
+
+  .dots-prog { display:flex; gap:5px; justify-content:center; }
+  .dots-prog i { width:6px; height:6px; border-radius:50%; background:var(--wf); } .dots-prog i.on { background:var(--primary); width:18px; border-radius:3px; }
+
+  .fab { position:absolute; bottom:13px; left:50%; transform:translateX(-50%); display:flex; gap:9px; align-items:center; z-index:5; }
+  .fab .main { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#8AA4FF,#6F8DF5); color:#fff; display:grid; place-items:center; font-size:16px; box-shadow:0 8px 18px -5px rgba(111,141,245,.7); }
+  .fab .mini { width:30px; height:30px; border-radius:50%; background:var(--white); border:1px solid var(--border); display:grid; place-items:center; font-size:13px; box-shadow:0 4px 10px -4px rgba(40,50,80,.25); }
+
+  .ico-badge { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:13px; flex:none; }
+  .ico-badge.p { background:var(--primary-soft); } .ico-badge.s { background:var(--secondary-soft); } .ico-badge.g { background:var(--wf-soft); }
+  .listrow { display:flex; align-items:center; gap:9px; padding:9px 0; }
+  .chev { color:var(--wf-ink); font-size:13px; margin-left:auto; }
+
+  pre { background:#1f2430; color:#e8ecf5; border-radius:14px; padding:18px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; line-height:1.55; }
+  .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:8px; }
+  .steps .step { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
+  .steps .step b { display:block; font-size:13px; margin-bottom:4px; } .steps .step p { margin:0; font-size:12.5px; color:var(--sub); }
+  footer { margin-top:72px; padding-top:24px; border-top:1px solid var(--border); color:var(--wf-ink); font-size:12px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">from<span>.</span>with</div>
+  <div class="meta">화면 플로우 — 디자이너 공유용</div>
+  <nav>
+    <a href="#flow">전이 플로우</a>
+    <a href="#inventory">화면 인벤토리</a>
+    <a href="#wireframes">화면 와이어프레임</a>
+    <a href="#variants">상태·역할 분기</a>
+    <a href="#figjam">FigJam 가져오기</a>
+  </nav>
+</header>
+
+<main>
+  <section>
+    <h1>from.with 화면 플로우</h1>
+    <p class="lede">그룹 운동 각서 앱(모바일 웹 PWA, 제품명 <b>from.with</b>)의 화면 구조·전이·화면별 mockup. 와이어프레임의 카피·레이아웃·컨트롤은 실제 컴포넌트 코드(<code class="route">apps/web/src/app/**/_components/**</code>)에서 추출한 진짜 텍스트를 반영했습니다. 최종 타이포·간격·일러스트는 디자인 영역으로 남겨둡니다.</p>
+    <p class="meta">기준일 2026-06-23 · 실화면 19개 라우트 + 폐기 redirect 6개 · 시나리오: "운동 크루"(민수·지은·현우·수아)의 "이번 주 운동" 챌린지</p>
+
+    <div class="legend">
+      <span class="tag"><span class="dot d-entry"></span>진입점</span>
+      <span class="tag"><span class="dot d-auth"></span>인증·온보딩</span>
+      <span class="tag"><span class="dot d-main"></span>메인·글로벌</span>
+      <span class="tag"><span class="dot d-create"></span>챌린지 생성</span>
+      <span class="tag"><span class="dot d-challenge"></span>챌린지 여정</span>
+      <span class="tag"><span class="dot d-settle"></span>정산</span>
+    </div>
+  </section>
+
+  <!-- ===================== FLOW ===================== -->
+  <section id="flow">
+    <h2><span class="idx">A</span> 전체 화면 전이 플로우</h2>
+    <p class="desc">앱 진입 → 로그인/온보딩 → 메인, 그리고 챌린지 생성·참여·인증·정산 여정. 실선 = 버튼/제출 전이, 점선 = 글로벌 네비게이션(헤더·FAB).</p>
+    <div class="flowwrap">
+      <pre class="mermaid">
+flowchart TD
+  start([앱 실행]):::entry --> authq{로그인 상태?}
+  invite([초대 링크<br/>카톡 공유]):::entry --> acc[초대 수락·미리보기]:::auth
+
+  authq -->|미인증| login[로그인]:::auth
+  authq -->|인증됨| home[홈 · 대시보드]:::main
+  acc -->|로그인하고 참여하기| login
+
+  login -->|카카오 · 이메일 링크| cb{온보딩 완료?}
+  cb -->|미완료| onb[온보딩 4슬라이드]:::auth
+  cb -->|완료 · 초대 있음| pledge[서약서 서명]:::challenge
+  cb -->|완료| home
+  onb --> home
+
+  home -->|챌린지 만들기| n1[생성 ① 약속·규칙]:::create
+  n1 -->|다음: 서약서 쓰기| n2[생성 ② 서약서·서명]:::create
+  n2 -->|서명하고 챌린지 만들기| done[생성 완료 · 초대 공유]:::create
+  done -->|카카오톡 공유| ext([외부 공유])
+  done -->|홈으로| home
+
+  home -->|챌린지 카드| detail[챌린지 상세 · 인증 피드]:::challenge
+  home -->|초대 대기 배너| pledge
+  home -->|정산 대기| recap[정산 영수증]:::settle
+  pledge -->|서명하고 참여| detail
+
+  detail <-->|탭| dash[현황판]:::challenge
+  detail <-->|탭| info[정보 · 멤버]:::challenge
+  detail -->|FAB 인증| act[인증 작성 · AI 일기]:::challenge
+  act -->|등록하기| detail
+  detail -->|종료 후| recap
+
+  home -.헤더 🔔.-> noti[알림 센터]:::main
+  home -.헤더 👤.-> me[마이페이지]:::main
+  me --> mych[내 챌린지 관리]:::main
+  me --> fb[건의하기]:::main
+  me --> legal[약관·개인정보]:::main
+  me -->|로그아웃| login
+  info -.그룹.-> grp[그룹 상세]:::main
+
+  classDef entry fill:#EDEFF4,stroke:#AEB4C2,color:#5b6170,stroke-width:1px;
+  classDef auth fill:#FFE3EA,stroke:#FFB6C6,color:#7a3a4c;
+  classDef main fill:#E8EDFF,stroke:#8AA4FF,color:#3a4a8a;
+  classDef create fill:#FFF1C7,stroke:#FFD46B,color:#7a6210;
+  classDef challenge fill:#DCE4FF,stroke:#6F8DF5,color:#33408a;
+  classDef settle fill:#EFE7FF,stroke:#BCA6FF,color:#5a47a0;
+      </pre>
+    </div>
+    <div class="callout">
+      <b>읽는 법:</b> 비로그인 사용자가 들어오는 입구는 둘 — ① 앱 직접 실행, ② 카톡 초대 링크. 두 입구 모두 <b>로그인</b>으로 모인 뒤, 첫 사용자는 <b>온보딩</b>을, 초대로 들어온 사용자는 곧장 <b>서약서 서명</b>으로 분기합니다. 챌린지 상세는 [인증 피드 · 현황판 · 정보] 3탭이 한 화면 안에서 전환됩니다.
+    </div>
+  </section>
+
+  <!-- ===================== INVENTORY ===================== -->
+  <section id="inventory">
+    <h2><span class="idx">B</span> 화면 인벤토리</h2>
+    <p class="desc">라우트별 목적·핵심 요소·진입/이탈·인증 게이트. 🔒 = 로그인 필요, 🔓 = 비로그인 접근 가능. 아래 C 섹션 와이어프레임과 1:1로 대응합니다.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>라우트</th><th>화면</th><th>핵심 요소 (실제 카피)</th><th>주요 전이</th><th>게이트</th></tr></thead>
+        <tbody>
+          <tr><td colspan="6"><span class="grp">인증 · 온보딩</span></td></tr>
+          <tr><td>1</td><td><code class="route">/login</code></td><td>로그인</td><td>"카카오로 시작하기", 이메일 링크 로그인(비밀번호 없이 메일 링크로 입장), 약관 동의 문구</td><td>성공 → 콜백 → 온보딩/홈/초대</td><td><span class="gate open">🔓</span></td></tr>
+          <tr><td>2</td><td><code class="route">/login?onboard=1</code></td><td>온보딩 4슬라이드</td><td>🤖 AI 운동일기 · 📷 인증 습관 · 💵 벌금 누적 · 👯 친구 챌린지 / "다음"·"시작하기"</td><td>완료/건너뛰기 → 홈</td><td><span class="gate open">🔓</span></td></tr>
+          <tr><td>3</td><td><code class="route">/invite/[token]</code></td><td>초대 수락</td><td>"초대장 도착", ShareCard(기간·주N회·벌금·최대 4명), "참여하기" / 만료·정원 에러</td><td>참여 → 로그인 → 서명</td><td><span class="gate open">🔓</span></td></tr>
+
+          <tr><td colspan="6"><span class="grp">메인 · 글로벌</span></td></tr>
+          <tr><td>4</td><td><code class="route">/home</code></td><td>홈 · 대시보드</td><td>"안녕, {name} 👋", 통계 4열(진행중·오늘완료·미인증·내벌금), 진행 중/정산 대기 리스트, 초대 배너, FAB</td><td>카드→상세 · 만들기→생성</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>5</td><td><code class="route">/notifications</code></td><td>알림 센터</td><td>탭(전체·리마인더·친구 인증·벌금), 알림 리스트, "모두 읽음" (IDB)</td><td>헤더 🔔 · 알림→targetUrl</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>6</td><td><code class="route">/me</code></td><td>마이페이지</td><td>프로필, "내 챌린지 관리", 알림 토글 3종, "개발자에게 건의하기", 약관, 로그아웃</td><td>→ 각 메뉴 · 로그아웃→로그인</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>7</td><td><code class="route">/me/challenges</code></td><td>내 챌린지 관리</td><td>"운영 가능 슬롯 n/5", 운영 중·참여 중·종료 섹션, 종료/삭제/나가기 액션</td><td>카드→상세 · 만들기→생성</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>8</td><td><code class="route">/me/feedback</code></td><td>건의하기</td><td>분류 3종(버그·기능·기타), 내용(n/1000), 사진 최대 3장, "보내기"</td><td>제출 → 완료 → 마이페이지</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>9</td><td><code class="route">/legal/terms · /privacy</code></td><td>약관·개인정보</td><td class="sub-note">placeholder("준비중")</td><td>마이페이지에서 진입</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>19</td><td><code class="route">/group/[id]</code></td><td>그룹 상세</td><td>웰컴 배너, 헤더(운영자/멤버 n명), 정산 계좌, 멤버·챌린지 리스트</td><td>챌린지 카드→상세</td><td><span class="gate lock">🔒</span></td></tr>
+
+          <tr><td colspan="6"><span class="grp">챌린지 생성 (flow)</span></td></tr>
+          <tr><td>10</td><td><code class="route">/challenge/new</code> ①</td><td>생성 ① 약속·규칙</td><td>"어떤 약속을 만들어 볼까요?", 이름·그룹·빈도 스텝퍼·기간[7·14·30]·벌금[없음·3천·5천·만원]</td><td>"다음: 서약서 쓰기" → step2</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>11</td><td><code class="route">/challenge/new</code> ②</td><td>생성 ② 서약서·서명</td><td>"서약서를 확인해주세요", PledgePreviewCard, 전자 서명 캔버스</td><td>"서명하고 챌린지 만들기" → 완료</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>12</td><td><code class="route">/challenge/new/done/[id]</code></td><td>생성 완료 · 공유</td><td>"🎉 챌린지가 생성되었어요!", 링크 복사, "카카오톡으로 공유", "홈으로"</td><td>공유→외부 · 홈으로→홈</td><td><span class="gate lock">🔒</span></td></tr>
+
+          <tr><td colspan="6"><span class="grp">챌린지 여정</span></td></tr>
+          <tr><td>13</td><td><code class="route">/challenge/[id]</code></td><td>상세 · 인증 피드</td><td>StatusCard(D-N·목표·벌금·서명현황), 3탭, 오늘 배너, FeedCard(사진·키워드·AI일기·KudosBar 💪🔥💯)</td><td>탭전환 · FAB→인증 · 종료→recap</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>14</td><td><code class="route">/challenge/[id]/action</code></td><td>인증 작성 · AI 일기</td><td>사진, 활동 종류 radio(🏋️🏃🧘🍽), "오늘의 일기 키워드 (n/3)"+재생성, "등록하기" (FAB 숨김)</td><td>등록 → 결과 모달 → 상세</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>15</td><td><code class="route">/challenge/[id]/dashboard</code></td><td>현황판</td><td>"모인 벌금 {n}원", "주차 기록" 칩, WeekRing 게이지, 멤버 진행바</td><td>탭 전환</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>16</td><td><code class="route">/challenge/[id]/info</code></td><td>정보</td><td>PledgePreviewCard, "정보"(기간·빈도·벌금·인원·모인 벌금), 초대 버튼(운영자), 정산 계좌</td><td>탭 전환 · 초대 · 그룹</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>17</td><td><code class="route">/challenge/[id]/pledge</code></td><td>서약서 서명</td><td>"🎉 합류했어요" 배너, "서약서", 서명 캔버스, 동의 체크박스, "서명하고 참여"</td><td>서명 → 상세</td><td><span class="gate lock">🔒</span></td></tr>
+          <tr><td>18</td><td><code class="route">/challenge/[id]/recap</code></td><td>정산 영수증</td><td>"🧾 정산 영수증", dl(목표·달성·판정 달성🎉/미달😅), "나의 정산" 금액, CREW(👑MVP)·계좌, 사진 갤러리, 공유</td><td>공유 · 챌린지로 가기</td><td><span class="gate lock">🔒</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <b>폐기된 라우트(자동 redirect):</b>
+      <code class="route">/feed</code> <code class="route">/action</code> <code class="route">/pledge</code> <code class="route">/recap</code> → 각각 최근 챌린지의 sub-route로 ·
+      <code class="route">/settings</code> → <code class="route">/me</code> ·
+      <code class="route">/group/new</code> → <code class="route">/challenge/new</code>. 디자인 IA에서는 무시해도 됩니다.
+    </div>
+  </section>
+
+  <!-- ===================== WIREFRAMES ===================== -->
+  <section id="wireframes">
+    <h2><span class="idx">C</span> 화면 와이어프레임 (19종 · 실제 카피 반영)</h2>
+    <p class="desc">모바일(375pt 기준) mockup. 텍스트·버튼 라벨·배지·기본값은 실제 <code class="route">_components</code> 코드에서 가져왔습니다(예: 통계 4열, 온보딩 슬라이드 카피, 빈도 스텝퍼 기본값 "매일", 벌금 프리셋, KudosBar 이모지). 화면은 실제처럼 스크롤되며 위쪽 above-the-fold 위주로 보여줍니다.</p>
+
+    <div class="gallery">
+
+      <!-- 1 로그인 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">1</span> 로그인</div>
+        <div class="cap-r">/login</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body between" style="padding:18px 16px;">
+            <div></div>
+            <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
+              <div class="t xl" style="letter-spacing:-.04em;">from<span style="color:var(--primary-deep)">.</span>with</div>
+              <div class="muted" style="font-size:11px;">친구들과 함께 운동 내기 시작하기</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div class="btn kakao block" style="height:44px;">카카오로 시작하기</div>
+              <div class="input" style="height:44px;"><span class="ph">you@example.com</span></div>
+              <div class="btn ghost block" style="height:44px;">이메일로 로그인 링크 받기</div>
+              <div class="muted xs" style="text-align:center;line-height:1.5;">비밀번호 없이, 메일로 받은 링크만 누르면<br/>바로 로그인돼요.</div>
+              <div class="muted xs" style="text-align:center;margin-top:4px;line-height:1.5;">계속하면 이용약관 및 개인정보<br/>수집·이용에 동의한 것으로 간주돼요.</div>
+            </div>
+          </div>
+        </div></div>
+        <div class="cap-d">이메일 링크 로그인은 비밀번호 없이 메일로 받은 링크를 한 번 누르면 바로 들어오는 방식이에요. 지금은 일부 사용자에게 먼저 보여줘요. 로고는 from.with 워드마크예요.</div>
+      </div>
+
+      <!-- 2 온보딩 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">2</span> 온보딩 (4슬라이드)</div>
+        <div class="cap-r">/login?onboard=1</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body between" style="padding:16px;">
+            <div class="row between mid"><div class="dots-prog"><i class="on"></i><i></i><i></i><i></i></div><span class="muted">건너뛰기</span></div>
+            <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;">
+              <div style="width:120px;height:120px;border-radius:50%;background:var(--primary-soft);display:grid;place-items:center;font-size:46px;">🤖</div>
+              <div class="t lg" style="font-size:18px;">AI 운동일기 자동 생성</div>
+              <div class="muted lh" style="font-size:11px;max-width:180px;">AI가 키워드를 일기로 바꿔줘요.<br/>글쓰기 부담 ZERO.</div>
+            </div>
+            <div class="btn block" style="height:44px;opacity:.6;">다음</div>
+          </div>
+        </div></div>
+        <div class="cap-d">4슬라이드: 🤖AI일기 · 📷인증습관 · 💵벌금누적 · 👯친구. 마지막은 "시작하기".</div>
+      </div>
+
+      <!-- 3 초대 수락 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">3</span> 초대 수락</div>
+        <div class="cap-r">/invite/[token]</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+          <div class="body">
+            <div style="margin-top:2px;"><div class="muted">초대장 도착</div><div class="t xl" style="margin-top:2px;">지은님이 같이<br/>운동하자고 해요</div></div>
+            <div class="sharecard" style="margin-top:6px;">
+              <div class="brand">FROM. WITH</div>
+              <div class="ttl">이번 주 운동 서약서</div>
+              <div class="ft">
+                <div class="muted">7일 · 주 5회</div>
+                <div class="row2"><div><div class="muted xs">실패 시 벌금</div><div class="t sm">3,000원</div></div><div style="text-align:right"><div class="muted xs">최대 인원</div><div class="t sm">4명</div></div></div>
+              </div>
+            </div>
+            <div class="muted" style="text-align:center;margin-top:auto;">탭에서 바로 참여 · 앱 설치 불필요</div>
+            <div class="btn block" style="height:44px;">참여하기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">미인증이면 "로그인하고 참여하기". 만료(72h)·정원초과 시 에러+"홈으로 가기".</div>
+      </div>
+
+      <!-- 4 홈 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">4</span> 홈 · 대시보드</div>
+        <div class="cap-r">/home</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="logo">from.with</span><div class="ic"><span class="ib">🔔<span class="nd"></span></span><span class="ib">👤</span></div></div>
+          <div class="body" style="gap:8px;">
+            <div><div class="muted">6월 23일 · 월요일</div><div class="t xl" style="margin-top:1px;">안녕, 민수 👋</div></div>
+            <div class="banner info">✉️ 초대받은 챌린지 · 운동 크루<span class="badge">1</span></div>
+            <div class="stat4">
+              <div class="c p"><b>2</b><span>진행 중</span></div>
+              <div class="c ok"><b>1</b><span>오늘 완료</span></div>
+              <div class="c w"><b>1</b><span>미인증</span></div>
+              <div class="c d"><b>3천</b><span>내 벌금</span></div>
+            </div>
+            <div class="row between" style="margin-top:2px;"><span class="t sm">진행 중 챌린지</span><span class="muted">2개</span></div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">⚡</span><div style="flex:1"><div class="t sm">이번 주 운동</div><div class="muted xs">👥 4 · <span style="color:var(--success)">✓ 오늘 완료</span> · 모인 벌금 12,000원</div></div><span class="chip pink">D-3</span></div></div>
+            <div class="card tight"><div class="li"><span class="ico-badge s">⚡</span><div style="flex:1"><div class="t sm">아침 러닝 모임</div><div class="muted xs">👥 3 · <span style="color:var(--warn)">○ 오늘 미인증</span></div></div><span class="chip g">D-5</span></div></div>
+            <div class="row between" style="margin-top:2px;"><span class="t sm">정산 대기</span><span class="muted">1개</span></div>
+            <div class="card tight"><div class="li"><span class="ico-badge s">🏆</span><div style="flex:1"><div class="t sm">지난주 운동 서약서</div><div class="muted xs"><span style="color:var(--text);font-weight:800">종료 · 정산하기</span> · 모인 벌금 9,000원</div></div><span class="chev">›</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+          <div class="fab"><span class="mini">🏠</span><span class="main">⚡</span><span class="mini">📷</span></div>
+        </div></div>
+        <div class="cap-d">통계 4열. 진행 중 아래 "정산 대기" 섹션 — 만기(phase=over) 챌린지를 🏆 + "종료 · 정산하기 · 모인 벌금"으로 띄워 영수증(recap)으로 유도(ADR-0027, 행 탭→/challenge/[id]/recap). 빈 상태면 Sparkles + "아직 진행 중인 챌린지가 없어요" + "챌린지 만들기".</div>
+      </div>
+
+      <!-- 5 알림 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">5</span> 알림 센터</div>
+        <div class="cap-r">/notifications</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="title" style="font-size:15px">알림</span><span class="act">모두 읽음</span></div>
+          <div class="body" style="gap:8px;">
+            <div class="tabs"><span class="tb on">전체</span><span class="tb">리마인더</span><span class="tb">친구 인증</span><span class="tb">벌금</span></div>
+            <div class="card tight"><div class="li"><div style="flex:1"><div class="t sm">⏰ 마감 24시간 전이에요</div><div class="muted xs lh">이번 주 운동 · 오늘 인증을 깜빡하지 마세요</div><div class="muted xs" style="margin-top:2px">방금</div></div><span style="width:7px;height:7px;border-radius:50%;background:var(--primary);align-self:flex-start;margin-top:3px"></span></div></div>
+            <div class="card tight" style="opacity:.62"><div><div class="t sm">👏 지은님이 응원했어요</div><div class="muted xs">내 인증글에 💪 · 1시간 전</div></div></div>
+            <div class="card tight" style="opacity:.62"><div><div class="t sm">💸 이번 주 벌금이 쌓였어요</div><div class="muted xs">3,000원 · 어제</div></div></div>
+          </div>
+        </div></div>
+        <div class="cap-d">IDB 기반. 빈 상태: Bell + "아직 알림이 없어요 / 친구 인증·마감 알림이 여기 모여요".</div>
+      </div>
+
+      <!-- 6 마이페이지 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">6</span> 마이페이지</div>
+        <div class="cap-r">/me</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="logo">from.with</span><div class="ic"><span class="ib">🔔</span><span class="ib">👤</span></div></div>
+          <div class="body" style="gap:9px;">
+            <div class="t xl">마이페이지</div>
+            <div class="card"><div class="li"><span class="ava soft s48">민</span><div style="flex:1"><div class="t md">민수</div><div class="muted xs">minsu@email.com</div></div></div><div class="chips"><span class="chip">5/14부터 함께</span><span class="chip g">챌린지 3회</span></div></div>
+            <div class="card tight"><div class="listrow" style="padding:2px 0"><span class="ico-badge s">🏆</span><div style="flex:1"><div class="t sm">내 챌린지 관리</div><div class="muted xs">운영 중 2 · 참여 중 1</div></div><span class="chev">›</span></div></div>
+            <div class="card tight">
+              <div class="li"><span style="font-size:12px">🔔</span><span class="t sm">알림 설정</span></div>
+              <div class="li" style="margin-top:2px"><div style="flex:1"><div class="t sm" style="font-size:10px">그룹 활동 알림</div></div><span class="toggle on"></span></div>
+              <div class="li"><div style="flex:1"><div class="t sm" style="font-size:10px">마감 임박 알림</div></div><span class="toggle on"></span></div>
+              <div class="li"><div style="flex:1"><div class="t sm" style="font-size:10px">응원 받음 알림</div></div><span class="toggle off"></span></div>
+            </div>
+            <div class="card none"><div class="listrow" style="padding:9px 11px"><span class="muted" style="font-size:11px;flex:1">💬 개발자에게 건의하기</span><span class="chev">›</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">하단에 약관·개인정보 링크 + 로그아웃(destructive 톤). 알림 새벽 2~7시 자동 차단.</div>
+      </div>
+
+      <!-- 7 내 챌린지 관리 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">7</span> 내 챌린지 관리</div>
+        <div class="cap-r">/me/challenges</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">챌린지 관리</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="t xl">챌린지 관리</div>
+            <div class="card tight"><div class="row between"><span class="muted">운영 가능 슬롯</span><span class="t sm">2 / 5</span></div><div class="slot"><i class="used"></i><i class="used"></i><i></i><i></i><i></i></div></div>
+            <div class="muted" style="margin-top:2px">운영 중 (2개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">이번 주 운동</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div><div class="row" style="gap:5px"><span class="ico-badge g" style="width:24px;height:24px;font-size:10px">🏳</span><span class="ico-badge g" style="width:24px;height:24px;font-size:10px;color:var(--danger)">🗑</span></div></div></div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">아침 러닝 모임</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div></div></div>
+            <div class="muted" style="margin-top:2px">참여 중 (1개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">요가 챌린지</div><span class="chip s" style="margin-top:3px;display:inline-block">서명 대기</span></div></div></div>
+            <div class="muted" style="margin-top:2px">종료된 챌린지 (1개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">지난달 만보 걷기</div><span class="chip ok" style="margin-top:3px;display:inline-block">종료</span></div></div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">액션: 운영=종료(🏳)·삭제(🗑), 참여=나가기. 종료 시 확인 다이얼로그. "종료된 챌린지" 섹션은 운영·참여 합본(status=closed) — 초록 "종료" 칩만, 액션 아이콘 없음(카드 탭→상세). 빈: "아직 챌린지가 없어요".</div>
+      </div>
+
+      <!-- 8 건의하기 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">8</span> 건의하기</div>
+        <div class="cap-r">/me/feedback</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">건의하기</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t lg">개발자에게 건의하기</div><div class="muted lh" style="margin-top:3px">버그 제보나 아이디어를 보내주세요.<br/>개발팀이 바로 확인해요.</div></div>
+            <div class="seg"><span class="o on">🐛 버그 제보</span><span class="o">✨ 기능 제안</span><span class="o">💬 기타</span></div>
+            <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">ℹ️ 무엇이, 언제·어디서 일어났는지 적어주시면 빨리 고칠 수 있어요.</div></div>
+            <div class="lbl">내용</div>
+            <div class="ta" style="min-height:84px;">예) 인증 사진을 여러 장 올리고 싶어요...</div>
+            <div class="row between"><span class="lbl">사진 · 선택 · 최대 3장</span><span class="muted xs">0 / 1000</span></div>
+            <div class="btn block" style="height:44px;">보내기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">제출 후 도장 애니메이션 + "전달됐어요". 글자수 900↑ 주황·980↑ 빨강.</div>
+      </div>
+
+      <!-- 9 약관 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">9</span> 약관 · 개인정보</div>
+        <div class="cap-r">/legal/terms · /privacy</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이용약관</span><span style="width:18px"></span></div>
+          <div class="body center">
+            <div style="font-size:34px;">📄</div>
+            <div class="t md">준비 중입니다</div>
+            <div class="muted lh" style="font-size:10px;max-width:160px;">정식 출시 전 약관·개인정보처리방침을<br/>게시할 예정이에요</div>
+          </div>
+        </div></div>
+        <div class="cap-d">현재 placeholder. terms·privacy 동일 틀. (FileText·Shield 아이콘으로 마이페이지에서 진입)</div>
+      </div>
+
+      <!-- 10 생성 1 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">10</span> 생성 ① 약속·규칙</div>
+        <div class="cap-r">/challenge/new · step 1/2</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">‹</span><span class="title">새 챌린지</span><span class="step">1/2</span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t lg">어떤 약속을<br/>만들어 볼까요?</div><div class="muted">운동이 아닌 다른 습관도 OK</div></div>
+            <div><div class="lbl">챌린지 이름</div><div class="input" style="margin-top:4px">이번 주 운동 서약서</div></div>
+            <div><div class="lbl">인증 빈도</div><div class="stepper" style="margin-top:4px"><span class="pm">−</span><span class="val"><b>매일</b><span>한 주에 7번 인증</span></span><span class="pm">+</span></div></div>
+            <div><div class="lbl">진행 기간</div><div class="seg" style="margin-top:4px"><span class="o on">7일</span><span class="o">14일</span><span class="o">30일</span><span class="o" style="flex:0 0 34px">📅</span></div></div>
+            <div><div class="lbl">주 목표 미달 시 벌금</div><div class="seg" style="margin-top:4px"><span class="o">없음</span><span class="o on">3천원</span><span class="o">5천원</span><span class="o">만원</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">기본값: 빈도 "매일", 기간 7일, 벌금 3천원. 하단 고정 버튼 "다음: 서약서 쓰기".</div>
+      </div>
+
+      <!-- 11 생성 2 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">11</span> 생성 ② 서약서·서명</div>
+        <div class="cap-r">/challenge/new · step 2/2</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">‹</span><span class="title">새 챌린지</span><span class="step">2/2</span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t lg">서약서를 확인해주세요</div><div class="muted">친구들에게 보여줄 약속이에요</div></div>
+            <div class="sharecard" style="background:linear-gradient(135deg,#8AA4FF,#7E97F5);gap:7px;">
+              <div class="row between"><span class="brand">PLEDGE · 운영자 작성</span></div>
+              <div class="ttl">이번 주 운동 서약서</div>
+              <div class="muted lh" style="color:rgba(255,255,255,.95);font-size:9px">나는 함께한 친구들과의 약속을 가볍게 여기지 않을게요. 매일 운동을 인증하고, 못한 날은 약속한 벌금을 부담할게요...</div>
+              <div style="border-top:1px solid rgba(255,255,255,.25);padding-top:6px;font-size:9px;color:rgba(255,255,255,.95)">기간 7일 · 매일 1회 · 3천원</div>
+            </div>
+            <div class="row between"><span class="lbl">전자 서명</span><span class="muted">지우기</span></div>
+            <div class="canvas"><svg viewBox="0 0 200 54" preserveAspectRatio="none"><path d="M18 40 q12 -24 26 -2 t26 -6 q14 20 26 -8 t28 12" fill="none" stroke="#22262E" stroke-width="2" stroke-linecap="round"/></svg><span class="hint">손가락 또는 펜으로 서명해주세요</span></div>
+            <div class="btn block" style="height:44px;">서명하고 챌린지 만들기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">집중 모드(헤더 없는 flow). PledgePreviewCard는 primary bg + 워드마크 스탬프.</div>
+      </div>
+
+      <!-- 12 생성 완료 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">12</span> 생성 완료 · 공유</div>
+        <div class="cap-r">/challenge/new/done/[id]</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body center">
+            <div style="width:72px;height:72px;border-radius:50%;background:var(--secondary-soft);display:grid;place-items:center;font-size:34px;">🎉</div>
+            <div class="t lg">챌린지가 생성되었어요!</div>
+            <div class="muted lh" style="font-size:11px">링크를 친구들에게 공유하면<br/>서명한 멤버로 시작할 수 있어요</div>
+            <div class="card muted tight" style="width:100%;flex-direction:row;align-items:center;gap:7px;"><span style="flex:1;font-family:ui-monospace,monospace;font-size:9px;color:var(--sub);overflow:hidden">from.with/invite/x9k2</span><span class="muted" style="color:var(--primary-deep)">copy</span></div>
+            <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:2px;">
+              <div class="btn kakao block" style="height:42px;border-radius:999px;">카카오톡으로 공유</div>
+              <div class="muted" style="text-align:center;">홈으로</div>
+            </div>
+          </div>
+        </div></div>
+        <div class="cap-d">복사 시 "복사됨"(1.5s). Web Share 지원 시 navigator.share, 미지원 시 클립보드.</div>
+      </div>
+
+      <!-- 13 상세 피드 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">13</span> 상세 · 인증 피드</div>
+        <div class="cap-r">/challenge/[id]</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:8px;">
+            <div class="statuscard">
+              <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-3</span></div>
+              <div class="ttl">이번 주 운동</div>
+              <div class="sub">매일 1회 · 7일 · 3천원</div>
+              <div class="sub" style="margin-top:3px;opacity:.85">3/4명 서명 · 7명이 함께해요</div>
+            </div>
+            <div class="tabs"><span class="tb on">인증 피드</span><span class="tb">현황판</span><span class="tb">정보</span></div>
+            <div class="card warm tight"><div class="row between"><div><div class="t sm" style="font-size:10px">오늘 3 / 4명 인증</div><div class="muted xs">현우 남음</div></div><span class="chip s">오늘</span></div></div>
+            <div class="t sm" style="margin-top:1px">최근 인증</div>
+            <div class="card tight">
+              <div class="li" style="font-size:10px"><span class="ava k s20">지</span><span class="t" style="font-size:10px">지은</span><span class="muted xs" style="margin-left:auto">3분 전</span><span class="chip" style="font-size:8px;padding:2px 6px">DAY 4</span></div>
+              <div class="pic run r169" style="height:62px">🏃</div>
+              <div class="chips"><span class="chip g" style="font-size:8px">#상쾌함</span><span class="chip g" style="font-size:8px">#러닝</span></div>
+              <div class="muted lh" style="color:var(--text);font-size:9.5px">아침 공기가 좋아서 한강까지 달렸다. 상쾌하고 뿌듯한 하루.</div>
+              <div class="kudos"><b class="on">💪 3</b><b>🔥 1</b><b>💯 0</b></div>
+            </div>
+          </div>
+          <div class="scrollfade"></div>
+          <div class="fab"><span class="mini">🏠</span><span class="main">⚡</span><span class="mini">📷</span></div>
+        </div></div>
+        <div class="cap-d">StatusCard(primary)+3탭. 반려된 인증은 사진 흑백+"반려" 스탬프. 빈: "아직 인증이 없어요".</div>
+      </div>
+
+      <!-- 14 인증 작성 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">14</span> 인증 작성 · AI 일기</div>
+        <div class="cap-r">/challenge/[id]/action</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">AI 일기</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="muted" style="margin-top:-2px">이번 주 운동</div>
+            <div class="pic gym r169" style="height:88px;">🏋️</div>
+            <div class="lbl">활동 종류</div>
+            <div class="chips"><span class="chip sel">🏋️ 헬스</span><span class="chip g">🏃 러닝</span><span class="chip g">🧘 요가</span><span class="chip g">🍽 식사</span><span class="chip g">기타</span></div>
+            <div class="row between"><span class="lbl">오늘의 일기 키워드 (2/3)</span><span class="muted">↻ 재생성</span></div>
+            <div class="chips"><span class="chip sel">상쾌함</span><span class="chip sel">근력</span><span class="chip g">뿌듯</span><span class="chip g">근육통</span><span class="chip g">열정</span></div>
+            <div class="card muted tight"><div class="li"><span class="ava p s20">🤖</span><span class="muted lh" style="font-size:9px">AI가 사진과 키워드를 보고 짧은 일기를 만들어요</span></div></div>
+            <div class="btn block" style="height:44px;">등록하기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">FAB 숨김. "✏️ 직접 쓰고 싶어요" 토글로 메모 직접 작성도 가능. 키워드 max 3.</div>
+      </div>
+
+      <!-- 15 현황판 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">15</span> 현황판</div>
+        <div class="cap-r">/challenge/[id]/dashboard</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="tabs"><span class="tb">인증 피드</span><span class="tb on">현황판</span><span class="tb">정보</span></div>
+            <div class="card soft" style="align-items:center;text-align:center;padding:13px"><div class="muted" style="color:var(--primary-deep);opacity:.85">모인 벌금</div><div class="t" style="font-size:26px;color:var(--primary-deep)">12,000<span style="font-size:12px">원</span></div></div>
+            <div class="t sm">주차 기록</div>
+            <div class="wchips"><i class="ach">1주 5/5</i><i class="ach">2주 5/5</i><i class="cur">3주 3/5</i><i class="fut">4주 0/5</i></div>
+            <div class="card tight" style="flex-direction:row;align-items:center;gap:10px"><div class="donut" style="background:conic-gradient(#8AA4FF 0 60%,#EFF1F6 60% 100%)"><div class="hole"><b>3/5</b></div></div><div style="flex:1"><div class="muted">이번 주 진척</div><div class="t" style="font-size:10px;margin-top:2px">2번 더 채우면 추가 벌금 0원</div><div class="muted xs" style="color:var(--warn);margin-top:2px">+6,000원 위험</div></div></div>
+          </div>
+        </div></div>
+        <div class="cap-d">WeekRing은 SVG 게이지. 하단에 멤버별 진행바 스트립(이름·n/n회).</div>
+      </div>
+
+      <!-- 16 정보 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">16</span> 정보 · 멤버</div>
+        <div class="cap-r">/challenge/[id]/info</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="tabs"><span class="tb">인증 피드</span><span class="tb">현황판</span><span class="tb on">정보</span></div>
+            <div class="sharecard" style="padding:10px;gap:5px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl" style="font-size:12px">이번 주 운동</div></div>
+            <div class="card tight">
+              <div class="t sm">정보</div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">기간</span><span class="t sm">7일</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">인증 빈도</span><span class="t sm">매일 1회</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">벌금</span><span class="t sm">3천원</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">참여 인원</span><span class="t sm">4명</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">모인 벌금</span><span class="t sm">12,000원</span></div>
+            </div>
+            <div class="btn ghost sm block">＋ 친구 초대 (운영자)</div>
+          </div>
+        </div></div>
+        <div class="cap-d">PledgePreviewCard + InfoRow 목록. 운영자만 초대 버튼, 우하단 정산 계좌 트리거.</div>
+      </div>
+
+      <!-- 17 서약서 서명 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">17</span> 서약서 서명</div>
+        <div class="cap-r">/challenge/[id]/pledge</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body">
+            <div class="banner invsoft" style="text-align:center;flex-direction:column;gap:1px"><span>🎉 운동 크루에 합류했어요</span><span class="muted xs" style="color:var(--sub)">첫 챌린지에 서명해 보세요</span></div>
+            <div class="t lg" style="margin-top:2px">서약서</div>
+            <div class="sharecard" style="background:linear-gradient(135deg,#8AA4FF,#7E97F5);gap:6px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl">이번 주 운동</div><div class="muted lh" style="color:rgba(255,255,255,.95);font-size:9px">나는 함께한 친구들과의 약속을 가볍게 여기지 않을게요. 매일 운동을 인증하고...</div></div>
+            <div class="row between"><span class="lbl">전자 서명</span><span class="muted">지우기</span></div>
+            <div class="canvas"><svg viewBox="0 0 200 54" preserveAspectRatio="none"><path d="M16 38 q14 -26 28 -2 t26 -4 q12 18 24 -10 t30 14" fill="none" stroke="#22262E" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <label class="li" style="font-size:9px;color:var(--sub);align-items:flex-start"><span style="width:13px;height:13px;border:1.5px solid var(--primary);border-radius:4px;flex:none;margin-top:1px"></span><span class="lh">나 민수는 위 조건에 동의합니다. 어긴 경우 약속대로 입금할게요.</span></label>
+            <div class="btn block" style="height:44px;margin-top:auto">서명하고 참여</div>
+          </div>
+        </div></div>
+        <div class="cap-d">초대 수락 후 자동 진입(welcome 배너). 동의 체크박스 + 서명 둘 다 필요.</div>
+      </div>
+
+      <!-- 18 정산 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">18</span> 정산 영수증</div>
+        <div class="cap-r">/challenge/[id]/recap</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">정산</span><span class="ic"><span class="ib">↗</span></span></div>
+          <div class="body" style="gap:0;padding:12px 12px 0;">
+            <div class="recpaper">
+              <div class="rhead"><div class="logo-w">from.with</div><div class="rcap">🧾 정산 영수증 · 운동 크루</div><div class="rcap">이번 주 운동 · 7일</div></div>
+              <div class="dash"></div>
+              <dl>
+                <div class="dlrow"><span>목표</span><b>매일 1회</b></div>
+                <div class="dlrow"><span>주차 달성</span><b>1주 중 1주</b></div>
+                <div class="dlrow"><span>나의 인증</span><b>4회</b></div>
+                <div class="dlrow"><span>판정</span><b>달성 🎉</b></div>
+              </dl>
+              <div class="dash"></div>
+              <div class="mine"><div class="k">나의 정산</div><div class="v">0원</div></div>
+              <div class="dash"></div>
+              <div class="crew"><div class="k" style="font-size:7.5px;letter-spacing:.12em;color:var(--invite-accent)">CREW</div><div style="margin-top:2px">👑 지은 · 민수 · 현우 · 수아</div></div>
+              <div class="dash"></div>
+              <div style="display:flex;justify-content:center"><span class="stamp">FROM<br/>WITH</span></div>
+            </div>
+            <div class="galg" style="margin:8px -12px 0"><div class="pic run">🏃</div><div class="pic gym">🏋️</div><div class="pic yoga">🧘</div><div class="pic bike">🚴</div><div class="pic walk">🚶</div><div class="pic swim">🏊</div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">종이톤 영수증(invite-bg·monospace·대시 구분선). 미달 시 "미달 😅"+금액 terra색. 하단 공유 버튼.</div>
+      </div>
+
+      <!-- 19 그룹 상세 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n">19</span> 그룹 상세</div>
+        <div class="cap-r">/group/[id]</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">운동 크루</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="banner invsoft" style="text-align:center;flex-direction:column;gap:1px"><span>🎉 운동 크루에 합류했어요</span><span class="muted xs" style="color:var(--sub)">여기서 챌린지를 함께 시작해 보세요</span></div>
+            <div><div class="t xl">운동 크루</div><div class="chips" style="margin-top:4px"><span class="chip">운영자</span><span class="chip g">멤버 4명</span></div></div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+            <div class="muted">멤버 (4명)</div>
+            <div class="card none"><div class="listrow" style="padding:8px 11px"><span class="ava soft s24">민</span><span class="t sm" style="flex:1">민수</span><span class="chip">운영자</span></div><div class="listrow" style="padding:8px 11px;border-top:1px solid var(--border-soft)"><span class="ava soft s24">지</span><span class="t sm" style="flex:1">지은</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">운영자에게 이름 변경(✏️)·삭제(🗑) + "새 챌린지" 버튼. 하단 챌린지 리스트.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== VARIANTS ===================== -->
+  <section id="variants">
+    <h2><span class="idx">D</span> 상태 · 역할 분기 (variants)</h2>
+    <p class="desc">C 섹션의 기본(happy-path) 화면이 <b>비거나 실패</b>했을 때, 그리고 같은 화면이 <b>운영자 / 일반 멤버</b>에 따라 어떻게 갈라지는지 모은 변형 모음입니다. 카피와 분기 변수는 실제 컴포넌트 코드에서 추출했습니다(예: <code class="route">preview.expired</code> · <code class="route">viewerAchieved</code> · <code class="route">isOwner</code>). 카드 좌상단 번호는 C 섹션의 원본 화면 번호이며, 색은 <span style="color:var(--danger);font-weight:800">빨강=빈·에러</span> · <span style="color:#5a47a0;font-weight:800">보라=역할 분기</span>입니다.</p>
+
+    <div style="font-size:16px;font-weight:800;letter-spacing:-.01em;margin:24px 0 2px;">D-1 · 빈 · 에러 상태</div>
+    <p class="desc" style="margin:0 0 14px">초대 링크 만료(72h)·정원 초과(최대 4명), 정산 미달, 인증 피드 0건. 막다른 길에서도 다음 행동을 찾도록 항상 CTA를 둡니다.</p>
+
+    <div class="gallery">
+
+      <!-- V1 초대 만료 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--danger)">3</span> 초대 만료</div>
+        <div class="cap-r">/invite/[token] · expired</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+          <div class="body center">
+            <div style="width:72px;height:72px;border-radius:50%;background:#FFE9EC;display:grid;place-items:center;font-size:32px;">⏳</div>
+            <div class="t md">만료된 초대</div>
+            <div class="muted lh" style="font-size:10px;max-width:188px;">이 초대 링크는 72시간이 지나 만료됐어요. 그룹장에게 새 링크를 요청해 주세요.</div>
+            <div class="btn ghost block" style="height:42px;margin-top:6px;">홈으로 가기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">조건 <code class="route">preview.expired</code>. 무효 토큰(not_found)은 "만료되었거나 유효하지 않은 초대 링크예요."</div>
+      </div>
+
+      <!-- V2 초대 정원 초과 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--danger)">3</span> 초대 정원 초과</div>
+        <div class="cap-r">/invite/[token] · full</div>
+        <div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+          <div class="body center">
+            <div style="width:72px;height:72px;border-radius:50%;background:#FFE9EC;display:grid;place-items:center;font-size:30px;">👥</div>
+            <div class="t md">그룹이 가득 찼어요</div>
+            <div class="avas" style="justify-content:center;margin-top:-2px"><span class="ava p s24">민</span><span class="ava k s24 stack">지</span><span class="ava s s24 stack">현</span><span class="ava y s24 stack">수</span></div>
+            <div class="muted lh" style="font-size:10px;max-width:196px;">이 그룹은 이미 4명이 참여 중이에요 (최대 인원). 이미 멤버라면 from.with 홈에서 새 서약서를 확인하고 서명할 수 있어요.</div>
+            <div class="btn ghost block" style="height:42px;margin-top:6px;">홈으로 가기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">조건 <code class="route">preview.full</code>. forbidden 매핑은 "그룹 인원이 가득 찼어요 (최대 4명)."</div>
+      </div>
+
+      <!-- V3 정산 미달 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--danger)">18</span> 정산 미달</div>
+        <div class="cap-r">/challenge/[id]/recap · 미달</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">정산</span><span class="ic"><span class="ib">↗</span></span></div>
+          <div class="body" style="gap:0;padding:12px 12px 0;">
+            <div class="recpaper">
+              <div class="rhead"><div class="logo-w">from.with</div><div class="rcap">🧾 정산 영수증 · 운동 크루</div><div class="rcap">이번 주 운동 · 7일</div></div>
+              <div class="dash"></div>
+              <dl>
+                <div class="dlrow"><span>목표</span><b>매일 1회</b></div>
+                <div class="dlrow"><span>주차 달성</span><b>1주 중 0주</b></div>
+                <div class="dlrow"><span>나의 인증</span><b>2회</b></div>
+                <div class="dlrow"><span>판정</span><b>미달 😅</b></div>
+              </dl>
+              <div class="dash"></div>
+              <div class="mine"><div class="k">나의 정산</div><div class="v miss">9,000원</div></div>
+              <div class="dash"></div>
+              <div class="crew"><div class="k" style="font-size:7.5px;letter-spacing:.12em;color:var(--invite-accent)">CREW</div><div style="margin-top:2px">👑 지은 · 민수 · 현우 · 수아</div></div>
+              <div class="dash"></div>
+              <div style="text-align:center;font-size:9px;color:var(--invite-accent)">오늘도 인증, 수고했어요 😜</div>
+            </div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">조건 <code class="route">viewerAchieved=false</code>. 금액 terra색(<code class="route">.v.miss</code>), footer "오늘도 인증, 수고했어요 😜"(달성 시 "끝까지 해냈어요 👏").</div>
+      </div>
+
+      <!-- V4 빈 인증 피드 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--danger)">13</span> 빈 인증 피드</div>
+        <div class="cap-r">/challenge/[id] · empty</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:8px;">
+            <div class="statuscard">
+              <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-7</span></div>
+              <div class="ttl">이번 주 운동</div>
+              <div class="sub">매일 1회 · 7일 · 3천원</div>
+              <div class="sub" style="margin-top:3px;opacity:.85">3/4명 서명 · 방금 시작</div>
+            </div>
+            <div class="tabs"><span class="tb on">인증 피드</span><span class="tb">현황판</span><span class="tb">정보</span></div>
+            <div class="card warm tight"><div class="row between"><div class="t sm" style="font-size:10px">오늘 0 / 4명 인증</div><span class="chip s">오늘</span></div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:10px 8px;">
+              <div style="width:58px;height:58px;border-radius:50%;background:var(--wf-soft);display:grid;place-items:center;font-size:25px;">📷</div>
+              <div class="t sm">아직 인증이 없어요</div>
+              <div class="muted lh" style="font-size:9.5px;max-width:150px">첫 번째 인증을 올려보세요</div>
+            </div>
+          </div>
+          <div class="scrollfade"></div>
+          <div class="fab"><span class="mini">🏠</span><span class="main">⚡</span><span class="mini">📷</span></div>
+        </div></div>
+        <div class="cap-d">조건 <code class="route">optimisticItems.length === 0</code>. 카피 "아직 인증이 없어요. 첫 번째 인증을 올려보세요." FAB로 첫 인증 유도.</div>
+      </div>
+
+    </div>
+
+    <div style="font-size:16px;font-weight:800;letter-spacing:-.01em;margin:34px 0 2px;">D-2 · 운영자 vs 일반 멤버</div>
+    <p class="desc" style="margin:0 0 14px">정보 탭 · 그룹 상세 · 관리 메뉴는 <code class="route">isOwner</code>로 갈립니다. 운영자에게만 초대 · 종료 · 삭제 · 이름변경이 노출되고, 일반 멤버는 같은 화면을 읽기 전용으로 봅니다. 좌=운영자 / 우=멤버 순서로 짝지었습니다.</p>
+
+    <div class="gallery">
+
+      <!-- V5 정보 탭 · 운영자 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">16</span> 정보 탭 · 운영자</div>
+        <div class="cap-r">/challenge/[id]/info · isOwner</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="tabs"><span class="tb">인증 피드</span><span class="tb">현황판</span><span class="tb on">정보</span></div>
+            <div class="sharecard" style="padding:10px;gap:5px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl" style="font-size:12px">이번 주 운동</div></div>
+            <div class="card tight">
+              <div class="t sm">정보</div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">기간</span><span class="t sm">7일</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">벌금</span><span class="t sm">3천원</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">모인 벌금</span><span class="t sm">12,000원</span></div>
+            </div>
+            <div class="row between mid"><span class="lbl">멤버 관리</span><span class="chip">운영자 전용</span></div>
+            <div class="btn ghost sm block">＋ 친구 초대 링크 공유</div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">운영자 전용 "친구 초대 링크 공유"(pending "링크 만드는 중...") + 정산 계좌 편집(›). <code class="route">isOwner=true</code>.</div>
+      </div>
+
+      <!-- V6 정보 탭 · 멤버 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">16</span> 정보 탭 · 일반 멤버</div>
+        <div class="cap-r">/challenge/[id]/info · member</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="tabs"><span class="tb">인증 피드</span><span class="tb">현황판</span><span class="tb on">정보</span></div>
+            <div class="sharecard" style="padding:10px;gap:5px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl" style="font-size:12px">이번 주 운동</div></div>
+            <div class="card tight">
+              <div class="t sm">정보</div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">기간</span><span class="t sm">7일</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">벌금</span><span class="t sm">3천원</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">모인 벌금</span><span class="t sm">12,000원</span></div>
+            </div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+            <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">🔒 친구 초대는 운영자만 할 수 있어요. (초대 버튼 숨김)</div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">멤버 뷰: 초대 버튼 숨김(서버는 "그룹장만 초대 링크를 만들 수 있어요."). 정보·계좌 열람은 동일.</div>
+      </div>
+
+      <!-- V7 그룹 상세 · 운영자 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">19</span> 그룹 상세 · 운영자</div>
+        <div class="cap-r">/group/[id] · isOwner</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">운동 크루</span><span class="ic"><span class="ib">✏️</span><span class="ib">🗑</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t xl">운동 크루</div><div class="chips" style="margin-top:4px"><span class="chip">운영자</span><span class="chip g">멤버 4명</span></div></div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+            <div class="muted">멤버 (4명)</div>
+            <div class="card none"><div class="listrow" style="padding:8px 11px"><span class="ava soft s24">민</span><span class="t sm" style="flex:1">민수</span><span class="chip">운영자</span></div><div class="listrow" style="padding:8px 11px;border-top:1px solid var(--border-soft)"><span class="ava soft s24">지</span><span class="t sm" style="flex:1">지은</span></div></div>
+            <div class="btn ghost sm block">＋ 이 그룹에서 새 챌린지</div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">운영자: 헤더 이름변경(✏️)·삭제(🗑) + "새 챌린지". 삭제 불가 시 "친구와 함께한 그룹은 삭제할 수 없어요" 등. <code class="route">isOwner=true</code>.</div>
+      </div>
+
+      <!-- V8 그룹 상세 · 멤버 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">19</span> 그룹 상세 · 일반 멤버</div>
+        <div class="cap-r">/group/[id] · member</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">운동 크루</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t xl">운동 크루</div><div class="chips" style="margin-top:4px"><span class="chip g">멤버</span><span class="chip g">멤버 4명</span></div></div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+            <div class="muted">멤버 (4명)</div>
+            <div class="card none"><div class="listrow" style="padding:8px 11px"><span class="ava soft s24">민</span><span class="t sm" style="flex:1">민수</span><span class="chip">운영자</span></div><div class="listrow" style="padding:8px 11px;border-top:1px solid var(--border-soft)"><span class="ava soft s24">지</span><span class="t sm" style="flex:1">지은</span></div></div>
+            <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">🔒 이름 변경·삭제·새 챌린지 시작은 운영자만 할 수 있어요.</div></div>
+          </div>
+          <div class="scrollfade"></div>
+        </div></div>
+        <div class="cap-d">멤버 뷰: 헤더 편집(✏️)·삭제(🗑)·"새 챌린지" 버튼 모두 숨김. 멤버·계좌 열람만 가능.</div>
+      </div>
+
+      <!-- V9 관리 메뉴 · 운영자 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">13</span> 관리 메뉴 · 운영자</div>
+        <div class="cap-r">/challenge/[id] · ⋯ 메뉴</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:8px;">
+            <div class="statuscard">
+              <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-3</span></div>
+              <div class="ttl">이번 주 운동</div>
+              <div class="sub">매일 1회 · 7일 · 3천원</div>
+            </div>
+            <div class="tabs"><span class="tb on">인증 피드</span><span class="tb">현황판</span><span class="tb">정보</span></div>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(15,19,32,.42);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:12px 14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -8px 24px -10px rgba(0,0,0,.3);">
+            <div style="width:34px;height:4px;border-radius:99px;background:var(--wf);margin:0 auto 2px;"></div>
+            <div class="muted" style="text-align:center;font-weight:700">챌린지 관리</div>
+            <div class="btn ghost block" style="height:40px;justify-content:flex-start;padding:0 14px;">🏳 챌린지 종료</div>
+            <div class="btn danger block" style="height:40px;justify-content:flex-start;padding:0 14px;">🗑 챌린지 삭제</div>
+            <div class="btn ghost block" style="height:38px;">닫기</div>
+          </div>
+        </div></div>
+        <div class="cap-d">운영자만 ⋯ 노출. "챌린지 종료"→"종료하시겠어요?", "챌린지 삭제"→"삭제된 챌린지는 복구할 수 없어요…". <code class="route">isOwner·canEnd·canDelete</code>.</div>
+      </div>
+
+      <!-- V10 나가기 · 멤버 -->
+      <div class="phone-cap">
+        <div class="cap-h"><span class="n" style="background:var(--accent)">7</span> 나가기 · 일반 멤버</div>
+        <div class="cap-r">/me/challenges · 나가기</div>
+        <div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back">←</span><span class="title">챌린지 관리</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="muted">참여 중 (1개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">이번 주 운동</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div><span class="btn ghost sm" style="height:24px">나가기</span></div></div>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(15,19,32,.42);display:grid;place-items:center;padding:20px;">
+            <div style="background:#fff;border-radius:16px;padding:16px;width:100%;display:flex;flex-direction:column;gap:8px;text-align:center;box-shadow:0 16px 40px -12px rgba(0,0,0,.4);">
+              <div class="t md">챌린지에서 나가시겠어요?</div>
+              <div class="muted lh" style="font-size:10px">내 인증 기록도 함께 삭제됩니다.</div>
+              <div class="row" style="gap:7px;margin-top:4px"><span class="btn ghost block" style="height:38px">취소</span><span class="btn danger block" style="height:38px">나가기</span></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="cap-d">멤버는 챌린지 상세에 ⋯ 없음 → "내 챌린지 관리"에서 나가기. 확인 "챌린지에서 나가시겠어요? / 내 인증 기록도 함께 삭제됩니다."</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== FIGJAM ===================== -->
+  <section id="figjam">
+    <h2><span class="idx">E</span> Figma / FigJam으로 가져가기</h2>
+    <p class="desc">이 자료는 Figma에 자동 생성되지 않습니다(연결된 MCP 없음). 아래 세 경로로 옮기세요.</p>
+    <div class="steps">
+      <div class="step"><b>① 전이 플로우 → FigJam</b><p>FigJam의 <i>Mermaid</i> 플러그인(또는 "Mermaid to FigJam")을 열고 아래 소스를 붙여넣으면 다이어그램이 노드로 생성됩니다.</p></div>
+      <div class="step"><b>② 와이어프레임 → 레퍼런스</b><p>이 HTML을 브라우저로 열어 각 화면을 캡처하거나, 그대로 공유해 Figma 프레임 설계의 IA 레퍼런스로 사용합니다.</p></div>
+      <div class="step"><b>③ 인벤토리 → 페이지 구조</b><p>B 섹션 표의 라우트·게이트를 Figma 페이지/프레임 네이밍 규칙으로 그대로 차용하면 개발과 1:1 매칭됩니다.</p></div>
+    </div>
+    <p class="meta" style="margin:18px 0 6px;">FigJam에 붙여넣을 Mermaid 소스 ▾</p>
+    <pre>flowchart TD
+  start([앱 실행]) --> authq{로그인 상태?}
+  invite([초대 링크]) --> acc[초대 수락]
+  authq -->|미인증| login[로그인]
+  authq -->|인증됨| home[홈]
+  acc -->|로그인하고 참여하기| login
+  login -->|카카오 · 이메일 링크| cb{온보딩 완료?}
+  cb -->|미완료| onb[온보딩]
+  cb -->|완료·초대있음| pledge[서약서 서명]
+  cb -->|완료| home
+  onb --> home
+  home -->|만들기| n1[생성 ① 약속·규칙]
+  n1 -->|다음: 서약서 쓰기| n2[생성 ② 서약서·서명]
+  n2 -->|서명하고 챌린지 만들기| done[생성 완료·공유]
+  done --> home
+  home -->|챌린지 카드| detail[상세·인증 피드]
+  home -->|초대 배너| pledge
+  home -->|정산 대기| recap[정산 영수증]
+  pledge --> detail
+  detail <--> dash[현황판]
+  detail <--> info[정보·멤버]
+  detail -->|FAB 인증| act[인증 작성·AI 일기]
+  act -->|등록하기| detail
+  detail -->|종료 후| recap
+  home --> noti[알림]
+  home --> me[마이페이지]
+  me --> mych[내 챌린지]
+  me --> fb[건의하기]
+  me --> legal[약관·개인정보]
+  info --> grp[그룹 상세]
+  me -->|로그아웃| login</pre>
+  </section>
+
+  <footer>
+    from.with · 화면 플로우 자료 · 2026-06-23 생성 · 카피·레이아웃 근거: <code class="route">apps/web/src/app/**/_components/**</code> 실제 컴포넌트 코드 ·
+    mockup(실제 텍스트·기본값 반영, 최종 타이포·간격·일러스트는 디자인 영역)
+  </footer>
+</main>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    flowchart: { curve: 'basis', nodeSpacing: 36, rankSpacing: 44, useMaxWidth: true },
+    themeVariables: { fontFamily: 'Pretendard, sans-serif', primaryColor: '#E8EDFF', primaryBorderColor: '#8AA4FF', primaryTextColor: '#22262E', lineColor: '#AEB4C2', fontSize: '14px' },
+  });
+</script>
+</body>
+</html>
