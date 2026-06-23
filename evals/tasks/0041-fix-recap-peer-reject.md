@@ -2,7 +2,7 @@
 Task: EVAL-0041
 Track: greenfield
 Kind: regression
-Status: todo
+Status: in_progress
 Depends-on: [task:EVAL-0040] — EVAL-0040(정산 penalty RPC peer_rejected 제외)의 화면-read 대응물. RPC가 peer_rejected를 제외하므로 recap read의 penalty 집계도 일치시켜야 한다. 기계 읽는 토큰은 task:EVAL-0040 뿐.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
