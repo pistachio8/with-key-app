@@ -2,7 +2,7 @@
 Task: EVAL-0040
 Track: greenfield
 Kind: regression
-Status: in_progress
+Status: done
 Depends-on: [task:EVAL-0006] — EVAL-0006(정산 RPC + _settlement_confirmed_penalties 원본 구현)의 직접 후속. EVAL-0032·0039 계열(peer_rejected 제외)의 settlement 버전. 기계 읽는 토큰은 task:EVAL-0006 뿐.
 Parent: docs/eng-stories/2026-06-05-points-settlement.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
