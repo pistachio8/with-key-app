@@ -30,6 +30,7 @@ type ChallengeRow = {
   start_at: string | null;
   end_at: string | null;
   closed_at: string | null;
+  feed_type: "image" | "video";
 };
 
 type ParticipantRow = {
@@ -84,6 +85,7 @@ export function buildRecapView(input: {
     startAt: challenge.start_at,
     endAt: challenge.end_at,
     status: challenge.status,
+    feedType: challenge.feed_type,
     viewerId,
     viewerAchieved: achievedAllElapsedWeeks(viewerDoneByWeek, ctx, {
       goalCount: challenge.goal_count,
@@ -138,7 +140,7 @@ export async function fetchRecap(
   let cq = supabase
     .from("challenges")
     .select(
-      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
+      "id, title, goal_count, duration_days, penalty_amount, status, start_at, end_at, closed_at, feed_type, groups!inner(id, name, owner_id, bank_code, account_holder, account_number_last4)",
     )
     .or(`status.eq.closed,and(status.eq.active,end_at.lte.${nowIso})`);
   if (options.challengeId) cq = cq.eq("id", options.challengeId);
@@ -156,6 +158,7 @@ export async function fetchRecap(
     start_at: raw.start_at as string | null,
     end_at: raw.end_at as string | null,
     closed_at: raw.closed_at as string | null,
+    feed_type: (raw.feed_type as "image" | "video" | null) ?? "image",
   };
   const groupRow = Array.isArray(raw.groups) ? raw.groups[0] : raw.groups;
   const group: RecapGroupView | null = groupRow

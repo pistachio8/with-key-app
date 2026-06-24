@@ -86,6 +86,9 @@ export const createChallenge = withUser<CreateChallengeInput, never>(
       p_goal_count: challengeFields.goalCount,
       p_duration_days: challengeFields.durationDays,
       p_penalty_amount: challengeFields.penaltyAmount,
+      // 피드 타입(image/video) — 0051 create_challenge 가 default 'image' 로 수용(EVAL-0043).
+      // penaltyMission(벌칙 redemption) 전달은 EVAL-0044 범위라 본 task 에선 제외.
+      p_feed_type: challengeFields.feedType,
     });
     if (challengeErr) {
       if (challengeErr.code === "P0002") return failure("not_found");

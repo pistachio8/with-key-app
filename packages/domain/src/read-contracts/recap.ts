@@ -28,6 +28,8 @@ export type RecapView = {
   startAt: string | null;
   endAt: string | null;
   status: "active" | "closed";
+  // 인증 medium·결과물 분기(spec §C6 / EVAL-0043). image=기존 PhotoGallery, video=스토리 자동재생.
+  feedType: "image" | "video";
   viewerId: string;
   viewerAchieved: boolean;
   viewerDoneCount: number;
@@ -44,6 +46,16 @@ export type RecapView = {
 // recap 사진 그리드(web fetchChallengePhotos · RN recap read service).
 // signedUrl 은 viewer 토큰으로 생성한 pre-signed URL(스토리지 RLS ap_select_group_member).
 export type RecapPhotoView = {
+  id: string;
+  signedUrl: string;
+  takenAt: string;
+  ownerDisplayName: string;
+  ownerId: string;
+};
+
+// recap 영상 스토리(web fetchChallengeVideos / EVAL-0043 §C6-A). 시간순 클립 자동재생용.
+// signedUrl 은 action-videos 버킷 pre-signed URL(av_select_group_member). RecapPhotoView 와 동형.
+export type RecapVideoView = {
   id: string;
   signedUrl: string;
   takenAt: string;

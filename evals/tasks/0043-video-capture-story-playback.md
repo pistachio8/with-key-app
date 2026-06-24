@@ -2,8 +2,8 @@
 Task: EVAL-0043
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0042] — `challenges.feed_type` 컬럼·`challengeInputSchema` 확장이 먼저 존재해야 한다.
+Status: done
+Blocked-by: [task:EVAL-0042] — RESOLVED 2026-06-24 EVAL-0042 done(`challenges.feed_type` 컬럼이 `0051_feed_type_penalty_mission.sql` 에 존재 · `challengeInputSchema.feedType` default 'image' 도출 완료). flip 승인: 사용자(orchestrate D6).
 Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

@@ -17,6 +17,7 @@ export const RECAP_TABLES: Record<string, Array<Record<string, unknown>>> = {
       start_at: "2026-05-01T00:00:00Z",
       end_at: "2026-05-08T00:00:00Z",
       closed_at: "2026-05-08T00:00:00Z",
+      feed_type: "image",
       groups: {
         id: "g1",
         name: "운동 그룹",
@@ -55,6 +56,7 @@ export const RECAP_EXPECTED = {
   startAt: "2026-05-01T00:00:00Z",
   endAt: "2026-05-08T00:00:00Z",
   status: "closed",
+  feedType: "image",
   viewerId: "u-minji",
   viewerAchieved: true,
   viewerDoneCount: 3,

@@ -11,6 +11,7 @@ export const FEED_RESPONSE = [
     authorName: "제이",
     photoSignedUrl:
       "https://example.supabase.co/storage/v1/object/sign/action-photos/u2/c1/log-1-abc.jpg?token=x",
+    videoSignedUrl: null,
     summary: "러닝 30분 완료 — 아침 공기가 상쾌했다.",
     keywords: ["러닝", "아침"],
     kudosByEmoji: { "🔥": 2, "💪": 0, "👏": 1 },
@@ -25,6 +26,7 @@ export const FEED_RESPONSE = [
     authorId: "u1",
     authorName: "민지",
     photoSignedUrl: null,
+    videoSignedUrl: null,
     summary: "홈트 완료.",
     keywords: ["홈트"],
     kudosByEmoji: { "🔥": 0, "💪": 0, "👏": 0 },

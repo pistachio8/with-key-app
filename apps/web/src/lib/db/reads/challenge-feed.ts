@@ -6,6 +6,7 @@ import { getPeerRejectCountForLog } from "@/lib/db/reads/peer-rejection-counts";
 import { getViewerPeerRejectionForLog } from "@/lib/db/reads/peer-rejection-viewer";
 import { getActionLogHydrate } from "@/lib/db/reads/action-log-hydrate";
 import { getActionLogPhotoSignedUrl } from "@/lib/db/reads/photo-signed-url";
+import { getActionLogVideoSignedUrl } from "@/lib/db/reads/video-signed-url";
 import {
   listVisibleActionLogIds,
   readVisibleActionLogIds,
@@ -79,9 +80,14 @@ async function hydrateFeedItems(
       const hydrate = await getActionLogHydrate(id, viewerId);
       if (!hydrate) return null;
 
-      const [photoSignedUrl, counts, viewerKudos, peerRejectCount, viewerRejected] =
+      const [photoSignedUrl, videoSignedUrl, counts, viewerKudos, peerRejectCount, viewerRejected] =
         await Promise.all([
           getActionLogPhotoSignedUrl(hydrate.photoPath, viewerId),
+          // 영상 인증만 video signed URL(media_type='video'). 사진 인증은 null (상호배타).
+          getActionLogVideoSignedUrl(
+            hydrate.mediaType === "video" ? hydrate.videoPath : null,
+            viewerId,
+          ),
           getKudosCountsForLog(id),
           getViewerKudosForLog(id, viewerId),
           getPeerRejectCountForLog(id),
@@ -93,6 +99,7 @@ async function hydrateFeedItems(
         authorId: hydrate.authorId,
         authorName: hydrate.authorName,
         photoSignedUrl,
+        videoSignedUrl,
         summary: hydrate.summary,
         keywords: hydrate.keywords,
         kudosByEmoji: counts ?? emptyKudosByEmoji(),
