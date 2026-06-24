@@ -71,6 +71,19 @@ export const actionLogInputSchema = z
 
 export type ActionLogInput = z.infer<typeof actionLogInputSchema>;
 
+// 영상 인증 제출 입력(spec §C2). 영상은 **순수 실시간 캡처** — AI 일기·키워드·메모가 없다.
+// 그래서 사진 입력(actionLogInputSchema)과 분리한다: challengeId 만 필수이고, activityType 은
+// 영상 폼이 활동을 묻지 않으므로 'other' 로 기본값(action_logs.activity_type NOT NULL 충족).
+// strict() — 사진 모드 필드(selectedKeywords 등)가 섞이면 거절해 두 경로를 명확히 가른다.
+export const actionVideoLogInputSchema = z
+  .object({
+    challengeId: z.string().uuid(),
+    activityType: activityType.default("other"),
+  })
+  .strict();
+
+export type ActionVideoLogInput = z.infer<typeof actionVideoLogInputSchema>;
+
 // Photo validation intentionally lives in uploadPhoto (size + extFromFile) +
 // the Storage bucket policy (mime/size). A third Zod layer on FormData would
 // reject iOS Safari HEIC uploads with empty Content-Type headers, so we rely

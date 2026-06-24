@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionLogInputSchema,
+  actionVideoLogInputSchema,
   actionVideoMetaSchema,
   ALLOWED_VIDEO_MIME,
   MAX_VIDEO_BYTES,
@@ -73,6 +74,33 @@ describe("actionLogInputSchema", () => {
       actionLogInputSchema.safeParse({ ...base, selectedKeywords: [], memo: "가".repeat(151) })
         .success,
     ).toBe(false);
+  });
+});
+
+// 영상 인증 제출 입력(spec §C2) — 순수 캡처라 키워드/AI 일기 없음. challengeId 만 필수.
+describe("actionVideoLogInputSchema", () => {
+  const challengeId = "00000000-0000-4000-8000-000000000001";
+
+  it("accepts a minimal video submission with just a challengeId", () => {
+    const parsed = actionVideoLogInputSchema.safeParse({ challengeId });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("defaults activityType to 'other' when omitted (영상은 활동 선택 없음)", () => {
+    const parsed = actionVideoLogInputSchema.parse({ challengeId });
+    expect(parsed.activityType).toBe("other");
+  });
+
+  it("rejects an invalid challengeId", () => {
+    expect(actionVideoLogInputSchema.safeParse({ challengeId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("rejects photo-mode keyword fields (strict — 영상 경로 오염 방지)", () => {
+    const parsed = actionVideoLogInputSchema.safeParse({
+      challengeId,
+      selectedKeywords: ["펌핑"],
+    });
+    expect(parsed.success).toBe(false);
   });
 });
 

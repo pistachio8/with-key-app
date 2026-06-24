@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   },
   uploadPhoto: vi.fn(),
   deletePhoto: vi.fn(),
+  uploadVideo: vi.fn(),
+  deleteVideo: vi.fn(),
   track: vi.fn().mockResolvedValue(undefined),
   generateDiary: vi.fn(),
   userProfile: vi.fn(),
@@ -35,6 +37,11 @@ vi.mock("@/lib/ai/diary", () => ({
 vi.mock("@/lib/storage/action-photos", () => ({
   uploadPhoto: (...args: unknown[]) => mocks.uploadPhoto(...args),
   deletePhoto: (...args: unknown[]) => mocks.deletePhoto(...args),
+}));
+
+vi.mock("@/lib/storage/action-videos", () => ({
+  uploadVideo: (...args: unknown[]) => mocks.uploadVideo(...args),
+  deleteVideo: (...args: unknown[]) => mocks.deleteVideo(...args),
 }));
 
 // verify 모듈은 신호 기록·θ 판정 — sharp/EXIF 실연산 대신 호출 여부만 검증.
@@ -91,6 +98,18 @@ function makeFormData(file?: File): FormData {
 function makeDirectFormData(memo: string): FormData {
   const formData = makeFormData();
   formData.set("memo", memo);
+  return formData;
+}
+
+// 영상 인증(spec §C2): mediaType=video + 실시간 캡처 클립. 키워드/메모 없음.
+function makeVideoFormData(file?: File): FormData {
+  const formData = new FormData();
+  formData.append("challengeId", challengeId);
+  formData.append("mediaType", "video");
+  formData.append(
+    "video",
+    file ?? new File([new Uint8Array(2000)], "clip.mp4", { type: "video/mp4" }),
+  );
   return formData;
 }
 
@@ -334,6 +353,79 @@ describe("submitActionLogCore", () => {
         }),
         { userId: mocks.user.id },
       );
+    });
+  });
+
+  // 영상 인증(spec §C2 / EVAL-0043 Phase 2 캡처). 사진과 done-count·push 는 동일하게 공유하되
+  // AI 일기·키워드·photo upload 는 건너뛰고 media_type='video' + video_path 로 저장한다.
+  describe("video capture submission", () => {
+    const videoPath = `${mocks.user.id}/${challengeId}/${actionLogId}-abcd.mp4`;
+
+    beforeEach(() => {
+      mocks.uploadVideo.mockResolvedValue({ ok: true, path: videoPath });
+    });
+
+    it("skips AI/keywords and inserts media_type='video' with empty body fields", async () => {
+      const result = await submit(makeVideoFormData());
+
+      expect(mocks.generateDiary).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ ok: true, data: { id: actionLogId } });
+
+      const actionLogs = mocks.supabase.from("action_logs");
+      expect(actionLogs.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          media_type: "video",
+          activity_type: "other",
+          ai_summary: "",
+          prompt_version: "video",
+          selected_keywords: [],
+          shown_keywords: [],
+          photo_path: null,
+        }),
+      );
+    });
+
+    it("uploads the clip and stores video_path via the video RPC (not the photo RPC)", async () => {
+      await submit(makeVideoFormData());
+
+      expect(mocks.uploadVideo).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: mocks.user.id, challengeId, actionLogId }),
+      );
+      expect(mocks.uploadPhoto).not.toHaveBeenCalled();
+      expect(mocks.supabase.rpc).toHaveBeenCalledWith("update_action_log_video_path", {
+        p_log_id: actionLogId,
+        p_video_path: videoPath,
+      });
+    });
+
+    it("does not run AI photo verification (no judge/signals on a video clip)", async () => {
+      await submit(makeVideoFormData());
+      expect(mocks.recordVerifySignals).not.toHaveBeenCalled();
+      expect(mocks.judgeAndRecordVerifyStatus).not.toHaveBeenCalled();
+    });
+
+    it("computes done-count and sends the completion push like a photo submit", async () => {
+      const result = await submit(makeVideoFormData());
+      expect(result).toMatchObject({ ok: true, data: { verifiedDays: [1], goalReached: false } });
+      expect(mocks.dispatchActionCompletedNotification).toHaveBeenCalledWith(
+        challengeId,
+        { userId: mocks.user.id, displayName: "지우" },
+        { activityType: "other", isFirstOfDay: true },
+      );
+    });
+
+    it("keeps the submission and cleans up when the clip upload fails", async () => {
+      mocks.uploadVideo.mockResolvedValue({ ok: false, reason: "upload_failed" });
+      const result = await submit(makeVideoFormData());
+      expect(result).toMatchObject({ ok: true, data: { id: actionLogId } });
+      expect(mocks.supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it("deletes the uploaded clip if the video RPC fails", async () => {
+      mocks.supabase.rpc.mockResolvedValue({ error: { code: "42501", message: "blocked" } });
+      const result = await submit(makeVideoFormData());
+      expect(result).toMatchObject({ ok: true, data: { id: actionLogId } });
+      expect(mocks.deleteVideo).toHaveBeenCalledWith(mocks.user.id, videoPath, mocks.supabase);
     });
   });
 
