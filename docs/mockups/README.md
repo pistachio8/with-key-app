@@ -2,12 +2,35 @@
 
 with-key 디자인 검토용 정적 HTML 모킹업을 보관합니다. 실제 구현은 `src/`에서 진행하며, 본 문서는 시안·리뷰 기록입니다.
 
+> 이 폴더는 **시각 시안**(특정 화면을 어떻게 그릴지)입니다. 색·타이포·컴포넌트·보이스의 **재사용 가능한 디자인 기준**은 [`../DESIGN.md`](../DESIGN.md)(Design System)를 참조하세요. 시안은 그 기준의 적용 예시입니다.
+
 ## 현재 (latest)
 
 - [`2026-05-14-ui-revision.html`](./2026-05-14-ui-revision.html) — 첨부 PDF "ui 수정 사항" + 검토 피드백 3회차 반영
   - 디자인 가이드: 색상 7종 · 아이콘 스타일 (lucide + emoji) · 카드/버튼/도넛/진행바 컴포넌트 · 타입 스타일
   - 13개 섹션 모킹업 (진입·홈·챌린지 생성·외부 공유·초대·상세·인증 결과·종료/정산·관리·알림)
   - 인터랙션: 도장 찍히는 애니메이션 (IntersectionObserver, 1회 재생) · 17일째 슬라이드 카운터 · 로딩 dot wave
+
+## 화면 플로우 / IA (디자이너 공유용)
+
+IA(Information Architecture, 화면 구조·흐름)를 정리한 자료입니다. 위 시안과 달리 "어떤 화면이 어떻게 이어지는가"가 목적이라 별도로 둡니다.
+
+- [`2026-06-23-screen-flow.html`](./2026-06-23-screen-flow.html) — 실제 라우트(`apps/web/src/app/**`)·네비게이션 코드 스캔 기반
+  - 전체 화면 전이 다이어그램 (Mermaid, CDN 렌더)
+  - 화면 인벤토리 표 19종 (라우트·핵심 요소·진입/이탈·인증 게이트) + 폐기 redirect 6종
+  - 화면 와이어프레임 19종 (모바일 mockup — 실제 `_components` 코드의 카피·레이아웃·기본값 반영, 인벤토리 전체와 1:1, 최종 타이포·일러스트는 디자인 영역)
+  - 상태·역할 분기 variant 10종 (빈/에러: 초대 만료·정원 초과·정산 미달·빈 피드 / 운영자 vs 일반 멤버: 정보 탭·그룹 상세·관리 메뉴·나가기 — 분기 변수 `preview.expired`·`viewerAchieved`·`isOwner` 등 코드 추출)
+  - Figma/FigJam 가져오기 안내 + 붙여넣기용 Mermaid 소스
+
+## 기능별 와이어프레임 (feature 단위)
+
+특정 기능 spec 의 신규·변경 화면만 추린 시안입니다. 전체 화면 인벤토리(위 screen-flow)와 달리 "이 기능이 더하는 화면"에 집중합니다.
+
+- [`2026-06-24-feed-type-penalty-screens.html`](./2026-06-24-feed-type-penalty-screens.html) — 피드 타입(이미지/3초 영상) + 만회 찬스(Redemption) ([spec](../superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md) · WP `evals/tasks/0042~0046`)
+  - UI 명칭은 "만회 찬스"(처벌 어감 완화) — spec·코드 식별자는 `penalty_*`·`/penalty` 유지
+  - 신규/변경 화면 6종: 생성 폼(피드 타입·만회 찬스 입력) · 영상 실시간 캡처 인증 · 만회 찬스 녹화 제출(미달자) · 만회 찬스 판단(동료) · 영상 스토리 자동재생 · 홈 "만회 찬스" 섹션
+  - 상태·역할 분기 6종: 면제 성공/실패 · 제출 자격 없음 · 2배 빚 carry-over 정산 · 합본 몽타주(fast-follow) · 이미지 recap 회귀(무변화)
+  - 화면 ↔ 라우트 ↔ WP 매핑표 + 데이터 흐름 발췌. Phase 1(녹화 기반)만, 라이브 송출은 범위 밖
 
 ## 보는 법
 
@@ -21,11 +44,11 @@ open docs/mockups/2026-05-14-ui-revision.html
 
 이전 검토 회차 산출물 — 참고용.
 
-| 파일 | 단계 | 비고 |
-|------|------|------|
-| [`archive/2026-05-14-ui-revision-v2.html`](./archive/2026-05-14-ui-revision-v2.html) | 1차 피드백 반영 | lucide icon 도입 · 컬러 통계 · 슬라이드/로딩 애니메이션 |
-| [`archive/2026-05-14-ui-revision-v3.html`](./archive/2026-05-14-ui-revision-v3.html) | 2차 피드백 반영 | 도장 디자인 · 6-A/6-B 메인컬러 · 17일째 슬라이드 |
-| [`archive/ui-sample.html`](./archive/ui-sample.html) | 이전 별개 작업물 | 본 revision 이전, 참고용 |
+| 파일                                                                                 | 단계             | 비고                                                    |
+| ------------------------------------------------------------------------------------ | ---------------- | ------------------------------------------------------- |
+| [`archive/2026-05-14-ui-revision-v2.html`](./archive/2026-05-14-ui-revision-v2.html) | 1차 피드백 반영  | lucide icon 도입 · 컬러 통계 · 슬라이드/로딩 애니메이션 |
+| [`archive/2026-05-14-ui-revision-v3.html`](./archive/2026-05-14-ui-revision-v3.html) | 2차 피드백 반영  | 도장 디자인 · 6-A/6-B 메인컬러 · 17일째 슬라이드        |
+| [`archive/ui-sample.html`](./archive/ui-sample.html)                                 | 이전 별개 작업물 | 본 revision 이전, 참고용                                |
 
 ## 원본 자료
 
