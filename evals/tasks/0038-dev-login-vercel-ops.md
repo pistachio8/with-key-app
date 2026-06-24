@@ -3,7 +3,7 @@ Task: EVAL-0038
 Track: greenfield
 Kind: migration
 Status: blocked
-Blocked-by: [task:EVAL-0033] [task:EVAL-0034] [task:EVAL-0035] [task:EVAL-0036] — 코드 WP 전원 완료 + PR 머지 후 Vercel 설정 가능. 코드가 없으면 env 등록해도 동작하지 않음.
+Blocked-by: [task:EVAL-0033] [task:EVAL-0034] [task:EVAL-0035] [task:EVAL-0036] [task:EVAL-0037] — 코드 WP(0033~0036) 전원 완료. seed 실행(0037)은 PO 승인 대기 — seed된 계정 없이는 수동 E2E(AC·Stop Condition)가 통과 불가하므로 0037 해제까지 게이트 유지.
 Parent: docs/superpowers/specs/2026-06-19-dev-login-mode-design.md, docs/eng-stories/2026-06-19-dev-login-mode.md
 ---
 
