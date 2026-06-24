@@ -72,6 +72,28 @@ status: draft
 
 ## Design
 
+### 화면 시안 (Design reference) — 구현이 따를 1차 기준
+
+구현 PR(EVAL-0042~0046)은 아래 **고화질 인터랙티브 목업**을 화면 디자인의 1차 기준으로 삼는다. 목업은 실제 앱 토큰(`apps/web/src/app/globals.css`)을 미러한 `css/withkey.css` 위에 그려져 색·타이포·컴포넌트·접근성 베이스라인(focus-visible·reduced-motion)이 구현과 일치하며, 카피·기본값·상태 분기·인터랙션(3초 캡처 타이머·스토리 재생·판정 토글·권한 플로우)을 담는다. 최종 일러스트·미세 모션은 디자인 영역.
+
+- **허브(오버뷰 + 전체 흐름)**: [`docs/mockups/2026-06-24-feed-type-penalty-screens.html`](../../mockups/2026-06-24-feed-type-penalty-screens.html) — 시안 위 ▶ 로 각 화면을 그 자리에서 실행, `↗ 전체`로 단독 열기
+- **인터랙티브 화면(단독 실행)**: [`docs/mockups/2026-06-24-feed-type-penalty/`](../../mockups/2026-06-24-feed-type-penalty/) ([`index.html`](../../mockups/2026-06-24-feed-type-penalty/index.html) 런처)
+- **토큰·컴포넌트 SoT**: [`docs/DESIGN.md`](../../DESIGN.md) (Design System) · 앱 토큰 원본 `apps/web/src/app/globals.css`
+
+| spec §  | 화면                                | 목업 파일                                                              |
+| ------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| C1      | 챌린지 생성 (피드 타입 + 벌칙 미션) | `challenge-new.html`                                                   |
+| C2      | 실시간 3초 영상 캡처 인증           | `action-video.html`                                                    |
+| C3      | 벌칙 수행 증명 제출 (미달자)        | `penalty-submit.html`                                                  |
+| C4      | 동료 판단 (peer-reject 재사용)      | `penalty-review.html` (`?state=empty`=미제출 대기)                     |
+| C5      | Redemption ↔ 정산 (면제/2배 이월)   | `penalty-result.html` · `?r=rejected`(이월) · 허브 변이 D(정산 영수증) |
+| C6      | 영상 결과물 — 스토리 / 몽타주       | `recap-story.html` (`?state=empty`) · 허브 변이 E(몽타주, fast-follow) |
+| C7      | 이미지 결과물 — 회귀(무변화)        | 허브 변이 F(기존 PhotoGallery 그대로)                                  |
+| 진입·홈 | 홈 "만회 찬스" 대기 섹션            | `home.html`                                                            |
+| 피드    | 인증 피드 — 영상 카드               | `challenge-feed.html`                                                  |
+
+> **UI 용어**: 사용자 노출 명칭은 **"만회 찬스"**(처벌 어감 완화). 본 spec·코드 식별자(`penalty_*`·`/penalty`)와 금액 "벌금"은 그대로 유지한다 — 이름만 부드럽게.
+
 ### 데이터 흐름 한눈에
 
 ```

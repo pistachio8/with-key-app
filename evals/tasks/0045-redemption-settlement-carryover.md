@@ -25,6 +25,7 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 ## Source Files to Inspect
 
+- **화면 시안(참고)** — 정산 영수증·2배 이월 표기(carry-over 카피·금액 기준): 허브 `docs/mockups/2026-06-24-feed-type-penalty-screens.html` 변이 D·B · 결과 `docs/mockups/2026-06-24-feed-type-penalty/penalty-result.html`(r=rejected) (spec §화면 시안)
 - `supabase/migrations/0044_settlement_rpcs.sql` — `settle_challenge`(EVAL-0042에서 INSERT-once로 재설계됨), `grant_bundle_points` 패턴(service_role 수금 참조)
 - `supabase/migrations/0050_settlement_penalty_exclude_peer_rejected.sql` — `point_ledger.reason` CHECK 제약 현행 값 목록 참조
 - `packages/domain/src/settlement.ts` — `SettlementReason`(L21, 손수 union), `computeSettlement`(EVAL-0042 deferred 분기 결과물)

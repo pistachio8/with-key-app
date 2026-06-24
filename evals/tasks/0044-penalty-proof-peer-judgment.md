@@ -26,6 +26,7 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 ## Source Files to Inspect
 
+- **화면 시안(디자인 SoT)** — `docs/mockups/2026-06-24-feed-type-penalty/penalty-submit.html`(증명 녹화·제출) · 판정 `docs/mockups/2026-06-24-feed-type-penalty/penalty-review.html`(토글, state=empty 미제출 대기) · 홈 `docs/mockups/2026-06-24-feed-type-penalty/home.html` 만회 찬스 대기 섹션 · 결과 `docs/mockups/2026-06-24-feed-type-penalty/penalty-result.html`(r=rejected 2배 이월) (spec §화면 시안)
 - `supabase/migrations/0048_peer_rejections.sql` — `peer_rejections`·`toggle_peer_rejection` RPC 패턴(미러 기준 SoT)
 - `apps/web/src/app/(app)/challenge/[id]/(tabs)/dashboard/page.tsx` — 기존 챌린지 상세 화면 구조
 - `apps/web/src/lib/db/reads/current-challenges.ts` — `status in (pending,accepted,active)` 쿼리(진입점 갭 SoT)
