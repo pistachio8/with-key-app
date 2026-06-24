@@ -20,7 +20,8 @@ with-key 팀이 공유하는 제품·아키텍처·운영 문서입니다.
 | Week 2 GO/NO-GO 지표                         | [`VALIDATION.md`](./VALIDATION.md)                                                              |
 | 제품의 "왜"·페르소나·가설                    | [`IDEATION.md`](./IDEATION.md)                                                                  |
 | D0 킥오프 스택 확정본                        | [`KICKOFF.md`](./KICKOFF.md) (수정 금지)                                                        |
-| 화면 흐름·디자인                             | [`DESIGN_FLOW.md`](./DESIGN_FLOW.md)                                                            |
+| 디자인 기준(색·타이포·컴포넌트·보이스)       | [`DESIGN.md`](./DESIGN.md) — 디자인 시스템 SoT 요약(토큰·primitive·상태·역할 분기)              |
+| 화면 전환·상태 플로우                        | [`DESIGN_FLOW.md`](./DESIGN_FLOW.md)                                                            |
 | 작업 일지·과거 컨텍스트                      | [`JOURNAL.md`](./JOURNAL.md)                                                                    |
 | PWA→RN 마이그레이션 전체 워크플로우          | [`migration/README.md`](./migration/README.md) — 가이드(하네스·spine·Phase) + 00~05 색인        |
 | 팀 공유 결정 노트                            | [`TEAM_SHARE_DECISIONS.md`](./TEAM_SHARE_DECISIONS.md)                                          |

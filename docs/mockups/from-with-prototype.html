@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>from.with — 화면 합본 프로토타입</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* =====================================================================
+   from.with — 새 SoT: docs/mockups/2026-06-23-screen-flow.html
+   실제 _components 코드 1:1 반영 와이어프레임 시스템을 그대로 이식.
+   .phone/.screen 은 단일 풀스크린 화면으로 어댑트(zoom 확대).
+   ===================================================================== */
+  :root {
+    --primary:#8AA4FF; --primary-deep:#6F8DF5; --secondary:#FFD46B; --accent:#BCA6FF;
+    --pink:#FFB6C6; --bg:#F7F8FB; --text:#22262E; --sub:#8B91A1; --white:#fff;
+    --border:#E8EBF0; --border-soft:#EEF0F5; --primary-soft:#E8EDFF; --secondary-soft:#FFF5DA;
+    --danger:#FF6B6B; --warn:#FF8A4E; --success:#52C28C;
+    --invite-bg:#FAF6EF; --invite-ink:#2A221C; --invite-line:#E5D8C2; --invite-accent:#B07A4D; --invite-terra:#C0603A;
+    --wf:#D8DCE6; --wf-soft:#EFF1F6; --wf-ink:#AEB4C2;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  a { color:var(--primary-deep); }
+
+  header.top { position:sticky; top:0; z-index:50; background:rgba(247,248,251,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); padding:14px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  header.top .brand { font-weight:800; font-size:17px; letter-spacing:-.02em; }
+  header.top .brand span { color:var(--primary-deep); }
+  header.top nav { display:flex; gap:6px; flex-wrap:wrap; margin-left:auto; }
+  header.top nav a { font-size:13px; font-weight:600; color:var(--sub); text-decoration:none; padding:6px 11px; border-radius:8px; transition:.15s; }
+  header.top nav a:hover { background:var(--primary-soft); color:var(--primary-deep); }
+
+  main { max-width:1240px; margin:0 auto; padding:36px 24px 96px; }
+  section { margin-top:64px; scroll-margin-top:72px; }
+  section:first-of-type { margin-top:28px; }
+  h1 { font-size:30px; font-weight:800; letter-spacing:-.03em; margin:0 0 6px; }
+  .lede { color:var(--sub); font-size:15px; max-width:820px; margin:0 0 6px; }
+  .meta { color:var(--wf-ink); font-size:12.5px; }
+  h2 { font-size:21px; font-weight:800; letter-spacing:-.02em; margin:0 0 4px; display:flex; align-items:baseline; gap:10px; }
+  h2 .idx { color:var(--primary); font-size:14px; font-weight:800; }
+  h2 + .desc { color:var(--sub); font-size:14px; margin:0 0 22px; }
+
+  .legend { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 0; }
+  .legend .tag { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; background:var(--white); border:1px solid var(--border); border-radius:999px; padding:6px 12px; }
+  .legend .dot { width:10px; height:10px; border-radius:3px; }
+  .d-entry{background:var(--wf-ink)} .d-auth{background:var(--pink)} .d-main{background:var(--primary)}
+  .d-create{background:var(--secondary)} .d-challenge{background:var(--primary-deep)} .d-settle{background:var(--accent)}
+
+  .flowwrap { background:var(--white); border:1px solid var(--border); border-radius:18px; padding:18px; overflow-x:auto; }
+  .mermaid { font-family:Pretendard,sans-serif !important; }
+  .callout { background:var(--secondary-soft); border:1px solid #F0DFA8; border-radius:14px; padding:14px 16px; font-size:13px; margin-top:18px; }
+  .callout b { color:#8a6d1f; }
+
+  .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:16px; background:var(--white); }
+  table { border-collapse:collapse; width:100%; font-size:13px; min-width:760px; }
+  thead th { text-align:left; font-weight:700; color:var(--sub); background:var(--wf-soft); padding:11px 14px; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; }
+  tbody td { padding:11px 14px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:var(--bg); }
+  code.route { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:var(--primary-soft); color:var(--primary-deep); padding:2px 7px; border-radius:6px; white-space:nowrap; }
+  .gate { font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .gate.lock { background:#FFE9EC; color:var(--danger); } .gate.open { background:#E6F7EF; color:var(--success); }
+  .grp { font-size:11px; font-weight:700; color:var(--wf-ink); text-transform:uppercase; letter-spacing:.04em; }
+  .sub-note { color:var(--sub); }
+
+  /* ============ wireframes (hi-fi, code-accurate) ============ */
+  .gallery { display:flex; flex-wrap:wrap; gap:34px 28px; margin-top:6px; }
+  .phone-cap { width:262px; }
+  .phone-cap .cap-h { font-size:14px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:7px; }
+  .phone-cap .cap-h .n { flex:none; width:21px; height:21px; border-radius:6px; background:var(--primary); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center; }
+  .phone-cap .cap-r { font-family:ui-monospace,monospace; font-size:11px; color:var(--wf-ink); margin:3px 0 9px 28px; }
+  .phone { width:262px; height:548px; background:#0e1320; border:1px solid #0e1320; border-radius:30px; padding:7px; box-shadow:0 16px 40px -18px rgba(40,50,80,.4); overflow:hidden; position:relative; }
+  .screen { height:100%; border-radius:24px; background:var(--bg); overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  .phone-cap .cap-d { font-size:11.5px; color:var(--sub); margin:10px 2px 0; line-height:1.45; }
+
+  .sb { height:22px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:2px 16px 0; }
+  .sb b { font-size:10px; color:var(--text); font-weight:800; }
+  .sb .sig { font-size:9px; color:var(--text); }
+
+  .ah { flex:none; height:38px; display:flex; align-items:center; justify-content:space-between; padding:0 13px; background:rgba(255,255,255,.92); border-bottom:1px solid var(--border-soft); backdrop-filter:blur(4px); }
+  .ah .logo { font-size:11px; font-weight:800; color:var(--primary-deep); letter-spacing:0; }
+  .ah .back { font-size:15px; color:var(--text); font-weight:600; width:18px; }
+  .ah .title { font-size:12.5px; font-weight:800; }
+  .ah .ic { display:flex; gap:10px; align-items:center; }
+  .ah .ic .ib { position:relative; width:18px; height:18px; display:grid; place-items:center; font-size:13px; }
+  .ah .ic .ib .nd { position:absolute; top:-1px; right:-1px; width:6px; height:6px; border-radius:50%; background:var(--danger); border:1.5px solid #fff; }
+  .ah .step { font-size:10.5px; color:var(--sub); font-weight:700; font-variant-numeric:tabular-nums; }
+  .ah .act { font-size:10.5px; color:var(--sub); font-weight:600; }
+
+  .body { flex:1; overflow:hidden; padding:12px; display:flex; flex-direction:column; gap:9px; }
+  .body.center { justify-content:center; align-items:center; text-align:center; gap:11px; padding:20px; }
+  .body.between { justify-content:space-between; }
+  .scrollfade { position:absolute; bottom:0; left:0; right:0; height:34px; background:linear-gradient(transparent,var(--bg)); pointer-events:none; }
+
+  .t { letter-spacing:-.01em; color:var(--text); font-weight:800; }
+  .t.xl { font-size:19px; line-height:1.2; } .t.lg { font-size:15.5px; } .t.md { font-size:12.5px; } .t.sm { font-size:11px; }
+  .muted { color:var(--sub); font-size:10px; font-weight:600; }
+  .muted.xs { font-size:9px; } .muted.lh { line-height:1.55; }
+  .card { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:11px; display:flex; flex-direction:column; gap:7px; box-shadow:0 2px 6px -4px rgba(40,50,80,.1); }
+  .card.tight { padding:9px; gap:5px; }
+  .card.paper { background:var(--invite-bg); border-color:var(--invite-line); }
+  .card.warm { background:var(--secondary-soft); border-color:#F0DFA8; }
+  .card.soft { background:var(--primary-soft); border-color:#D6DEFF; }
+  .card.muted { background:var(--wf-soft); border-color:var(--border-soft); }
+  .card.none { padding:0; gap:0; overflow:hidden; }
+
+  .btn { height:34px; border-radius:11px; background:var(--primary); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 6px 14px -6px rgba(111,141,245,.7); }
+  .btn.kakao { background:#FEE500; color:#3C2E22; box-shadow:0 6px 14px -6px rgba(254,229,0,.55); }
+  .btn.ghost { background:var(--white); border:1px solid var(--border); color:var(--text); box-shadow:none; }
+  .btn.danger { background:rgba(255,107,107,.06); border:1px solid rgba(255,107,107,.3); color:var(--danger); box-shadow:none; }
+  .btn.sm { height:27px; font-size:11px; border-radius:9px; box-shadow:none; padding:0 11px; }
+  .btn.block { width:100%; }
+
+  .row { display:flex; gap:7px; } .row.between { justify-content:space-between; align-items:center; } .row.mid { align-items:center; }
+  .chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .chip { font-size:9.5px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--primary-soft); color:var(--primary-deep); white-space:nowrap; }
+  .chip.g { background:var(--wf-soft); color:var(--sub); }
+  .chip.s { background:var(--secondary-soft); color:#8a6d1f; }
+  .chip.pink { background:#FFE3EA; color:#c44a64; }
+  .chip.warn { background:#FFF1E8; color:var(--warn); }
+  .chip.ok { background:#E6F7EF; color:var(--success); }
+  .chip.live { background:var(--primary); color:#fff; }
+  .chip.sel { background:var(--primary); color:#fff; }
+
+  .stat4 { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+  .stat4 .c { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:8px 3px; text-align:center; box-shadow:0 2px 6px -4px rgba(40,50,80,.1); }
+  .stat4 .c b { font-size:15px; font-weight:800; display:block; line-height:1.15; }
+  .stat4 .c.p b{color:var(--primary-deep)} .stat4 .c.ok b{color:var(--success)} .stat4 .c.w b{color:var(--warn)} .stat4 .c.d b{color:var(--sub);font-size:12px}
+  .stat4 .c span { font-size:7.5px; color:var(--sub); font-weight:600; }
+
+  .ava { border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:800; }
+  .ava.s24 { width:24px; height:24px; font-size:9px; } .ava.s20 { width:20px; height:20px; font-size:8px; } .ava.s34 { width:34px; height:34px; font-size:12px; } .ava.s48{width:48px;height:48px;font-size:16px;}
+  .ava.p { background:linear-gradient(135deg,#A8B8FF,#8AA4FF); } .ava.k { background:linear-gradient(135deg,#FFC4D0,#FFB6C6); }
+  .ava.s { background:linear-gradient(135deg,#9AE8C0,#7FE0AE); } .ava.y { background:linear-gradient(135deg,#FFE08A,#FFD46B); color:#6b5200; }
+  .ava.soft { background:var(--primary-soft); color:var(--primary-deep); }
+  .ava.stack { margin-left:-7px; box-shadow:0 0 0 2px #fff; }
+  .avas { display:flex; align-items:center; }
+
+  .pic { border-radius:11px; display:grid; place-items:center; font-size:22px; position:relative; overflow:hidden; }
+  .pic::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.12)); }
+  .pic.r169 { aspect-ratio:16/9; width:100%; }
+  .pic.run { background:linear-gradient(135deg,#FFD9A8,#FF9FB0); } .pic.gym { background:linear-gradient(135deg,#A8C7FF,#8AA4FF); }
+  .pic.yoga { background:linear-gradient(135deg,#C9F0DA,#7FE0AE); } .pic.bike { background:linear-gradient(135deg,#D8C9FF,#BCA6FF); }
+  .pic.swim { background:linear-gradient(135deg,#A8E6FF,#7FCBE0); } .pic.walk { background:linear-gradient(135deg,#FFE3A8,#FFD46B); }
+
+  .input { height:32px; border-radius:10px; background:var(--white); border:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 11px; font-size:11px; font-weight:600; color:var(--text); }
+  .input .ph { color:var(--wf-ink); font-weight:500; }
+  .input.dashed { border-style:dashed; }
+  .lbl { font-size:9.5px; font-weight:700; color:var(--sub); }
+  .ta { border-radius:10px; background:var(--white); border:1px solid var(--border); padding:9px 11px; font-size:10.5px; color:var(--wf-ink); flex:1; }
+
+  .tabs { display:flex; gap:3px; background:var(--wf-soft); border-radius:999px; padding:3px; }
+  .tabs .tb { flex:1; text-align:center; font-size:10px; font-weight:800; padding:6px 0; border-radius:999px; color:var(--sub); }
+  .tabs .tb.on { background:var(--white); color:var(--primary-deep); box-shadow:0 2px 5px -3px rgba(40,50,80,.3); }
+
+  .bar { height:6px; border-radius:99px; background:var(--wf-soft); overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#8AA4FF,#6F8DF5); }
+  .bar.s > span { background:linear-gradient(90deg,#FFD46B,#FFB347); }
+  .bar.h15 { height:5px; }
+
+  .stepper { display:flex; align-items:center; gap:7px; }
+  .stepper .pm { width:30px; height:30px; border-radius:9px; border:1px solid var(--border); background:var(--white); display:grid; place-items:center; font-size:14px; color:var(--sub); }
+  .stepper .val { flex:1; text-align:center; background:var(--primary-soft); border-radius:9px; padding:5px 0; }
+  .stepper .val b { font-size:12px; color:var(--primary-deep); display:block; } .stepper .val span { font-size:8px; color:var(--sub); }
+
+  .seg { display:flex; gap:5px; }
+  .seg .o { flex:1; text-align:center; font-size:10px; font-weight:700; padding:7px 0; border-radius:9px; border:1px solid var(--border); background:var(--white); color:var(--sub); }
+  .seg .o.on { border-color:var(--primary); background:var(--primary-soft); color:var(--primary-deep); }
+
+  .donut { width:58px; height:58px; border-radius:50%; display:grid; place-items:center; flex:none; }
+  .donut .hole { width:42px; height:42px; border-radius:50%; background:var(--white); display:grid; place-items:center; }
+  .donut .hole b { font-size:12px; font-weight:800; color:var(--primary-deep); }
+
+  .li { display:flex; align-items:center; gap:8px; }
+  .toggle { width:30px; height:17px; border-radius:999px; position:relative; flex:none; }
+  .toggle.on { background:var(--success); } .toggle.off { background:var(--wf); }
+  .toggle::after { content:""; position:absolute; top:2px; width:13px; height:13px; border-radius:50%; background:#fff; }
+  .toggle.on::after { right:2px; } .toggle.off::after { left:2px; }
+
+  .banner { border-radius:12px; padding:8px 10px; font-size:10px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .banner.info { background:var(--primary-soft); color:var(--primary-deep); } .banner.invsoft { background:rgba(138,164,255,.08); border:1px solid rgba(138,164,255,.25); color:var(--primary-deep); }
+  .banner.paper { background:#F3E9D6; color:var(--invite-accent); }
+  .banner .badge { margin-left:auto; background:var(--primary); color:#fff; width:15px; height:15px; border-radius:50%; font-size:8px; display:grid; place-items:center; }
+
+  .statuscard { background:linear-gradient(135deg,#8AA4FF,#7E97F5); color:#fff; border-radius:14px; padding:13px; display:flex; flex-direction:column; gap:3px; }
+  .statuscard .brand { font-size:8px; font-weight:800; letter-spacing:.08em; opacity:.9; }
+  .statuscard .ttl { font-size:15px; font-weight:800; }
+  .statuscard .sub { font-size:9px; opacity:.92; }
+  .statuscard .top { display:flex; justify-content:space-between; align-items:center; }
+  .statuscard .dday { font-size:10px; font-weight:800; }
+
+  .sharecard { background:linear-gradient(135deg,#8AA4FF 0%,#BCA6FF 50%,#FFB6C6 100%); color:#fff; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:9px; }
+  .sharecard .brand { font-size:8px; font-weight:800; letter-spacing:.06em; opacity:.95; }
+  .sharecard .ttl { font-size:14px; font-weight:800; line-height:1.2; }
+  .sharecard .ft { background:rgba(255,255,255,.95); color:var(--text); border-radius:11px; padding:9px; }
+  .sharecard .ft .row2 { display:flex; justify-content:space-between; align-items:flex-end; margin-top:5px; }
+
+  .kudos { display:flex; gap:9px; margin-top:2px; }
+  .kudos b { font-size:10px; display:flex; align-items:center; gap:3px; color:var(--sub); font-weight:700; }
+  .kudos b.on { color:var(--text); }
+
+  .weeks { display:flex; gap:7px; align-items:flex-end; height:46px; }
+  .weeks .wk { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .weeks .wk .col { width:100%; border-radius:5px 5px 2px 2px; } .weeks .wk .lab { font-size:7.5px; color:var(--sub); font-weight:700; }
+  .weeks .wk.ok .col { background:linear-gradient(180deg,#7FE0AE,#52C28C); } .weeks .wk.now .col { background:linear-gradient(180deg,#8AA4FF,#6F8DF5); } .weeks .wk.no .col { background:var(--wf-soft); }
+
+  .wchips { display:flex; gap:5px; flex-wrap:wrap; }
+  .wchips i { font-size:9px; font-weight:800; padding:4px 9px; border-radius:999px; border:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .wchips i.ach { background:var(--primary-soft); color:var(--primary-deep); border-color:#D6DEFF; }
+  .wchips i.cur { border-style:dashed; border-color:var(--primary); color:var(--primary-deep); }
+  .wchips i.miss { background:#FFF1E8; color:var(--warn); border-color:#FFD9C2; }
+  .wchips i.fut { background:var(--wf-soft); color:var(--wf-ink); }
+
+  .slot { display:flex; gap:4px; }
+  .slot i { flex:1; height:8px; border-radius:3px; background:var(--wf-soft); } .slot i.used { background:linear-gradient(90deg,#8AA4FF,#6F8DF5); }
+
+  .recpaper { background:var(--invite-bg); border-top:1.5px dashed var(--invite-line); border-bottom:1.5px dashed var(--invite-line); padding:12px; font-family:ui-monospace,monospace; }
+  .recpaper .rhead { text-align:center; }
+  .recpaper .logo-w { font-size:10px; font-weight:800; color:var(--invite-accent); letter-spacing:.04em; }
+  .recpaper .rcap { font-size:8.5px; color:var(--invite-accent); }
+  .recpaper .dash { border-top:1px dashed var(--invite-line); margin:7px 0; }
+  .recpaper dl { margin:0; display:flex; flex-direction:column; gap:3px; }
+  .recpaper .dlrow { display:flex; justify-content:space-between; font-size:10px; color:var(--invite-ink); }
+  .recpaper .dlrow b { font-weight:800; }
+  .recpaper .mine { text-align:center; }
+  .recpaper .mine .k { font-size:7.5px; letter-spacing:.12em; color:var(--invite-accent); }
+  .recpaper .mine .v { font-size:18px; font-weight:800; color:var(--invite-ink); }
+  .recpaper .mine .v.miss { color:var(--invite-terra); }
+  .recpaper .crew { font-size:9.5px; color:var(--invite-ink); text-align:center; }
+  .stamp { display:inline-grid; place-items:center; width:34px; height:34px; border:1.5px solid var(--invite-accent); border-radius:50%; color:var(--invite-accent); font-size:6.5px; font-weight:800; transform:rotate(-12deg); opacity:.8; text-align:center; line-height:1; }
+  .galg { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; } .galg .pic { aspect-ratio:1; border-radius:0; font-size:14px; }
+
+  .canvas { min-height:54px; border:1px solid var(--border); border-radius:10px; background:var(--white); position:relative; display:grid; place-items:end stretch; }
+  .canvas svg { width:100%; height:54px; } .canvas .hint { position:absolute; bottom:3px; left:0; right:0; text-align:center; font-size:8px; color:var(--wf-ink); }
+
+  .dots-prog { display:flex; gap:5px; justify-content:center; }
+  .dots-prog i { width:6px; height:6px; border-radius:50%; background:var(--wf); } .dots-prog i.on { background:var(--primary); width:18px; border-radius:3px; }
+
+  .fab { position:absolute; bottom:13px; left:50%; transform:translateX(-50%); display:flex; gap:9px; align-items:center; z-index:5; }
+  .fab .main { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#8AA4FF,#6F8DF5); color:#fff; display:grid; place-items:center; font-size:16px; box-shadow:0 8px 18px -5px rgba(111,141,245,.7); }
+  .fab .mini { width:30px; height:30px; border-radius:50%; background:var(--white); border:1px solid var(--border); display:grid; place-items:center; font-size:13px; box-shadow:0 4px 10px -4px rgba(40,50,80,.25); }
+
+  .ico-badge { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:13px; flex:none; }
+  .ico-badge.p { background:var(--primary-soft); } .ico-badge.s { background:var(--secondary-soft); } .ico-badge.g { background:var(--wf-soft); }
+  .listrow { display:flex; align-items:center; gap:9px; padding:9px 0; }
+  .chev { color:var(--wf-ink); font-size:13px; margin-left:auto; }
+
+  pre { background:#1f2430; color:#e8ecf5; border-radius:14px; padding:18px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; line-height:1.55; }
+  .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:8px; }
+  .steps .step { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
+  .steps .step b { display:block; font-size:13px; margin-bottom:4px; } .steps .step p { margin:0; font-size:12.5px; color:var(--sub); }
+  footer { margin-top:72px; padding-top:24px; border-top:1px solid var(--border); color:var(--wf-ink); font-size:12px; }
+
+/* ===== 풀스크린 앱 셸 어댑테이션 (screen-flow .phone/.screen → 단일 화면) ===== */
+html{scroll-behavior:auto;}
+body{margin:0;background:#E9ECF3;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;}
+.phone{width:auto;max-width:none;height:auto;min-height:0;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none;overflow:visible;}
+.screen{width:280px;min-height:566px;height:auto;border-radius:0;overflow:visible;zoom:1.4;box-shadow:0 0 0 1px rgba(40,50,80,.06);}
+.body{overflow:visible;}
+[data-nav],.btn,.tabs .tb,.seg .o,.card.tight,.li,.listrow,.chip,.ib{cursor:pointer;}
+.home-indicator{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:96px;height:4px;border-radius:3px;background:rgba(40,50,80,.18);z-index:20;}
+
+
+/* from leave-confirm */
+
+  /* ── leave-confirm 폴리시 (이 파일에만 적용 · 공유 app.css 미변경) ── */
+  button{appearance:none;background:none;border:none;font:inherit;color:inherit;padding:0;margin:0;cursor:pointer}
+  button:focus-visible,[data-nav]:focus-visible{outline:2.5px solid #3457D5;outline-offset:2px;border-radius:12px}
+  .ah .back{width:auto;padding:6px 9px;margin:-6px -3px;border-radius:9px}        /* 터치 타깃 확대 */
+  .leave-trigger{height:26px}
+
+  .dlg-scrim{position:absolute;inset:0;display:grid;place-items:center;padding:20px;animation:dlg-fade .18s ease both}
+  .dlg-back{position:absolute;inset:0;background:rgba(15,19,32,.46)}
+  .dlg-card{position:relative;background:#fff;border-radius:18px;padding:18px 18px 16px;width:100%;
+    display:flex;flex-direction:column;gap:9px;text-align:center;box-shadow:0 18px 44px -12px rgba(15,19,32,.45);
+    animation:dlg-rise .22s cubic-bezier(.2,.8,.2,1) both}
+  .dlg-ic{width:42px;height:42px;border-radius:50%;background:#FFE9EC;display:grid;place-items:center;margin:0 auto 2px;color:#D32F2F}
+  .dlg-ic svg{width:21px;height:21px}
+  .dlg-title{font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--text);margin:0}
+  .dlg-desc{font-size:11.5px;line-height:1.5;color:#4A5160;text-wrap:pretty;margin:0}
+  .dlg-actions{display:flex;gap:8px;margin-top:6px}
+  .btn.danger.solid{background:#D32F2F;border:none;color:#fff;box-shadow:0 8px 16px -6px rgba(211,47,47,.5)}  /* 대비 4.6:1 ↑ */
+  .btn:active{transform:translateY(1px)}
+
+  @keyframes dlg-fade{from{opacity:0}to{opacity:1}}
+  @keyframes dlg-rise{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .dlg-scrim,.dlg-card{animation:none}
+    .btn:active{transform:none}
+  }
+
+
+/* ===== 합본 셸 (app.css 위에 덮어써서 네이티브 폰 + 그리드/포커스) ===== */
+html{scroll-behavior:smooth}
+body{margin:0;display:block;background:#EDEEF3;color:var(--text);
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1240px;margin:0 auto;padding:30px 24px 96px}
+.top h1{font-size:27px;font-weight:800;letter-spacing:-.02em;margin:0}
+.top h1 .dot{color:var(--primary-deep)}
+.top p{color:var(--sub);font-size:14px;margin:7px 0 0;max-width:70ch}
+.ginfo{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--sub);align-items:baseline}
+.ginfo .s{display:flex;gap:6px;align-items:baseline}
+.ginfo b{color:var(--text);font:700 17px/1 ui-monospace,monospace}
+.hint{margin-top:14px;font-size:12.5px;color:var(--primary-deep);background:var(--primary-soft);
+  border:1px solid #D6DEFF;border-radius:10px;padding:10px 13px}
+.ghead{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.01em;margin:38px 0 16px;display:flex;align-items:center;gap:9px}
+.ghead .ix{font:800 11px/1 ui-monospace,monospace;background:var(--primary-soft);color:var(--primary-deep);padding:5px 9px;border-radius:7px}
+.ghead .ct{font:600 12px/1 ui-monospace,monospace;color:var(--wf-ink)}
+.deck{display:flex;flex-wrap:wrap;gap:30px 24px}
+.tile{width:262px}
+.tile .cap{font-size:13px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.tile .cap .n{flex:none;width:20px;height:20px;border-radius:6px;background:var(--primary);color:#fff;font:800 11px/1 ui-monospace,monospace;display:grid;place-items:center}
+.tile .rt{font:500 10.5px/1.4 ui-monospace,monospace;color:var(--wf-ink);margin:0 0 9px 27px}
+.tile .open{display:block;cursor:pointer;outline:none}
+.tile .open:focus-visible{outline:2.5px solid #3457D5;outline-offset:4px;border-radius:34px}
+
+/* app.css full-screen 적용을 네이티브 폰으로 되돌림 */
+.phone{width:262px;height:548px;background:#0e1320;border:1px solid #0e1320;border-radius:30px;padding:7px;
+  box-shadow:0 16px 40px -18px rgba(40,50,80,.4);overflow:hidden;position:relative;transition:transform .18s,box-shadow .18s}
+.screen{width:100%;min-height:0;height:100%;border-radius:24px;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;position:relative;zoom:1;box-shadow:none}
+.body{overflow:hidden}
+.tile .open:hover .phone{transform:translateY(-4px);box-shadow:0 26px 50px -20px rgba(40,50,80,.5)}
+
+/* 포커스 모드 */
+body[data-mode="focus"]{overflow:hidden}
+.scrim{position:fixed;inset:0;background:rgba(20,24,36,.55);backdrop-filter:blur(3px);display:none;z-index:50}
+body[data-mode="focus"] .scrim{display:block}
+.stagebar{position:fixed;top:0;left:0;right:0;z-index:60;display:none;align-items:center;gap:12px;
+  padding:11px 18px;background:rgba(247,248,251,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+body[data-mode="focus"] .stagebar{display:flex}
+.stagebar .close{appearance:none;border:1px solid var(--border);background:#fff;border-radius:9px;padding:9px 13px;
+  font:700 13px/1 Pretendard;cursor:pointer;color:var(--text)}
+.stagebar .close:hover{border-color:var(--primary)}
+.stagebar .nm{font-weight:800;font-size:14px}
+.stagebar .rt2{font:500 11px/1 ui-monospace,monospace;color:var(--wf-ink)}
+.stagebar .sp{flex:1}
+.stagebar .tip{font:600 11px/1 Pretendard;color:var(--sub)}
+.tile.is-active{position:fixed;inset:0;z-index:55;margin:0;width:auto;
+  display:flex;overflow:auto;padding:56px 14px 28px;-webkit-overflow-scrolling:touch}
+.tile.is-active .cap,.tile.is-active .rt{display:none}
+.tile.is-active .open{margin:auto;cursor:default}              /* margin:auto = 맞으면 중앙, 넘치면 위 안 잘리고 스크롤 */
+.tile.is-active .phone{zoom:1.3;transform:none}                /* transform scale → zoom(레이아웃 반영, 클리핑 없음) */
+.tile.is-active .screen{overflow-y:auto}
+.tile.is-active .body{overflow-y:auto}                         /* 콘텐츠 많은 화면은 내부 스크롤로 전부 노출 */
+@media (prefers-reduced-motion:reduce){.phone{transition:none}}
+
+</style>
+</head>
+<body data-mode="grid">
+<div class="wrap">
+<header class="top">
+<h1>from<span class="dot">.</span>with <span style="color:var(--sub);font-weight:600">— 화면 합본 프로토타입</span></h1>
+<p>운동 내기 앱 from.with의 전체 화면을 한 파일에 담았어요. 화면을 누르면 확대되고, 그 안에서 버튼·탭·뒤로가기로 실제처럼 이동합니다. (단일 HTML · 외부 의존 없음, 폰트만 CDN)</p>
+<div class="ginfo"><span class="s"><b>24</b>화면</span><span class="s"><b>6</b>그룹</span><span class="s"><b>1</b>파일</span></div>
+<div class="hint">썸네일을 클릭 → 확대 + 클릭형 이동 · Esc 또는 “← 목록”으로 복귀</div>
+</header>
+<div class="ghead"><span class="ix">A</span>진입 · 인증<span class="ct">5 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-login" data-nm="로그인" data-rt="/login"><div class="cap"><span class="n">1</span>로그인</div><div class="rt">/login</div><div class="open" data-open="login" role="button" tabindex="0" aria-label="로그인 열기"><div class="phone"><div class="screen" style="background:#fff;">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="body between" style="padding:18px 16px;">
+    <div></div>
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div class="t xl" style="letter-spacing:-.04em;">from<span style="color:var(--primary-deep)">.</span>with</div>
+      <div class="muted" style="font-size:11px;">친구들과 함께 운동 내기 시작하기</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div class="btn kakao block" style="height:44px;" data-nav="onboarding">카카오로 시작하기</div>
+      <div class="input" style="height:44px;"><span class="ph">you@example.com</span></div>
+      <div class="btn ghost block" style="height:44px;" data-nav="onboarding">이메일로 로그인 링크 받기</div>
+      <div class="muted xs" style="text-align:center;line-height:1.5;">비밀번호 없이, 메일로 받은 링크만 누르면<br/>바로 로그인돼요.</div>
+      <div class="muted xs" style="text-align:center;margin-top:4px;line-height:1.5;">계속하면 이용약관 및 개인정보<br/>수집·이용에 동의한 것으로 간주돼요.</div>
+    </div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-onboarding" data-nm="온보딩" data-rt="/login?onboard=1"><div class="cap"><span class="n">2</span>온보딩</div><div class="rt">/login?onboard=1</div><div class="open" data-open="onboarding" role="button" tabindex="0" aria-label="온보딩 열기"><div class="phone"><div class="screen" style="background:#fff;">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="body between" style="padding:16px;">
+    <div class="row between mid"><div class="dots-prog"><i class="on"></i><i></i><i></i><i></i></div><span class="muted" data-nav="home">건너뛰기</span></div>
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;">
+      <div style="width:120px;height:120px;border-radius:50%;background:var(--primary-soft);display:grid;place-items:center;font-size:46px;">🤖</div>
+      <div class="t lg" style="font-size:18px;">AI 운동일기 자동 생성</div>
+      <div class="muted lh" style="font-size:11px;max-width:180px;">AI가 키워드를 일기로 바꿔줘요.<br/>글쓰기 부담 ZERO.</div>
+    </div>
+    <div class="btn block" style="height:44px;opacity:.6;" data-nav="home">다음</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-invite" data-nm="초대 수락" data-rt="/invite/[token]"><div class="cap"><span class="n">3</span>초대 수락</div><div class="rt">/invite/[token]</div><div class="open" data-open="invite" role="button" tabindex="0" aria-label="초대 수락 열기"><div class="phone"><div class="screen" style="background:#fff;">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+  <div class="body">
+    <div style="margin-top:2px;"><div class="muted">초대장 도착</div><div class="t xl" style="margin-top:2px;">지은님이 같이<br/>운동하자고 해요</div></div>
+    <div class="sharecard" style="margin-top:6px;">
+      <div class="brand">FROM. WITH</div>
+      <div class="ttl">이번 주 운동 서약서</div>
+      <div class="ft">
+        <div class="muted">7일 · 주 5회</div>
+        <div class="row2"><div><div class="muted xs">실패 시 벌금</div><div class="t sm">3,000원</div></div><div style="text-align:right"><div class="muted xs">최대 인원</div><div class="t sm">4명</div></div></div>
+      </div>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:auto;">탭에서 바로 참여 · 앱 설치 불필요</div>
+    <div class="btn block" style="height:44px;" data-nav="challenge-pledge">참여하기</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-invite-error" data-nm="초대 만료" data-rt="/invite · expired"><div class="cap"><span class="n">4</span>초대 만료</div><div class="rt">/invite · expired</div><div class="open" data-open="invite-error" role="button" tabindex="0" aria-label="초대 만료 열기"><div class="phone"><div class="screen" style="background:#fff;">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+  <div class="body center">
+    <div style="width:72px;height:72px;border-radius:50%;background:#FFE9EC;display:grid;place-items:center;font-size:32px;">⏳</div>
+    <div class="t md">만료된 초대</div>
+    <div class="muted lh" style="font-size:10px;max-width:188px;">이 초대 링크는 72시간이 지나 만료됐어요. 그룹장에게 새 링크를 요청해 주세요.</div>
+    <div class="btn ghost block" style="height:42px;margin-top:6px;" data-nav="home">홈으로 가기</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-invite-full" data-nm="초대 정원 초과" data-rt="/invite · full"><div class="cap"><span class="n">5</span>초대 정원 초과</div><div class="rt">/invite · full</div><div class="open" data-open="invite-full" role="button" tabindex="0" aria-label="초대 정원 초과 열기"><div class="phone"><div class="screen" style="background:#fff;">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="logo">from.with</span><span style="width:18px"></span></div>
+  <div class="body center">
+    <div style="width:72px;height:72px;border-radius:50%;background:#FFE9EC;display:grid;place-items:center;font-size:30px;">👥</div>
+    <div class="t md">그룹이 가득 찼어요</div>
+    <div class="avas" style="justify-content:center;margin-top:-2px"><span class="ava p s24">민</span><span class="ava k s24 stack">지</span><span class="ava s s24 stack">현</span><span class="ava y s24 stack">수</span></div>
+    <div class="muted lh" style="font-size:10px;max-width:196px;">이 그룹은 이미 4명이 참여 중이에요 (최대 인원). 이미 멤버라면 from.with 홈에서 새 서약서를 확인하고 서명할 수 있어요.</div>
+    <div class="btn ghost block" style="height:42px;margin-top:6px;" data-nav="home">홈으로 가기</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+<div class="ghead"><span class="ix">B</span>메인 · 네비게이션<span class="ct">3 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-home" data-nm="홈 · 대시보드" data-rt="/home"><div class="cap"><span class="n">6</span>홈 · 대시보드</div><div class="rt">/home</div><div class="open" data-open="home" role="button" tabindex="0" aria-label="홈 · 대시보드 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="logo">from.with</span><div class="ic"><span class="ib" data-nav="notifications">🔔<span class="nd"></span></span><span class="ib" data-nav="me">👤</span></div></div>
+  <div class="body" style="gap:8px;">
+    <div><div class="muted">6월 23일 · 월요일</div><div class="t xl" style="margin-top:1px;">안녕, 민수 👋</div></div>
+    <div class="banner info" data-nav="invite">✉️ 초대받은 챌린지 · 운동 크루<span class="badge">1</span></div>
+    <div class="stat4">
+      <div class="c p"><b>2</b><span>진행 중</span></div>
+      <div class="c ok"><b>1</b><span>오늘 완료</span></div>
+      <div class="c w"><b>1</b><span>미인증</span></div>
+      <div class="c d"><b>3천</b><span>내 벌금</span></div>
+    </div>
+    <div class="row between" style="margin-top:2px;"><span class="t sm">진행 중 챌린지</span><span class="muted">2개</span></div>
+    <div class="card tight" data-nav="challenge"><div class="li"><span class="ico-badge p">⚡</span><div style="flex:1"><div class="t sm">이번 주 운동</div><div class="muted xs">👥 4 · <span style="color:var(--success)">✓ 오늘 완료</span> · 모인 벌금 12,000원</div></div><span class="chip pink">D-3</span></div></div>
+    <div class="card tight" data-nav="challenge"><div class="li"><span class="ico-badge s">⚡</span><div style="flex:1"><div class="t sm">아침 러닝 모임</div><div class="muted xs">👥 3 · <span style="color:var(--warn)">○ 오늘 미인증</span></div></div><span class="chip g">D-5</span></div></div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="fab"><span class="mini" data-nav="home">🏠</span><span class="main" data-nav="challenge-new">⚡</span><span class="mini" data-nav="challenge-action">📷</span></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-notifications" data-nm="알림 센터" data-rt="/notifications"><div class="cap"><span class="n">7</span>알림 센터</div><div class="rt">/notifications</div><div class="open" data-open="notifications" role="button" tabindex="0" aria-label="알림 센터 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="title" style="font-size:15px">알림</span><span class="act">모두 읽음</span></div>
+  <div class="body" style="gap:8px;">
+    <div class="tabs"><span class="tb on" data-tab="all">전체</span><span class="tb" data-tab="remind">리마인더</span><span class="tb" data-tab="friend">친구 인증</span><span class="tb" data-tab="penalty">벌금</span></div>
+    <div class="card tight" data-nav="challenge"><div class="li"><div style="flex:1"><div class="t sm">⏰ 마감 24시간 전이에요</div><div class="muted xs lh">이번 주 운동 · 오늘 인증을 깜빡하지 마세요</div><div class="muted xs" style="margin-top:2px">방금</div></div><span style="width:7px;height:7px;border-radius:50%;background:var(--primary);align-self:flex-start;margin-top:3px"></span></div></div>
+    <div class="card tight" style="opacity:.62" data-nav="challenge"><div><div class="t sm">👏 지은님이 응원했어요</div><div class="muted xs">내 인증글에 💪 · 1시간 전</div></div></div>
+    <div class="card tight" style="opacity:.62" data-nav="challenge"><div><div class="t sm">💸 이번 주 벌금이 쌓였어요</div><div class="muted xs">3,000원 · 어제</div></div></div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-me" data-nm="마이페이지" data-rt="/me"><div class="cap"><span class="n">8</span>마이페이지</div><div class="rt">/me</div><div class="open" data-open="me" role="button" tabindex="0" aria-label="마이페이지 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="logo">from.with</span><div class="ic"><span class="ib" data-nav="notifications">🔔</span><span class="ib">👤</span></div></div>
+  <div class="body" style="gap:9px;">
+    <div class="t xl">마이페이지</div>
+    <div class="card"><div class="li"><span class="ava soft s48">민</span><div style="flex:1"><div class="t md">민수</div><div class="muted xs">minsu@email.com</div></div></div><div class="chips"><span class="chip">5/14부터 함께</span><span class="chip g">챌린지 3회</span></div></div>
+    <div class="card tight" data-nav="me-challenges"><div class="listrow" style="padding:2px 0"><span class="ico-badge s">🏆</span><div style="flex:1"><div class="t sm">내 챌린지 관리</div><div class="muted xs">운영 중 2 · 참여 중 1</div></div><span class="chev">›</span></div></div>
+    <div class="card tight">
+      <div class="li"><span style="font-size:12px">🔔</span><span class="t sm">알림 설정</span></div>
+      <div class="li" style="margin-top:2px"><div style="flex:1"><div class="t sm" style="font-size:10px">그룹 활동 알림</div></div><span class="toggle on"></span></div>
+      <div class="li"><div style="flex:1"><div class="t sm" style="font-size:10px">마감 임박 알림</div></div><span class="toggle on"></span></div>
+      <div class="li"><div style="flex:1"><div class="t sm" style="font-size:10px">응원 받음 알림</div></div><span class="toggle off"></span></div>
+    </div>
+    <div class="card none" data-nav="me-feedback"><div class="listrow" style="padding:9px 11px"><span class="muted" style="font-size:11px;flex:1">💬 개발자에게 건의하기</span><span class="chev">›</span></div></div>
+    <div class="card none" data-nav="legal"><div class="listrow" style="padding:9px 11px"><span class="muted" style="font-size:11px;flex:1">📄 약관 · 개인정보</span><span class="chev">›</span></div></div>
+    <div class="muted" style="text-align:center;color:var(--danger);margin-top:4px" data-nav="login">로그아웃</div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+<div class="ghead"><span class="ix">C</span>마이<span class="ct">3 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-me-challenges" data-nm="내 챌린지 관리" data-rt="/me/challenges"><div class="cap"><span class="n">9</span>내 챌린지 관리</div><div class="rt">/me/challenges</div><div class="open" data-open="me-challenges" role="button" tabindex="0" aria-label="내 챌린지 관리 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">챌린지 관리</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="t xl">챌린지 관리</div>
+            <div class="card tight"><div class="row between"><span class="muted">운영 가능 슬롯</span><span class="t sm">2 / 5</span></div><div class="slot"><i class="used"></i><i class="used"></i><i></i><i></i><i></i></div></div>
+            <div class="muted" style="margin-top:2px">운영 중 (2개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1" data-nav="challenge"><div class="t sm">이번 주 운동</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div><div class="row" style="gap:5px"><span class="ico-badge g" style="width:24px;height:24px;font-size:10px">🏳</span><span class="ico-badge g" style="width:24px;height:24px;font-size:10px;color:var(--danger)">🗑</span></div></div></div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1" data-nav="challenge"><div class="t sm">아침 러닝 모임</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div></div></div>
+            <div class="muted" style="margin-top:2px">참여 중 (1개)</div>
+            <div class="card tight"><div class="row between mid"><div style="flex:1" data-nav="challenge"><div class="t sm">요가 챌린지</div><span class="chip s" style="margin-top:3px;display:inline-block">서명 대기</span></div></div></div>
+          </div>
+          <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-me-feedback" data-nm="건의하기" data-rt="/me/feedback"><div class="cap"><span class="n">10</span>건의하기</div><div class="rt">/me/feedback</div><div class="open" data-open="me-feedback" role="button" tabindex="0" aria-label="건의하기 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">건의하기</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t lg">개발자에게 건의하기</div><div class="muted lh" style="margin-top:3px">버그 제보나 아이디어를 보내주세요.<br/>개발팀이 바로 확인해요.</div></div>
+            <div class="seg"><span class="o on">🐛 버그 제보</span><span class="o">✨ 기능 제안</span><span class="o">💬 기타</span></div>
+            <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">ℹ️ 무엇이, 언제·어디서 일어났는지 적어주시면 빨리 고칠 수 있어요.</div></div>
+            <div class="lbl">내용</div>
+            <div class="ta" style="min-height:84px;">예) 인증 사진을 여러 장 올리고 싶어요...</div>
+            <div class="row between"><span class="lbl">사진 · 선택 · 최대 3장</span><span class="muted xs">0 / 1000</span></div>
+            <div class="btn block" style="height:44px;" data-nav="me">보내기</div>
+          </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-legal" data-nm="약관 · 개인정보" data-rt="/legal"><div class="cap"><span class="n">11</span>약관 · 개인정보</div><div class="rt">/legal</div><div class="open" data-open="legal" role="button" tabindex="0" aria-label="약관 · 개인정보 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">이용약관</span><span style="width:18px"></span></div>
+  <div class="body center">
+    <div style="font-size:34px;">📄</div>
+    <div class="t md">준비 중입니다</div>
+    <div class="muted lh" style="font-size:10px;max-width:160px;">정식 출시 전 약관·개인정보처리방침을<br/>게시할 예정이에요</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+<div class="ghead"><span class="ix">D</span>그룹 · 생성<span class="ct">4 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-group" data-nm="그룹 상세" data-rt="/group/[id]"><div class="cap"><span class="n">12</span>그룹 상세</div><div class="rt">/group/[id]</div><div class="open" data-open="group" role="button" tabindex="0" aria-label="그룹 상세 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">운동 크루</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="banner invsoft" style="text-align:center;flex-direction:column;gap:1px"><span>🎉 운동 크루에 합류했어요</span><span class="muted xs" style="color:var(--sub)">여기서 챌린지를 함께 시작해 보세요</span></div>
+            <div><div class="t xl">운동 크루</div><div class="chips" style="margin-top:4px"><span class="chip">운영자</span><span class="chip g">멤버 4명</span></div></div>
+            <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+            <div class="muted">멤버 (4명)</div>
+            <div class="card none"><div class="listrow" style="padding:8px 11px"><span class="ava soft s24">민</span><span class="t sm" style="flex:1">민수</span><span class="chip">운영자</span></div><div class="listrow" style="padding:8px 11px;border-top:1px solid var(--border-soft)"><span class="ava soft s24">지</span><span class="t sm" style="flex:1">지은</span></div></div>
+          </div>
+          <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-group-member" data-nm="그룹 · 멤버" data-rt="/group · member"><div class="cap"><span class="n">13</span>그룹 · 멤버</div><div class="rt">/group · member</div><div class="open" data-open="group-member" role="button" tabindex="0" aria-label="그룹 · 멤버 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">운동 크루</span><span style="width:18px"></span></div>
+  <div class="body" style="gap:9px;">
+    <div><div class="t xl">운동 크루</div><div class="chips" style="margin-top:4px"><span class="chip g">멤버</span><span class="chip g">멤버 4명</span></div></div>
+    <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+    <div class="muted">멤버 (4명)</div>
+    <div class="card none"><div class="listrow" style="padding:8px 11px"><span class="ava soft s24">민</span><span class="t sm" style="flex:1">민수</span><span class="chip">운영자</span></div><div class="listrow" style="padding:8px 11px;border-top:1px solid var(--border-soft)"><span class="ava soft s24">지</span><span class="t sm" style="flex:1">지은</span></div></div>
+    <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">🔒 이름 변경·삭제·새 챌린지 시작은 운영자만 할 수 있어요.</div></div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-new" data-nm="챌린지 생성" data-rt="/challenge/new"><div class="cap"><span class="n">14</span>챌린지 생성</div><div class="rt">/challenge/new</div><div class="open" data-open="challenge-new" role="button" tabindex="0" aria-label="챌린지 생성 열기"><div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">‹</span><span class="title">새 챌린지</span><span class="step">1/2</span></div>
+          <div class="body" style="gap:9px;">
+            <div><div class="t lg">어떤 약속을<br/>만들어 볼까요?</div><div class="muted">운동이 아닌 다른 습관도 OK</div></div>
+            <div><div class="lbl">챌린지 이름</div><div class="input" style="margin-top:4px">이번 주 운동 서약서</div></div>
+            <div><div class="lbl">인증 빈도</div><div class="stepper" style="margin-top:4px"><span class="pm">−</span><span class="val"><b>매일</b><span>한 주에 7번 인증</span></span><span class="pm">+</span></div></div>
+            <div><div class="lbl">진행 기간</div><div class="seg" style="margin-top:4px"><span class="o on">7일</span><span class="o">14일</span><span class="o">30일</span><span class="o" style="flex:0 0 34px">📅</span></div></div>
+            <div><div class="lbl">주 목표 미달 시 벌금</div><div class="seg" style="margin-top:4px"><span class="o">없음</span><span class="o on">3천원</span><span class="o">5천원</span><span class="o">만원</span></div></div>
+            <div class="btn block" style="height:44px;" data-nav="challenge-new-done">다음: 서약서 쓰기</div>
+          </div>
+          <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-new-done" data-nm="생성 완료 · 공유" data-rt="/challenge/new/done"><div class="cap"><span class="n">15</span>생성 완료 · 공유</div><div class="rt">/challenge/new/done</div><div class="open" data-open="challenge-new-done" role="button" tabindex="0" aria-label="생성 완료 · 공유 열기"><div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body center">
+            <div style="width:72px;height:72px;border-radius:50%;background:var(--secondary-soft);display:grid;place-items:center;font-size:34px;">🎉</div>
+            <div class="t lg">챌린지가 생성되었어요!</div>
+            <div class="muted lh" style="font-size:11px">링크를 친구들에게 공유하면<br/>서명한 멤버로 시작할 수 있어요</div>
+            <div class="card muted tight" style="width:100%;flex-direction:row;align-items:center;gap:7px;"><span style="flex:1;font-family:ui-monospace,monospace;font-size:9px;color:var(--sub);overflow:hidden">from.with/invite/x9k2</span><span class="muted" style="color:var(--primary-deep)">copy</span></div>
+            <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:2px;">
+              <div class="btn kakao block" style="height:42px;border-radius:999px;">카카오톡으로 공유</div>
+              <div class="muted" style="text-align:center;" data-nav="home">홈으로</div>
+            </div>
+          </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+<div class="ghead"><span class="ix">E</span>챌린지<span class="ct">7 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-challenge" data-nm="챌린지 상세" data-rt="/challenge/[id]"><div class="cap"><span class="n">16</span>챌린지 상세</div><div class="rt">/challenge/[id]</div><div class="open" data-open="challenge" role="button" tabindex="0" aria-label="챌린지 상세 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+          <div class="body" style="gap:8px;">
+            <div class="statuscard">
+              <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-3</span></div>
+              <div class="ttl">이번 주 운동</div>
+              <div class="sub">매일 1회 · 7일 · 3천원</div>
+              <div class="sub" style="margin-top:3px;opacity:.85">3/4명 서명 · 7명이 함께해요</div>
+            </div>
+            <div class="tabs"><span class="tb on" data-tab="feed">인증 피드</span><span class="tb" data-tab="board">현황판</span><span class="tb" data-tab="info">정보</span></div>
+            <div data-panel="feed">
+            <div class="card warm tight"><div class="row between"><div><div class="t sm" style="font-size:10px">오늘 3 / 4명 인증</div><div class="muted xs">현우 남음</div></div><span class="chip s">오늘</span></div></div>
+            <div class="t sm" style="margin-top:1px">최근 인증</div>
+            <div class="card tight">
+              <div class="li" style="font-size:10px"><span class="ava k s20">지</span><span class="t" style="font-size:10px">지은</span><span class="muted xs" style="margin-left:auto">3분 전</span><span class="chip" style="font-size:8px;padding:2px 6px">DAY 4</span></div>
+              <div class="pic run r169" style="height:62px">🏃</div>
+              <div class="chips"><span class="chip g" style="font-size:8px">#상쾌함</span><span class="chip g" style="font-size:8px">#러닝</span></div>
+              <div class="muted lh" style="color:var(--text);font-size:9.5px">아침 공기가 좋아서 한강까지 달렸다. 상쾌하고 뿌듯한 하루.</div>
+              <div class="kudos"><b class="on">💪 3</b><b>🔥 1</b><b>💯 0</b></div>
+            </div>
+            </div>
+            <div data-panel="board" hidden>
+            <div class="card soft" style="align-items:center;text-align:center;padding:13px"><div class="muted" style="color:var(--primary-deep);opacity:.85">모인 벌금</div><div class="t" style="font-size:26px;color:var(--primary-deep)">12,000<span style="font-size:12px">원</span></div></div>
+            <div class="t sm">주차 기록</div>
+            <div class="wchips"><i class="ach">1주 5/5</i><i class="ach">2주 5/5</i><i class="cur">3주 3/5</i><i class="fut">4주 0/5</i></div>
+            <div class="card tight" style="flex-direction:row;align-items:center;gap:10px"><div class="donut" style="background:conic-gradient(#8AA4FF 0 60%,#EFF1F6 60% 100%)"><div class="hole"><b>3/5</b></div></div><div style="flex:1"><div class="muted">이번 주 진척</div><div class="t" style="font-size:10px;margin-top:2px">2번 더 채우면 추가 벌금 0원</div><div class="muted xs" style="color:var(--warn);margin-top:2px">+6,000원 위험</div></div></div>
+            </div>
+            <div data-panel="info" hidden>
+            <div class="sharecard" style="padding:10px;gap:5px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl" style="font-size:12px">이번 주 운동</div></div>
+            <div class="card tight">
+              <div class="t sm">정보</div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">기간</span><span class="t sm">7일</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">인증 빈도</span><span class="t sm">매일 1회</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">벌금</span><span class="t sm">3천원</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">참여 인원</span><span class="t sm">4명</span></div>
+              <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">모인 벌금</span><span class="t sm">12,000원</span></div>
+            </div>
+            <div class="btn ghost sm block" data-nav="challenge-new-done">＋ 친구 초대 (운영자)</div>
+            </div>
+          </div>
+          <div class="scrollfade"></div>
+          <div class="fab"><span class="mini" data-nav="home">🏠</span><span class="main" data-nav="challenge-action">⚡</span><span class="mini" data-nav="challenge-action">📷</span></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-empty" data-nm="빈 인증 피드" data-rt="/challenge · empty"><div class="cap"><span class="n">17</span>빈 인증 피드</div><div class="rt">/challenge · empty</div><div class="open" data-open="challenge-empty" role="button" tabindex="0" aria-label="빈 인증 피드 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+  <div class="body" style="gap:8px;">
+    <div class="statuscard">
+      <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-7</span></div>
+      <div class="ttl">이번 주 운동</div>
+      <div class="sub">매일 1회 · 7일 · 3천원</div>
+      <div class="sub" style="margin-top:3px;opacity:.85">3/4명 서명 · 방금 시작</div>
+    </div>
+    <div class="tabs"><span class="tb on">인증 피드</span><span class="tb">현황판</span><span class="tb">정보</span></div>
+    <div class="card warm tight"><div class="row between"><div class="t sm" style="font-size:10px">오늘 0 / 4명 인증</div><span class="chip s">오늘</span></div></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:10px 8px;">
+      <div style="width:58px;height:58px;border-radius:50%;background:var(--wf-soft);display:grid;place-items:center;font-size:25px;">📷</div>
+      <div class="t sm">아직 인증이 없어요</div>
+      <div class="muted lh" style="font-size:9.5px;max-width:150px">첫 번째 인증을 올려보세요</div>
+    </div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="fab"><span class="mini" data-nav="home">🏠</span><span class="main" data-nav="challenge-action">⚡</span><span class="mini" data-nav="challenge-action">📷</span></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-action" data-nm="AI 일기 인증" data-rt="/challenge/[id]/action"><div class="cap"><span class="n">18</span>AI 일기 인증</div><div class="rt">/challenge/[id]/action</div><div class="open" data-open="challenge-action" role="button" tabindex="0" aria-label="AI 일기 인증 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">AI 일기</span><span style="width:18px"></span></div>
+          <div class="body" style="gap:9px;">
+            <div class="muted" style="margin-top:-2px">이번 주 운동</div>
+            <div class="pic gym r169" style="height:88px;">🏋️</div>
+            <div class="lbl">활동 종류</div>
+            <div class="chips"><span class="chip sel">🏋️ 헬스</span><span class="chip g">🏃 러닝</span><span class="chip g">🧘 요가</span><span class="chip g">🍽 식사</span><span class="chip g">기타</span></div>
+            <div class="row between"><span class="lbl">오늘의 일기 키워드 (2/3)</span><span class="muted">↻ 재생성</span></div>
+            <div class="chips"><span class="chip sel">상쾌함</span><span class="chip sel">근력</span><span class="chip g">뿌듯</span><span class="chip g">근육통</span><span class="chip g">열정</span></div>
+            <div class="card muted tight"><div class="li"><span class="ava p s20">🤖</span><span class="muted lh" style="font-size:9px">AI가 사진과 키워드를 보고 짧은 일기를 만들어요</span></div></div>
+            <div class="btn block" style="height:44px;" data-nav="challenge">등록하기</div>
+          </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-pledge" data-nm="서약서 서명" data-rt="/challenge/[id]/pledge"><div class="cap"><span class="n">19</span>서약서 서명</div><div class="rt">/challenge/[id]/pledge</div><div class="open" data-open="challenge-pledge" role="button" tabindex="0" aria-label="서약서 서명 열기"><div class="phone"><div class="screen" style="background:#fff;">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="body">
+            <div class="banner invsoft" style="text-align:center;flex-direction:column;gap:1px"><span>🎉 운동 크루에 합류했어요</span><span class="muted xs" style="color:var(--sub)">첫 챌린지에 서명해 보세요</span></div>
+            <div class="t lg" style="margin-top:2px">서약서</div>
+            <div class="sharecard" style="background:linear-gradient(135deg,#8AA4FF,#7E97F5);gap:6px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl">이번 주 운동</div><div class="muted lh" style="color:rgba(255,255,255,.95);font-size:9px">나는 함께한 친구들과의 약속을 가볍게 여기지 않을게요. 매일 운동을 인증하고...</div></div>
+            <div class="row between"><span class="lbl">전자 서명</span><span class="muted">지우기</span></div>
+            <div class="canvas"><svg viewBox="0 0 200 54" preserveAspectRatio="none"><path d="M16 38 q14 -26 28 -2 t26 -4 q12 18 24 -10 t30 14" fill="none" stroke="#22262E" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <label class="li" style="font-size:9px;color:var(--sub);align-items:flex-start"><span style="width:13px;height:13px;border:1.5px solid var(--primary);border-radius:4px;flex:none;margin-top:1px"></span><span class="lh">나 민수는 위 조건에 동의합니다. 어긴 경우 약속대로 입금할게요.</span></label>
+            <div class="btn block" style="height:44px;margin-top:auto" data-nav="challenge">서명하고 참여</div>
+          </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-recap" data-nm="정산 영수증" data-rt="/challenge/[id]/recap"><div class="cap"><span class="n">20</span>정산 영수증</div><div class="rt">/challenge/[id]/recap</div><div class="open" data-open="challenge-recap" role="button" tabindex="0" aria-label="정산 영수증 열기"><div class="phone"><div class="screen">
+          <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+          <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">정산</span><span class="ic"><span class="ib">↗</span></span></div>
+          <div class="body" style="gap:0;padding:12px 12px 0;">
+            <div class="recpaper">
+              <div class="rhead"><div class="logo-w">from.with</div><div class="rcap">🧾 정산 영수증 · 운동 크루</div><div class="rcap">이번 주 운동 · 7일</div></div>
+              <div class="dash"></div>
+              <dl>
+                <div class="dlrow"><span>목표</span><b>매일 1회</b></div>
+                <div class="dlrow"><span>주차 달성</span><b>1주 중 1주</b></div>
+                <div class="dlrow"><span>나의 인증</span><b>4회</b></div>
+                <div class="dlrow"><span>판정</span><b>달성 🎉</b></div>
+              </dl>
+              <div class="dash"></div>
+              <div class="mine"><div class="k">나의 정산</div><div class="v">0원</div></div>
+              <div class="dash"></div>
+              <div class="crew"><div class="k" style="font-size:7.5px;letter-spacing:.12em;color:var(--invite-accent)">CREW</div><div style="margin-top:2px">👑 지은 · 민수 · 현우 · 수아</div></div>
+              <div class="dash"></div>
+              <div style="display:flex;justify-content:center"><span class="stamp">FROM<br/>WITH</span></div>
+            </div>
+            <div class="galg" style="margin:8px -12px 0"><div class="pic run">🏃</div><div class="pic gym">🏋️</div><div class="pic yoga">🧘</div><div class="pic bike">🚴</div><div class="pic walk">🚶</div><div class="pic swim">🏊</div></div>
+          </div>
+          <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-info-member" data-nm="정보 탭 · 멤버" data-rt="/challenge/info · member"><div class="cap"><span class="n">21</span>정보 탭 · 멤버</div><div class="rt">/challenge/info · member</div><div class="open" data-open="info-member" role="button" tabindex="0" aria-label="정보 탭 · 멤버 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+  <div class="body" style="gap:9px;">
+    <div class="tabs"><span class="tb">인증 피드</span><span class="tb">현황판</span><span class="tb on">정보</span></div>
+    <div class="sharecard" style="padding:10px;gap:5px"><div class="brand">PLEDGE · 운영자 민수</div><div class="ttl" style="font-size:12px">이번 주 운동</div></div>
+    <div class="card tight">
+      <div class="t sm">정보</div>
+      <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">기간</span><span class="t sm">7일</span></div>
+      <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">벌금</span><span class="t sm">3천원</span></div>
+      <div class="row between" style="border-top:1px solid var(--border-soft);padding-top:5px"><span class="muted">모인 벌금</span><span class="t sm">12,000원</span></div>
+    </div>
+    <div class="card tight"><div class="li"><span class="ico-badge p">👛</span><div style="flex:1"><div class="t sm">민수 · 카카오뱅크</div><div class="muted xs" style="font-variant-numeric:tabular-nums">****-****-3333</div></div><span class="chev">›</span></div></div>
+    <div class="card muted tight"><div class="muted lh" style="font-size:9.5px">🔒 친구 초대는 운영자만 할 수 있어요. (초대 버튼 숨김)</div></div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-challenge-manage" data-nm="관리 메뉴 · 운영자" data-rt="/challenge · ⋯"><div class="cap"><span class="n">22</span>관리 메뉴 · 운영자</div><div class="rt">/challenge · ⋯</div><div class="open" data-open="challenge-manage" role="button" tabindex="0" aria-label="관리 메뉴 · 운영자 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">이번 주 운동</span><span class="ic"><span class="ib">⋯</span></span></div>
+  <div class="body" style="gap:8px;">
+    <div class="statuscard">
+      <div class="top"><span class="brand">FROM · WITH · 운영자 민수</span><span class="dday">D-3</span></div>
+      <div class="ttl">이번 주 운동</div>
+      <div class="sub">매일 1회 · 7일 · 3천원</div>
+    </div>
+    <div class="tabs"><span class="tb on">인증 피드</span><span class="tb">현황판</span><span class="tb">정보</span></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(15,19,32,.42);" data-nav="#back"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:12px 14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -8px 24px -10px rgba(0,0,0,.3);">
+    <div style="width:34px;height:4px;border-radius:99px;background:var(--wf);margin:0 auto 2px;"></div>
+    <div class="muted" style="text-align:center;font-weight:700">챌린지 관리</div>
+    <div class="btn ghost block" style="height:40px;justify-content:flex-start;padding:0 14px;">🏳 챌린지 종료</div>
+    <div class="btn danger block" style="height:40px;justify-content:flex-start;padding:0 14px;">🗑 챌린지 삭제</div>
+    <div class="btn ghost block" style="height:38px;" data-nav="#back">닫기</div>
+  </div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+<div class="ghead"><span class="ix">F</span>상태 · 기타<span class="ct">2 screens</span></div>
+<div class="deck">
+<div class="tile" id="t-recap-miss" data-nm="정산 미달" data-rt="/recap · 미달"><div class="cap"><span class="n">23</span>정산 미달</div><div class="rt">/recap · 미달</div><div class="open" data-open="recap-miss" role="button" tabindex="0" aria-label="정산 미달 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+  <div class="ah"><span class="back" data-nav="#back">←</span><span class="title">정산</span><span class="ic"><span class="ib">↗</span></span></div>
+  <div class="body" style="gap:0;padding:12px 12px 0;">
+    <div class="recpaper">
+      <div class="rhead"><div class="logo-w">from.with</div><div class="rcap">🧾 정산 영수증 · 운동 크루</div><div class="rcap">이번 주 운동 · 7일</div></div>
+      <div class="dash"></div>
+      <dl>
+        <div class="dlrow"><span>목표</span><b>매일 1회</b></div>
+        <div class="dlrow"><span>주차 달성</span><b>1주 중 0주</b></div>
+        <div class="dlrow"><span>나의 인증</span><b>2회</b></div>
+        <div class="dlrow"><span>판정</span><b>미달 😅</b></div>
+      </dl>
+      <div class="dash"></div>
+      <div class="mine"><div class="k">나의 정산</div><div class="v miss">9,000원</div></div>
+      <div class="dash"></div>
+      <div class="crew"><div class="k" style="font-size:7.5px;letter-spacing:.12em;color:var(--invite-accent)">CREW</div><div style="margin-top:2px">👑 지은 · 민수 · 현우 · 수아</div></div>
+      <div class="dash"></div>
+      <div style="text-align:center;font-size:9px;color:var(--invite-accent)">오늘도 인증, 수고했어요 😜</div>
+    </div>
+  </div>
+  <div class="scrollfade"></div>
+  <div class="home-indicator"></div>
+</div></div></div></div>
+<div class="tile" id="t-leave-confirm" data-nm="나가기 확인" data-rt="/me/challenges · 나가기"><div class="cap"><span class="n">24</span>나가기 확인</div><div class="rt">/me/challenges · 나가기</div><div class="open" data-open="leave-confirm" role="button" tabindex="0" aria-label="나가기 확인 열기"><div class="phone"><div class="screen">
+  <div class="sb"><b>9:41</b><span class="sig">📶 🔋</span></div>
+
+  <header class="ah" inert>
+    <button class="back" data-nav="#back" aria-label="뒤로">←</button>
+    <span class="title">챌린지 관리</span><span style="width:18px"></span>
+  </header>
+
+  <main class="body" style="gap:9px;" inert>
+    <div class="muted">참여 중 (1개)</div>
+    <div class="card tight"><div class="row between mid"><div style="flex:1"><div class="t sm">이번 주 운동</div><span class="chip live" style="margin-top:3px;display:inline-block">진행 중</span></div><button class="btn ghost sm leave-trigger">나가기</button></div></div>
+  </main>
+
+  <div class="dlg-scrim">
+    <div class="dlg-back" data-nav="#back" role="presentation"></div>
+    <div class="dlg-card" role="alertdialog" aria-modal="true" aria-labelledby="leave-title" aria-describedby="leave-desc">
+      <span class="dlg-ic" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </span>
+      <h2 class="dlg-title" id="leave-title">챌린지에서 나가시겠어요?</h2>
+      <p class="dlg-desc" id="leave-desc">지금까지 쌓은 내 인증 기록도 함께 삭제되고, 되돌릴 수 없어요.</p>
+      <div class="dlg-actions">
+        <button class="btn ghost block" style="height:40px" data-nav="#back" autofocus>취소</button>
+        <button class="btn danger solid block" style="height:40px" data-nav="me-challenges">나가기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="home-indicator"></div>
+</div></div></div></div>
+</div>
+</div>
+<div class="scrim" data-close></div>
+<div class="stagebar"><button class="close" data-close>← 목록</button><span class="nm" id="stage-nm"></span><span class="rt2" id="stage-rt"></span><span class="sp"></span><span class="tip">Esc 로 닫기</span></div>
+<script>
+
+(function(){
+  "use strict";
+  var body=document.body, stack=[];
+  function tile(n){return document.getElementById("t-"+n);}
+  function setActive(n){
+    document.querySelectorAll(".tile.is-active").forEach(function(x){x.classList.remove("is-active");});
+    var t=tile(n); if(!t) return false; t.classList.add("is-active");
+    var s=t.querySelector(".screen"); if(s) s.scrollTop=0;
+    document.getElementById("stage-nm").textContent=t.getAttribute("data-nm");
+    document.getElementById("stage-rt").textContent=t.getAttribute("data-rt");
+    return true;
+  }
+  function open(n){ if(setActive(n)) body.setAttribute("data-mode","focus"); }
+  function closeF(){ document.querySelectorAll(".tile.is-active").forEach(function(x){x.classList.remove("is-active");}); body.setAttribute("data-mode","grid"); stack=[]; }
+  function back(){ stack.pop(); var p=stack[stack.length-1]; if(p) setActive(p); else closeF(); }
+
+  document.addEventListener("click",function(e){
+    if(body.getAttribute("data-mode")!=="focus"){
+      var card=e.target.closest("[data-open]");
+      if(card){ stack=[card.getAttribute("data-open")]; open(card.getAttribute("data-open")); }
+      return;
+    }
+    if(e.target.closest("[data-close]")){ closeF(); return; }
+    var tb=e.target.closest(".tabs .tb[data-tab]");
+    if(tb){ var tabs=tb.closest(".tabs"); tabs.querySelectorAll(".tb").forEach(function(b){b.classList.remove("on");}); tb.classList.add("on");
+      var root=tb.closest(".screen")||document, key=tb.getAttribute("data-tab");
+      root.querySelectorAll("[data-panel]").forEach(function(p){p.hidden=(p.getAttribute("data-panel")!==key);}); return; }
+    var o=e.target.closest(".seg .o");
+    if(o && !o.hasAttribute("data-nav")){ var sg=o.closest(".seg"); sg.querySelectorAll(".o").forEach(function(b){b.classList.remove("on");}); o.classList.add("on"); return; }
+    var nav=e.target.closest("[data-nav]");
+    if(nav){ var d=nav.getAttribute("data-nav"); if(d==="#back"){ back(); } else if(d){ stack.push(d); open(d); } return; }
+    if(!e.target.closest(".phone")){ closeF(); }   // 폰 바깥(스크림·여백) 클릭 → 닫기
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape" && body.getAttribute("data-mode")==="focus"){ back(); }
+  });
+  // open(name) 으로 직접 진입 (해시 지원)
+  if(location.hash.length>1){ var n=location.hash.slice(1); if(tile(n)){ stack=[n]; open(n); } }
+})();
+
+</script>
+</body>
+</html>
