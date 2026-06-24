@@ -551,6 +551,31 @@
         "verdict": "fixed"
       },
       "notes": "도메인 fan-out 리뷰 3종 Blocker 0. 반영: 스토리 그라디언트 오버레이(가독성)·radiogroup native radio(키보드 a11y)·KST 시각 표시·video_path 길이 CHECK(photo_path 0010 대칭)·미사용 ref 제거. 범위 밖 판정: backend가 지적한 analytics 이벤트 스키마(영상 mediaType/videoAttached)는 EVAL-0043 Non-goals(analytics 후속)이자 C8(PRD §9.1 parity·PO 승인 필요)이라 미반영. frontend Major(video 챌린지서도 photos fetch)는 이미지 경로 병렬성 보존(회귀안전) 우선의 의도적 트레이드오프로 유지(video 빈쿼리 1회). 영상 SUBMIT(캡처 업로드) UI는 RN vision-camera Phase 2라 본 task 범위 밖 — 인프라(버킷·RPC·컬럼·read·계약)만 구축. flip 승인: 사용자(orchestrate D6)."
+    },
+    {
+      "taskId": "EVAL-0044",
+      "date": "2026-06-24",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "벌칙(만회 찬스) 증명 제출·동료 판단(peer-reject 미러). migration 0055: penalty_proofs·penalty_proof_rejections·penalty_debts 3테이블 + submit_penalty_proof·toggle_penalty_proof_rejection RPC(0048 미러, #variable_conflict use_column 으로 status 컬럼/OUT 충돌 차단, 과반식 rejectCount>(N-1)/2). @withkey/domain: validators/penalty(zod) + challenge/penalty-proof(과반식 TS SoT). 창2 UI route challenge/[id]/penalty(제출/판정/만료 분기 + Suspense) + home 벌칙 대기 진입 섹션(SettlementPendingList 미러). carry-over 수금·point_ledger.reason·정산 연동·만료 cron·analytics 는 EVAL-0045/후속(Non-goals).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass (domain·web·mobile)",
+          "pnpm lint": "pass (web·domain); mobile 2건은 expo-image-* 기존 결함·미수정 파일",
+          "pnpm test (unit)": "pass (web 779/779 · domain 211/211, penalty-proof.spec 5)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken refs)",
+          "pnpm test:integration -- penalty-proof-rls": "deferred-ci (로컬 Supabase 부재 — CI Integration RLS·RPC 실측)"
+        }
+      },
+      "review": {
+        "reviewers": ["migration-reviewer", "backend-reviewer", "frontend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "fixed"
+      },
+      "notes": "도메인 fan-out 리뷰 3종 Blocker 0. 수정 반영(Major 2): (1) submitPenaltyProof 가 zod 검증 전 raw challengeId 로 uploadVideo→buildVideoPath(throw)를 호출하던 경계 결함 → challengeId zod 선검증으로 ActionResult shape 보존. (2) BE_SCHEMA.md 신규 3테이블 미문서화 → §5.8.2 + 카탈로그 + RLS 요약표 추가. 익명성(voter_id read 비노출)·ADR-0024 admin hydrate(Layer1 RLS 후 hydrate, private helper)·과반식 0048 동일 모두 소스 교차검증 확인. Minor(후속): submit RPC media_path 확장자 정규식 미러·status 런타임 parse·재제출 구 video 캐시 stale·ADR-0024 callsite 문서에 penalty-status.ts 추가. AC3(창2 UI 모바일 dogfood)·AC2(RLS CI Integration)는 머지 후 게이트(로컬 미검증). EVAL-0043 캡처 UI 부재로 getUserMedia/MediaRecorder 컴포넌트 신규(uploadVideo 인프라 재사용). flip 승인: 사용자(orchestrate D6)."
     }
   ]
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentChallenges } from "@/lib/db/reads/current-challenges";
+import { fetchPenaltyWaiting } from "@/lib/db/reads/penalty-waiting";
 import { fetchMyDisplayName, hasEverCreatedChallenge } from "@/lib/db/reads/me";
 import { HomeGreeting } from "./_components/home-greeting";
 import {
@@ -16,6 +17,7 @@ import {
 import { StatsGrid } from "./_components/stats-grid";
 import { RunningChallengeList } from "./_components/running-challenge-list";
 import { SettlementPendingList } from "./_components/settlement-pending-list";
+import { PenaltyWaitingList } from "./_components/penalty-waiting-list";
 import { PwaGate } from "./_components/pwa-gate";
 
 // Phase 5-1: cached read 를 Suspense 안에서 호출하기 위해 page 셸 분리.
@@ -42,9 +44,10 @@ async function HomeSection() {
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [groups, displayName] = await Promise.all([
+  const [groups, displayName, penaltyWaiting] = await Promise.all([
     fetchCurrentChallenges(user.id),
     fetchMyDisplayName(user.id),
+    fetchPenaltyWaiting(user.id),
   ]);
 
   // ADR-0027 — stats("진행 N개"·"예정 벌금")는 running 만. over(만기)는 정산 대상이라 제외.
@@ -101,6 +104,9 @@ async function HomeSection() {
     <div className="flex flex-col gap-4 p-4">
       <PwaGate />
       <HomeGreeting displayName={displayName ?? "친구"} />
+
+      {/* 만회 찬스 대기(spec §C3 진입점) — closed 챌린지라 hasAnyChallenge 분기 밖에서 항상 노출. 빈 배열이면 null. */}
+      <PenaltyWaitingList items={penaltyWaiting} />
 
       {hasAnyChallenge ? (
         <>

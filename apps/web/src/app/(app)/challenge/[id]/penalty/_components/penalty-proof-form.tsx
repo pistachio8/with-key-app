@@ -1,0 +1,260 @@
+"use client";
+
+// 벌칙(만회 찬스) 증명 영상 캡처·제출 (spec §C2·§C3 / EVAL-0044, mockup penalty-submit.html).
+// 실시간 캡처 전용 — getUserMedia + MediaRecorder. 갤러리 업로드 UI 없음(각서 앱 신뢰 = 카메라 단 차단, spec §C2).
+// 업로드·RPC 호출은 submitPenaltyProof Server Action(클라→서버 write 일원화).
+
+import { Camera, Loader2, RotateCcw, Square, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { FALLBACK_ERROR_MESSAGE, makeUserMessage } from "@/lib/actions/error-messages";
+import { submitPenaltyProof } from "../_actions";
+
+const MAX_RECORD_MS = 15_000; // mockup "최대 15초". 서버(domain)가 크기 상한을 최종 강제.
+
+const userMessage = makeUserMessage({
+  forbidden: "지금은 만회 찬스를 제출할 수 있는 기간이 아니에요.",
+  invalid_input: "영상을 다시 확인해 주세요. (mp4·webm, 20MB 이하)",
+  not_found: "챌린지를 찾을 수 없어요.",
+});
+
+type Phase = "idle" | "requesting" | "ready" | "recording" | "recorded";
+
+// MediaRecorder 가 지원하는 mime 선택 — Safari=mp4, Chrome/FF=webm. 서버 ALLOWED_VIDEO_MIME 와 정합.
+function pickMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  const candidates = ["video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  return candidates.find((m) => MediaRecorder.isTypeSupported(m));
+}
+
+function extForMime(mime: string): "mp4" | "webm" {
+  return mime.startsWith("video/mp4") ? "mp4" : "webm";
+}
+
+type Props = {
+  challengeId: string;
+};
+
+export function PenaltyProofForm({ challengeId }: Props) {
+  const router = useRouter();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const stopTimerRef = useRef<number | null>(null);
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordedFile, setRecordedFile] = useState<File | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }, []);
+
+  // 언마운트 시 카메라·blob URL 정리(권한 해제·메모리 누수 방지).
+  useEffect(() => {
+    return () => {
+      if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    };
+  }, [recordedUrl]);
+
+  const requestCamera = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      toast.error("이 브라우저는 실시간 촬영을 지원하지 않아요.");
+      return;
+    }
+    setPhase("requesting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: true,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        await videoRef.current.play().catch(() => {});
+      }
+      setPhase("ready");
+    } catch {
+      setPhase("idle");
+      toast.error("카메라 권한이 필요해요. 권한을 허용한 뒤 다시 시도해 주세요.");
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (stopTimerRef.current) {
+      window.clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = null;
+    }
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  }, []);
+
+  const startRecording = useCallback(() => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    const mimeType = pickMimeType();
+    chunksRef.current = [];
+    let recorder: MediaRecorder;
+    try {
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    } catch {
+      toast.error("녹화를 시작할 수 없어요.");
+      return;
+    }
+    recorderRef.current = recorder;
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      const type = recorder.mimeType || mimeType || "video/webm";
+      const blob = new Blob(chunksRef.current, { type });
+      const ext = extForMime(type);
+      const file = new File([blob], `penalty.${ext}`, { type: type.split(";")[0] });
+      const url = URL.createObjectURL(blob);
+      setRecordedFile(file);
+      setRecordedUrl(url);
+      setPhase("recorded");
+      // 미리보기로 전환 — 라이브 스트림은 멈춰 카메라 표시등을 끈다.
+      if (videoRef.current) videoRef.current.srcObject = null;
+      stopStream();
+    };
+    recorder.start();
+    setPhase("recording");
+    // 최대 길이 도달 시 자동 정지.
+    stopTimerRef.current = window.setTimeout(stopRecording, MAX_RECORD_MS);
+  }, [stopRecording, stopStream]);
+
+  const retake = useCallback(() => {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedUrl(null);
+    setRecordedFile(null);
+    void requestCamera();
+  }, [recordedUrl, requestCamera]);
+
+  function submit() {
+    if (!recordedFile) return;
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.append("challengeId", challengeId);
+        formData.append("video", recordedFile);
+        const res = await submitPenaltyProof(formData);
+        if (!res.ok) {
+          toast.error(userMessage(res.error));
+          if (res.error === "unauthorized") router.push("/login");
+          return;
+        }
+        toast.success("증명을 제출했어요. 친구들의 판정을 기다려요.");
+        router.refresh();
+      } catch (err) {
+        console.error("[submitPenaltyProof] unexpected throw:", err);
+        toast.error(FALLBACK_ERROR_MESSAGE);
+      }
+    });
+  }
+
+  const busy = pending;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="bg-foreground/95 relative aspect-[9/12] w-full overflow-hidden rounded-2xl">
+        {/* 라이브 프리뷰(녹화 전·중) — 녹화 완료 후엔 캡처본 재생으로 교체. */}
+        {phase !== "recorded" ? (
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="absolute inset-0 h-full w-full object-cover"
+            aria-label="실시간 미리보기"
+          />
+        ) : (
+          recordedUrl && (
+            <video
+              src={recordedUrl}
+              playsInline
+              controls
+              className="absolute inset-0 h-full w-full object-cover"
+              aria-label="촬영한 증명 영상"
+            />
+          )
+        )}
+
+        {phase === "idle" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center text-white">
+            <Camera className="size-10 opacity-90" aria-hidden="true" />
+            <p className="t-body font-semibold">앱 카메라로 바로 찍어요</p>
+            <p className="text-[12px] opacity-75">미리 찍어둔 영상은 올릴 수 없어요</p>
+          </div>
+        )}
+        {phase === "requesting" && (
+          <div className="absolute inset-0 flex items-center justify-center text-white">
+            <Loader2 className="size-7 animate-spin" aria-hidden="true" />
+          </div>
+        )}
+        {phase === "recording" && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+            <span className="bg-secondary size-2 animate-pulse rounded-full" aria-hidden="true" />
+            녹화 중
+          </span>
+        )}
+      </div>
+
+      {/* 컨트롤 — phase 별 버튼 분기. */}
+      {phase === "idle" && (
+        <Button size="lg" className="h-12" onClick={() => void requestCamera()}>
+          <Camera className="size-4" aria-hidden="true" />
+          미션 영상 녹화
+        </Button>
+      )}
+      {phase === "requesting" && (
+        <Button size="lg" className="h-12" disabled>
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          카메라 준비 중...
+        </Button>
+      )}
+      {phase === "ready" && (
+        <Button size="lg" className="h-12" onClick={startRecording}>
+          <span className="bg-secondary mr-1 size-3 rounded-full" aria-hidden="true" />
+          녹화 시작
+        </Button>
+      )}
+      {phase === "recording" && (
+        <Button size="lg" variant="secondary" className="h-12" onClick={stopRecording}>
+          <Square className="size-4" aria-hidden="true" />
+          녹화 정지
+        </Button>
+      )}
+      {phase === "recorded" && (
+        <div className="flex flex-col gap-2">
+          <Button size="lg" className="h-12" disabled={busy} onClick={submit}>
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Upload className="size-4" aria-hidden="true" />
+            )}
+            {busy ? "제출 중..." : "증명 제출하기"}
+          </Button>
+          <Button size="lg" variant="outline" className="h-12" disabled={busy} onClick={retake}>
+            <RotateCcw className="size-4" aria-hidden="true" />
+            다시 찍기
+          </Button>
+        </div>
+      )}
+
+      <Card tone="muted" padding="sm" className="border-transparent">
+        <p className="t-sub text-[12px] leading-relaxed">
+          혼자 하는 챌린지라면 판단자가 없어 제출 즉시 자동 면제돼요. 친구 과반이 인정하면 벌금이
+          면제되고, 미제출·반려되면 벌금이 2배로 다음 정산에 이월돼요.
+        </p>
+      </Card>
+    </div>
+  );
+}
