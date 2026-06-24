@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>영상 인증 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .screen.dark { color: #fff; }
+  .cam-wrap { position: relative; flex: 1; min-height: 0; background: #0c0e14; overflow: hidden; }
+  .cam-wrap video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cam-top { position: absolute; top: 14px; left: 0; right: 0; display: flex; justify-content: center; z-index: 4; }
+  .lock-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9999px;
+    background: rgba(8,10,18,.55); backdrop-filter: blur(8px); color: #fff; font-size: 11.5px; font-weight: 600; letter-spacing: .01em; }
+  .cam-reticle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 3; pointer-events: none; }
+  .cam-hint { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.82); font-size: 13px; font-weight: 500; z-index: 4; }
+  .rec-badge { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 4;
+    display: none; align-items: center; gap: 6px; color: #fff; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rec-badge .blink { width: 8px; height: 8px; border-radius: 50%; background: #FF5A5A; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .recording .rec-badge { display: flex; }
+  .recording .cam-hint { opacity: 0; }
+
+  .cam-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px calc(18px + env(safe-area-inset-bottom)); background: #0c0e14; }
+  .bar-side { width: 52px; display: flex; justify-content: center; }
+  .ghost-side { font-size: 11px; color: rgba(255,255,255,.4); text-align: center; line-height: 1.3; }
+  .rec-btn { position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; background: transparent; cursor: pointer; touch-action: none; }
+  .rec-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .rec-ring circle { fill: none; stroke-width: 4; }
+  .rec-ring .track { stroke: rgba(255,255,255,.25); }
+  .rec-ring .prog { stroke: #FF5A5A; stroke-linecap: round; stroke-dasharray: 226; stroke-dashoffset: 226; transition: stroke-dashoffset .05s linear; }
+  .rec-dot { position: absolute; top: 50%; left: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: #fff; transition: .18s var(--ease); }
+  .recording .rec-dot { width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 9px; background: #FF5A5A; }
+
+  /* 프리뷰(촬영 후) */
+  .review-actions { display: none; gap: 10px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: #0c0e14; }
+  .reviewed .cam-bar { display: none; }
+  .reviewed .review-actions { display: flex; }
+  .reviewed .cam-hint, .reviewed .cam-top { display: none; }
+  .frozen-tag { position: absolute; top: 14px; left: 14px; z-index: 4; padding: 5px 10px; border-radius: 8px; background: rgba(8,10,18,.55); backdrop-filter: blur(8px); font-size: 11px; font-weight: 700; color: #fff; }
+
+  /* 권한 오버레이 */
+  .perm { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 32px; background: #0c0e14; color: #fff; }
+  .perm .perm-ic { width: 78px; height: 78px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.07); }
+  .perm .perm-ic.deny { background: color-mix(in srgb, var(--destructive) 24%, #0c0e14); color: #ffd0d0; }
+  .perm h2 { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .perm p { font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,.66); max-width: 280px; }
+  .perm .btn-row { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 260px; margin-top: 6px; }
+  .btn-light { background: #fff; color: #16181f; }
+  .btn-line { background: transparent; border-color: rgba(255,255,255,.3); color: #fff; }
+  .text-link { background: none; border: 0; color: rgba(255,255,255,.55); font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="screen dark" id="screen">
+  <h1 class="sr-only">오늘의 영상 인증</h1>
+  <header class="flow-header">
+    <button class="icon-btn on-dark" aria-label="닫기">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <span class="ttl">오늘 인증 · DAY 5</span>
+    <span class="step" style="color:rgba(255,255,255,.6)">3초</span>
+  </header>
+
+  <div class="cam-wrap" id="cam">
+    <div class="scene cam-scene"></div>
+    <div class="cam-grain"></div>
+    <video id="live" autoplay playsinline muted hidden></video>
+
+    <div class="cam-top"><span class="lock-pill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      실시간 캡처 · 갤러리 사용 안 함
+    </span></div>
+
+    <div class="rec-badge"><span class="blink"></span> REC <span id="recTime">0.0</span>s</div>
+    <span class="frozen-tag" hidden id="frozenTag">촬영됨 · 2.9s</span>
+
+    <div class="cam-reticle">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-linecap="round"><path d="M8 20V12a4 4 0 0 1 4-4h8M44 8h8a4 4 0 0 1 4 4v8M56 44v8a4 4 0 0 1-4 4h-8M20 56h-8a4 4 0 0 1-4-4v-8"/></svg>
+    </div>
+    <p class="cam-hint" id="hint">버튼을 꾹 눌러 3초를 찍어요</p>
+
+    <!-- 권한 프라이머 (시작) -->
+    <div class="perm" id="permStart">
+      <div class="perm-ic">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg>
+      </div>
+      <h2>오늘은 영상으로 인증해요</h2>
+      <p>3초 실시간 클립으로 인증하는 챌린지예요. 시작하려면 카메라와 마이크를 켜주세요.</p>
+      <div class="btn-row">
+        <button class="btn btn-lg btn-light" id="startCam">카메라 켜기</button>
+      </div>
+    </div>
+
+    <!-- 권한 거부 (보강) -->
+    <div class="perm" id="permDeny" hidden>
+      <div class="perm-ic deny">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 5.3A5 5 0 0 1 17 10v.5M7 7v3a5 5 0 0 0 5 5"/><path d="M2 2l20 20"/><rect x="1" y="6" width="15" height="12" rx="2" opacity=".4"/></svg>
+      </div>
+      <h2>카메라 권한이 꺼져 있어요</h2>
+      <p>영상 인증은 직접 촬영만 가능해서 갤러리로는 대신할 수 없어요. 설정에서 카메라·마이크를 허용한 뒤 다시 시도해 주세요.</p>
+      <div class="btn-row">
+        <button class="btn btn-lg btn-light" id="retryCam">권한 허용하고 다시 시도</button>
+        <button class="text-link" id="useMock">미리보기로 계속 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 녹화 바 -->
+  <div class="cam-bar" id="bar">
+    <div class="bar-side"><span class="ghost-side">갤러리<br>없음</span></div>
+    <button class="rec-btn" id="rec" aria-label="꾹 눌러 녹화">
+      <svg class="rec-ring" width="76" height="76" viewBox="0 0 76 76"><circle class="track" cx="38" cy="38" r="36"/><circle class="prog" id="prog" cx="38" cy="38" r="36"/></svg>
+      <span class="rec-dot"></span>
+    </button>
+    <div class="bar-side"><button class="icon-btn on-dark" aria-label="카메라 전환">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-2h6l2 2h3a2 2 0 0 1 2 2v6"/><path d="M14.5 9.5 17 12l-2.5 2.5M22 16l-2.5-2.5L17 16"/></svg>
+    </button></div>
+  </div>
+
+  <!-- 촬영 후 -->
+  <div class="review-actions" id="review">
+    <button class="btn btn-lg btn-line" id="retake">다시 찍기</button>
+    <button class="btn btn-lg btn-primary" id="submitClip">인증 제출</button>
+  </div>
+
+  <!-- 완료 모달 -->
+  <div class="scrim" id="done" hidden>
+    <div class="dialog">
+      <div class="dlg-ic" style="background:var(--primary-soft);color:var(--primary)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h3 class="t-h2" style="margin-bottom:6px">오늘 인증 완료!</h3>
+      <p class="t-sub" style="margin-bottom:16px">3초 클립이 챌린지 피드에 올라갔어요. 영상 인증은 AI 검증 없이 바로 ‘완료’로 기록돼요.</p>
+      <button class="btn btn-lg btn-primary" id="closeDone">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var screen = document.getElementById('screen');
+  var permStart = document.getElementById('permStart');
+  var permDeny = document.getElementById('permDeny');
+  var live = document.getElementById('live');
+  var rec = document.getElementById('rec');
+  var prog = document.getElementById('prog');
+  var recTime = document.getElementById('recTime');
+  var frozenTag = document.getElementById('frozenTag');
+  var MAX = 3000, C = 226;
+  var t0 = 0, raf = 0, stream = null;
+
+  function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showDeny(); return; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true })
+      .then(function (s) { stream = s; live.srcObject = s; live.hidden = false; permStart.hidden = true; permDeny.hidden = true; })
+      .catch(function () { showDeny(); });
+  }
+  function showDeny() { permStart.hidden = true; permDeny.hidden = false; }
+  function useMock() { permStart.hidden = true; permDeny.hidden = true; } // 모의 씬으로 계속
+
+  document.getElementById('startCam').addEventListener('click', startCamera);
+  document.getElementById('retryCam').addEventListener('click', startCamera);
+  document.getElementById('useMock').addEventListener('click', useMock);
+
+  function tick() {
+    var el = Date.now() - t0;
+    var p = Math.min(el / MAX, 1);
+    prog.style.strokeDashoffset = String(C * (1 - p));
+    recTime.textContent = (el / 1000).toFixed(1);
+    if (p >= 1) { stop(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+  function start() {
+    if (!permStart.hidden || !permDeny.hidden) return;
+    if (screen.classList.contains('reviewed')) return;
+    screen.classList.add('recording');
+    t0 = Date.now(); raf = requestAnimationFrame(tick);
+  }
+  function stop() {
+    if (!screen.classList.contains('recording')) return;
+    cancelAnimationFrame(raf);
+    var dur = Math.min((Date.now() - t0) / 1000, 3);
+    screen.classList.remove('recording');
+    screen.classList.add('reviewed');
+    frozenTag.hidden = false;
+    frozenTag.textContent = '촬영됨 · ' + dur.toFixed(1) + 's';
+    if (stream) live.pause();
+  }
+  rec.addEventListener('pointerdown', function (e) { e.preventDefault(); start(); });
+  rec.addEventListener('pointerup', stop);
+  rec.addEventListener('pointerleave', stop);
+
+  document.getElementById('retake').addEventListener('click', function () {
+    screen.classList.remove('reviewed');
+    prog.style.strokeDashoffset = String(C);
+    recTime.textContent = '0.0'; frozenTag.hidden = true;
+    if (stream) live.play();
+  });
+  document.getElementById('submitClip').addEventListener('click', function () {
+    document.getElementById('done').hidden = false;
+  });
+  document.getElementById('closeDone').addEventListener('click', function () {
+    document.getElementById('done').hidden = true;
+  });
+})();
+</script>
+
+</body>
+</html>

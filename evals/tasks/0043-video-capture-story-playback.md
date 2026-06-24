@@ -25,6 +25,7 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 ## Source Files to Inspect
 
+- **화면 시안(디자인 SoT)** — `docs/mockups/2026-06-24-feed-type-penalty/action-video.html`(3초 캡처·권한 플로우) · 스토리 `docs/mockups/2026-06-24-feed-type-penalty/recap-story.html`(자동재생, state=empty 빈 클립) · 생성 폼 `docs/mockups/2026-06-24-feed-type-penalty/challenge-new.html`. 허브 ▶ 로 동작 확인 (spec §화면 시안)
 - `apps/web/src/lib/db/reads/challenge-feed.ts` — `FeedItemView` 타입·`photoSignedUrl` 패턴(확장 기준)
 - `apps/web/src/lib/db/reads/photo-signed-url.ts` — ADR-0024 패턴 SoT(`adminClient()` + `"use cache"` + `cacheTag` + `cacheLife`)
 - `apps/web/src/lib/storage/action-photos.ts` — 기존 action-photos 버킷 패턴(action-videos 구현 기준)

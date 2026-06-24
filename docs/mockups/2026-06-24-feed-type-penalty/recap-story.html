@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>영상 회고 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .screen.dark { color: #fff; }
+  .story { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  .story .frame { position: absolute; inset: 0; }
+  .grad-top { position: absolute; top: 0; left: 0; right: 0; height: 160px; background: linear-gradient(to bottom, rgba(8,10,18,.7), transparent); z-index: 2; }
+  .grad-bot { position: absolute; bottom: 0; left: 0; right: 0; height: 200px; background: linear-gradient(to top, rgba(8,10,18,.78), transparent); z-index: 2; }
+  .bars { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 4px; z-index: 5; }
+  .bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: #fff; }
+  .s-head { position: absolute; top: 26px; left: 14px; right: 14px; display: flex; align-items: center; gap: 10px; z-index: 6; }
+  .s-av { width: 34px; height: 34px; border-radius: 50%; background: var(--secondary); color: var(--secondary-foreground); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex: 0 0 auto; }
+  .s-head .nm { font-size: 13.5px; font-weight: 700; }
+  .s-head .dy { font-size: 11px; color: rgba(255,255,255,.7); }
+  .s-cap { position: absolute; left: 18px; right: 18px; bottom: 26px; z-index: 6; }
+  .s-cap .big { font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+  .s-cap .sub { font-size: 13px; color: rgba(255,255,255,.78); margin-top: 4px; }
+  .tap { position: absolute; top: 0; bottom: 0; width: 36%; z-index: 4; }
+  .tap.l { left: 0; } .tap.r { right: 0; }
+  .closing { position: absolute; inset: 0; z-index: 7; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 32px; background: radial-gradient(120% 80% at 50% 30%, #2b3354, #11152400); }
+  .closing.show { display: flex; }
+  .closing .ring { width: 96px; height: 96px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; }
+  .frame.f0 { background: radial-gradient(120% 90% at 30% 10%, #3a4a6a, #10131f); }
+  .frame.f1 { background: radial-gradient(120% 90% at 70% 20%, #4a3a5e, #120f1c); }
+  .frame.f2 { background: radial-gradient(120% 90% at 40% 30%, #2e5048, #0e1714); }
+  .frame.f3 { background: radial-gradient(120% 90% at 60% 10%, #5e4a3a, #1c150f); }
+  /* 빈 상태 */
+  .story-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 32px; color: rgba(255,255,255,.7); }
+</style>
+</head>
+<body>
+<div class="screen dark" id="screen">
+  <h1 class="sr-only">새벽기상 4인방 영상 회고</h1>
+  <header class="flow-header" style="position:relative;z-index:8">
+    <button class="icon-btn on-dark" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <span class="ttl">새벽기상 4인방 · 영상 회고</span>
+    <button class="icon-btn on-dark" aria-label="공유"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg></button>
+  </header>
+
+  <!-- 스토리 -->
+  <div class="story" id="story">
+    <div class="frame f0" id="frame"></div>
+    <div class="cam-grain"></div>
+    <div class="grad-top"></div><div class="grad-bot"></div>
+
+    <div class="bars" id="bars"></div>
+    <div class="s-head"><span class="s-av" id="av">민</span><div><div class="nm" id="nm">민지</div><div class="dy" id="dy">DAY 1 · 6월 10일 07:02</div></div></div>
+    <div class="s-cap"><div class="big" id="capBig">14일의 새벽,<br>4명이 모았어요</div><div class="sub" id="capSub">3초씩 모은 클립을 순서대로 재생 중</div></div>
+
+    <button class="tap l" id="tapL" aria-label="이전"></button>
+    <button class="tap r" id="tapR" aria-label="다음"></button>
+
+    <div class="closing" id="closing">
+      <div class="ring"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+      <div class="stack gap-2"><h2 class="t-h2" style="color:#fff">완성! 4명의 14일</h2><p class="t-sub" style="color:rgba(255,255,255,.7)">56개의 3초 클립을 모았어요</p></div>
+      <div class="stack gap-2" style="width:100%;max-width:240px">
+        <button class="btn btn-lg btn-secondary" id="replay">처음부터 다시 보기</button>
+        <button class="btn btn-lg btn-line" style="border-color:rgba(255,255,255,.3);color:#fff;background:transparent">공유하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 빈 상태 (보강) -->
+  <div class="story-empty" id="emptyView" hidden>
+    <span style="opacity:.6"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/><path d="M2 2l20 20" stroke-opacity=".7"/></svg></span>
+    <h2 class="t-h3" style="color:#fff">아직 영상이 없어요</h2>
+    <p class="t-sub" style="color:rgba(255,255,255,.65);max-width:260px">이 챌린지엔 올라온 3초 클립이 없어요. 인증이 쌓이면 자동으로 스토리가 만들어져요.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  if (new URLSearchParams(location.search || window.SCREEN_PARAMS || '').get('state') === 'empty') {
+    document.getElementById('story').style.display = 'none';
+    document.getElementById('emptyView').hidden = false;
+    return;
+  }
+  var clips = [
+    { f:'f0', av:'민', nm:'민지', dy:'DAY 1 · 6월 10일 07:02', big:'14일의 새벽,<br>4명이 모았어요', sub:'3초씩 모은 클립을 순서대로 재생 중' },
+    { f:'f1', av:'지', nm:'지호', dy:'DAY 4 · 6월 13일 06:48', big:'오늘도 성공 🙌', sub:'지호 · 4일 연속' },
+    { f:'f2', av:'서', nm:'서연', dy:'DAY 8 · 6월 17일 07:15', big:'비 오는 날도<br>일어났어요', sub:'서연 · 개근 중' },
+    { f:'f3', av:'태', nm:'태윤', dy:'DAY 14 · 6월 23일 06:30', big:'마지막 날!', sub:'태윤 · 완주' }
+  ];
+  var DUR = 3000, idx = 0, raf = 0, t0 = 0, paused = false, pauseAt = 0;
+  var frame = document.getElementById('frame'), bars = document.getElementById('bars');
+  var av = document.getElementById('av'), nm = document.getElementById('nm'), dy = document.getElementById('dy');
+  var capBig = document.getElementById('capBig'), capSub = document.getElementById('capSub');
+  var closing = document.getElementById('closing'), story = document.getElementById('story');
+
+  clips.forEach(function () { var b = document.createElement('div'); b.className = 'bar'; b.innerHTML = '<i></i>'; bars.appendChild(b); });
+  var fills = Array.prototype.map.call(bars.children, function (b) { return b.firstChild; });
+
+  function render(i) {
+    var c = clips[i];
+    frame.className = 'frame ' + c.f;
+    av.textContent = c.av; nm.textContent = c.nm; dy.textContent = c.dy;
+    capBig.innerHTML = c.big; capSub.textContent = c.sub;
+    fills.forEach(function (f, k) { f.style.width = k < i ? '100%' : '0%'; });
+  }
+  function play(i) {
+    idx = i; if (i >= clips.length) { finish(); return; }
+    render(i); t0 = Date.now(); paused = false; cancelAnimationFrame(raf); loop();
+  }
+  function loop() {
+    if (paused) return;
+    var el = Date.now() - t0, p = Math.min(el / DUR, 1);
+    fills[idx].style.width = (p * 100) + '%';
+    if (p >= 1) { play(idx + 1); return; }
+    raf = requestAnimationFrame(loop);
+  }
+  function finish() { cancelAnimationFrame(raf); fills.forEach(function (f) { f.style.width = '100%'; }); closing.classList.add('show'); }
+
+  document.getElementById('tapR').addEventListener('click', function () { closing.classList.remove('show'); play(Math.min(idx + 1, clips.length)); });
+  document.getElementById('tapL').addEventListener('click', function () { closing.classList.remove('show'); play(Math.max(idx - 1, 0)); });
+  document.getElementById('replay').addEventListener('click', function () { closing.classList.remove('show'); play(0); });
+  // 길게 누르면 일시정지
+  story.addEventListener('pointerdown', function (e) { if (e.target.closest('.btn')) return; paused = true; pauseAt = Date.now() - t0; cancelAnimationFrame(raf); });
+  story.addEventListener('pointerup', function () { if (!paused) return; paused = false; t0 = Date.now() - pauseAt; loop(); });
+
+  play(0);
+})();
+</script>
+
+</body>
+</html>

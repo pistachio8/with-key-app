@@ -25,6 +25,7 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 ## Source Files to Inspect
 
+- **화면 시안(디자인 SoT)** — `docs/mockups/2026-06-24-feed-type-penalty/challenge-new.html` 생성 폼(피드 타입 토글 이미지/3초 영상·만회 찬스 미션 입력 ≤80자·기본값 image). 전체 흐름·다른 화면은 허브 `docs/mockups/2026-06-24-feed-type-penalty-screens.html` ▶ 로 확인 (spec §화면 시안)
 - `packages/domain/src/validators/challenge.ts` — `challengeInputSchema` 현행 필드 확인
 - `packages/domain/src/settlement.ts` — `computeSettlement`(L68), `SettlementResult.distribution` 타입(L53), `SettlementReason`(L21)
 - `supabase/migrations/0022_create_challenge_rpc_fix.sql` — `create_challenge` 현행 RPC 시그니처

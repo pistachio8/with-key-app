@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>만회 찬스 판정 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .proof { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 9 / 12; background: #0c0e14; }
+  .proof .ptag { position: absolute; top: 12px; left: 12px; z-index: 3; padding: 5px 10px; border-radius: 8px; background: rgba(8,10,18,.55); backdrop-filter: blur(8px); color: #fff; font-size: 11px; font-weight: 700; }
+  .proof .pplay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 3; cursor: pointer; }
+  .proof .pplay span { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.18); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; color: #fff; transition: .15s; }
+  .proof.playing .pplay span { opacity: 0; }
+  .proof .pbar { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; z-index: 3; }
+  .proof .pbar i { display: block; height: 100%; width: 0; background: #fff; }
+  .judge { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .jbtn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px; border-radius: 16px; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; transition: .15s; }
+  .jbtn .ji { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--muted); color: var(--muted-foreground); }
+  .jbtn .jt { font-size: 14px; font-weight: 700; }
+  .jbtn .jd { font-size: 11px; color: var(--muted-foreground); }
+  .jbtn[aria-pressed="true"][data-v="accept"] { border-color: var(--success); background: color-mix(in srgb,var(--success) 12%,white); }
+  .jbtn[aria-pressed="true"][data-v="accept"] .ji { background: var(--success); color: #fff; }
+  .jbtn[aria-pressed="true"][data-v="reject"] { border-color: var(--secondary); background: var(--secondary-soft); }
+  .jbtn[aria-pressed="true"][data-v="reject"] .ji { background: var(--secondary); color: var(--secondary-foreground); }
+  .toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; background: #16181f; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-pop); opacity: 0; transition: .25s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="screen" id="screen">
+  <div class="toast" id="toast">판정이 반영됐어요 · 익명</div>
+  <header class="flow-header">
+    <button class="icon-btn" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="ttl">만회 찬스 판정</span>
+    <span class="step tnum">마감 D-2</span>
+  </header>
+
+  <!-- 판정 상태 -->
+  <div class="body-pad" id="judgeView">
+    <div class="stack gap-2">
+      <p class="chip chip-neutral" style="align-self:flex-start">미라클 모닝 클럽 · 만회 증명</p>
+      <h1 class="t-h2">지호님이 미션을<br>해냈을까요?</h1>
+      <p class="t-sub">미션 — 거울 보며 “내일은 꼭 일어난다” 3초 외치기</p>
+    </div>
+
+    <div class="proof" id="proof">
+      <div class="scene cam-scene"></div><div class="cam-grain"></div>
+      <span class="ptag">지호님 · 11초</span>
+      <button class="pplay" id="pplay" aria-label="재생"><span><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <div class="pbar"><i id="pbar"></i></div>
+    </div>
+
+    <div class="notice notice-info" style="font-size:12.5px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>응원이 아니라 <b>판정</b>이에요. 미션을 ‘불성실’하게 했다고 보면 반려를 눌러주세요. 기본값은 인정이고, 누가 눌렀는지는 아무에게도 보이지 않아요.</span>
+    </div>
+
+    <div class="field">
+      <span class="field-label">내 판정</span>
+      <div class="judge" id="judge">
+        <button class="jbtn" data-v="accept" aria-pressed="true">
+          <span class="ji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span class="jt">인정</span><span class="jd">미션 통과</span>
+        </button>
+        <button class="jbtn" data-v="reject" aria-pressed="false">
+          <span class="ji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+          <span class="jt">반려</span><span class="jd">불성실</span>
+        </button>
+      </div>
+    </div>
+
+    <p class="help" style="text-align:center">판단자 2명 중 과반 반려 시 ‘반려’ 확정 → 벌금 2배 이월</p>
+  </div>
+
+  <!-- 미제출 대기 상태 (보강) -->
+  <div class="body-pad" id="emptyView" hidden>
+    <div class="stack gap-2">
+      <p class="chip chip-neutral" style="align-self:flex-start">미라클 모닝 클럽 · 만회 증명</p>
+      <h1 class="t-h2">아직 제출된<br>증명이 없어요</h1>
+    </div>
+    <div class="empty" style="padding:36px 20px">
+      <span class="empty-ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <p class="t-h3">지호님의 미션 영상을 기다리는 중</p>
+      <p class="t-sub">증명이 올라오면 알림으로 알려드릴게요. 마감(D-2)까지 제출이 없으면 자동으로 벌금 2배가 이월돼요.</p>
+    </div>
+    <div class="card pad" style="display:flex;gap:10px;align-items:center">
+      <span class="thumb thumb-warn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
+      <p class="t-sub" style="flex:1">판정은 증명이 도착한 뒤에 열려요. 지금은 할 일이 없어요.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 미제출 대기 변형: ?state=empty
+  var params = new URLSearchParams(location.search || window.SCREEN_PARAMS || '');
+  if (params.get('state') === 'empty') {
+    document.getElementById('judgeView').hidden = true;
+    document.getElementById('emptyView').hidden = false;
+    return;
+  }
+  // 영상 재생 시뮬레이션
+  var proof = document.getElementById('proof'), pbar = document.getElementById('pbar');
+  var playing = false, raf = 0, t0 = 0, DUR = 11000;
+  document.getElementById('pplay').addEventListener('click', function () {
+    if (playing) { stop(); return; }
+    playing = true; proof.classList.add('playing'); t0 = Date.now() - (parseFloat(pbar.dataset.el || 0));
+    (function loop(){ var el = Date.now() - t0; pbar.dataset.el = el;
+      pbar.style.width = Math.min(el / DUR * 100, 100) + '%';
+      if (el >= DUR) { pbar.dataset.el = 0; pbar.style.width = '0%'; stop(); return; }
+      raf = requestAnimationFrame(loop); })();
+  });
+  function stop(){ playing = false; proof.classList.remove('playing'); cancelAnimationFrame(raf); }
+
+  // 판정 토글
+  var judge = document.getElementById('judge'), toast = document.getElementById('toast'), tm;
+  judge.addEventListener('click', function (e) {
+    var b = e.target.closest('.jbtn'); if (!b) return;
+    judge.querySelectorAll('.jbtn').forEach(function (x){ x.setAttribute('aria-pressed', String(x === b)); });
+    toast.textContent = b.dataset.v === 'reject' ? '반려로 판정했어요 · 익명' : '인정으로 판정했어요 · 익명';
+    toast.classList.add('show'); clearTimeout(tm); tm = setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+  });
+})();
+</script>
+
+</body>
+</html>

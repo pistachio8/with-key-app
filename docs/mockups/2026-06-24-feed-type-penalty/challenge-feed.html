@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>인증 피드 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .status-card { margin: 8px 16px 0; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+  .prog-track { height: 8px; border-radius: 6px; background: var(--muted); overflow: hidden; margin-top: 12px; }
+  .prog-fill { height: 100%; width: 36%; border-radius: 6px; background: var(--primary); }
+  .tabs { display: flex; gap: 4px; padding: 10px 16px 2px; position: sticky; top: 0; background: color-mix(in srgb,var(--background) 92%,transparent); backdrop-filter: blur(8px); z-index: 10; }
+  .tab { flex: 1; text-align: center; padding: 9px 0; font-size: 13px; font-weight: 600; color: var(--muted-foreground); border-radius: 10px; cursor: pointer; border: 0; background: transparent; }
+  .tab[aria-selected="true"] { color: var(--foreground); background: var(--card); box-shadow: var(--shadow-card); }
+  .feed { padding: 8px 16px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .post { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex: 0 0 auto; }
+  .av-a { background: var(--secondary); color: var(--secondary-foreground); }
+  .av-b { background: var(--primary-soft); color: var(--primary); }
+  .av-c { background: color-mix(in srgb,var(--pink) 45%,white); color: #d2698a; }
+  .post-head .nm { font-size: 14px; font-weight: 700; }
+  .post-head .mt { font-size: 11.5px; color: var(--muted-foreground); }
+  .clip { position: relative; aspect-ratio: 4 / 5; background: #0c0e14; cursor: pointer; }
+  .clip .tag { position: absolute; top: 10px; left: 10px; z-index: 3; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 8px; background: rgba(8,10,18,.55); backdrop-filter: blur(8px); color: #fff; font-size: 11px; font-weight: 700; }
+  .clip .pl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 3; }
+  .clip .pl span { width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.18); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; color: #fff; transition: .15s; }
+  .clip.playing .pl span { opacity: 0; }
+  .clip .cbar { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; z-index: 3; }
+  .clip .cbar i { display: block; height: 100%; width: 0; background: #fff; }
+  .photo { aspect-ratio: 4 / 5; background:
+      repeating-linear-gradient(135deg, #eef1f6 0 14px, #e7ebf2 14px 28px); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); }
+  .post-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; }
+  .react { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 9999px; border: 1px solid var(--border); background: var(--card); font-size: 12.5px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; }
+  .react.cheer.on { color: #d2698a; border-color: color-mix(in srgb,var(--pink) 55%,white); background: color-mix(in srgb,var(--pink) 18%,white); }
+  .react.reject.on { color: #b88a13; border-color: var(--secondary); background: var(--secondary-soft); }
+  .done-chip { margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="app-header">
+    <button class="icon-btn" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="ttl" style="font-size:14px;font-weight:600">새벽기상 4인방</span>
+    <button class="icon-btn" aria-label="더보기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+  </header>
+
+  <div class="status-card">
+    <div class="row between">
+      <div class="stack gap-2">
+        <h1 class="t-h3">DAY 5 진행 중</h1>
+        <div class="row" style="gap:6px"><span class="chip chip-primary">영상 챌린지</span><span class="chip chip-neutral">4명</span></div>
+      </div>
+      <div style="text-align:right"><div class="t-h2 tnum" style="color:var(--primary)">5<span class="t-sub">/14</span></div><div class="t-caption">남은 9일</div></div>
+    </div>
+    <div class="prog-track"><div class="prog-fill"></div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" aria-selected="false">대시보드</button>
+    <button class="tab" aria-selected="true">오늘 피드</button>
+    <button class="tab" aria-selected="false">정보</button>
+  </div>
+
+  <div class="feed">
+    <!-- 영상 인증 카드 (핵심) -->
+    <article class="post">
+      <div class="post-head"><span class="av av-a">민</span><div style="flex:1"><div class="nm">민지</div><div class="mt">오늘 07:02 인증</div></div><span class="chip chip-success done-chip"><span class="dot" style="background:#2f9d6b"></span>완료</span></div>
+      <div class="clip" data-dur="3000">
+        <div class="scene cam-scene"></div><div class="cam-grain"></div>
+        <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg>3초</span>
+        <button class="pl" aria-label="재생"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg></span></button>
+        <div class="cbar"><i></i></div>
+      </div>
+      <div class="post-foot">
+        <button class="react cheer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A3.5 3.5 0 0 0 12 6 3.5 3.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7 7-7z"/></svg>응원</button>
+        <button class="react reject"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 6 0v-3h3a2 2 0 0 0 2-2l-1-6a2 2 0 0 0-2-1.5H7"/><path d="M7 16V6H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3z"/></svg>반려</button>
+      </div>
+    </article>
+
+    <!-- 영상 인증 카드 2 -->
+    <article class="post">
+      <div class="post-head"><span class="av av-b">지</span><div style="flex:1"><div class="nm">지호</div><div class="mt">오늘 06:48 인증</div></div><span class="chip chip-success done-chip"><span class="dot" style="background:#2f9d6b"></span>완료</span></div>
+      <div class="clip" data-dur="3000">
+        <div class="scene cam-scene" style="background:radial-gradient(120% 80% at 60% 10%,#42385c,#11101c)"></div><div class="cam-grain"></div>
+        <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg>3초</span>
+        <button class="pl" aria-label="재생"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg></span></button>
+        <div class="cbar"><i></i></div>
+      </div>
+      <div class="post-foot">
+        <button class="react cheer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A3.5 3.5 0 0 0 12 6 3.5 3.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7 7-7z"/></svg>응원</button>
+        <button class="react reject"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 6 0v-3h3a2 2 0 0 0 2-2l-1-6a2 2 0 0 0-2-1.5H7"/><path d="M7 16V6H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3z"/></svg>반려</button>
+        <span class="t-caption" style="margin-left:auto">판정은 익명이에요</span>
+      </div>
+    </article>
+
+    <!-- 미인증 (대기) -->
+    <article class="post" style="border-style:dashed;background:transparent">
+      <div class="post-head"><span class="av av-c">서</span><div style="flex:1"><div class="nm">서연</div><div class="mt">오늘 아직 인증 전</div></div><span class="chip chip-warn done-chip">대기</span></div>
+    </article>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 인라인 클립 재생
+  document.querySelectorAll('.clip').forEach(function (clip) {
+    var bar = clip.querySelector('.cbar i'); var DUR = +clip.dataset.dur || 3000;
+    var raf = 0, playing = false, t0 = 0;
+    clip.addEventListener('click', function () {
+      if (playing) { stop(); return; }
+      playing = true; clip.classList.add('playing'); t0 = Date.now();
+      (function loop(){ var p = Math.min((Date.now() - t0) / DUR, 1); bar.style.width = (p*100)+'%';
+        if (p >= 1) { setTimeout(function(){ bar.style.width='0%'; }, 200); stop(); return; }
+        raf = requestAnimationFrame(loop); })();
+    });
+    function stop(){ playing = false; clip.classList.remove('playing'); cancelAnimationFrame(raf); }
+  });
+  // 응원/반려 토글 (상호배타 · 익명)
+  document.querySelectorAll('.post-foot').forEach(function (foot) {
+    var cheer = foot.querySelector('.cheer'), reject = foot.querySelector('.reject');
+    if (cheer) cheer.addEventListener('click', function () { cheer.classList.toggle('on'); if (reject) reject.classList.remove('on'); });
+    if (reject) reject.addEventListener('click', function () { reject.classList.toggle('on'); if (cheer) cheer.classList.remove('on'); });
+  });
+  // 탭
+  var tabs = document.querySelector('.tabs');
+  tabs.addEventListener('click', function (e) { var t = e.target.closest('.tab'); if (!t) return;
+    tabs.querySelectorAll('.tab').forEach(function (x){ x.setAttribute('aria-selected', String(x === t)); }); });
+})();
+</script>
+
+</body>
+</html>

@@ -25,6 +25,7 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 ## Source Files to Inspect
 
+- **화면 시안(참고)** — 합본 몽타주 결과물(저장/공유 UI·카피): 허브 `docs/mockups/2026-06-24-feed-type-penalty-screens.html` 변이 E (spec §화면 시안)
 - `apps/web/src/lib/db/reads/photo-signed-url.ts` — ADR-0024 패턴 SoT(signed URL 재사용 기준)
 - `apps/web/src/lib/storage/action-photos.ts` — 기존 storage 패턴(action-videos 참조)
 - `apps/web/src/app/(app)/challenge/[id]/recap/page.tsx` — EVAL-0043 스토리 재생 분기 결과물(몽타주 URL 추가 대상)

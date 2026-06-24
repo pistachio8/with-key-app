@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>새 챌린지 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+
+</head>
+<body>
+<div class="screen">
+  <header class="flow-header">
+    <button class="icon-btn" aria-label="뒤로">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="ttl">새 챌린지</span>
+    <span class="step tnum">2 / 2</span>
+  </header>
+
+  <div class="body-pad">
+    <div class="stack gap-2">
+      <h1 class="t-h1">인증 방식과<br>만회 찬스를 정해요</h1>
+      <p class="t-sub">‘새벽기상 4인방’ · 2주 챌린지</p>
+    </div>
+
+    <!-- 피드 타입 토글 (EVAL-0042/0043) -->
+    <div class="field">
+      <span class="field-label">인증 피드 타입</span>
+      <div class="segmented" id="feedType">
+        <button type="button" class="seg" data-val="image" aria-pressed="true">
+          <span class="seg-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 20"/></svg></span>
+          <span class="seg-t">이미지</span>
+          <span class="seg-d">사진 한 장으로 인증<br>AI 키워드 검증</span>
+        </button>
+        <button type="button" class="seg" data-val="video" aria-pressed="false">
+          <span class="seg-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg></span>
+          <span class="seg-t">3초 영상</span>
+          <span class="seg-d">실시간 캡처 클립<br>스토리·몽타주 결과물</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="notice notice-warn" id="videoNotice" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      <span><b>갤러리 업로드 불가.</b> 영상 챌린지는 매일 앱 카메라로 <b>3초 실시간 캡처</b>만 인증할 수 있어요. 함께 모이면 스토리·합본 영상으로 남아요.</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 벌금 -->
+    <div class="field">
+      <span class="field-label">목표 미달 시 벌금</span>
+      <div class="pills" id="penaltyAmount" role="radiogroup" aria-label="벌금 금액">
+        <button type="button" class="pill" data-val="1000">1,000원</button>
+        <button type="button" class="pill" data-val="3000" aria-pressed="true">3,000원</button>
+        <button type="button" class="pill" data-val="5000">5,000원</button>
+        <button type="button" class="pill" data-val="10000">1만원</button>
+      </div>
+    </div>
+
+    <!-- 만회 찬스 미션 입력 (EVAL-0044) -->
+    <div class="field">
+      <div class="row between">
+        <label class="field-label" for="mission">만회 찬스 미션 <span class="chip chip-neutral" style="margin-left:4px">선택</span></label>
+        <span class="count"><span id="missionCount">0</span>/80</span>
+      </div>
+      <textarea class="textarea" id="mission" maxlength="80" aria-describedby="missionHelp"
+        placeholder="예: 거울 보며 ‘내일은 꼭 일어난다’ 3초 외치기 영상"></textarea>
+      <p class="help" id="missionHelp">미달자가 이 미션을 영상으로 해내고 친구들이 인정하면 <b>벌금이 면제</b>돼요. 비워두면 벌금만 적용됩니다.</p>
+    </div>
+  </div>
+
+  <div class="bottom-cta">
+    <button class="btn btn-primary btn-lg" id="submit">서명하고 챌린지 만들기</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 피드 타입 토글
+  var feed = document.getElementById('feedType');
+  var notice = document.getElementById('videoNotice');
+  feed.addEventListener('click', function (e) {
+    var b = e.target.closest('.seg'); if (!b) return;
+    feed.querySelectorAll('.seg').forEach(function (s) { s.setAttribute('aria-pressed', String(s === b)); });
+    notice.hidden = b.dataset.val !== 'video';
+  });
+  // 벌금 라디오
+  var pa = document.getElementById('penaltyAmount');
+  pa.addEventListener('click', function (e) {
+    var b = e.target.closest('.pill'); if (!b) return;
+    pa.querySelectorAll('.pill').forEach(function (s) { s.removeAttribute('aria-pressed'); });
+    b.setAttribute('aria-pressed', 'true');
+  });
+  // 미션 글자수
+  var m = document.getElementById('mission'), mc = document.getElementById('missionCount');
+  m.addEventListener('input', function () { mc.textContent = m.value.length; });
+  document.getElementById('submit').addEventListener('click', function () {
+    this.setAttribute('aria-busy', 'true'); this.textContent = '만드는 중'; this.disabled = true;
+  });
+})();
+</script>
+
+</body>
+</html>

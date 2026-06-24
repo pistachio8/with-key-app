@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>만회 찬스 결과 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .result-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 36px 24px 18px; }
+  .result-ic { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pop .45s var(--ease); }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+  .ic-ok { background: color-mix(in srgb,var(--success) 16%,white); color: #2f9d6b; }
+  .ic-no { background: color-mix(in srgb,var(--warn) 18%,white); color: #d9702f; }
+  .receipt { margin: 4px 16px 0; background: var(--invite-bg); border-radius: 18px; padding: 20px; color: var(--invite-ink); position: relative; }
+  .receipt h3 { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--invite-muted); }
+  .rrow { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
+  .rrow + .rrow { border-top: 1px dashed var(--invite-gold); }
+  .rrow .k { font-size: 14px; font-weight: 600; }
+  .rrow .v { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .v-ok { color: #2f9d6b; } .v-no { color: var(--invite-terra); }
+  .stamp { position: absolute; right: 16px; top: 14px; border: 2px solid var(--invite-terra); color: var(--invite-terra); font-size: 11px; font-weight: 800; letter-spacing: .08em; padding: 4px 8px; border-radius: 8px; transform: rotate(-8deg); opacity: .9; }
+  .stamp.ok { border-color: #2f9d6b; color: #2f9d6b; }
+</style>
+</head>
+<body>
+<div class="screen" id="screen">
+  <header class="flow-header">
+    <button class="icon-btn" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <span class="ttl">만회 찬스 결과</span>
+    <span class="step">창2 마감</span>
+  </header>
+
+  <!-- 면제 성공 -->
+  <div id="okView">
+    <div class="result-hero">
+      <div class="result-ic ic-ok"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="stack gap-2">
+        <h1 class="t-h1">벌금이 면제됐어요!</h1>
+        <p class="t-sub">친구들이 미션을 인정했어요. ‘새벽기상 4인방’ 다음 정산에서 벌금이 빠집니다.</p>
+      </div>
+    </div>
+    <div class="receipt">
+      <span class="stamp ok">면제</span>
+      <h3>만회 정산</h3>
+      <div class="rrow"><span class="k">확정 벌금</span><span class="v" style="text-decoration:line-through;color:var(--invite-muted)">3,000원</span></div>
+      <div class="rrow"><span class="k">동료 판정</span><span class="v v-ok">인정 2 · 반려 0</span></div>
+      <div class="rrow"><span class="k">최종 청구</span><span class="v v-ok">0원</span></div>
+    </div>
+    <div class="body-pad" style="padding-top:18px">
+      <div class="notice notice-info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span>면제는 다음 정산 영수증에 ‘만회 면제’로 기록돼요. 챌린지 자체는 이미 정산이 끝나 있어요.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2배 이월 -->
+  <div id="noView" hidden>
+    <div class="result-hero">
+      <div class="result-ic ic-no"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+      <div class="stack gap-2">
+        <h1 class="t-h1">벌금이 2배로 이월됐어요</h1>
+        <p class="t-sub" id="noReason">증명이 반려돼 만회에 실패했어요. 벌금이 2배가 되어 다음 챌린지 정산에 더해집니다.</p>
+      </div>
+    </div>
+    <div class="receipt">
+      <span class="stamp">2배 이월</span>
+      <h3>만회 정산</h3>
+      <div class="rrow"><span class="k">확정 벌금</span><span class="v">3,000원</span></div>
+      <div class="rrow"><span class="k">동료 판정</span><span class="v v-no" id="noJudge">인정 0 · 반려 2</span></div>
+      <div class="rrow"><span class="k">다음 정산 이월</span><span class="v v-no">6,000원</span></div>
+    </div>
+    <div class="body-pad" style="padding-top:18px">
+      <div class="notice notice-warn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span><b>이월된 6,000원</b>은 같은 그룹의 다음 챌린지를 정산할 때 자동으로 더해져요. 이번엔 추가로 빠져나가는 돈은 없어요.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-cta">
+    <button class="btn btn-primary btn-lg">확인</button>
+  </div>
+</div>
+
+<script>
+  // 결과 분기: ?r=rejected | expired (기본 accepted)
+  (function () {
+    var r = new URLSearchParams(location.search || window.SCREEN_PARAMS || '').get('r');
+    if (r === 'rejected' || r === 'expired') {
+      document.getElementById('okView').hidden = true;
+      document.getElementById('noView').hidden = false;
+      if (r === 'expired') {
+        document.getElementById('noReason').textContent =
+          '창2 마감까지 미션 증명을 제출하지 않았어요. 벌금이 2배가 되어 다음 챌린지 정산에 더해집니다.';
+        document.getElementById('noJudge').textContent = '미제출 · 만료';
+      }
+    }
+  })();
+</script>
+
+</body>
+</html>
