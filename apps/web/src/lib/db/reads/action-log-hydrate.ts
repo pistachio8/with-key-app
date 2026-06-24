@@ -6,6 +6,9 @@ export type ActionLogHydrate = {
   authorId: string;
   authorName: string;
   photoPath: string | null;
+  // 영상 인증(spec §C2 / EVAL-0043). mediaType='video' 이면 videoPath 로 signed URL 을 만든다.
+  mediaType: "photo" | "video";
+  videoPath: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   // auto_verify_status==='peer_rejected' 여부. 피드 무효 표시용(ADR-0038).
@@ -34,6 +37,8 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
         "id",
         "user_id",
         "photo_path",
+        "media_type",
+        "video_path",
         "ai_summary",
         "selected_keywords",
         "created_at",
@@ -51,6 +56,8 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
     id: string;
     user_id: string;
     photo_path: string | null;
+    media_type: "photo" | "video" | null;
+    video_path: string | null;
     ai_summary: string;
     selected_keywords: string[] | null;
     created_at: string;
@@ -64,6 +71,8 @@ async function fetchHydrate(actionLogId: string): Promise<ActionLogHydrate | nul
     authorId: row.user_id,
     authorName: author?.display_name ?? "익명",
     photoPath: row.photo_path,
+    mediaType: row.media_type ?? "photo",
+    videoPath: row.video_path,
     summary: row.ai_summary,
     keywords: row.selected_keywords ?? [],
     isPeerRejected: row.auto_verify_status === "peer_rejected",

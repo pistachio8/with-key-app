@@ -16,6 +16,7 @@ describe("buildRecapView (주 단위)", () => {
     start_at: "2026-05-01T00:00:00Z",
     end_at: "2026-05-08T00:00:00Z",
     closed_at: "2026-05-08T00:00:00Z",
+    feed_type: "image" as const,
   };
 
   // 1주 챌린지라 모든 done 이 week1. dbw 로 week1 카운트만 지정.
@@ -106,6 +107,7 @@ describe("buildVisibleDoneByUserByWeek — peer_rejected 제외 (EVAL-0041)", ()
     start_at: "2026-05-01T00:00:00Z",
     end_at: "2026-05-08T00:00:00Z",
     closed_at: "2026-05-08T00:00:00Z",
+    feed_type: "image" as const,
   };
   const now = new Date("2026-05-08T00:00:00Z");
   // 03:00Z = 12:00 KST → 각각 05-01·02·03 (KST distinct day). 05-03 만 반려.

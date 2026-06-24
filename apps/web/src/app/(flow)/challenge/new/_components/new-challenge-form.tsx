@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,8 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
   const [goalCount, setGoalCount] = useState(7);
   const [durationDays, setDurationDays] = useState(7);
   const [penaltyAmount, setPenaltyAmount] = useState(3000);
+  // 인증 medium·결과물(spec §C1 / EVAL-0043). image=사진+기존 recap, video=3초 클립+스토리.
+  const [feedType, setFeedType] = useState<"image" | "video">("image");
   const [signature, setSignature] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -114,6 +117,7 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
           goalCount,
           durationDays,
           penaltyAmount,
+          feedType,
           ownerSignatureDataUrl: signature,
         });
         if (!res.ok) {
@@ -177,6 +181,43 @@ export function NewChallengeForm({ ownerGroups, initialGroupId }: NewChallengeFo
               placeholder="예: 30일 헬스장 출석"
             />
           </div>
+
+          {/* native radio — 화살표 키 이동·checked 토글을 브라우저가 처리(WAI-ARIA radiogroup 내장). */}
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="t-caption">인증 방식</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "image", label: "사진", desc: "기존 사진 인증" },
+                  { value: "video", label: "3초 영상", desc: "실시간 클립 · 스토리" },
+                ] as const
+              ).map((opt) => {
+                const selected = feedType === opt.value;
+                return (
+                  <label
+                    key={opt.value}
+                    className={cn(
+                      "focus-within:ring-ring flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 transition focus-within:ring-2",
+                      selected
+                        ? "border-primary bg-primary/5 ring-primary ring-1"
+                        : "border-border hover:bg-muted",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="feedType"
+                      value={opt.value}
+                      checked={selected}
+                      onChange={() => setFeedType(opt.value)}
+                      className="sr-only"
+                    />
+                    <span className="t-body font-semibold">{opt.label}</span>
+                    <span className="text-muted-foreground text-xs">{opt.desc}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           {singleGroup && (
             <p className="t-sub rounded-lg border border-dashed px-3 py-2">

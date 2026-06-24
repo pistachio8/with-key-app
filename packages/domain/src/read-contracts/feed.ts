@@ -10,6 +10,9 @@ export type FeedItemView = {
   authorId: string;
   authorName: string;
   photoSignedUrl: string | null;
+  // 영상 인증(media_type='video')일 때만 채워진다(spec §C2 / EVAL-0043). 사진 인증은 null.
+  // photoSignedUrl 과 상호배타 — 둘 다 viewer-agnostic pre-signed URL(action-videos RLS).
+  videoSignedUrl: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Record<KudosEmoji, number>>;
@@ -36,6 +39,7 @@ export const feedItemViewSchema: z.ZodType<FeedItemView> = z.object({
   authorId: z.string(),
   authorName: z.string(),
   photoSignedUrl: z.string().nullable(),
+  videoSignedUrl: z.string().nullable(),
   summary: z.string(),
   keywords: z.array(z.string()),
   kudosByEmoji: kudosByEmojiSchema,
