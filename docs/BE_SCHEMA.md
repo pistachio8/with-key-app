@@ -273,19 +273,21 @@ stateDiagram-v2
 
 ### 5.5 `challenges` ⭐ (D-006/007 반영)
 
-| 컬럼             | 타입        | Null | Default             | 제약/비고                                                                                                                                                                        |
-| ---------------- | ----------- | ---- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`             | uuid        | NO   | `gen_random_uuid()` | PK                                                                                                                                                                               |
-| `group_id`       | uuid        | NO   | —                   | FK → `groups.id`                                                                                                                                                                 |
-| `title`          | text        | NO   | —                   | `char_length BETWEEN 1 AND 30`                                                                                                                                                   |
-| `type`           | text        | NO   | `'fitness'`         | `CHECK IN ('fitness')` — POC                                                                                                                                                     |
-| `goal_count`     | int         | NO   | `3`                 | `CHECK BETWEEN 1 AND 7` — 주 N회(주간 빈도). 벌금은 끝난 주마다 미달 시 누적(`lib/challenge/weekly.ts`)                                                                          |
-| `duration_days`  | int         | NO   | `7`                 | `CHECK BETWEEN 1 AND 90` ← **D-006**. 사용자 종료일 picker 로 7~90일 선택 (최소 1주 — [ADR-0004](./adr/0004-2026-05-14-end-date-picker-min-week.md), PR5 머지 후 FE 가드 해제됨) |
-| `penalty_amount` | int         | NO   | —                   | `CHECK BETWEEN 0 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** (migration 0025_penalty_allow_zero.sql에서 0원 허용으로 완화됨, PR #45)                                    |
-| `status`         | text        | NO   | `'pending'`         | `CHECK IN ('pending','accepted','active','closed')`                                                                                                                              |
-| `start_at`       | timestamptz | YES  | null                | `active` 전이 시 서버가 `now()`로 채움                                                                                                                                           |
-| `end_at`         | timestamptz | YES  | null                | (활성화 KST 날짜 + duration_days)일의 00:00 KST — ADR-0026                                                                                                                       |
-| `created_at`     | timestamptz | NO   | `now()`             |                                                                                                                                                                                  |
+| 컬럼              | 타입        | Null | Default             | 제약/비고                                                                                                                                                                        |
+| ----------------- | ----------- | ---- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | uuid        | NO   | `gen_random_uuid()` | PK                                                                                                                                                                               |
+| `group_id`        | uuid        | NO   | —                   | FK → `groups.id`                                                                                                                                                                 |
+| `title`           | text        | NO   | —                   | `char_length BETWEEN 1 AND 30`                                                                                                                                                   |
+| `type`            | text        | NO   | `'fitness'`         | `CHECK IN ('fitness')` — POC                                                                                                                                                     |
+| `goal_count`      | int         | NO   | `3`                 | `CHECK BETWEEN 1 AND 7` — 주 N회(주간 빈도). 벌금은 끝난 주마다 미달 시 누적(`lib/challenge/weekly.ts`)                                                                          |
+| `duration_days`   | int         | NO   | `7`                 | `CHECK BETWEEN 1 AND 90` ← **D-006**. 사용자 종료일 picker 로 7~90일 선택 (최소 1주 — [ADR-0004](./adr/0004-2026-05-14-end-date-picker-min-week.md), PR5 머지 후 FE 가드 해제됨) |
+| `penalty_amount`  | int         | NO   | —                   | `CHECK BETWEEN 0 AND 10000 AND penalty_amount % 1000 = 0` ← **D-007** (migration 0025_penalty_allow_zero.sql에서 0원 허용으로 완화됨, PR #45)                                    |
+| `status`          | text        | NO   | `'pending'`         | `CHECK IN ('pending','accepted','active','closed')`                                                                                                                              |
+| `start_at`        | timestamptz | YES  | null                | `active` 전이 시 서버가 `now()`로 채움                                                                                                                                           |
+| `end_at`          | timestamptz | YES  | null                | (활성화 KST 날짜 + duration_days)일의 00:00 KST — ADR-0026                                                                                                                       |
+| `created_at`      | timestamptz | NO   | `now()`             |                                                                                                                                                                                  |
+| `feed_type`       | text        | NO   | `'image'`           | `CHECK IN ('image','video')` (migration 0051). 인증 medium·결과물 타입 — image=사진/기존 recap, video=실시간 3초 캡처/스토리. 기본 image 로 기존 동작·backfill 보존. spec §C1    |
+| `penalty_mission` | text        | YES  | null                | 그룹장 벌칙(행동 미션) 자유 입력(≤80자, validator). NULL=기존 벌금 전용, 있으면 redemption(deferred penalty) 경로 활성 — [ADR-0039](./adr/0039-penalty-redemption-settlement.md) |
 
 - **그룹당 동시 1개 제약**: partial unique index `challenges_one_open_per_group on challenges(group_id) where status in ('pending','accepted','active')` (migration 0029). closed 는 제외하여 종료 챌린지 history 누적 보존.
 - `created_by` 컬럼은 POC 에서 추가하지 않음 — owner=creator 모델 유지 (ADR-0011).
@@ -520,7 +522,7 @@ $$;
 ### 8.1 `createChallenge(input)`
 
 - 입력 검증: `challengeInputSchema` (D-006/007 반영 후)
-- 구현: SECURITY DEFINER RPC `create_challenge(p_group_id, p_title, p_type, p_goal_count, p_duration_days, p_penalty_amount)` (migration `0021_create_challenge_rpc.sql`)
+- 구현: SECURITY DEFINER RPC `create_challenge(p_group_id, p_title, p_type, p_goal_count, p_duration_days, p_penalty_amount, p_feed_type default 'image', p_penalty_mission default null)` — migration `0021_create_challenge_rpc.sql`(원형) → `0051_feed_type_penalty_mission.sql`(6-인자 drop 후 8-인자 재생성, 단일 시그니처 유지). named 호출이라 기존 6-param 호출부는 default 로 투명 호환.
 - owner 검증 → `challenges(status='pending')` 삽입 → `challenge_participants` 에 **현재 `group_members` 전원** 시드(`signed_at=null`) 를 한 트랜잭션으로 처리. 이후 친구가 `acceptInvite` 로 합류하면 `accept_invite` RPC 가 pending 챌린지에 자동 편입(§8.3).
 - 반환: `(id uuid, participant_count int)` — `participant_count` 는 시드 직후 카운트. cohort 분리(솔로 1 / 그룹 ≥2)와 이벤트 props 에 사용.
 - 백필: 0021 마이그레이션이 멱등(`ON CONFLICT DO NOTHING`)으로 기존 pending 챌린지의 누락된 참가자 시드를 보정.

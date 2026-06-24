@@ -23,7 +23,9 @@ const createChallengeInputSchema = challengeInputSchema.extend({
   ownerSignatureDataUrl: z.string().min(1).optional(),
 });
 
-export type CreateChallengeInput = z.infer<typeof createChallengeInputSchema>;
+// z.input(아닌 z.infer): feedType 에 .default("image") 가 있어 input(호출부)에선 optional,
+// output(parse 후)에선 required 로 갈린다. 호출부는 feedType 미지정(UI 후속 WP)이므로 input 타입을 쓴다.
+export type CreateChallengeInput = z.input<typeof createChallengeInputSchema>;
 
 // 성공 시 redirect throw 로 함수가 종료되므로 success payload 없음.
 // 실패 분기만 ActionResult<never> 로 client 에 반환.
