@@ -18,7 +18,9 @@ import type { ZodError } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   actionLogInputSchema,
+  actionVideoLogInputSchema,
   type ActionLogInput,
+  type ActionVideoLogInput,
   type SubmitResult,
   KEYWORD_POOL_VERSION,
   toKstDayKey,
@@ -30,6 +32,7 @@ import { track } from "@/lib/analytics/track";
 import { success, failure, validationFailure, type ActionResult } from "@/lib/actions/response";
 import { mapSupabaseError } from "@/lib/actions/supabase-error";
 import { deletePhoto, uploadPhoto } from "@/lib/storage/action-photos";
+import { deleteVideo, uploadVideo } from "@/lib/storage/action-videos";
 import { judgeAndRecordVerifyStatus, recordVerifySignals } from "@/lib/verify";
 import { dispatchActionCompletedNotification } from "@/lib/push/dispatch";
 
@@ -45,11 +48,23 @@ function readJsonArray(value: FormDataEntryValue | null): unknown {
   }
 }
 
-function parseFormData(
-  formData: FormData,
-):
-  | { ok: true; input: ActionLogInput; file: File | null }
-  | { ok: false; error: ZodError<ActionLogInput> } {
+type ParsedSubmission =
+  | { ok: true; mediaType: "photo"; input: ActionLogInput; file: File | null }
+  | { ok: true; mediaType: "video"; input: ActionVideoLogInput; file: File | null }
+  | { ok: false; error: ZodError };
+
+function parseFormData(formData: FormData): ParsedSubmission {
+  // 영상 인증(spec §C2): 순수 실시간 캡처라 키워드·메모 없이 challengeId + 클립만 온다.
+  if (formData.get("mediaType") === "video") {
+    const parsed = actionVideoLogInputSchema.safeParse({
+      challengeId: String(formData.get("challengeId") ?? ""),
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error };
+    const maybeVideo = formData.get("video");
+    const file = maybeVideo instanceof File && maybeVideo.size > 0 ? maybeVideo : null;
+    return { ok: true, mediaType: "video", input: parsed.data, file };
+  }
+
   const memoRaw = formData.get("memo");
   const memo = typeof memoRaw === "string" ? memoRaw.trim() : "";
   const raw = {
@@ -65,7 +80,7 @@ function parseFormData(
 
   const maybeFile = formData.get("photo");
   const file = maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
-  return { ok: true, input: parsed.data, file };
+  return { ok: true, mediaType: "photo", input: parsed.data, file };
 }
 
 // BE_SCHEMA §8.5. RLS 가 참가자/active/기간 검증. caller 가 client·user 를 주입한다.
@@ -134,13 +149,8 @@ export async function submitActionLogCore(
 
   const currentDay = Math.max(1, Math.min(totalDays, dayIndexOf(todayKey, startKstDayKey)));
 
-  // 직접 입력 일기(spec 2026-05-28-action-manual-diary): memo 가 채워졌으면 AI 를
-  // 건너뛰고 입력 글을 그대로 일기로 저장하며, 키워드는 무시한다(selected_keywords=[]).
-  const isDirect = Boolean(parsed.input.memo);
-  const finalKeywords = isDirect ? [] : parsed.input.selectedKeywords;
-
   // display_name 은 (a) AI 템플릿 fallback 1인칭 톤, (b) 완료 푸시 작성자명 둘 다에 쓰인다.
-  // 직접 입력 모드에서도 푸시용으로 필요하므로 분기 밖에서 1회 조회. RLS users_select_self 허용.
+  // 직접 입력·영상 모드에서도 푸시용으로 필요하므로 분기 밖에서 1회 조회. RLS users_select_self 허용.
   const { data: profile } = await supabase
     .from("users")
     .select("display_name")
@@ -148,58 +158,116 @@ export async function submitActionLogCore(
     .maybeSingle();
   const pushDisplayName = profile?.display_name?.trim() || "친구";
 
+  // 인증 본문 분기.
+  //  - 영상(spec §C2): 실시간 캡처 자체가 인증 → AI 일기·키워드 없음. ai_summary='' · prompt_version='video'.
+  //  - 직접 입력(spec 2026-05-28-action-manual-diary): memo 를 ai_summary 로 승격, 키워드 무시(selected_keywords=[]).
+  //  - AI 모드: generateDiary 로 일기 생성.
   let aiSummary: string;
   let templateFallback: boolean;
   let promptVersion: string;
   let aiResult: DiaryResult | null = null;
+  let finalKeywords: string[];
+  let shownKeywords: string[];
+  let rerollCount: number;
+  let isDirect: boolean;
 
-  if (parsed.input.memo) {
-    aiSummary = parsed.input.memo;
+  if (parsed.mediaType === "video") {
+    aiSummary = "";
     templateFallback = false;
-    promptVersion = "manual";
+    promptVersion = "video";
+    finalKeywords = [];
+    shownKeywords = [];
+    rerollCount = 0;
+    isDirect = false;
   } else {
-    // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
-    const mealSlot = parsed.input.activityType === "meal" ? inferMealSlot(now) : undefined;
+    const input = parsed.input;
+    isDirect = Boolean(input.memo);
+    finalKeywords = isDirect ? [] : input.selectedKeywords;
+    shownKeywords = input.shownKeywords;
+    rerollCount = input.rerollCount;
 
-    aiResult = await generateDiary(
-      {
-        activityType: parsed.input.activityType,
-        keywords: parsed.input.selectedKeywords,
-        mealSlot,
-      },
-      { displayName: profile?.display_name ?? undefined },
-    );
-    aiSummary = aiResult.summary;
-    templateFallback = aiResult.fallback;
-    promptVersion = aiResult.promptVersion;
+    if (input.memo) {
+      aiSummary = input.memo;
+      templateFallback = false;
+      promptVersion = "manual";
+    } else {
+      // meal 만 업로드 시각(now)으로 끼니 추론 — soft context 라 DB/analytics 미저장, 프롬프트에만 주입.
+      const mealSlot = input.activityType === "meal" ? inferMealSlot(now) : undefined;
+
+      aiResult = await generateDiary(
+        {
+          activityType: input.activityType,
+          keywords: input.selectedKeywords,
+          mealSlot,
+        },
+        { displayName: profile?.display_name ?? undefined },
+      );
+      aiSummary = aiResult.summary;
+      templateFallback = aiResult.fallback;
+      promptVersion = aiResult.promptVersion;
+    }
   }
 
+  const insertRow = {
+    challenge_id: parsed.input.challengeId,
+    user_id: user.id,
+    activity_type: parsed.input.activityType,
+    photo_path: null,
+    selected_keywords: finalKeywords,
+    shown_keywords: shownKeywords,
+    reroll_count: rerollCount,
+    // 직접 입력은 ai_summary 로 승격되고 AI 모드는 memo 가 없으므로 항상 null. 영상은 빈 문자열.
+    memo: null,
+    ai_summary: aiSummary,
+    template_fallback: templateFallback,
+    prompt_version: promptVersion,
+  };
+  // media_type 은 0054 추가 컬럼이나 생성 타입(supabase.ts)이 아직 stale → 영상만 캐스트로 'video' 주입한다.
+  // 사진은 DB default 'photo' 로 충족되어 명시하지 않는다(기존 동작 보존).
   const { data, error } = await supabase
     .from("action_logs")
-    .insert({
-      challenge_id: parsed.input.challengeId,
-      user_id: user.id,
-      activity_type: parsed.input.activityType,
-      photo_path: null,
-      selected_keywords: finalKeywords,
-      shown_keywords: parsed.input.shownKeywords,
-      reroll_count: parsed.input.rerollCount,
-      // 직접 입력은 ai_summary 로 승격되고 AI 모드는 memo 가 없으므로 항상 null.
-      memo: null,
-      ai_summary: aiSummary,
-      template_fallback: templateFallback,
-      prompt_version: promptVersion,
-    })
+    .insert(
+      parsed.mediaType === "video"
+        ? ({ ...insertRow, media_type: "video" } as typeof insertRow)
+        : insertRow,
+    )
     .select("id")
     .single();
 
   if (error) return failure(mapSupabaseError(error));
   if (!data) return failure("upstream_error");
 
-  // D-018: 2-step photo upload → RPC update. 실패는 비파괴 폴백 (photoAttached=false).
+  // D-018: 2-step media upload → RPC update. 실패는 비파괴 폴백.
   let photoAttached = false;
   let photoSize = 0;
-  if (parsed.file) {
+  if (parsed.mediaType === "video") {
+    // 영상 인증: 클립 업로드 → update_action_log_video_path 로 video_path 저장.
+    // AI 부정탐지(signals/judge) 없음 — 실시간 캡처가 1차 보증, 사후 게이트는 peer-reject(spec §C2).
+    if (parsed.file) {
+      const upload = await uploadVideo({
+        userId: user.id,
+        challengeId: parsed.input.challengeId,
+        actionLogId: data.id,
+        file: parsed.file,
+        client: supabase,
+      });
+      if (upload.ok) {
+        const { error: rpcError } = await supabase.rpc("update_action_log_video_path", {
+          p_log_id: data.id,
+          p_video_path: upload.path,
+        });
+        if (rpcError) {
+          console.error("[submitActionLog] update_action_log_video_path failed", rpcError);
+          await deleteVideo(user.id, upload.path, supabase);
+        }
+      } else {
+        console.warn("[submitActionLog] uploadVideo failed", {
+          actionLogId: data.id,
+          reason: upload.reason,
+        });
+      }
+    }
+  } else if (parsed.file) {
     const upload = await uploadPhoto({
       userId: user.id,
       challengeId: parsed.input.challengeId,
@@ -261,7 +329,7 @@ export async function submitActionLogCore(
         selectedKeywords: finalKeywords,
         keywordCount: finalKeywords.length,
         hasMemo: isDirect,
-        rerollCount: parsed.input.rerollCount,
+        rerollCount,
         photoSize,
         photoAttached,
         poolVersion: KEYWORD_POOL_VERSION,

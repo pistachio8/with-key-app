@@ -4,6 +4,7 @@ import { toKstDayKey } from "@withkey/domain";
 import { fetchChallengeDetail } from "@/lib/db/reads/challenge-detail";
 import { createClient } from "@/lib/supabase/server";
 import { ActionFormKeyed } from "./_components/action-form-keyed";
+import { VideoActionFormKeyed } from "./_components/video-action-form-keyed";
 import { MarkActionStartedOnMount } from "./_components/mark-action-started-on-mount";
 
 type Params = Promise<{ id: string }>;
@@ -43,14 +44,27 @@ export default async function ChallengeActionPage({ params }: { params: Params }
     ? toKstDayKey(latestLog.created_at) === toKstDayKey(new Date())
     : false;
 
+  // 인증 medium 분기(spec §C2): 영상 챌린지는 실시간 3초 캡처, 이미지 챌린지는 기존 사진+AI 일기.
+  // feed_type 은 0051 추가 컬럼이나 생성 타입(supabase.ts)이 stale → 캐스트로 읽는다(기존 video read 패턴과 동일).
+  const { data: feedRow } = await supabase
+    .from("challenges")
+    .select("feed_type")
+    .eq("id", id)
+    .maybeSingle();
+  const isVideo = (feedRow as { feed_type?: string | null } | null)?.feed_type === "video";
+
   return (
     <div className="flex min-h-[100dvh] flex-col gap-4 p-4">
       <MarkActionStartedOnMount challengeId={id} />
       <header className="flex flex-col gap-1">
         <p className="t-caption text-muted-foreground">{detail.title}</p>
-        <h1 className="t-h2">AI 일기</h1>
+        <h1 className="t-h2">{isVideo ? "3초 영상 인증" : "AI 일기"}</h1>
       </header>
-      <ActionFormKeyed challengeId={id} verifiedToday={verifiedToday} />
+      {isVideo ? (
+        <VideoActionFormKeyed challengeId={id} verifiedToday={verifiedToday} />
+      ) : (
+        <ActionFormKeyed challengeId={id} verifiedToday={verifiedToday} />
+      )}
     </div>
   );
 }
