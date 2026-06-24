@@ -138,6 +138,7 @@ export function ChallengeFeed({ items, viewerId, participantCount, isEnded }: Pr
           <FeedCard
             authorName={item.authorName}
             photoSignedUrl={item.photoSignedUrl}
+            videoSignedUrl={item.videoSignedUrl}
             summary={item.summary}
             keywords={item.keywords}
             kudosByEmoji={item.kudosByEmoji}
