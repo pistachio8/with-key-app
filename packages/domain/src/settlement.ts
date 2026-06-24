@@ -18,7 +18,10 @@
 // apps/web/src/lib/challenge/weekly.ts(`confirmedPenalty`)이고 SQL 정산 RPC 는 동일 산식을
 // 포팅한다. 본 모듈은 "산출된 미달분"을 입력으로 받아 분배·원장 행·풀을 결정론으로 만든다.
 
-export type SettlementReason = "deposit_release" | "penalty";
+// penalty_debt_carryover: 벌칙 미인정(rejected/expired) 시 2X 빚이 같은 그룹 다음 챌린지 정산에
+//   이월 차감되는 reason(ADR-0039 carry-over). 타입은 0042 에서 미리 추가하되, DB CHECK 확장과 실제
+//   INSERT 경로는 0054(EVAL-0045) 에서 활성화한다 — 0042 단계에선 이 reason 으로 원장 행을 만들지 않는다.
+export type SettlementReason = "deposit_release" | "penalty" | "penalty_debt_carryover";
 
 export type SettlementInput = {
   userId: string;
@@ -51,6 +54,21 @@ export type SettlementResult = {
   poolPoints: number;
   /** 확정 시점 분배 스냅샷 → settlements.distribution(사후 재계산 금지, AC-settle-5). */
   distribution: Record<string, SettlementShare>;
+  /**
+   * 벌칙 챌린지(penalty_mission 있음): penalty 를 deferred 처리해 이 스냅샷이 최종 미달분을 담지 않음을
+   * 표시하는 메타. redemption 창(종료+48~96h) 결과가 forward(carry-over)로 반영된다(ADR-0039 §C5).
+   * settlements.distribution 에 redemption_pending 키로 미러된다(SQL settle_challenge). 기본 false.
+   */
+  redemptionPending: boolean;
+};
+
+export type SettlementOptions = {
+  /**
+   * 챌린지의 벌칙 미션(challenges.penalty_mission). 비어있지 않으면 penalty 를 deferred 처리한다 —
+   * 이 정산에서 미달분(forfeit)을 차감/적재하지 않고 redemption 창에서 forward(ADR-0039). 불변 스냅샷에
+   * 아직 확정 전인 X 를 박지 않기 위함이다.
+   */
+  penaltyMission?: string | null;
 };
 
 function toNonNegInt(value: number): number {
@@ -65,7 +83,12 @@ function toNonNegInt(value: number): number {
  * 반환된 entries 를 그대로 원장에 append 하고 poolPoints 를 settlements 에 적재하면
  * 잔액=Σdelta 가 보존된다.
  */
-export function computeSettlement(participants: ReadonlyArray<SettlementInput>): SettlementResult {
+export function computeSettlement(
+  participants: ReadonlyArray<SettlementInput>,
+  options?: SettlementOptions,
+): SettlementResult {
+  // 벌칙 챌린지(penalty_mission 있음)는 deferred — 이 정산에선 forfeit 0(redemption 창에서 forward).
+  const deferred = Boolean(options?.penaltyMission && options.penaltyMission.trim().length > 0);
   const entries: SettlementLedgerEntry[] = [];
   const distribution: Record<string, SettlementShare> = {};
   let poolPoints = 0;
@@ -73,9 +96,10 @@ export function computeSettlement(participants: ReadonlyArray<SettlementInput>):
   for (const p of participants) {
     const held = toNonNegInt(p.heldDeposit);
     const penalty = toNonNegInt(p.confirmedPenalty);
-    const forfeit = Math.min(held, penalty); // 보증금 한도 — 초과분은 P1 미징수
+    // deferred 면 미달분을 차감하지 않는다. 아니면 보증금 한도 — 초과분은 P1 미징수.
+    const forfeit = deferred ? 0 : Math.min(held, penalty);
     const released = held; // release-full: 전액 환급
-    const net = released - forfeit; // = H - F >= 0
+    const net = released - forfeit; // = H - F >= 0 (deferred 면 = H)
 
     if (released > 0) {
       entries.push({ userId: p.userId, delta: released, reason: "deposit_release" });
@@ -88,7 +112,7 @@ export function computeSettlement(participants: ReadonlyArray<SettlementInput>):
     poolPoints += forfeit;
   }
 
-  return { entries, poolPoints, distribution };
+  return { entries, poolPoints, distribution, redemptionPending: deferred };
 }
 
 /**
@@ -104,7 +128,7 @@ export function settleOnce(
   participants: ReadonlyArray<SettlementInput>,
 ): SettlementResult {
   if (alreadySettled) {
-    return { entries: [], poolPoints: 0, distribution: {} };
+    return { entries: [], poolPoints: 0, distribution: {}, redemptionPending: false };
   }
   return computeSettlement(participants);
 }

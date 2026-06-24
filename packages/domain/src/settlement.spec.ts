@@ -131,6 +131,40 @@ describe("computeSettlement — 정산 분배 결정론 (EVAL-0006)", () => {
   });
 });
 
+describe("computeSettlement — 벌칙 deferred penalty (ADR-0039 §C5)", () => {
+  const parts: SettlementInput[] = [
+    { userId: "a", heldDeposit: 3000, confirmedPenalty: 0 }, // 달성
+    { userId: "b", heldDeposit: 3000, confirmedPenalty: 2000 }, // 미달
+  ];
+
+  it("penaltyMission 있으면 penalty 미생성 — forfeit 0·deposit_release 만·pool 0·redemptionPending", () => {
+    const r = computeSettlement(parts, { penaltyMission: "물구나무 10초" });
+
+    // 미달자도 penalty 행 없음 — deposit_release(+H) 한 줄만
+    expect(r.entries.filter((e) => e.userId === "b")).toEqual([
+      { userId: "b", delta: 3000, reason: "deposit_release" },
+    ]);
+    expect(r.entries.some((e) => e.reason === "penalty")).toBe(false);
+
+    // 미달분이 deferred → 이 정산 forfeit 0, 공동주머니 미적재(carry-over 는 다음 정산으로 forward)
+    expect(r.distribution["b"]).toEqual({ released: 3000, forfeit: 0, net: 3000 });
+    expect(r.poolPoints).toBe(0);
+    expect(r.redemptionPending).toBe(true);
+  });
+
+  it("penaltyMission 없음/빈문자열은 기존 동작(즉시 penalty) — redemptionPending false", () => {
+    const base = computeSettlement(parts);
+    const empty = computeSettlement(parts, { penaltyMission: "   " });
+    const nullish = computeSettlement(parts, { penaltyMission: null });
+
+    expect(base.redemptionPending).toBe(false);
+    expect(empty).toEqual(base); // 공백만 → deferred 아님
+    expect(nullish).toEqual(base);
+    expect(base.distribution["b"].forfeit).toBe(2000); // 즉시 차감 유지
+    expect(base.poolPoints).toBe(2000);
+  });
+});
+
 describe("settleOnce — 이중 정산 멱등 (AC-settle-trigger-3 / TS-settle-trigger-2)", () => {
   const parts: SettlementInput[] = [{ userId: "a", heldDeposit: 1000, confirmedPenalty: 1000 }];
 
