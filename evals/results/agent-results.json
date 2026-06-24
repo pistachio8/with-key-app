@@ -516,7 +516,7 @@
           "pnpm harness:check": "pass — 0 violation",
           "pnpm validate:docs": "pass — broken 0"
         },
-        "ci": "PR(base develop) — Integration(shared with-key, PR migration apply 후)가 settle-challenge-insert-once.spec.ts 로 settle_challenge 단일 INSERT(pool/distribution 최종값·UPDATE 없음)·재호출 멱등·deferred penalty(pool 0·redemption_pending·penalty 원장 없음)를 실측 예정.",
+        "ci": "PR #264(base develop) — Lint+Type+Unit pass. Integration 89/91 pass: settle-challenge-insert-once.spec.ts 3건(단일 INSERT·재호출 멱등·deferred penalty) 전부 통과, cascade 해소. 잔여 2건은 deadline-cron.spec.ts(expect dispatched 0, 실제 1) = 알려진 공유 Supabase 동시성 오염 플레이크(rerun 재현, deadline-cron 챌린지는 point_ledger 없어 내 변경과 무관). Integration 은 develop required check 아님(비차단). 머지는 사용자 수동.",
         "local-skip": "integration 테스트는 로컬 Supabase 부재로 미실행(정직) — CI Integration 이 실측."
       },
       "review": {
@@ -524,7 +524,7 @@
         "criticalHigh": 0,
         "verdict": "pass"
       },
-      "notes": "오케스트레이션: /orchestrate → harness:route(prd, 0.9) → ADR 2건(0039 penalty-redemption-settlement·0040 feed-type-video-capture)을 spec §Impact Scope 로 작성 → PO 수락(하드 게이트) → EVAL-0042 unblock(Blocked-by [adr:*] RESOLVED)·claim → 구현. 도메인 fan-out 리뷰(migration-reviewer·backend-reviewer) Blocker/Major 0. migration-reviewer Minor 1건: settle_challenge 가 participant 루프를 2회(선계산+원장write) 돌며 forfeit 식이 중복 — 정확성 결함 아닌 유지보수 nit(동일 트랜잭션·_settlement_confirmed_penalties stable 이라 일관), POC 가독성 수준이라 미수정. migration-reviewer 가 'BE_SCHEMA 미동반'이라 했으나 소스 교차검증 결과 커밋에 docs/BE_SCHEMA.md 포함됨(reviewer 오독, 실제 동반). 스코프 분리: settle_challenge SQL deferred 분기는 0042 포함(Rollout ① deferred 정산·domain 미러), penalty_debts/carry-over/point_ledger.reason CHECK 은 0045. 트레이드오프: CreateChallengeInput z.infer→z.input(default 필드 input/output 발산, feedType 미전달=UI 후속 WP); analytics track.ts 미변경(C8 PO 승인 별도 게이트, Non-goals). 커밋 0d7dfd0(11 files) 브랜치 feat/feed-type-schema-domain(mockup·0043~0046 task 는 미커밋 분리). 후속: 0045 진입 시 penalty_debt_carryover INSERT 전 point_ledger.reason CHECK 확장 선행 필수(backend-reviewer 지적)."
+      "notes": "오케스트레이션: /orchestrate → harness:route(prd, 0.9) → ADR 2건(0039 penalty-redemption-settlement·0040 feed-type-video-capture)을 spec §Impact Scope 로 작성 → PO 수락(하드 게이트) → EVAL-0042 unblock(Blocked-by [adr:*] RESOLVED)·claim → 구현. 도메인 fan-out 리뷰(migration-reviewer·backend-reviewer) Blocker/Major 0. migration-reviewer Minor 1건: settle_challenge 가 participant 루프를 2회(선계산+원장write) 돌며 forfeit 식이 중복 — 정확성 결함 아닌 유지보수 nit(동일 트랜잭션·_settlement_confirmed_penalties stable 이라 일관), POC 가독성 수준이라 미수정. migration-reviewer 가 'BE_SCHEMA 미동반'이라 했으나 소스 교차검증 결과 커밋에 docs/BE_SCHEMA.md 포함됨(reviewer 오독, 실제 동반). 스코프 분리: settle_challenge SQL deferred 분기는 0042 포함(Rollout ① deferred 정산·domain 미러), penalty_debts/carry-over/point_ledger.reason CHECK 은 0045. 트레이드오프: CreateChallengeInput z.infer→z.input(default 필드 input/output 발산, feedType 미전달=UI 후속 WP); analytics track.ts 미변경(C8 PO 승인 별도 게이트, Non-goals). 커밋 0d7dfd0(11 files) 브랜치 feat/feed-type-schema-domain(mockup·0043~0046 task 는 미커밋 분리). 후속: 0045 진입 시 penalty_debt_carryover INSERT 전 point_ledger.reason CHECK 확장 선행 필수(backend-reviewer 지적). CI 후속: settle 테스트가 통합테스트 사상 처음 settle_challenge 로 point_ledger/settlements 행을 만들어 truncate_test_data 의 잠복 결함(ADR-0035 — point_ledger/settlements 미정리)을 노출 → afterEach 정리가 FK/append-only 로 깨져 전 suite cascade. forward-fix 0052(두 테이블 정리 추가)·0053(append-only 가드에 이중게이트 DELETE 우회 — definer 컨텍스트 + app.test_cleanup flag, production 불변성 byte-identical 보존)으로 해소. 커밋 8b28d72(finalize)·4b11d73(0052)·4f0c9d0(0053)."
     }
   ]
 }
