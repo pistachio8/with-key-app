@@ -2,8 +2,8 @@
 Task: EVAL-0045
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0044] — `penalty_debts` 테이블과 EVAL-0042 deferred 분기가 선행 필요.
+Status: in_progress
+Blocked-by: [task:EVAL-0044] — `penalty_debts` 테이블과 EVAL-0042 deferred 분기가 선행 필요. (RESOLVED 2026-06-24: EVAL-0044 done — `penalty_debts` 테이블·RLS 가 `0055_penalty_redemption.sql` 에 존재, deferred 분기는 EVAL-0042 done. flip 승인: 사용자 orchestrate D6)
 Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

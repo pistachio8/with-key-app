@@ -20,7 +20,7 @@
 
 // penalty_debt_carryover: 벌칙 미인정(rejected/expired) 시 2X 빚이 같은 그룹 다음 챌린지 정산에
 //   이월 차감되는 reason(ADR-0039 carry-over). 타입은 0042 에서 미리 추가하되, DB CHECK 확장과 실제
-//   INSERT 경로는 0054(EVAL-0045) 에서 활성화한다 — 0042 단계에선 이 reason 으로 원장 행을 만들지 않는다.
+//   INSERT 경로는 0056(EVAL-0045) 에서 활성화한다 — 0042 단계에선 이 reason 으로 원장 행을 만들지 않는다.
 export type SettlementReason = "deposit_release" | "penalty" | "penalty_debt_carryover";
 
 export type SettlementInput = {
