@@ -2,9 +2,9 @@
 Task: EVAL-0044
 Track: greenfield
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0042] — `challenges.penalty_mission`·`challengeInputSchema` 확장이 먼저 존재해야 한다.
-Depends-on: [task:EVAL-0043] — `action-videos` 버킷을 penalty 증명 제출에 재사용(순서 의존, 하드 게이트 아님).
+Status: done
+Blocked-by: [task:EVAL-0042] — `challenges.penalty_mission`·`challengeInputSchema` 확장이 먼저 존재해야 한다. (resolved 2026-06-24: EVAL-0042 done)
+Depends-on: [task:EVAL-0043] — `action-videos` 버킷을 penalty 증명 제출에 재사용(순서 의존, 하드 게이트 아님). (resolved 2026-06-24: EVAL-0043 done)
 Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---
 

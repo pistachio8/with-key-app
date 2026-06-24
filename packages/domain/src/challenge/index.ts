@@ -5,6 +5,7 @@ export * from "./feed-time";
 export * from "./frequency";
 export * from "./lifecycle";
 export * from "./penalty";
+export * from "./penalty-proof";
 export * from "./pledge-date-range";
 export * from "./resolve-verify-target";
 export * from "./streak-tiers";
