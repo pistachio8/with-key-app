@@ -11,6 +11,8 @@ Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, 
 
 > spec §C2·C6-A·C7 및 Rollout ② 구현. `action-videos` private 버킷, `action_logs` 영상 컬럼(`media_type`·`video_path`), `video-signed-url.ts`(ADR-0024 패턴), `FeedItemView.videoSignedUrl`, 챌린지 생성 UI 피드 타입 선택, recap 화면 `feed_type` 분기(스토리 자동재생)를 포함한다.
 
+> **후속 추적 (2026-06-24, done 이후 발견 갭 close)** — 본 task 는 영상 **인증 캡처 UI**(Phase 2·out of scope)와 피드 카드의 **영상 렌더**(`FeedItemView.videoSignedUrl` 데이터만 배선, `FeedCard` 표시 누락) 두 갭을 남긴 채 done 처리됐다. 사용자 실기 보고("동영상 챌린지 퀵버튼 촬영하기 에러" → "스토리에 클립이 안보여")로 발견. close: **PR #271** = `submit-core` `mediaType` 분기 + `video-action-form`(실시간 3초 캡처) → 영상 인증 경로 / **PR #272** = `FeedCard` `<video>` 렌더 + `challenge-feed.tsx` 전달 → 피드 표시. 마이그레이션 0(0054 자산 재사용). recap StoryPlayback 은 종료/만기 챌린지만 진입이 정상(`recap.ts` running 미진입).
+
 ## Parent Links
 
 - Parent PRD Feature: spec §C2 · §C6-A · §C7 — [2026-06-23-feed-type-penalty-redesign-design.md](../../docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md)
