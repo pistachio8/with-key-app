@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>만회 찬스 · with-key</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="css/withkey.css">
+<style>
+  .mission-card { background: var(--primary-strong); color: #fff; border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
+  .mission-card .kick { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .82; }
+  .mission-card .mtxt { font-size: 19px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; margin-top: 8px; }
+  .mission-card .mby { margin-top: 12px; font-size: 12px; opacity: .85; display: flex; align-items: center; gap: 6px; }
+  .mission-card .seal { position: absolute; right: -10px; bottom: -14px; opacity: .14; }
+  .steps { display: flex; align-items: center; gap: 6px; padding: 2px; }
+  .step-i { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 0 0 auto; width: 76px; text-align: center; }
+  .step-i .b { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--muted); color: var(--muted-foreground); font-size: 12px; font-weight: 700; }
+  .step-i.done .b { background: var(--success); color: #fff; }
+  .step-i.cur .b { background: var(--primary); color: #fff; }
+  .step-i .l { font-size: 11px; font-weight: 600; color: var(--muted-foreground); line-height: 1.2; }
+  .step-i.cur .l { color: var(--foreground); }
+  .step-line { flex: 1; height: 2px; background: var(--border); border-radius: 2px; }
+  .step-line.done { background: var(--success); }
+
+  .rec-card { border: 1.5px dashed var(--border); border-radius: 16px; padding: 26px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; cursor: pointer; background: var(--card); }
+  .rec-card .rc-ic { width: 52px; height: 52px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; }
+  .clip-card { display: none; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
+  .clip-thumb { width: 56px; height: 56px; border-radius: 12px; position: relative; overflow: hidden; flex: 0 0 auto; }
+  .clip-thumb .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .has-clip .rec-card { display: none; } .has-clip .clip-card { display: flex; }
+
+  .wait-wrap { display: none; flex-direction: column; gap: 14px; }
+  .submitted .form-wrap { display: none; } .submitted .wait-wrap { display: flex; }
+  .vote-bar { display: flex; gap: 5px; margin-top: 4px; }
+  .vote-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--muted); }
+  .vote-seg.ok { background: var(--success); }
+</style>
+</head>
+<body>
+<div class="screen" id="screen">
+  <h1 class="sr-only">만회 찬스 미션</h1>
+  <header class="flow-header">
+    <button class="icon-btn" aria-label="뒤로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="ttl">만회 찬스</span>
+    <span class="step tnum">마감 D-2</span>
+  </header>
+
+  <div class="body-pad">
+    <!-- 미션 카드 -->
+    <div class="mission-card">
+      <p class="kick">그룹장이 정한 미션</p>
+      <p class="mtxt">거울 보며 “내일은 꼭 일어난다”<br>3초 외치는 영상 찍기 🙌</p>
+      <p class="mby">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        태윤님이 출제 · 미달자 모두 같은 미션 수행
+      </p>
+      <svg class="seal" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+    </div>
+
+    <!-- 면제/이월 설명 -->
+    <div class="notice notice-info">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>미션을 해내고 친구 과반이 <b>인정</b>하면 벌금 <b>3,000원이 면제</b>돼요. 미제출·반려되면 벌금은 <b>2배(6,000원)</b>로 다음 정산에 이월됩니다.</span>
+    </div>
+
+    <!-- 타임라인 -->
+    <div class="steps">
+      <div class="step-i done"><span class="b"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="l">미달 확정</span></div>
+      <span class="step-line done"></span>
+      <div class="step-i cur"><span class="b">2</span><span class="l">미션 증명</span></div>
+      <span class="step-line"></span>
+      <div class="step-i"><span class="b">3</span><span class="l">결과</span></div>
+    </div>
+
+    <!-- 폼 (제출 전) -->
+    <div class="form-wrap stack gap-3" id="formWrap">
+      <div>
+        <span class="field-label" style="display:block;margin-bottom:8px">미션 수행 영상</span>
+        <div class="rec-card" id="recCard">
+          <span class="rc-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.2A1 1 0 0 0 23 15.4V8.6a1 1 0 0 0-1.8-.8L16 11"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg></span>
+          <p class="t-body" style="font-weight:600">미션 영상 녹화</p>
+          <p class="t-sub">앱 카메라로 바로 찍어요 · 최대 15초</p>
+        </div>
+        <div class="clip-card" id="clipCard">
+          <span class="clip-thumb cam-scene"><span class="play"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg></span></span>
+          <div style="flex:1">
+            <p class="t-body" style="font-weight:600">미션 영상 · 11초</p>
+            <p class="t-sub">방금 촬영됨</p>
+          </div>
+          <button class="icon-btn" id="clipDel" aria-label="삭제"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-lg" id="submitBtn" disabled>증명 제출하기</button>
+      <p class="help" style="text-align:center">혼자 하는 챌린지라면 판단자가 없어 제출 즉시 자동 면제돼요.</p>
+    </div>
+
+    <!-- 대기 (제출 후) -->
+    <div class="wait-wrap">
+      <div class="card pad stack gap-2">
+        <div class="row between">
+          <span class="chip chip-success"><span class="dot" style="background:#2f9d6b"></span> 제출 완료</span>
+          <span class="t-sub tnum">마감 D-2</span>
+        </div>
+        <p class="t-h3" style="margin-top:4px">친구들의 판정을 기다리는 중</p>
+        <p class="t-sub">판단자 2명 중 과반이 인정하면 벌금이 면제돼요. 마감까지 판정이 모자라면 자동으로 인정 처리됩니다.</p>
+        <div class="vote-bar"><span class="vote-seg ok"></span><span class="vote-seg"></span></div>
+        <p class="t-caption tnum" style="margin-top:2px">인정 1 · 대기 1 — 누가 눌렀는지는 공개되지 않아요</p>
+      </div>
+      <button class="btn btn-outline btn-lg" id="reSubmit">영상 다시 제출</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var screen = document.getElementById('screen');
+  var recCard = document.getElementById('recCard');
+  var form = document.getElementById('formWrap');
+  var submitBtn = document.getElementById('submitBtn');
+  recCard.addEventListener('click', function () {
+    form.classList.add('has-clip'); submitBtn.disabled = false;
+  });
+  document.getElementById('clipDel').addEventListener('click', function () {
+    form.classList.remove('has-clip'); submitBtn.disabled = true;
+  });
+  submitBtn.addEventListener('click', function () { screen.classList.add('submitted'); });
+  document.getElementById('reSubmit').addEventListener('click', function () {
+    screen.classList.remove('submitted'); form.classList.remove('has-clip'); submitBtn.disabled = true;
+  });
+})();
+</script>
+
+</body>
+</html>
