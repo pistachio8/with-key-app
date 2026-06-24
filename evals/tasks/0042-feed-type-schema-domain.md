@@ -2,7 +2,7 @@
 Task: EVAL-0042
 Track: greenfield
 Kind: migration
-Status: in_progress
+Status: done
 Blocked-by: [adr:penalty-redemption-settlement] [adr:feed-type-video-capture] — RESOLVED 2026-06-24 PO 수락 완료(ADR-0039·ADR-0040 accepted). `settlements_guard_writes` INSERT-once Blocker·deferred penalty 분기는 ADR-0039에 확정.
 Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, docs/adr/0032-settlement-verification-data-model.md, docs/migration/01-rn-mvp-prd.md
 ---

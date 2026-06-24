@@ -498,6 +498,33 @@
         "verdict": "pass"
       },
       "notes": "retroactive finalize(2026-06-23 수행, date 는 실제 작업·머지일 2026-06-22): EVAL-0040 은 2026-06-22 PR #257 로 머지(reviewDecision 공란·GitHub 리뷰 0건, 도메인 sub-agent fan-out 리뷰 미실행) — 검증 기반은 local checks + CI Integration(RPC 행위 측정) + migration gate. ADR 결정(사용자): spec-required(supabase/migrations/**)지만 신규 ADR 없이 ADR-0032 참조로 충분(0050 헤더 주석에 'ADR-0032 §peer_rejected 제외 정책 구현 누락 bugfix' 명시) — 정책은 0045 가 선언, ADR-0032 가 정산 데이터 모델 관장. 테스트 배치 정정: 당초 task 가 settlement.spec.ts(domain) 단언을 지시했으나 computeSettlement 는 confirmedPenalty 를 입력으로만 받아 done_days→penalty 산식 검증이 불가 → RPC admin 직접 호출 integration 테스트로 교체. 오케스트레이션: harness:route 0.5 ambiguous → 사용자 2문항 확인(SQL RPC만/새 task 생성 후 구현) → harness-engineer 가 EVAL-0040 생성 → claim→goal→구현. 커밋 4건(0c54d6a task·265195a fix migration·93571d6 test·cecfc04 task 본문 정정). finalize 는 EVAL-0041 finalize(PR #261 머지) 와 별도 PR — #261 이 먼저 머지돼 develop 갱신 후 fresh finalize."
+    },
+    {
+      "taskId": "EVAL-0042",
+      "date": "2026-06-24",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "피드 타입+벌칙 미션 스키마 + 정산 도메인(Rollout ①). migration 0051: challenges.feed_type(NOT NULL DEFAULT 'image' CHECK image/video, 기존 행 자동 backfill)·penalty_mission(nullable) 추가; create_challenge 를 6-인자 drop 후 8-인자(p_feed_type default 'image'·p_penalty_mission default null)로 재생성해 단일 시그니처 유지(named 6-param 호출부 투명 호환)·grant 재선언·SECURITY DEFINER+search_path+#variable_conflict use_column 보존; settle_challenge 를 placeholder-INSERT→UPDATE 패턴에서 pool/distribution 선계산 후 단일 INSERT 로 재설계해 settlements_guard_writes(비-INSERT 무조건 차단, 0043:38) Blocker 를 해소(멱등 게이트=settlements PK + on conflict do nothing 보존), 벌칙 챌린지(penalty_mission 있음)는 penalty deferred(forfeit 0·penalty 원장행 미생성·redemption_pending 메타). 도메인 computeSettlement 에 options.penaltyMission 추가(deferred 분기·redemptionPending 필드)·SettlementReason 에 penalty_debt_carryover 타입 추가(0042 단계 INSERT 경로 없음, DB CHECK 확장은 0054/EVAL-0045)·challengeInputSchema 에 feedType(default image)/penaltyMission(<=80, optional). penalty_debts 수금·carry-over·point_ledger.reason CHECK 은 EVAL-0045 로 분리(Non-goals).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass — 3 workspace(domain·web·mobile) exit 0",
+          "pnpm lint (web·domain)": "pass — clean (mobile lint 만 expo-image-picker·expo-image-manipulator 모듈 해석 fail, mobile 파일 0건 수정·선행 환경 이슈)",
+          "pnpm --filter @withkey/domain test": "pass — 201 (settlement deferred 2건 신규 포함)",
+          "web vitest (challenge/new)": "pass — 23 (z.input 전환 회귀 0)",
+          "pnpm harness:check": "pass — 0 violation",
+          "pnpm validate:docs": "pass — broken 0"
+        },
+        "ci": "PR(base develop) — Integration(shared with-key, PR migration apply 후)가 settle-challenge-insert-once.spec.ts 로 settle_challenge 단일 INSERT(pool/distribution 최종값·UPDATE 없음)·재호출 멱등·deferred penalty(pool 0·redemption_pending·penalty 원장 없음)를 실측 예정.",
+        "local-skip": "integration 테스트는 로컬 Supabase 부재로 미실행(정직) — CI Integration 이 실측."
+      },
+      "review": {
+        "reviewers": ["migration-reviewer", "backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "오케스트레이션: /orchestrate → harness:route(prd, 0.9) → ADR 2건(0039 penalty-redemption-settlement·0040 feed-type-video-capture)을 spec §Impact Scope 로 작성 → PO 수락(하드 게이트) → EVAL-0042 unblock(Blocked-by [adr:*] RESOLVED)·claim → 구현. 도메인 fan-out 리뷰(migration-reviewer·backend-reviewer) Blocker/Major 0. migration-reviewer Minor 1건: settle_challenge 가 participant 루프를 2회(선계산+원장write) 돌며 forfeit 식이 중복 — 정확성 결함 아닌 유지보수 nit(동일 트랜잭션·_settlement_confirmed_penalties stable 이라 일관), POC 가독성 수준이라 미수정. migration-reviewer 가 'BE_SCHEMA 미동반'이라 했으나 소스 교차검증 결과 커밋에 docs/BE_SCHEMA.md 포함됨(reviewer 오독, 실제 동반). 스코프 분리: settle_challenge SQL deferred 분기는 0042 포함(Rollout ① deferred 정산·domain 미러), penalty_debts/carry-over/point_ledger.reason CHECK 은 0045. 트레이드오프: CreateChallengeInput z.infer→z.input(default 필드 input/output 발산, feedType 미전달=UI 후속 WP); analytics track.ts 미변경(C8 PO 승인 별도 게이트, Non-goals). 커밋 0d7dfd0(11 files) 브랜치 feat/feed-type-schema-domain(mockup·0043~0046 task 는 미커밋 분리). 후속: 0045 진입 시 penalty_debt_carryover INSERT 전 point_ledger.reason CHECK 확장 선행 필수(backend-reviewer 지적)."
     }
   ]
 }
