@@ -14,6 +14,8 @@ import { Stamp } from "@/components/ui/stamp";
 interface FeedCardProps {
   authorName: string;
   photoSignedUrl: string | null;
+  // 영상 인증 클립(spec §C2). photoSignedUrl 과 상호배타 — 영상 챌린지 인증은 photo_path 가 없다.
+  videoSignedUrl?: string | null;
   summary: string;
   keywords: ReadonlyArray<string>;
   kudosByEmoji: Readonly<Partial<Record<KudosEmoji, number>>>;
@@ -40,6 +42,7 @@ interface FeedCardProps {
 export function FeedCard({
   authorName,
   photoSignedUrl,
+  videoSignedUrl = null,
   summary,
   keywords,
   kudosByEmoji,
@@ -113,7 +116,24 @@ export function FeedCard({
               </Chip>
             ) : null}
           </header>
-          {hasImage && photoSignedUrl ? (
+          {videoSignedUrl ? (
+            <div
+              className={cn(
+                "bg-foreground/90 relative aspect-[16/9] w-full overflow-hidden rounded-[10px]",
+                isPeerRejected && "grayscale",
+              )}
+            >
+              {/* 영상 인증 클립(spec §C2). 자동재생 안 함 — 피드 스크롤에서 사용자가 직접 재생. */}
+              <video
+                src={videoSignedUrl}
+                controls
+                playsInline
+                preload="metadata"
+                aria-label={`${authorName}의 인증 영상`}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+          ) : hasImage && photoSignedUrl ? (
             <div
               className={cn(
                 "relative aspect-[16/9] w-full overflow-hidden rounded-[10px]",

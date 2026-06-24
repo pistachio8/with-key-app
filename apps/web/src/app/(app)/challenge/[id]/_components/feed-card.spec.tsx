@@ -65,6 +65,22 @@ describe("FeedCard", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
+  it("renders a video clip when videoSignedUrl is present (영상 인증)", () => {
+    const { container } = render(
+      <FeedCard
+        {...baseProps}
+        photoSignedUrl={null}
+        videoSignedUrl="https://example.com/clip.mp4"
+        onKudos={() => {}}
+      />,
+    );
+    const video = container.querySelector("video");
+    expect(video).toBeTruthy();
+    expect(video?.getAttribute("src")).toBe("https://example.com/clip.mp4");
+    // 영상일 때는 사진 placeholder(img)가 뜨지 않는다 (상호배타).
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("renders muted card + (나) suffix + 편집 link when isSelfAuthor (#25)", () => {
     render(<FeedCard {...baseProps} isSelfAuthor onKudos={() => {}} photoSignedUrl={null} />);
     expect(screen.getByText(/민지 \(나\)/)).toBeTruthy();
