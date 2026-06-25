@@ -2,7 +2,7 @@
 Task: EVAL-0048
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0029] — 건의하기 폼·완료 페이지 최초 구현(EVAL-0027~0029)이 재진입 경로의 SoT. 게이트 아님(착수 가능).
 Parent: docs/PRD.md
 ---
