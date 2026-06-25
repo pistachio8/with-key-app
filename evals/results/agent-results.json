@@ -656,6 +656,28 @@
         "verdict": "pass"
       },
       "notes": "flip 승인: 사용자(orchestrate D6 — route ambiguous(0.2, 기존 백로그 task 참조라 키워드 미스 정상) → harness:next 가 unblock 후보 식별[차단자 EVAL-0043·0045 둘 다 done] → 사용자 확정 flip blocked→todo). 핵심 설계: ① 트리거=cron(after() 기각 — auto-close 만기 cron 챌린지는 user action 없어 after() 로 못 잡음). ② 저장=전용 버킷(action-videos 재사용 시 recap read 가 admin client 필요→ADR-0024[admin hydrate=challenge-feed.ts callsite 한정] 위반 → 전용 버킷+RLS 로 viewer user client read). ③ 멱등=경로 존재 검사(montage_jobs 기각 — 일 1회 cron+워커 자체 검사 2중으로 in-flight 흡수, POC 볼륨에 상태 테이블 과함). 도메인 리뷰어 3종 fan-out Blocker 0, Major 2 수정: (a) listClipPaths DB 에러 침묵 삼킴→인코딩 영구 누락 가능→console.error 로깅, (b) 워커 fetch 타임아웃 부재→serverless 블록→AbortController 10s. 후속(repo 밖): Oracle A1 프로비저닝+ffmpeg /encode(HMAC 검증)+TLS+Vercel env 등록; Vercel hobby cron 한도(cron 3개로 증가 — 초과 시 deadline-push 에 fold 또는 pro 승격); iOS Safari 실기 viewport 확인(montage-playback WebKit 폭 고정). 미반영 Minor: video loop/end-UX(controls 충분)·staged fetch(montage 있어도 videos fetch — parallel 이 common path 빠름)·truncate_test_data montage 정리(테스트가 실제 montage 객체 미생성). 머지: PR #279(d4087a9). finalize 는 머지 후 별도 PR(사후교정 — 구현 PR 에 미포함, 사용자 게이트 분리)."
+    },
+    {
+      "taskId": "EVAL-0057",
+      "date": "2026-06-25",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "recap-clip Route Handler 의 renderBeatPng 경로에 per-frame 타임아웃(8s)+1회 재시도+정적 폴백(renderIntroFrame 단색 CREAM+그룹명) 을 추가해 단일 프레임의 지연·실패가 요청 전체 500 으로 번지는 구조 제거(AC-1). Promise.all 무제한 동시 렌더를 수동 worker 풀 mapWithLimit 동시성 cap 3 으로 교체 — beat 순서(intro→photo→endcard)·렌더 호출 총 수(=beat 수) 보존(AC-2). p-limit 미채택(Promise.race+setTimeout 내장만 사용, 신규 dep 0). encode.ts·storyboard.ts·frames.tsx Non-goal 봉인. 변경 파일 2개(route.ts·route.spec.ts).",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass (web·domain·mobile)",
+          "pnpm lint": "pass (web recap-clip clean 0; mobile pre-existing expo-image-* 미해결은 본 변경 무관)",
+          "pnpm test (web unit recap-clip)": "pass (route.spec 11 + storyboard 4 = 15; 타임아웃→재시도→폴백·재시도 복구·재시도 소진 폴백·폴백 실패 500 floor·동시성 cap=3·beat 순서/호출 수 보존)",
+          "pnpm harness:check": "pass",
+          "pnpm harness:drift": "no drift (Tier1 0)",
+          "pnpm validate:docs": "pass (no broken refs)",
+          "pnpm test -- \"src/app/api/share/recap-clip\"": "web vitest 15/15 pass; mobile(jest) no-match exit1 은 monorepo recursive-run quirk(apps/web 만 변경) — web 스코프 vitest run 으로 실측"
+        }
+      },
+      "review": { "reviewers": ["backend-reviewer"], "criticalHigh": 0, "verdict": "fixed" },
+      "notes": "orchestrate D6: route ambiguous(0.2) 는 'EVAL-0057 착수' 가 기존 백로그 task ID 참조라 키워드 미스인 정상 케이스(분류 모호성 아님) → 기존 READY task 라 implement-agent-task 직행. WP 브랜치는 origin/develop(6d52905, PR #284 머지로 0057 task 포함)에서 컷. backend-reviewer fan-out Blocker 0 / Major 1 수정: 폴백 renderElement 자체 throw 시 500 잔존 → try/catch + 명시 로그('static fallback frame also failed') + 문서화된 rethrow(catastrophic floor: 렌더 파이프라인 전체 손상 시에만 500) + 전용 테스트 고정. Minor: attempt 하드코딩→MAX_RENDER_ATTEMPTS 상수화, 동시성 테스트 지연 20ms·maxInFlight===3 강화, FRAME_TIMEOUT_MS_TEST 상단 이동. 타임아웃은 satori/ImageResponse abort 미지원이라 'hero 사진 fetch 행' 대기 차단이 실효 타깃(ADR-0025 §B). 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측."
     }
   ]
 }
