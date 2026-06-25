@@ -2,7 +2,7 @@
 Task: EVAL-0046
 Track: greenfield
 Kind: migration
-Status: in_progress
+Status: done
 Blocked-by: [task:EVAL-0043] [task:EVAL-0045] — RESOLVED 2026-06-25: EVAL-0043 done(버킷·클립 경로) · EVAL-0045 done(핵심 출시 dogfood 안정). spec §Rollout "캡처 루프 안정 후 착수" 게이트는 dogfood 안정 확인됨. flip 승인: 사용자(orchestrate D6).
 Parent: docs/superpowers/specs/2026-06-23-feed-type-penalty-redesign-design.md, docs/migration/01-rn-mvp-prd.md
 ---
