@@ -625,6 +625,37 @@
         "verdict": "pass"
       },
       "notes": "SPEC_CHECK 결론: 의도된 정책 아님 — /action 재진입 버그(action-form-reset-on-leave)와 동일 클래스. 설계 spec(2026-06-10-feedback-suggestion-design)은 성공 시 인라인 완료 상태만 정의·재진입 잔존 미정의. frontend-reviewer Blocker 0 / CRITICAL·HIGH 0(fix 불요라 verdict=pass). Minor 2 미반영: (1) createContext(0) silent fallback — action-visit-key 선례와 일관(단일 사용처+테스트 보호)이라 의도적 유지, (2) spec 파일 bare/Provider-wrapped 혼용 + next/navigation mock 파일전역 — 기존 테스트는 usePathname 미호출이라 무영향(reviewer 소스 확인). 한계: jsdom 은 <Activity> 보존 미시뮬 — 단위테스트는 visitKey-remount 메커니즘(폼 reset 보장)을 검증, 실제 Activity 보존 무력화는 동일 메커니즘이 /action 에서 이미 production 검증됨. 후속 권고: iOS Safari 실기/DevTools 에서 /me/feedback 제출→/me→뒤로 재진입 1회 수동 스모크. 참고: task frontmatter Kind:migration 은 QA intake 생성 시 오분류(실제 frontend bugfix)지만 harness 카운터 영향 회피 + surgical 원칙상 미변경. flip 승인: 사용자(orchestrate D6)."
+    },
+    {
+      "taskId": "EVAL-0046",
+      "date": "2026-06-25",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "합본 몽타주 fast-follow — 영상 챌린지 결과물(클립 합본 mp4)의 트리거 경로·env·recap 분기 구현(인코딩 런타임은 repo 밖 Oracle A1 ffmpeg 워커). 트리거=cron Route Handler GET/POST /api/cron/montage(deadline-push 패턴·CRON_SECRET Bearer): 종료/만기 영상 챌린지(최근 3일) 스캔 → 결과 mp4 미존재 시 HMAC-SHA256 서명 POST 로 외부 워커에 인코딩 위임(AbortController 10s 타임아웃). 저장=신규 private 버킷 challenge-montages(migration 0057, 경로 {challengeId}/montage.mp4) + cm_select_group_member RLS(그룹 멤버 select만; insert/update/delete 정책 부재=워커 service_role 전용 write). 멱등=결과 mp4 경로 존재 검사(montage_jobs 테이블 미도입). recap=montage URL 있으면 MontagePlayback(단일 재생), 없으면 StoryPlayback fallback. env=MONTAGE_WORKER_URL·MONTAGE_WORKER_SECRET 서버 전용(미설정 시 트리거 no-op). 신규: lib/media/montage/{types,trigger}.ts·api/cron/montage/route.ts·db/reads/challenge-montage.ts·recap/_components/montage-playback.tsx·migration 0057. 수정: recap/page.tsx·.env.example·vercel.json(cron 1개)·ADR-0040 §후속·BE_SCHEMA.",
+      "verification": {
+        "local": {
+          "pnpm typecheck": "pass (web·domain·mobile)",
+          "pnpm lint": "pass (web·domain clean; mobile pre-existing expo 모듈 미해결은 본 변경 무관)",
+          "pnpm test (web unit)": "pass (125 files / 803; montage 17 = trigger.spec 12[멱등 2회→1건·HMAC 서명·worker_error·타임아웃 abort] + route.spec 5[인증 401·집계]; recap 회귀 48)",
+          "pnpm harness:check": "pass",
+          "pnpm harness:drift": "no drift",
+          "pnpm build": "pass — 클라 static 번들에 MONTAGE_* 미포함(env 서버 전용 AC)",
+          "pnpm validate:docs": "pass (no broken refs)"
+        },
+        "ci": {
+          "Lint + Type + Unit": "pass",
+          "Integration (shared Supabase)": "pass — migration 0057(challenge-montages 버킷 + cm_select_group_member RLS) 공유 Supabase 적용 후 실측",
+          "Playwright E2E": "pass"
+        }
+      },
+      "review": {
+        "reviewers": ["migration-reviewer", "backend-reviewer", "frontend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "flip 승인: 사용자(orchestrate D6 — route ambiguous(0.2, 기존 백로그 task 참조라 키워드 미스 정상) → harness:next 가 unblock 후보 식별[차단자 EVAL-0043·0045 둘 다 done] → 사용자 확정 flip blocked→todo). 핵심 설계: ① 트리거=cron(after() 기각 — auto-close 만기 cron 챌린지는 user action 없어 after() 로 못 잡음). ② 저장=전용 버킷(action-videos 재사용 시 recap read 가 admin client 필요→ADR-0024[admin hydrate=challenge-feed.ts callsite 한정] 위반 → 전용 버킷+RLS 로 viewer user client read). ③ 멱등=경로 존재 검사(montage_jobs 기각 — 일 1회 cron+워커 자체 검사 2중으로 in-flight 흡수, POC 볼륨에 상태 테이블 과함). 도메인 리뷰어 3종 fan-out Blocker 0, Major 2 수정: (a) listClipPaths DB 에러 침묵 삼킴→인코딩 영구 누락 가능→console.error 로깅, (b) 워커 fetch 타임아웃 부재→serverless 블록→AbortController 10s. 후속(repo 밖): Oracle A1 프로비저닝+ffmpeg /encode(HMAC 검증)+TLS+Vercel env 등록; Vercel hobby cron 한도(cron 3개로 증가 — 초과 시 deadline-push 에 fold 또는 pro 승격); iOS Safari 실기 viewport 확인(montage-playback WebKit 폭 고정). 미반영 Minor: video loop/end-UX(controls 충분)·staged fetch(montage 있어도 videos fetch — parallel 이 common path 빠름)·truncate_test_data montage 정리(테스트가 실제 montage 객체 미생성). 머지: PR #279(d4087a9). finalize 는 머지 후 별도 PR(사후교정 — 구현 PR 에 미포함, 사용자 게이트 분리)."
     }
   ]
 }
