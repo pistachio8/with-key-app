@@ -4,6 +4,7 @@
   "cleanUrls": false,
   "crons": [
     { "path": "/api/cron/deadline-push", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/montage", "schedule": "0 1 * * *" },
     { "path": "/api/cron/cleanup-kudos-push-log", "schedule": "0 4 * * 0" }
   ]
 }
