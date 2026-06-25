@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchRecap } from "@/lib/db/reads/recap";
 import { fetchChallengePhotos } from "@/lib/db/reads/challenge-photos";
 import { fetchChallengeVideos } from "@/lib/db/reads/challenge-videos";
+import { fetchChallengeMontageUrl } from "@/lib/db/reads/challenge-montage";
 import { formatSharePeriod } from "@withkey/domain";
 import { makeShareSeed } from "@/lib/share/seed";
 import { track } from "@/lib/analytics/track";
@@ -13,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { AccountInlinePrompt } from "./_components/account-inline-prompt";
 import { PhotoGallery } from "./_components/photo-gallery";
 import { StoryPlayback } from "./_components/story-playback";
+import { MontagePlayback } from "./_components/montage-playback";
 import { SettlementReceipt } from "./_components/settlement-receipt";
 import { ShareCardAction } from "./_components/share-card-action";
 
@@ -53,8 +55,14 @@ export default async function RecapPage({ params }: { params: Params }) {
   );
 
   // 결과물 분기(spec §C6 / EVAL-0043): 영상 챌린지만 클립 스토리. 이미지 경로는 위 photos 그대로(회귀 무변).
-  const videos =
-    recap.feedType === "video" ? await fetchChallengeVideos(challengeId, { client: supabase }) : [];
+  // 합본 몽타주(spec §C6-B / EVAL-0046)가 준비됐으면 단일 재생, 아직이면 스토리 자동재생 fallback.
+  const [videos, montageUrl] =
+    recap.feedType === "video"
+      ? await Promise.all([
+          fetchChallengeVideos(challengeId, { client: supabase }),
+          fetchChallengeMontageUrl(challengeId, { client: supabase }),
+        ])
+      : [[], null];
 
   const isOwner = recap.group?.ownerId === user.id;
   const hasAccount = !!(
@@ -131,11 +139,15 @@ export default async function RecapPage({ params }: { params: Params }) {
       />
 
       {recap.feedType === "video" ? (
-        <StoryPlayback
-          clips={videos}
-          durationDays={recap.durationDays}
-          memberCount={recap.members.length}
-        />
+        montageUrl ? (
+          <MontagePlayback src={montageUrl} />
+        ) : (
+          <StoryPlayback
+            clips={videos}
+            durationDays={recap.durationDays}
+            memberCount={recap.members.length}
+          />
+        )
       ) : (
         <PhotoGallery photos={photos} />
       )}

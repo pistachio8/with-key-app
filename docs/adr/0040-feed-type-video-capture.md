@@ -84,3 +84,4 @@
 - `packages/domain/src/validators/action-log.ts` 영상 MIME·길이·크기 검증. recap `page.tsx` `feed_type` 분기.
 - `docs/BE_SCHEMA.md`에 `action-videos` 버킷·`media_type`/`video_path` 컬럼·불변성 트리거 갱신 반영.
 - 인코딩 파라미터(`-c copy` 가능 여부)는 dogfood 캡처 품질 실측 후 확정(EVAL-0046).
+- **EVAL-0046 구현 결정** — 트리거는 **cron Route Handler `GET/POST /api/cron/montage`**(Server Action `after()` 대신): 몽타주는 종료 후 batch 인코딩이라 user-write side effect 가 아니고, auto-close(만기 cron)된 챌린지는 user action 이 없어 `after()` 경로로는 못 잡는다 — `deadline-push` 패턴(CRON_SECRET Bearer)을 재사용한다. 결과 mp4 는 **신규 private 버킷 `challenge-montages`**(migration `0057`, 경로 `{challengeId}/montage.mp4`)에 저장한다 — `action-videos`(경로 `{userId}/...`) 재사용 시 recap read 가 admin client 를 써야 해 ADR-0024(admin hydrate 는 `challenge-feed.ts` callsite 한정)를 어기므로, 전용 버킷 + `cm_select_group_member` RLS 로 recap 이 viewer user client 로 안전하게 read 한다. **멱등은 결과 mp4 경로 존재 검사**(`montage_jobs` 테이블 미도입 — 일 1회 cron + 워커 자체 존재 검사로 in-flight 중복을 흡수, POC 볼륨에서 상태 테이블은 과함).
