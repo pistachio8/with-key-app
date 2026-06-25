@@ -256,7 +256,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 ## 7. Native Capability (A9)
 
-- **A9 푸시 = 신규 `device_push_tokens` (ADR)**:
+- **A9 푸시 = 신규 `device_push_tokens` ([ADR-0041](../adr/0041-rn-push-token-model.md) 확정)**:
 
   ```text
   device_push_tokens
@@ -266,7 +266,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
   RLS: self만 read/insert/update
   ```
 
-  기존 `push_subscriptions`(Web Push: endpoint·p256dh·auth)는 **cutover까지 web 잔존**, dispatch sender가 두 테이블을 조회해 전송. **왜**: 한 테이블에 Web Push·Expo를 섞으면 nullable·분기·RLS가 지저분해진다([03 §8](./03-rn-migration-rules.md)). **migration ADR 필요**([AGENTS.md §4](../../AGENTS.md)). `src/lib/push/dispatch.ts`의 수신자 선정·quiet hours·dedup은 유지하고 sender만 Expo push로 교체.
+  기존 `push_subscriptions`(Web Push: endpoint·p256dh·auth)는 **cutover까지 web 잔존**, dispatch sender가 두 테이블을 조회해 전송. **왜**: 한 테이블에 Web Push·Expo를 섞으면 nullable·분기·RLS가 지저분해진다([03 §8](./03-rn-migration-rules.md)). **migration 은 [ADR-0041](../adr/0041-rn-push-token-model.md) 로 확정**(구현 `0058_device_push_tokens`). `src/lib/push/dispatch.ts`의 수신자 선정·quiet hours·dedup은 유지하고 sender만 Expo push로 교체.
 
 - **이미지 (기본값)**: 렌더=`expo-image`, 선택=`expo-image-picker`, 촬영=`expo-camera`, 압축/리사이즈=`expo-image-manipulator`. **5MB/1920px/JPEG 0.85** 정책 상수는 `packages/domain`(`image/prepare-upload` 상수)에서 공유, browser canvas/heic2any 구현만 RN으로 교체. Storage는 private bucket + signed URL([03 §4·§7](./03-rn-migration-rules.md)).
 

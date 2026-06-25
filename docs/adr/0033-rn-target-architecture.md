@@ -96,7 +96,7 @@ PWA를 **`apps/web`+`apps/mobile`+`packages/domain` 모노레포**로 전면 재
 ### 후속 영향
 
 - [04 §0.2 A1](../migration/04-rn-architecture.md)의 `⚠️ ADR` 상태 마커를 본 ADR(0033)로 연결한다(이 PR에서 1줄 갱신).
-- 본 ADR이 닫지 **않는** 세부 결정은 [00 §13.4](../migration/00-rn-conversion-plan.md)의 후속 ADR/spec으로 남는다 — D-2(push token), D-3(analytics 경로), D-4(admin hydrate read의 RN 계약), D-5(service-role mutation → RPC 승격), D-6(계좌 암호화 BFF), D-7(`submitActionLog` BFF 계약), D-8(auth/deep-link PoC).
+- 본 ADR이 닫지 **않는** 세부 결정은 [00 §13.4](../migration/00-rn-conversion-plan.md)의 후속 ADR/spec으로 남는다 — D-2(push token → [ADR-0041](./0041-rn-push-token-model.md) 확정), D-3(analytics 경로), D-4(admin hydrate read의 RN 계약), D-5(service-role mutation → RPC 승격), D-6(계좌 암호화 BFF), D-7(`submitActionLog` BFF 계약), D-8(auth/deep-link PoC).
 - 본 ADR은 Repo 토폴로지·PWA·BFF 경계만 박제한다. 인증 백본(Kakao 네이티브, [04 A6](../migration/04-rn-architecture.md))·push 테이블([04 A9](../migration/04-rn-architecture.md))은 별도 ADR 대상이다.
 
 ## 용어집

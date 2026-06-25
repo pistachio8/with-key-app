@@ -163,20 +163,20 @@
 
 ## 5. RN 전환 리스크
 
-| 리스크                   | 영향                                                         | 완화                                                                    |
-| ------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| Server Action 의존       | RN은 `_actions.ts`를 호출할 수 없어 모든 write path가 막힘   | RPC/BFF 계약을 먼저 정의하고 route별 mutation matrix 작성               |
-| Auth redirect/session    | Kakao OAuth, invite 자동 수락, magic link가 웹 callback 중심 | Expo AuthSession/deep link PoC를 Phase 1에서 완료 조건으로 둠           |
-| RLS/admin boundary       | PWA는 서버에서 service-role/admin hydrate cache를 일부 사용  | RN client는 RLS 직접 접근만 허용. admin 필요 작업은 서버 API로 격리     |
-| Push token 모델          | Web Push endpoint/p256dh/auth와 Expo push token이 다름       | `push_subscriptions` 확장 또는 `device_push_tokens` 신설 ADR 필요       |
-| 알림센터 데이터          | 현재 알림은 service worker가 IDB에만 저장                    | RN 로컬 저장소로 재현하거나 서버 notification table로 전환              |
-| 사진 처리                | HEIC/JPEG 변환, 1920px clamp, 5MB 제한이 browser canvas 기반 | native module 검증, 실제 iOS/Android 샘플 이미지 회귀 테스트            |
-| Storage signed URL/cache | Next 서버 cache/hydrate read가 signed URL 수명과 맞물림      | RN은 URL refresh 정책과 이미지 cache expiration을 별도 설계             |
-| 공유 카드/영상           | `next/og`, ffmpeg-static, server route에 의존                | 초기에는 서버 endpoint 유지, RN은 share/download client만 구현          |
-| UI parity                | 모바일 웹 max-width/Tailwind와 native layout 차이            | 핵심 플로우별 screenshot/interaction acceptance criteria 작성           |
-| 딥링크 호환              | 기존 카카오 초대 URL, push targetUrl이 웹 path 기준          | URL path를 앱 route로 매핑하는 compatibility table 유지                 |
-| App Store 권한/정책      | 카메라, 사진, 알림, tracking/privacy copy 필요               | Phase 6에서 권한 문구와 privacy manifest/review checklist 작성          |
-| 운영 이중화              | PWA와 RN이 같은 DB/RPC를 동시에 사용                         | migration 전후 backward compatibility window를 Phase별 완료 조건에 포함 |
+| 리스크                   | 영향                                                         | 완화                                                                            |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Server Action 의존       | RN은 `_actions.ts`를 호출할 수 없어 모든 write path가 막힘   | RPC/BFF 계약을 먼저 정의하고 route별 mutation matrix 작성                       |
+| Auth redirect/session    | Kakao OAuth, invite 자동 수락, magic link가 웹 callback 중심 | Expo AuthSession/deep link PoC를 Phase 1에서 완료 조건으로 둠                   |
+| RLS/admin boundary       | PWA는 서버에서 service-role/admin hydrate cache를 일부 사용  | RN client는 RLS 직접 접근만 허용. admin 필요 작업은 서버 API로 격리             |
+| Push token 모델          | Web Push endpoint/p256dh/auth와 Expo push token이 다름       | [ADR-0041](../adr/0041-rn-push-token-model.md) 확정 — `device_push_tokens` 신설 |
+| 알림센터 데이터          | 현재 알림은 service worker가 IDB에만 저장                    | RN 로컬 저장소로 재현하거나 서버 notification table로 전환                      |
+| 사진 처리                | HEIC/JPEG 변환, 1920px clamp, 5MB 제한이 browser canvas 기반 | native module 검증, 실제 iOS/Android 샘플 이미지 회귀 테스트                    |
+| Storage signed URL/cache | Next 서버 cache/hydrate read가 signed URL 수명과 맞물림      | RN은 URL refresh 정책과 이미지 cache expiration을 별도 설계                     |
+| 공유 카드/영상           | `next/og`, ffmpeg-static, server route에 의존                | 초기에는 서버 endpoint 유지, RN은 share/download client만 구현                  |
+| UI parity                | 모바일 웹 max-width/Tailwind와 native layout 차이            | 핵심 플로우별 screenshot/interaction acceptance criteria 작성                   |
+| 딥링크 호환              | 기존 카카오 초대 URL, push targetUrl이 웹 path 기준          | URL path를 앱 route로 매핑하는 compatibility table 유지                         |
+| App Store 권한/정책      | 카메라, 사진, 알림, tracking/privacy copy 필요               | Phase 6에서 권한 문구와 privacy manifest/review checklist 작성                  |
+| 운영 이중화              | PWA와 RN이 같은 DB/RPC를 동시에 사용                         | migration 전후 backward compatibility window를 Phase별 완료 조건에 포함         |
 
 ## 6. 추천 태스크 순서
 
@@ -311,32 +311,32 @@ route handler(`route.ts`/`route.tsx`) 8개도 §1.3에 전부 존재(`/auth/call
 
 `_actions.ts` 10개 파일의 **Server Action export 24개**(`export type` 3개 제외)를 §9 서술을 코드로 검증해 4분류로 고정한다. 매트릭스 행 수(24) = export 수(24).
 
-| #   | Server Action                          | 파일                                      | 분류             | 코드 근거                                                                                                                  |
-| --- | -------------------------------------- | ----------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `requestMagicLink`                     | `(auth)/login/_actions.ts`                | RN direct client | `supabase.auth.signInWithOtp`                                                                                              |
-| 2   | `markOnboarded`                        | `(auth)/login/_actions.ts`                | RN direct client | `users` self-row update(`auth.getUser`)                                                                                    |
-| 3   | `acceptInvite`                         | `(auth)/invite/[token]/_actions.ts`       | RPC direct       | `rpc("accept_invite")`                                                                                                     |
-| 4   | `createChallenge`                      | `(flow)/challenge/new/_actions.ts`        | RPC direct       | `rpc("create_challenge")`(+`create_group_with_owner`·`sign_and_maybe_activate`); push→서버, 다단계 orchestration           |
-| 5   | `markFeedSeen`                         | `(app)/_actions.ts`                       | deprecated/alias | **현재 호출자 없음**(헤더 dot이 IDB unread로 이전); 제거 follow-up                                                         |
-| 6   | `toggleKudos`                          | `(app)/challenge/[id]/_actions.ts`        | RN direct client | `kudos` insert/delete(RLS self); 친구 kudos push→서버                                                                      |
-| 7   | `markActionStarted`                    | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` events(service_role) idempotency 조회                                                                      |
-| 8   | `revealAccountNumber`                  | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `decryptAccountNumber`(서버 키)+`adminClient()` (§9 서버 전용)                                                             |
-| 9   | `endChallenge`                         | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenges` DELETE RLS 정책 없음                                                                        |
-| 10  | `startChallengeWithSignedParticipants` | `(app)/challenge/[id]/_actions.ts`        | RPC direct       | `rpc("start_challenge_with_signed_participants")`; push→서버                                                               |
-| 11  | `deleteChallenge`                      | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenges` DELETE RLS 정책 없음                                                                        |
-| 12  | `leaveChallenge`                       | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenge_participants` DELETE RLS 정책 없음                                                            |
-| 13  | `submitActionLog`                      | `(app)/challenge/[id]/action/_actions.ts` | BFF API          | `generateDiary`(OpenAI)+Storage upload+`rpc("update_action_log_photo_path")`+push (§9 server API 권장, 단일 트랜잭션 경계) |
-| 14  | `signPledge`                           | `(app)/challenge/[id]/pledge/_actions.ts` | RPC direct       | `rpc("sign_and_maybe_activate")`; owner nudge push→서버                                                                    |
-| 15  | `updateGroupAccount`                   | `(app)/group/[id]/_actions.ts`            | BFF API          | `encryptAccountNumber`(서버 키)                                                                                            |
-| 16  | `renameGroup`                          | `(app)/group/[id]/_actions.ts`            | RN direct client | `groups` update(RLS owner `.eq("owner_id")`)                                                                               |
-| 17  | `deleteGroup`                          | `(app)/group/[id]/_actions.ts`            | RN direct client | `groups` delete(RLS owner + 멤버/챌린지 가드)                                                                              |
-| 18  | `createInvite`                         | `(app)/group/[id]/_actions.ts`            | RN direct client | `invites` insert(RLS `invites_insert_owner`)                                                                               |
-| 19  | `createGroup`                          | `(app)/group/new/_actions.ts`             | BFF API          | `encryptAccountNumber`(계좌 시 서버 키)+`rpc("create_group_with_owner")`; page는 redirect-only(D-9)                        |
-| 20  | `signOut`                              | `(app)/me/_actions.ts`                    | RN direct client | `supabase.auth.signOut`                                                                                                    |
-| 21  | `registerPushSubscription`             | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` upsert(RLS self); Web Push→Expo token 스키마 교체(D-2)                                                |
-| 22  | `unregisterPushSubscription`           | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` delete(RLS self)                                                                                      |
-| 23  | `clearMyPushSubscriptions`             | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` delete(RLS self)                                                                                      |
-| 24  | `updateNotificationPrefs`              | `(app)/me/_actions.ts`                    | RN direct client | `users.notification_prefs` update(RLS self)                                                                                |
+| #   | Server Action                          | 파일                                      | 분류             | 코드 근거                                                                                                                    |
+| --- | -------------------------------------- | ----------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `requestMagicLink`                     | `(auth)/login/_actions.ts`                | RN direct client | `supabase.auth.signInWithOtp`                                                                                                |
+| 2   | `markOnboarded`                        | `(auth)/login/_actions.ts`                | RN direct client | `users` self-row update(`auth.getUser`)                                                                                      |
+| 3   | `acceptInvite`                         | `(auth)/invite/[token]/_actions.ts`       | RPC direct       | `rpc("accept_invite")`                                                                                                       |
+| 4   | `createChallenge`                      | `(flow)/challenge/new/_actions.ts`        | RPC direct       | `rpc("create_challenge")`(+`create_group_with_owner`·`sign_and_maybe_activate`); push→서버, 다단계 orchestration             |
+| 5   | `markFeedSeen`                         | `(app)/_actions.ts`                       | deprecated/alias | **현재 호출자 없음**(헤더 dot이 IDB unread로 이전); 제거 follow-up                                                           |
+| 6   | `toggleKudos`                          | `(app)/challenge/[id]/_actions.ts`        | RN direct client | `kudos` insert/delete(RLS self); 친구 kudos push→서버                                                                        |
+| 7   | `markActionStarted`                    | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` events(service_role) idempotency 조회                                                                        |
+| 8   | `revealAccountNumber`                  | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `decryptAccountNumber`(서버 키)+`adminClient()` (§9 서버 전용)                                                               |
+| 9   | `endChallenge`                         | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenges` DELETE RLS 정책 없음                                                                          |
+| 10  | `startChallengeWithSignedParticipants` | `(app)/challenge/[id]/_actions.ts`        | RPC direct       | `rpc("start_challenge_with_signed_participants")`; push→서버                                                                 |
+| 11  | `deleteChallenge`                      | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenges` DELETE RLS 정책 없음                                                                          |
+| 12  | `leaveChallenge`                       | `(app)/challenge/[id]/_actions.ts`        | BFF API          | `adminClient()` — `challenge_participants` DELETE RLS 정책 없음                                                              |
+| 13  | `submitActionLog`                      | `(app)/challenge/[id]/action/_actions.ts` | BFF API          | `generateDiary`(OpenAI)+Storage upload+`rpc("update_action_log_photo_path")`+push (§9 server API 권장, 단일 트랜잭션 경계)   |
+| 14  | `signPledge`                           | `(app)/challenge/[id]/pledge/_actions.ts` | RPC direct       | `rpc("sign_and_maybe_activate")`; owner nudge push→서버                                                                      |
+| 15  | `updateGroupAccount`                   | `(app)/group/[id]/_actions.ts`            | BFF API          | `encryptAccountNumber`(서버 키)                                                                                              |
+| 16  | `renameGroup`                          | `(app)/group/[id]/_actions.ts`            | RN direct client | `groups` update(RLS owner `.eq("owner_id")`)                                                                                 |
+| 17  | `deleteGroup`                          | `(app)/group/[id]/_actions.ts`            | RN direct client | `groups` delete(RLS owner + 멤버/챌린지 가드)                                                                                |
+| 18  | `createInvite`                         | `(app)/group/[id]/_actions.ts`            | RN direct client | `invites` insert(RLS `invites_insert_owner`)                                                                                 |
+| 19  | `createGroup`                          | `(app)/group/new/_actions.ts`             | BFF API          | `encryptAccountNumber`(계좌 시 서버 키)+`rpc("create_group_with_owner")`; page는 redirect-only(D-9)                          |
+| 20  | `signOut`                              | `(app)/me/_actions.ts`                    | RN direct client | `supabase.auth.signOut`                                                                                                      |
+| 21  | `registerPushSubscription`             | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` upsert(RLS self); Web Push→Expo token 스키마 교체(D-2 — [ADR-0041](../adr/0041-rn-push-token-model.md)) |
+| 22  | `unregisterPushSubscription`           | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` delete(RLS self)                                                                                        |
+| 23  | `clearMyPushSubscriptions`             | `(app)/me/_actions.ts`                    | RN direct client | `push_subscriptions` delete(RLS self)                                                                                        |
+| 24  | `updateNotificationPrefs`              | `(app)/me/_actions.ts`                    | RN direct client | `users.notification_prefs` update(RLS self)                                                                                  |
 
 분류 합계: RN direct client 11 · BFF API 8 · RPC direct 4 · deprecated/alias 1 = **24**.
 
@@ -377,16 +377,16 @@ route handler(`route.ts`/`route.tsx`) 8개도 §1.3에 전부 존재(`/auth/call
 
 freeze 과정에서 드러난, Phase 1(Expo Foundation) 진입 전 결정이 필요한 항목이다. §5 리스크표를 ADR/spec 산출물로 구체화했다.
 
-| ID  | 항목                                                                                                                                                                    | 산출물 | 트리거(코드)                                          | 왜 Phase 1 전                                          |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------- | ------------------------------------------------------ |
-| D-1 | 모노레포 restructure(`apps/web`·`apps/mobile`·`packages/domain`)                                                                                                        | ADR    | 02 §3.2, 04 A1                                        | Phase 1 부트스트랩이 이 레이아웃 위에서 시작           |
-| D-2 | push token 모델(Web Push `endpoint/p256dh/auth` → Expo device token)                                                                                                    | ADR    | `push_subscriptions`, `registerPushSubscription`(#21) | 알림 register 경로·테이블이 auth 직후 필요(§5 리스크)  |
-| D-3 | analytics emission 경로(`track.ts` service-role → `/events` API 또는 RLS-safe helper)                                                                                   | spec   | `track.ts`, `markActionStarted`(#7) 등                | RN client는 events 직접 insert 불가(RLS), 전 화면 공통 |
-| D-4 | ADR-0024 admin hydrate read의 RN 계약(13.3 service-role 6개를 BFF vs RLS 재설계, signed URL 수명 포함) — [ADR-0036](../adr/0036-rn-admin-hydrate-bff-contract.md) 확정  | ADR    | reads admin 6개                                       | read 패리티(Phase 3) 설계 기준                         |
-| D-5 | service-role mutation → RPC 승격(`deleteChallenge`·`leaveChallenge`·`endChallenge`: DELETE RLS 정책 없음)                                                               | ADR    | adminClient action 3개(#9·#11·#12)                    | RN은 admin 직접 호출 불가 → 쓰기 패리티(Phase 4) 차단  |
-| D-6 | 계좌 암호화 BFF 경계(`updateGroupAccount`·`createGroup`·`revealAccountNumber`)                                                                                          | ADR    | `crypto/account-cipher`(#8·#15·#19)                   | 서버 키가 client에 노출되면 안 됨 — BFF 필수 확정      |
-| D-7 | `submitActionLog` BFF 계약(Storage+OpenAI+RPC+push 단일 트랜잭션 경계 endpoint shape) — [spec](../superpowers/specs/2026-06-13-d-7-submit-action-log-bff.md) (accepted) | spec   | `action/_actions.ts`(#13)                             | 사진/AI(Phase 5) 핵심 write의 endpoint 형태 필요       |
-| D-8 | auth/deep-link PoC(Kakao OAuth·magic link·invite 자동수락, `@supabase/ssr` cookie flow 폐기)                                                                            | ADR    | `supabase/middleware.ts`, `auth/*`                    | Phase 1 완료 조건 자체(§7 Phase 1)                     |
-| D-9 | deprecation 정리(`markFeedSeen` 호출자 없음·`createGroup` page redirect-only·§1.2 legacy 6)                                                                             | spec   | `markFeedSeen`(#5), §1.2                              | RN route skeleton에서 제거 vs alias 결정               |
+| ID  | 항목                                                                                                                                                                    | 산출물 | 트리거(코드)                                          | 왜 Phase 1 전                                                                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| D-1 | 모노레포 restructure(`apps/web`·`apps/mobile`·`packages/domain`)                                                                                                        | ADR    | 02 §3.2, 04 A1                                        | Phase 1 부트스트랩이 이 레이아웃 위에서 시작                                                                |
+| D-2 | push token 모델(Web Push `endpoint/p256dh/auth` → Expo device token)                                                                                                    | ADR    | `push_subscriptions`, `registerPushSubscription`(#21) | 알림 register 경로·테이블이 auth 직후 필요(§5 리스크) — [ADR-0041](../adr/0041-rn-push-token-model.md) 확정 |
+| D-3 | analytics emission 경로(`track.ts` service-role → `/events` API 또는 RLS-safe helper)                                                                                   | spec   | `track.ts`, `markActionStarted`(#7) 등                | RN client는 events 직접 insert 불가(RLS), 전 화면 공통                                                      |
+| D-4 | ADR-0024 admin hydrate read의 RN 계약(13.3 service-role 6개를 BFF vs RLS 재설계, signed URL 수명 포함) — [ADR-0036](../adr/0036-rn-admin-hydrate-bff-contract.md) 확정  | ADR    | reads admin 6개                                       | read 패리티(Phase 3) 설계 기준                                                                              |
+| D-5 | service-role mutation → RPC 승격(`deleteChallenge`·`leaveChallenge`·`endChallenge`: DELETE RLS 정책 없음)                                                               | ADR    | adminClient action 3개(#9·#11·#12)                    | RN은 admin 직접 호출 불가 → 쓰기 패리티(Phase 4) 차단                                                       |
+| D-6 | 계좌 암호화 BFF 경계(`updateGroupAccount`·`createGroup`·`revealAccountNumber`)                                                                                          | ADR    | `crypto/account-cipher`(#8·#15·#19)                   | 서버 키가 client에 노출되면 안 됨 — BFF 필수 확정                                                           |
+| D-7 | `submitActionLog` BFF 계약(Storage+OpenAI+RPC+push 단일 트랜잭션 경계 endpoint shape) — [spec](../superpowers/specs/2026-06-13-d-7-submit-action-log-bff.md) (accepted) | spec   | `action/_actions.ts`(#13)                             | 사진/AI(Phase 5) 핵심 write의 endpoint 형태 필요                                                            |
+| D-8 | auth/deep-link PoC(Kakao OAuth·magic link·invite 자동수락, `@supabase/ssr` cookie flow 폐기)                                                                            | ADR    | `supabase/middleware.ts`, `auth/*`                    | Phase 1 완료 조건 자체(§7 Phase 1)                                                                          |
+| D-9 | deprecation 정리(`markFeedSeen` 호출자 없음·`createGroup` page redirect-only·§1.2 legacy 6)                                                                             | spec   | `markFeedSeen`(#5), §1.2                              | RN route skeleton에서 제거 vs alias 결정                                                                    |
 
 `EVAL-0005+` 기능 포팅 task는 자신이 건드리는 행을 위 매트릭스(13.2·13.3)에서 인용하고, 막힌 결정은 위 D-1~D-9 ID로 참조한다.

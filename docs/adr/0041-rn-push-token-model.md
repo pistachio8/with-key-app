@@ -1,7 +1,7 @@
 # ADR-0041: RN Push Token 모델 — Web Push 구독에서 Expo device token으로
 
 **Date**: 2026-06-25
-**Status**: proposed <!-- accepted / superseded / deprecated -->
+**Status**: accepted <!-- proposed / superseded / deprecated --> (PO 수락 2026-06-25)
 **Deciders**: pistachio8
 
 ## Context
@@ -47,6 +47,7 @@
 세부 규칙:
 
 - **테이블 신설** — `push_subscriptions`를 변형하지 않고 새 테이블 추가. 03/04 권장 shape 확정:
+
   ```sql
   device_push_tokens
     id              uuid pk default gen_random_uuid()
@@ -66,6 +67,7 @@
 
   - **왜 새 테이블**: `endpoint/p256dh/auth`는 Web Push 전용 의미라 token 모델과 컬럼이 1:1로 안 맞는다. 한 테이블에 두 모델을 섞으면 nullable·분기·RLS가 지저분해진다(03 §8). POC migration은 단방향·append-only(가드레일)라 기존 컬럼 파괴적 교체는 dispatch 8종 + register/unregister/clear 액션 + read 1종을 한 migration에 묶어 회귀 위험이 크다. 03 §8·04 §7도 신설을 권장했다.
   - **무효 토큰 = soft-delete(`disabled_at`)**: 현재 Web Push는 404/410에 endpoint row를 하드 삭제하지만, 신규는 `DeviceNotRegistered`에 `disabled_at` 마킹. 재등록 시 같은 `(user_id, device_id)` upsert로 재활성화. 갱신 이력 추적과 다중 디바이스 정책에 유리.
+
 - **전송 = Expo Push API** `https://exp.host/--/api/v2/push/send`(또는 `expo-server-sdk`). Expo가 iOS=APNs·Android=FCM으로 라우팅. 전송 실패 receipts의 `DeviceNotRegistered`로 무효 토큰 정리.
   - **왜 Expo**: 이미 Expo 앱이라 자연스럽고, APNs 인증서·FCM 서버키 관리를 Expo가 대행. 단일 엔드포인트로 양 플랫폼 통합.
 - **register 경로 = RN direct client** — `device_push_tokens` upsert는 RLS self-row라 RN이 Supabase 클라이언트로 직접 쓴다(BFF(Backend for Frontend, RN↔Supabase 보안 경계 서버) 불필요). [ADR-0036](./0036-rn-admin-hydrate-bff-contract.md)이 "Route Handler = RN BFF 전용"으로 표면을 분리했고 `00-rn-conversion-plan.md:336` #21이 "RN direct client"로 분류한 것과 일치 — **PWA 가드레일(쓰기는 Server Action 일원화)의 RN 표면 예외**다. 충돌 키는 `onConflict: "(user_id, device_id)"`.
