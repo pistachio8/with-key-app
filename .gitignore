@@ -91,6 +91,8 @@ docs/JOURNAL.md
 
 # QA triage snapshot (local — Slack #qa dogfood, not for team)
 docs/QA_TRIAGE.md
+# qa-intake state ledger (local — holds feedback bodies, same privacy stance as above)
+docs/QA_TRIAGE.intake.json
 
 # Vendored skills (.agents/skills/) are external copies (npm-package-like), not our code.
 # Track only the manifest (skills-lock.json, repo root); keep external skill files local.
