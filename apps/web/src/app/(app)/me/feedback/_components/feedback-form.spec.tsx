@@ -2,6 +2,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
+// 재진입(navigation) 재현용 — FeedbackVisitKeyProvider 가 usePathname 전이를 본다.
+let mockPathname = "/me/feedback";
+vi.mock("next/navigation", () => ({ usePathname: () => mockPathname }));
+
 const submitFeedback = vi.fn();
 vi.mock("../_actions", () => ({
   submitFeedback: (...args: unknown[]) => submitFeedback(...args),
@@ -22,8 +26,19 @@ vi.mock("sonner", () => ({
 }));
 
 import { FeedbackForm } from "./feedback-form";
+import { FeedbackFormKeyed } from "./feedback-form-keyed";
+import { FeedbackVisitKeyProvider } from "@/components/app-shell/feedback-visit-key";
 
 const png = (n: string) => new File([new Uint8Array([1, 2, 3])], n, { type: "image/png" });
+
+// (app) layout 의 Provider + page 의 keyed wrapper 를 그대로 재현.
+function reentryTree() {
+  return (
+    <FeedbackVisitKeyProvider>
+      <FeedbackFormKeyed />
+    </FeedbackVisitKeyProvider>
+  );
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -73,5 +88,41 @@ describe("FeedbackForm 멀티 사진", () => {
     const fd = submitFeedback.mock.calls[0][0] as FormData;
     expect(fd.getAll("photos")).toHaveLength(2);
     expect(fd.get("body")).toBe("사진 두 장");
+  });
+});
+
+describe("FeedbackForm 재진입(state reset) — EVAL-0048", () => {
+  it("제출 완료 후 /me/feedback 재진입 시 완료 화면이 리셋되어 입력 폼이 다시 보인다", async () => {
+    mockPathname = "/me/feedback";
+    const { rerender } = render(reentryTree());
+
+    // 제출 → 완료(thank-you) 화면
+    fireEvent.change(screen.getByLabelText("내용"), { target: { value: "재진입 버그 재현" } });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    expect(await screen.findByText("전달됐어요")).toBeInTheDocument();
+
+    // 이탈(/me) 후 재진입(/me/feedback) — cacheComponents 가 subtree 를 보존해도
+    // visitKey 가 +1 되어 FeedbackForm 이 remount → 완료 상태 리셋.
+    mockPathname = "/me";
+    rerender(reentryTree());
+    mockPathname = "/me/feedback";
+    rerender(reentryTree());
+
+    expect(screen.getByLabelText("내용")).toBeInTheDocument();
+    expect(screen.queryByText("전달됐어요")).toBeNull();
+  });
+
+  it("완료 화면에서 이탈만 하고 재진입 전에는 완료 화면이 유지된다(회귀 가드)", async () => {
+    mockPathname = "/me/feedback";
+    const { rerender } = render(reentryTree());
+
+    fireEvent.change(screen.getByLabelText("내용"), { target: { value: "유지 확인" } });
+    fireEvent.click(screen.getByRole("button", { name: "보내기" }));
+    expect(await screen.findByText("전달됐어요")).toBeInTheDocument();
+
+    // 다른 경로로 이탈만 — 아직 /me/feedback 재진입 전이므로 remount 없음(완료 화면 유지).
+    mockPathname = "/me";
+    rerender(reentryTree());
+    expect(screen.getByText("전달됐어요")).toBeInTheDocument();
   });
 });
