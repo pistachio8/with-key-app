@@ -101,7 +101,7 @@ RN 인증 백본을 **네이티브 Kakao SDK + `signInWithIdToken`(1차) · magi
 
 - **PO 수락 시**: Status를 `accepted`로 갱신하고 [04 §0.2 A6](../migration/04-rn-architecture.md) 상태 마커(`ADR`)와 [04 §9 산출물 표](../migration/04-rn-architecture.md)를 본 ADR 링크로 연결한다(본 PR에서 §9 표는 draft 링크로 선반영).
 - 구현 산출물: SecureStore chunked adapter(`apps/mobile` services), Kakao SDK config plugin + `EXPO_PUBLIC_KAKAO_NATIVE_KEY` env(`.env.example` 동기화), RN `authService`(invite stash·수락·emit). 분석 emit 경로의 세부는 [D-3 spec](../migration/00-rn-conversion-plan.md)에서 확정.
-- **본 ADR이 닫지 않는 것**: A7 딥링크의 미설치 deferred = **재탭 UX의 MVP 수용 여부**는 별도 PO 제품 판단으로 남아 있다([04 §9 ⓑ](../migration/04-rn-architecture.md)). push 테이블(A9 — `device_push_tokens`)도 별도 ADR(D-2) 대상이다.
+- **본 ADR이 닫지 않는 것**: A7 딥링크의 미설치 deferred = **재탭 UX의 MVP 수용 여부**는 별도 PO 제품 판단으로 남아 있다([04 §9 ⓑ](../migration/04-rn-architecture.md)). push 테이블(A9 — `device_push_tokens`)은 별도 ADR(D-2 — [ADR-0041](./0041-rn-push-token-model.md))로 확정됐다.
 
 ## 용어집
 
