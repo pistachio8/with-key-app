@@ -61,7 +61,10 @@ export function StoryPlayback({ clips, durationDays, memberCount }: Props) {
     return (
       <section
         aria-label="영상 회고 스토리"
-        className="-mx-4 flex aspect-[9/16] max-h-[70vh] flex-col items-center justify-center gap-3 bg-black px-8 text-center"
+        // w-[calc(100%+2rem)]: -mx-4 full-bleed 폭을 명시 고정. WebKit(iOS Safari)는 flex item 에서
+        // max-h 가 aspect-ratio 높이를 자르면 9/16 유지를 위해 폭을 height×9/16 로 역산해 좁은 좌측
+        // 칼럼으로 붕괴한다(feedback e6693fe2). 폭을 definite 로 박으면 aspect-ratio 는 높이만 좌우한다.
+        className="-mx-4 flex aspect-[9/16] max-h-[70vh] w-[calc(100%+2rem)] flex-col items-center justify-center gap-3 bg-black px-8 text-center"
       >
         <h2 className="t-h3 text-white">아직 영상이 없어요</h2>
         <p className="t-sub max-w-[260px] text-white/65">
@@ -76,7 +79,8 @@ export function StoryPlayback({ clips, durationDays, memberCount }: Props) {
   return (
     <section
       aria-label="영상 회고 스토리"
-      className="relative -mx-4 aspect-[9/16] max-h-[70vh] overflow-hidden bg-black"
+      // w-[calc(100%+2rem)] 폭 고정 — empty 섹션과 동일 사유(WebKit aspect-ratio 폭 역산 붕괴 방지).
+      className="relative -mx-4 aspect-[9/16] max-h-[70vh] w-[calc(100%+2rem)] overflow-hidden bg-black"
     >
       {finished ? (
         // 종료 화면(시안 #closing) — 합본 몽타주(fast-follow)는 EVAL-0046, 여기선 다시보기만.
