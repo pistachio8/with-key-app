@@ -2,7 +2,7 @@
 Task: EVAL-0050
 Track: greenfield
 Kind: migration
-Status: in_progress
+Status: done
 Depends-on: [task:EVAL-0043] — 스토리 자동재생 Phase 1(recap 화면 feed_type 분기·영상 플레이어) 최초 구현. 게이트 아님(착수 가능).
 Parent: docs/PRD.md
 ---
