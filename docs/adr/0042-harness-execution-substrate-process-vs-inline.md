@@ -34,8 +34,8 @@ subprocess.run(["claude", "-p", "--dangerously-skip-permissions",
 - **차용 시 필수 수정 3가지** (execute.py를 그대로 옮기면 안 되는 이유):
   1. **self-report → 외부 결정론 oracle.** 세션이 self-report한 "completed" status를 신뢰하지 않는다. **왜**: oracle이 구현 에이전트 *내부*에 있으면 학생이 자기 시험을 채점하는 것 — 환각 "통과"가 그대로 커밋된다. with-key의 `pass@3` 실측 + 리뷰어 merge·소스검증을 유지한다.
   2. **공유 working tree/단일 브랜치 → worktree.** **왜**: execute.py의 공유 체크아웃은 동시 step 충돌을 막지 못하고 한 phase가 거대한 단일 브랜치가 된다. worktree는 병렬 안전 + 1 PR 단위를 보존한다.
-  3. **`--dangerously-skip-permissions` → allowlist.** **왜**: with-key 룰이 명시 금지한다([hooks.md](../../.claude/rules/web/hooks.md) "`--dangerously-skip-permissions` 는 금지 — allowlist 로만"). 무인은 권한 우회가 아니라 사전 승인된 allowlist로 달성한다.
-- **보존 불변**: D6 사람 게이트(push/PR/merge), meta-eval 거버넌스(strengthen/neutral/weaken + reason-code + ×3 침식경보), 회고 루프([retro-loop 설계](../superpowers/specs/)). 실행 기질을 바꿔도 신뢰·승인 경계는 그대로다.
+  3. **`--dangerously-skip-permissions` → allowlist.** **왜**: with-key 룰이 이 플래그를 명시 금지하고 `allowedTools` allowlist로 대체하도록 한다([common/hooks.md](../../.claude/rules/common/hooks.md) §자동 수락 권한). 무인은 권한 우회가 아니라 사전 승인된 allowlist로 달성한다.
+- **보존 불변**: D6 사람 게이트(push/PR/merge), meta-eval 거버넌스(strengthen/neutral/weaken + reason-code + ×3 침식경보), 회고 루프(harness-retrospector 에이전트 + [회고 보고](../../evals/retro-reports/)). 실행 기질을 바꿔도 신뢰·승인 경계는 그대로다.
 - **상태 핸드오프 차용**: execute.py의 `index.json`(step status·summary를 세션 간 핸드오프 SoT로 쓰는 명시적 상태 파일)은 좋은 패턴 — 차용 시 with-key의 `evals/tasks` + `runs[]`와 정합시킨다.
 - **Multi-tool 역할 분담은 본 결정의 따름정리다** — 격리 헤드리스 step의 CLI를 tool별로 분기한다(planner=Claude · executor=Codex · reviewer=cross-tool 쌍). 상세는 아래 "Multi-tool 확장" 절. **왜**: step이 격리 세션이면 그 세션이 어느 tool인지는 자유 변수다.
 
@@ -59,7 +59,7 @@ subprocess.run(["claude", "-p", "--dangerously-skip-permissions",
 
 ### 긍정적
 
-- 장기 확장 시 컨텍스트 위생·스케일·step replay를 얻으면서 oracle·거버넌스 신뢰를 보존한다.
+- 장기 확장 시 **컨텍스트 위생**을 즉시 얻고(프로세스 격리의 무조건적 이득), oracle·거버넌스 신뢰를 보존한다. 단 **스케일·fan-out 이득은 시퀀셜 1-tick + PR마다 D6 게이트를 유지하는 한 실현되지 않는다** — 별도 `parallel-implementer` spec이 그 제약을 풀 때만 도달한다(아래 G1).
 - execute.py가 **동작하는 레퍼런스**라 후속 spec이 추상론이 아니라 실물 기반("이렇게 spawn하되 oracle은 외부로·worktree로·allowlist로")으로 작성된다.
 - 회고가 밝힌 "비용은 라우팅 입구에 집중"(retro 2026-06-26)과 **분리된 별도 트랙**이라, 실행 기질 결정이 입구 개선을 지연시키지 않는다.
 
@@ -68,11 +68,12 @@ subprocess.run(["claude", "-p", "--dangerously-skip-permissions",
 - 멀티세션 오케스트레이션 복잡도(세션 spawn·timeout·재시도·동시성 제어).
 - worktree N개 = 디스크·`pnpm install` setup 비용.
 - 상태 핸드오프 파일(index.json류) 추가 = SoT 표면 증가 → drift 점검 대상 1개 늘어남.
+- **공유 Supabase 비결정성 ↔ 결정론 oracle 충돌**: 병렬 worktree가 공유 Supabase를 타격하는 test를 동시 실행하면 pass@N이 비결정적이 되어 "외부 결정론 oracle" 전제가 흔들린다(이미 문서화된 결함 — 회고 §3-4 모노레포/공유DB 플레이크). 병렬화 전 DB 격리(worktree별 Supabase branch 또는 DB-touching test 직렬화)가 선결(아래 G2).
 - 즉시 이득 없음 — 현행 inline 유지라 전환 비용은 미래로 이연된다.
 
 ### 후속 영향
 
-- 별도 spec 필요: `parallel-implementer` 또는 `headless-substrate` — `AUTONOMY_EXPANDED` meta-eval + PO 게이트 대상. retro-loop spec과는 **별개 트랙**.
+- 별도 spec 필요: `parallel-implementer` 또는 `headless-substrate` — `AUTONOMY_EXPANDED` meta-eval + PO 게이트 대상. 회고 루프(retrospector)와는 **별개 트랙**.
 - [orchestrate-backlog.md](../../.agents/workflows/orchestrate-backlog.md) §63 "병렬 implementer 범위 밖" 갱신 시 본 ADR을 인용한다.
 - 전환 착수 전 [UPDATE_POLICY](../../.agents/harness/UPDATE_POLICY.md) Level 2 분류 + meta-eval(`AUTONOMY_EXPANDED` reason-code) 통과 확인.
 
@@ -86,6 +87,19 @@ subprocess.run(["claude", "-p", "--dangerously-skip-permissions",
 - **빠진 구현 조각**: ① step별 CLI 분기 오케스트레이터, ② per-step tool 배치 메타(`runs[]`의 `review.reviewers`에 `claude:backend` · `codex:backend`로 tool 기록), ③ cross-review 화해 — 두 리뷰 불일치 시 소스 재검증(기존 merge+verify의 cross-tool 확장).
 - **옵션(기본 아님)**: executor 토너먼트 — 두 tool이 같은 Agent Task를 각자 worktree에서 구현하고 oracle/리뷰어가 통과본을 채택(best-of-N). 실행 이질성에 검증 가치를 주는 유일한 길이나 실행 비용 ×2라 default 아님.
 - **거버넌스·비용 경계**: 본 따름정리도 `AUTONOMY_EXPANDED`(multi-tool 무인 오케스트레이션) — 위 Decision과 동일 게이트(별도 spec + meta-eval + PO). tool 양쪽 auth·과금·rate limit 이중화는 하네스 R&D 역량 비용이지 POC feature 배달 비용이 아니다(feature 트랙과 분리).
+
+## 전환 spec이 반드시 닫을 미해결 (grill 2026-06-26)
+
+> 본 ADR은 *방향*만 박는다. 아래는 grill 검토에서 드러난, `headless-substrate`/`parallel-implementer` 전환 spec이 착수 전 반드시 닫아야 할 결함이다. 닫히지 않으면 "외부 oracle·격리 기질" 전제 자체가 성립하지 않는다.
+
+- **G1 이득 한정** — 시퀀셜 + PR마다 D6 게이트를 유지하면 격리 기질에서 살아남는 이득은 *컨텍스트 위생*뿐이다. 스케일·fan-out을 실제로 얻으려면 병렬 implementer가 필요하고, 그건 D6/시퀀셜 제약을 _어떻게_ 푸는지를 전환 spec이 명시해야 한다. (Alternative #1을 기각한 "게이트에서 이득 소멸" 논리가 채택 하이브리드에도 대칭 적용됨.)
+- **G2 결정론 oracle 보존** — 병렬화는 공유 Supabase 비결정성과 충돌한다. worktree별 Supabase branch 또는 DB-touching test 직렬화 없이는 pass@N이 oracle 자격을 잃는다. 병렬 도입의 선결 조건.
+- **G3 oracle·merge+verify 실행 주체** — 현행은 pass@3을 implementer 세션이, merge+verify(리뷰어 주장 소스 재검증)를 메인 LLM이 돈다([implement-agent-task.md](../../.agents/workflows/implement-agent-task.md) §4·5). 헤드리스로 빼면 ① 오케스트레이터가 subprocess의 self-claimed green을 *재실행*으로 검증하고, ② reviewer 화해를 별도 헤드리스 step으로 둬야 한다(둘 다 위 "빠진 구현 조각"에 추가). 얇은 스크립트 오케스트레이터만으로는 외부 oracle이 성립하지 않는다.
+- **G4 allowlist 완전성·실패모드·tool 등가물** — 헤드리스는 사람이 권한 프롬프트에 답할 수 없다. push/PR/merge(D6)는 배제하되 자율 작업엔 충분한 allowlist 정의 + allowlist 밖 행위 시 step 실패·에스컬레이트 규칙이 필요하다. 이 가드레일은 `.claude.json` `allowedTools` 기준이라 Codex executor에는 sandbox/approval 등가물로 재표현해야 한다(Multi-tool 따름정리).
+- **G5 index.json 휘발성 경계** — 차용 시 index.json은 *휘발성 오케스트레이션 scratch*일 뿐, 권위 status는 runs[]/`harness:finalize`(single-writer) 유지. 이중 status SoT는 막 세운 status-drift 차단 가드레일([implement-agent-task.md](../../.agents/workflows/implement-agent-task.md) §7 "머지 후 별도 편집 금지")을 후퇴시킨다.
+- **G6 step 비용·시한 상한** — execute.py의 `timeout=3600`×3회를 그대로 들이면 pass@3 × CI 재시도 × spawn이 곱해진다. step 단위 wall-clock·토큰 상한 + 전역 abort가 필요하다(POC 예산).
+
+> 부기: G3·multi-tool의 per-step tool 메타는 runs[] 스키마를 회고 트랙([회고](../../evals/retro-reports/) §4 후보 4)과 공유한다 — "별개 트랙"이되 runs[] 스키마 진화는 조율 대상.
 
 ## 용어집
 
