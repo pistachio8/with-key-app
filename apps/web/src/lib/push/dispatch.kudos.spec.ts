@@ -7,11 +7,18 @@ import type { KudosEmoji } from "@withkey/domain";
 // scenario/deletes 도 같이 hoist 해 mock factory closure 가 안전하게 참조하게 한다.
 const state = vi.hoisted(() => {
   type SubsRow = { user_id: string; endpoint: string; p256dh: string; auth: string };
+  type TokenRow = {
+    user_id: string;
+    device_id: string;
+    expo_push_token: string;
+    disabled_at: string | null;
+  };
   type Scenario = {
     challenge?: { status: string } | null;
     recipientPrefs?: { notification_prefs: unknown } | null;
     reserveResult?: { data: unknown; error: { code: string } | null };
     subs?: SubsRow[];
+    tokens?: TokenRow[];
   };
   return {
     scenario: {} as Scenario,
@@ -66,7 +73,17 @@ vi.mock("@/lib/supabase/admin", () => ({
       if (table === "push_subscriptions") {
         return {
           select: () => ({
-            eq: () => Promise.resolve({ data: state.scenario.subs ?? [], error: null }),
+            in: () => Promise.resolve({ data: state.scenario.subs ?? [], error: null }),
+          }),
+        };
+      }
+      if (table === "device_push_tokens") {
+        // ADR-0041 — loadUserPushTargets 가 web 구독에 이어 Expo 토큰도 조회. kudos 시나리오는
+        // 기본 web-only 라 빈 배열(scenario.tokens 미설정 시). DeviceNotRegistered soft-delete 경로는
+        // dispatch.expo.spec.ts 에서 검증하므로 여기선 update 분기 불필요.
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: state.scenario.tokens ?? [], error: null }),
           }),
         };
       }

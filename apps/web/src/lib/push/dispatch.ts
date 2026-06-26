@@ -1,12 +1,7 @@
 import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
 import { track } from "@/lib/analytics/track";
-import {
-  isQuietHoursKST,
-  sendPush,
-  type PushPayload,
-  type PushSubscriptionRow,
-} from "@/lib/push/send";
+import { isQuietHoursKST, sendPush, sendExpoPush, type PushPayload } from "@/lib/push/send";
 import {
   notificationPrefsSchema,
   type NotificationPrefs,
@@ -19,7 +14,23 @@ type NotificationKind = "start" | "deadline";
 type NotificationSentType = "start" | "deadline" | "friend_action";
 type Outcome = "sent" | "cleaned" | "failed" | "suppressed";
 
-type DispatchTarget = PushSubscriptionRow & { userId: string };
+// ADR-0041 — 전환기 두 푸시 모델 공존. web=Web Push 구독(push_subscriptions),
+// expo=RN device token(device_push_tokens). 수신자 선정·quiet hours·dedup 은 모델 무관이고
+// sender 만 kind 로 분기한다(safeSend). 무효 토큰 정리도 모델별로 다름(web=hard delete, expo=soft).
+type WebTarget = {
+  kind: "web";
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
+type ExpoTarget = {
+  kind: "expo";
+  userId: string;
+  deviceId: string;
+  expoPushToken: string;
+};
+type DispatchTarget = WebTarget | ExpoTarget;
 
 // 호출자가 사용자에게 사실 그대로 보고할 수 있도록, 발송이 끝난 뒤 무엇이 일어났는지 요약.
 // `recipientCount` 는 옵트인 + 구독까지 마친 실제 발송 후보 수. `quietHours` 가 true 면 발송은 일어나지 않고 suppressed 트래킹만 남는다.
@@ -27,6 +38,44 @@ export type DispatchSummary = {
   recipientCount: number;
   quietHours: boolean;
 };
+
+// 한 user 집합의 발송 대상(web 구독 + Expo 토큰)을 모은다. ADR-0041 provider 추상화의 load 단계 —
+// "누가 받을지"(수신자 선정)는 호출자가 끝낸 뒤, 그 user 들의 디바이스 토큰만 여기서 읽는다.
+async function loadUserPushTargets(
+  admin: ReturnType<typeof adminClient>,
+  userIds: string[],
+): Promise<DispatchTarget[]> {
+  if (userIds.length === 0) return [];
+
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("user_id, endpoint, p256dh, auth")
+    .in("user_id", userIds);
+  const webTargets: WebTarget[] = (subs ?? []).map((s) => ({
+    kind: "web",
+    userId: s.user_id as string,
+    endpoint: s.endpoint as string,
+    p256dh: s.p256dh as string,
+    auth: s.auth as string,
+  }));
+
+  // disabled_at(DeviceNotRegistered soft-delete) 토큰은 발송 제외. service-role read 라 RLS 우회 —
+  // 이 read 는 authorization gate 가 아니라 발송 타깃팅이므로 필터를 코드에서 적용한다.
+  const { data: tokens } = await admin
+    .from("device_push_tokens")
+    .select("user_id, device_id, expo_push_token, disabled_at")
+    .in("user_id", userIds);
+  const expoTargets: ExpoTarget[] = (tokens ?? [])
+    .filter((t) => !t.disabled_at)
+    .map((t) => ({
+      kind: "expo",
+      userId: t.user_id as string,
+      deviceId: t.device_id as string,
+      expoPushToken: t.expo_push_token as string,
+    }));
+
+  return [...webTargets, ...expoTargets];
+}
 
 async function loadTargets(
   challengeId: string,
@@ -60,19 +109,7 @@ async function loadTargets(
     })
     .map((u) => u.id as string);
 
-  if (optedIn.length === 0) return [];
-
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id, endpoint, p256dh, auth")
-    .in("user_id", optedIn);
-
-  return (subs ?? []).map((s) => ({
-    userId: s.user_id as string,
-    endpoint: s.endpoint as string,
-    p256dh: s.p256dh as string,
-    auth: s.auth as string,
-  }));
+  return loadUserPushTargets(admin, optedIn);
 }
 
 export async function cleanupInvalidSubscription(endpoint: string): Promise<void> {
@@ -80,10 +117,38 @@ export async function cleanupInvalidSubscription(endpoint: string): Promise<void
   await admin.from("push_subscriptions").delete().match({ endpoint });
 }
 
+// Expo 무효 토큰은 hard-delete 대신 soft-delete(disabled_at) — 재등록 시 (user_id,device_id) upsert 로
+// 재활성, 갱신 이력 보존(ADR-0041 §69). Web Push 의 endpoint hard-delete 와 의도적으로 다르다.
+async function disableExpoToken(expoPushToken: string): Promise<void> {
+  const admin = adminClient();
+  await admin
+    .from("device_push_tokens")
+    .update({ disabled_at: new Date().toISOString() })
+    .match({ expo_push_token: expoPushToken });
+}
+
 async function safeSend(
   target: DispatchTarget,
   payload: PushPayload,
 ): Promise<Exclude<Outcome, "suppressed">> {
+  if (target.kind === "expo") {
+    try {
+      const result = await sendExpoPush({ expoPushToken: target.expoPushToken }, payload);
+      if (result === "device-not-registered") {
+        await disableExpoToken(target.expoPushToken);
+        return "cleaned";
+      }
+      return "sent";
+    } catch (error) {
+      // Expo Push Service transport 실패·rate limit·기타 ticket error. 토큰부 노출 최소화(24자 prefix).
+      console.error("[push] expo rejected", {
+        tokenPrefix: target.expoPushToken.slice(0, 24),
+        message: (error as { message?: string })?.message,
+      });
+      return "failed";
+    }
+  }
+
   try {
     await sendPush(target, payload);
     return "sent";
@@ -253,17 +318,8 @@ export async function dispatchGoalUnreachableNotification(args: {
     return { recipientCount: 0, quietHours };
   }
 
-  // 3. 구독.
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id, endpoint, p256dh, auth")
-    .eq("user_id", userId);
-  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
-    userId: s.user_id as string,
-    endpoint: s.endpoint as string,
-    p256dh: s.p256dh as string,
-    auth: s.auth as string,
-  }));
+  // 3. 발송 대상(web 구독 + Expo 토큰).
+  const targets = await loadUserPushTargets(admin, [userId]);
   if (targets.length === 0) {
     return { recipientCount: 0, quietHours };
   }
@@ -333,16 +389,7 @@ export async function dispatchVerifyAnomalyNotification(args: {
   const prefs = notificationPrefsSchema.safeParse(owner?.notification_prefs);
   if (!prefs.success || !prefs.data.deadline) return { recipientCount: 0, quietHours };
 
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id, endpoint, p256dh, auth")
-    .eq("user_id", ownerUserId);
-  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
-    userId: s.user_id as string,
-    endpoint: s.endpoint as string,
-    p256dh: s.p256dh as string,
-    auth: s.auth as string,
-  }));
+  const targets = await loadUserPushTargets(admin, [ownerUserId]);
   if (targets.length === 0) return { recipientCount: 0, quietHours };
 
   const targetUrl = `/challenge/${challengeId}/dashboard`;
@@ -425,20 +472,11 @@ export async function dispatchKudosReceivedNotification(args: {
     return { recipientCount: 0, quietHours };
   }
 
-  // 4. recipient 의 push_subscriptions 로드. 구독 미존재면 dedup 선예약 자체를 안 한다.
-  // 미구독 시점 응원이 dedup 만 남기고 silent return 하면, 추후 구독한 사용자가 같은 actor 의
+  // 4. 발송 대상(web 구독 + Expo 토큰) 로드. 대상 미존재면 dedup 선예약 자체를 안 한다.
+  // 미등록 시점 응원이 dedup 만 남기고 silent return 하면, 추후 등록한 사용자가 같은 actor 의
   // 같은 글 응원을 영원히 못 받는 회귀가 된다 (RCA 2026-05-27 — POC dogfood 중 실측).
   // 보존 정책의 손해(드물게 같은 글에 재발송) 보다 발송 누락 손해가 더 큼.
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id, endpoint, p256dh, auth")
-    .eq("user_id", recipientUserId);
-  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
-    userId: s.user_id as string,
-    endpoint: s.endpoint as string,
-    p256dh: s.p256dh as string,
-    auth: s.auth as string,
-  }));
+  const targets = await loadUserPushTargets(admin, [recipientUserId]);
 
   if (targets.length === 0) {
     return { recipientCount: 0, quietHours };
@@ -527,16 +565,7 @@ export async function dispatchOwnerStartNudge(
     return { recipientCount: 0, quietHours };
   }
 
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id, endpoint, p256dh, auth")
-    .eq("user_id", ownerUserId);
-  const targets: DispatchTarget[] = (subs ?? []).map((s) => ({
-    userId: s.user_id as string,
-    endpoint: s.endpoint as string,
-    p256dh: s.p256dh as string,
-    auth: s.auth as string,
-  }));
+  const targets = await loadUserPushTargets(admin, [ownerUserId]);
   if (targets.length === 0) {
     return { recipientCount: 0, quietHours };
   }

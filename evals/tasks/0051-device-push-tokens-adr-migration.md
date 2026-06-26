@@ -2,8 +2,7 @@
 Task: EVAL-0051
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [adr:rn-push-token-model] — `device_push_tokens` 신설 ADR(D-2) 이 docs/adr/ 에 accepted 상태로 없으면 migration schema 를 확정할 수 없다. `pnpm new adr rn-push-token-model` 로 초안 작성 후 PO/BE 수락 전 코드 확정 금지.
+Status: done
 Parent: docs/migration/00-rn-conversion-plan.md
 ---
 
@@ -61,14 +60,14 @@ Parent: docs/migration/00-rn-conversion-plan.md
 
 ## Acceptance Criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| ADR accepted 상태 | `docs/adr/NNNN-rn-push-token-model.md` 존재 + accepted |
-| migration append-only | `005X_device_push_tokens.sql` 번호 최대+1 |
-| dispatch Expo 분기 | `pnpm test -- src/lib/push/` green(기존 + Expo sender 단위 테스트) |
-| 기존 Web Push 회귀 없음 | 위 test 통과 |
-| TypeScript/ESLint | `pnpm typecheck && pnpm lint` |
-| harness 추적성 | `pnpm harness:check` |
+| 기준                    | 검증 방법                                                          |
+| ----------------------- | ------------------------------------------------------------------ |
+| ADR accepted 상태       | `docs/adr/NNNN-rn-push-token-model.md` 존재 + accepted             |
+| migration append-only   | `005X_device_push_tokens.sql` 번호 최대+1                          |
+| dispatch Expo 분기      | `pnpm test -- src/lib/push/` green(기존 + Expo sender 단위 테스트) |
+| 기존 Web Push 회귀 없음 | 위 test 통과                                                       |
+| TypeScript/ESLint       | `pnpm typecheck && pnpm lint`                                      |
+| harness 추적성          | `pnpm harness:check`                                               |
 
 ## Verification Commands
 
