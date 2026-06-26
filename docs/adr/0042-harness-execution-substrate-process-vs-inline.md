@@ -1,10 +1,10 @@
 # ADR-0042-harness-execution-substrate-process-vs-inline: 하네스 실행 기질 — 프로세스 격리 vs inline
 
 **Date**: 2026-06-26
-**Status**: proposed <!-- accepted / superseded / deprecated -->
+**Status**: accepted <!-- accepted / superseded / deprecated -->
 **Deciders**: pistachio8
 
-> 이 ADR은 **제안(proposed)** 상태다. 즉시 전환을 적용하지 않는다 — 하네스 자기변경(자율 경계 확장)이라 PO 승인 + meta-eval 게이트 전까지는 결정 후보일 뿐이다. ([UPDATE_POLICY](../../.agents/harness/UPDATE_POLICY.md) Level 2 + `AUTONOMY_EXPANDED`)
+> 이 ADR은 **accepted** 상태다(2026-06-26 PO 승인 — meta-eval **weaken `AUTONOMY_EXPANDED`** 첫 사용, [proposal](../../.agents/harness/reports/proposals/2026-06-26-adr-0042-accept.md)). **단 accepted 된 것은 *방향과 제약*이지 즉시 전환이 아니다** — 실제 헤드리스 격리 전환은 별도 spec + 새 `AUTONOMY_EXPANDED` meta-eval + PO 게이트가 다시 필요하다(아래 G1~G6 닫기 선결). ([UPDATE_POLICY](../../.agents/harness/UPDATE_POLICY.md) Level 2)
 
 ## Context
 
