@@ -65,3 +65,73 @@ export async function sendPush(
     },
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Expo Push (ADR-0041) — RN device token 발송 경로. Web Push 와 dispatch 레이어를
+// 공유하고 sender 만 교체한다. APNs/FCM 라우팅은 Expo Push Service 가 대행.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ExpoPushTokenRow = {
+  expoPushToken: string;
+};
+
+// "ok" = ticket 수락. "device-not-registered" = 회수 가능한 무효 토큰(호출자가 disabled_at soft-delete).
+// transport 실패·rate limit·기타 ticket error 는 throw 로 신호 → 호출자(safeSend)가 failed 처리.
+export type ExpoSendResult = "ok" | "device-not-registered";
+
+const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
+
+export async function sendExpoPush(
+  token: ExpoPushTokenRow,
+  payload: PushPayload,
+): Promise<ExpoSendResult> {
+  // Web Push 의 urgency=high / TTL=24h 정책(위 sendPush 주석)을 Expo 옵션으로 재지정(ADR-0041 §76).
+  // priority=high → iOS APNs immediate · Android FCM high priority. ttl 은 초 단위.
+  // payload.type/category/targetUrl 등 알림센터 분류 메타는 data 로 전달(RN 수신 핸들러 EVAL-0053 가 라우팅).
+  const message = {
+    to: token.expoPushToken,
+    title: payload.title,
+    body: payload.body,
+    sound: "default",
+    priority: PUSH_URGENCY,
+    ttl: PUSH_TTL_SECONDS,
+    data: {
+      url: payload.url,
+      type: payload.type,
+      category: payload.category,
+      targetUrl: payload.targetUrl,
+      id: payload.id,
+      challengeId: payload.challengeId,
+    },
+  };
+
+  const res = await fetch(EXPO_PUSH_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(message),
+    // cron·Server Action after() 컨텍스트에서 exp.host 지연 시 무기한 블록 방지(10s 상한).
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`expo push HTTP ${res.status}`);
+  }
+
+  // 단건 발송이라 data 는 ticket 객체(배열 아님). status=error + DeviceNotRegistered 만 회수 가능 무효 토큰.
+  const json = (await res.json()) as {
+    data?: { status?: string; message?: string; details?: { error?: string } };
+  };
+  const ticket = json.data;
+  if (ticket?.status === "error") {
+    if (ticket.details?.error === "DeviceNotRegistered") {
+      return "device-not-registered";
+    }
+    throw new Error(
+      `expo push ticket error: ${ticket.details?.error ?? ticket.message ?? "unknown"}`,
+    );
+  }
+  return "ok";
+}

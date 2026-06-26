@@ -676,8 +676,38 @@
           "pnpm test -- \"src/app/api/share/recap-clip\"": "web vitest 15/15 pass; mobile(jest) no-match exit1 은 monorepo recursive-run quirk(apps/web 만 변경) — web 스코프 vitest run 으로 실측"
         }
       },
-      "review": { "reviewers": ["backend-reviewer"], "criticalHigh": 0, "verdict": "fixed" },
+      "review": {
+        "reviewers": ["backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "fixed"
+      },
       "notes": "orchestrate D6: route ambiguous(0.2) 는 'EVAL-0057 착수' 가 기존 백로그 task ID 참조라 키워드 미스인 정상 케이스(분류 모호성 아님) → 기존 READY task 라 implement-agent-task 직행. WP 브랜치는 origin/develop(6d52905, PR #284 머지로 0057 task 포함)에서 컷. backend-reviewer fan-out Blocker 0 / Major 1 수정: 폴백 renderElement 자체 throw 시 500 잔존 → try/catch + 명시 로그('static fallback frame also failed') + 문서화된 rethrow(catastrophic floor: 렌더 파이프라인 전체 손상 시에만 500) + 전용 테스트 고정. Minor: attempt 하드코딩→MAX_RENDER_ATTEMPTS 상수화, 동시성 테스트 지연 20ms·maxInFlight===3 강화, FRAME_TIMEOUT_MS_TEST 상단 이동. 타임아웃은 satori/ImageResponse abort 미지원이라 'hero 사진 fetch 행' 대기 차단이 실효 타깃(ADR-0025 §B). 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측."
+    },
+    {
+      "taskId": "EVAL-0051",
+      "date": "2026-06-26",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0051 drift 정정(Blocked-by:[adr:rn-push-token-model] 이 ADR-0041 accepted 2026-06-25 로 이미 해소 → blocked→todo→in_progress) 후 ADR-0041 구현. migration 0058_device_push_tokens.sql 신설(컬럼 id·user_id·device_id·expo_push_token·platform(ios|android check)·app_version·last_seen_at·disabled_at·created_at, UNIQUE(user_id,device_id)+UNIQUE(expo_push_token), idx_dpt_user, RLS dpt_all_self=ps_all_self 미러). push_subscriptions 무변경(cutover 까지 공존), truncate_test_data 는 auth.users→users→device_push_tokens cascade 로 자동 정리라 재선언 불요. send.ts sendExpoPush() 신설(직접 fetch exp.host·신규 dep 0, urgency=high→priority·TTL 24h→ttl 재지정, DeviceNotRegistered 감지, AbortSignal.timeout 10s). dispatch.ts: PushSubscriptionRow&{userId} → discriminated DispatchTarget(web|expo), 통합 loadUserPushTargets(두 테이블 조회·disabled_at 제외), safeSend kind 분기(web=404/410 hard-delete · expo=DeviceNotRegistered soft-delete disableExpoToken). 8개 dispatch 함수(start·deadline·friend_action·new_challenge + kudos·nudge·goal_unreachable·verify_anomaly) 전부 Expo 대상 지원, 수신자 선정·quiet hours·dedup 불변. BE_SCHEMA.md SoT parity(§2·ER·§5.9.1·§6·RLS). 변경 8 파일.",
+      "verification": {
+        "local": {
+          "pnpm test (web unit src/lib/push/)": "pass (7 files 58 — 기존 dispatch/kudos/nudge/new-challenge/subscribe 회귀 0 + send.spec Expo 4 + dispatch.expo.spec 6 신규)",
+          "pnpm vitest run --project unit (apps/web 전체)": "pass (126 files 821 — dispatch/send import 하는 me/_actions·submit-core·pledge·new 등 회귀 0)",
+          "pnpm typecheck": "pass (web·domain·mobile)",
+          "apps/web eslint src/lib/push": "clean 0 — 모노레포 pnpm lint 의 apps/mobile expo-image-* 미해결은 본 변경 무관(mobile 파일 미수정)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (BE_SCHEMA device_push_tokens 추가 후 broken ref 0)",
+          "integration push (tests/integration/push·deadline-push cron)": "skip — 로컬 Supabase env 부재(메모리 Local Supabase unavailable). CI Integration 잡이 0058 적용 후 공유 Supabase 에서 실행"
+        }
+      },
+      "review": {
+        "reviewers": ["migration-reviewer", "backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "fixed"
+      },
+      "notes": "orchestrate D6: route feature(0.7·ambiguous=false) → 기존 EVAL-0051 task 존재라 create-agent-tasks 생략, drift 정정(blocked→todo) 후 claim→구현. WP 브랜치 feat/eval-0051-device-push-tokens 는 origin/develop(54eddfc·PR #285 머지 후)에서 컷. ADR 부분은 ADR-0041(accepted) 로 선완료라 본 PR 은 migration+dispatch+test+BE_SCHEMA. 리뷰어 fan-out(migration·backend) Blocker 0/Major 0=pass; review-driven 반영 2건: BE_SCHEMA SoT parity 6곳 추가(migration-reviewer Major 승격 여지 차단), sendExpoPush fetch AbortSignal.timeout 10s(backend-reviewer cron 행 방지). 미반영 Minor(의도/후속): disabled_at .is() DB필터 대신 JS filter(strict-sequence 테스트 mock churn 회피 의도적 POC 트레이드오프), disableExpoToken DB error silent(cleanupInvalidSubscription house style 일치). 실기기 4종 Expo 수신 확인은 EVAL-0052(토큰 등록)·0053(수신 핸들러) 후. 푸시·PR 은 사용자 게이트(D6) 후."
     }
   ]
 }

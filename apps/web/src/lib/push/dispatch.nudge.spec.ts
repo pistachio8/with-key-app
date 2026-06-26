@@ -24,8 +24,9 @@ import { dispatchOwnerStartNudge } from "./dispatch";
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const CH = "00000000-0000-4000-8000-000000000001";
 
-// users.notification_prefs / push_subscriptions 조회를 테이블별로 분기하는 헬퍼.
-function wireDb(opts: { prefs: unknown; subs: unknown[] }) {
+// users.notification_prefs / push_subscriptions / device_push_tokens 조회를 테이블별로 분기하는 헬퍼.
+// ADR-0041 — loadUserPushTargets 가 push_subscriptions(.in) + device_push_tokens(.in) 둘 다 조회.
+function wireDb(opts: { prefs: unknown; subs: unknown[]; tokens?: unknown[] }) {
   mocks.from.mockImplementation((table: string) => {
     if (table === "users") {
       return {
@@ -35,7 +36,10 @@ function wireDb(opts: { prefs: unknown; subs: unknown[] }) {
       };
     }
     if (table === "push_subscriptions") {
-      return { select: () => ({ eq: async () => ({ data: opts.subs }) }) };
+      return { select: () => ({ in: async () => ({ data: opts.subs }) }) };
+    }
+    if (table === "device_push_tokens") {
+      return { select: () => ({ in: async () => ({ data: opts.tokens ?? [] }) }) };
     }
     throw new Error(`unexpected table ${table}`);
   });
