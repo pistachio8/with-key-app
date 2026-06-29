@@ -2,7 +2,7 @@
 Task: EVAL-0066
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0064] [task:EVAL-0065] — BFF route(EVAL-0064)와 fixture(EVAL-0065) 완료 후 RN service 구현이 의미 있다.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---

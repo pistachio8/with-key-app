@@ -887,6 +887,63 @@
         "notes": "backend-reviewer 1도메인(BFF 인증/RLS 경계) 단독. Blocker 0 / Major 0 / Minor 3. Minor 1(getUser error → 401 테스트 누락, feed 선례도 동일 누락)=반영, 인증 계약 보강 테스트 추가(계약 6→7종). Minor 2(penalty-status.ts c as unknown as ChallengeRow 이중 단언)=pre-existing(EVAL-0044 도입, 이번 커밋은 코드 이동만, reviewer 도 인정)→내 변경 범위 밖 미반영, 후속. Minor 3(ADR-0024 production callsite 가 challenge-feed.ts 만 명시 — penalty-status.ts 추가 권고)=ADR 본문 변경은 D6 사람 게이트(adr)라 자동 미반영, 코드에 ADR-0024 admin hydrate 인용 주석 존재로 정당성 기록됨 → 후속 사람 결정. 확인: Bearer 인증 순서 feed 정합, Layer 1 주입 RLS client(admin 대체 없음), Layer 2 admin hydrate ADR-0024 준수(viewer-agnostic cache + viewerId 3-way filter), 시크릿 노출 없음(publishable key only)."
       },
       "notes": "EVAL-0064 · plan 2026-06-29-rn-settlement-c2-penalty Task 5(Phase B). TDD: route.spec.ts(RED, ./route 부재) → route.ts(GREEN). Harness Impact: Q1 신규 폴더 api/penalty-status/ · Q4 신규 검증명령 pnpm --filter web test -- penalty-status/route — 둘 다 기존 BFF(feed/action-log) 선례와 동일 구조라 drift 아님 → drift-report 불요. 후속: Minor 2(ChallengeRow 캐스팅 제거)·Minor 3(ADR-0024 callsite 명시) 별도. 푸시·PR 은 사용자 게이트(D6)."
+    },
+    {
+      "taskId": "EVAL-0065",
+      "date": "2026-06-29",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "penalty 창2 read-contract 패리티 fixture 2종 신설 + domain schema 수용 테스트. evals/fixtures/read-contracts/penalty-status.ts(PENALTY_STATUS_EXPECTED — 7일·주3회 closed·창2 open transport snapshot: viewer 민지 pending·rejectCount0·isViewer true, JJ pending·rejectCount1, signedParticipantCount3)는 BFF(admin hydrate) 경로라 RN 이 view 를 조립하지 않아 domain penaltyStatusViewSchema 수용 + RN BFF round-trip(EVAL-0066) 의 공유 SoT. penalty-waiting.ts(PENALTY_WAITING_TABLES — groups g1 + challenges cw1~cw4 + challenge_participants viewer 3행, PENALTY_WAITING_EXPECTED=[cw1])는 RLS-direct 조립 snapshot — mock supabase 필터 no-op 특성상 모든 challenge row 가 closed+penalty_mission, 변별은 read 의 in-memory 창2 게이트([종료+48h,+96h]) + viewer 서약 멤버십(NOW=2026-05-10T00:00:00Z 기준 cw1=종료+72h·서약 포함, cw2=종료+12h 창 전, cw3=종료+120h 만료, cw4=종료+72h·미서약). packages/domain/src/read-contracts/penalty.spec.ts 에 'penalty-status fixture parity' describe 추가(penaltyStatusViewSchema.parse round-trip). 신규 2파일 + spec 1파일.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/domain test -- penalty": "pass (27 files · 225 tests — read-contracts/penalty.spec.ts 6 tests: 기존 5 + fixture parity 1)",
+          "pnpm --filter @withkey/domain exec tsc --noEmit": "pass (exit 0)",
+          "pnpm --filter @withkey/domain lint": "pass (0 error)",
+          "pnpm exec prettier --check penalty-status.ts penalty-waiting.ts penalty.spec.ts": "pass (All matched files use Prettier code style)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken references)"
+        }
+      },
+      "review": {
+        "reviewers": ["backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass",
+        "notes": "backend-reviewer 1도메인(domain read-contract fixture) 단독. Blocker 0 / Major 0 / Minor 2. 수기 검산으로 PENALTY_WAITING_EXPECTED=[cw1] 정합(cw1 창2 open+서약, cw2 창 전, cw3 만료, cw4 미서약 — open/close 경계 직접 계산)과 penaltyStatusViewSchema round-trip 정합을 독립 재현 확인. Minor 1(penalty-waiting EXPECTED 타입 어노테이션 부재)=미반영, 기존 fixture 7종 순수객체 컨벤션 일관성 + EVAL-0066 이 toEqual + PenaltyWaitingView[] 반환타입으로 즉시 소비 검증(reviewer 도 컨벤션상 Minor 인정). Minor 2(penalty-waiting domain round-trip 부재)=불가/불요, PenaltyWaitingView 는 transport zod 없는 의도적 설계(penalty.ts: BFF 아님·RN 직접·타입만)라 round-trip schema 자체 부재(reviewer 도 규칙 위반 아님 인정). EVAL-0066 참고: PENALTY_WAITING_TABLES groups 행에 name 컬럼 존재 확인."
+      },
+      "notes": "EVAL-0065 · plan 2026-06-29-rn-settlement-c2-penalty Task 6(Phase C). Harness Impact: Q1 evals/fixtures/read-contracts/ 하위 penalty 파일 신규는 기존 디렉토리 확장(새 폴더 구조 아님)·Q2~Q6 모두 no → drift-report 불요(harness:drift Tier1 drift 없음 확인). plan 교정 1건: penalty-status.ts 의 @withkey/domain self-import 명세가 domain typecheck context 에서 TS2307(빌드 산출물 exports 의존) → 기존 fixture 순수객체 컨벤션으로 교정, 타입 정합은 spec penaltyStatusViewSchema round-trip 이 보존. 커밋·푸시·PR 은 사용자 게이트(D6)."
+    },
+    {
+      "taskId": "EVAL-0066",
+      "date": "2026-06-29",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "RN 벌칙 창2 read service 신설 — apps/mobile/src/features/penalty/api/penalty-reads.ts. fetchPenaltyStatus(challengeId)=BFF GET /api/penalty-status(bffGetJson Bearer) 호출 + penaltyStatusViewSchema(@withkey/domain) zod parse, BffRequestError.status===404 → null(web notFound 정합), 그 외 throw. fetchPenaltyWaiting(viewerId,{now?})=web fetchPenaltyWaitingInner 미러 — RLS-direct supabase 직접(groups→challenges→challenge_participants 쿼리 체인) + in-memory 창2 게이트([종료+48h,+96h], end=closed_at??end_at, now 주입 가능) + viewer 서약 멤버십 Set 필터. penalty-reads.spec.ts(jest.mock bff-client·supabase client + EVAL-0065 fixture 6단계 import): BFF round-trip·404→null·throw·waiting cw1만 4종. penalty/api/keys.ts 동반 신설(penaltyKeys factory: status(challengeId)·waiting() — ADR-0037 read service↔keys.ts 쌍 규칙, key viewerId 미포함). recap-reads.ts 선례 패턴 정합. 신규 3파일.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/mobile test -- penalty-reads": "pass (1 suite · 4 tests — BFF round-trip·404 null·non-404 throw·waiting cw1)",
+          "pnpm --filter @withkey/mobile exec tsc --noEmit": "pass (exit 0)",
+          "pnpm --filter @withkey/mobile lint": "pass (exit 0, expo lint)",
+          "pnpm exec prettier --check penalty/api/*.ts": "pass (All matched files use Prettier code style)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken references)"
+        }
+      },
+      "review": {
+        "reviewers": ["mobile-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "fixed",
+        "notes": "mobile-reviewer 1도메인(RN read service) 단독. Blocker 0 / Major 0 / Minor 4. ADR-0036 BFF 경계(bffGetJson만·EXPO_PUBLIC_*·admin 직접노출 없음)·zod parse 계약(penaltyStatusViewSchema BFF 응답 검증, windowPhase enum 위반 시 throw 전파)·RLS early-return 이상 없음 확인. Minor 1(keys.ts 누락)=반영, ADR-0037(read service↔keys.ts 쌍 규칙) + recap/feed/challenge 전 read feature 선례라 penalty/api/keys.ts 의 penaltyKeys factory 신설(status·waiting, viewerId 미포함). Minor 2(testMatch §C7 src/ 앵커 — task 검증명령 기재)=미반영, plan 전체(0064 포함) 동일 컨벤션 + testMatch glob 이라 실동작 정상 + 비-worktree → 후속 일관성. Minor 3(viewerId vs web userId 주석)=미반영, penalty-reads.ts 에 이미 'web fetchPenaltyWaitingInner 미러' 주석 존재 + recap-reads.ts 선례도 파라미터명 매핑 주석 없음. Minor 4(g.id/g.name 타입 단언 정밀도)=미반영, reviewer 본인이 현재 코드(g.id as string PK 안전·g.name as string|null 올바름) 인정 + recap-reads.ts 캐스팅 혼재 선례 일관. 후속 실측 권고: 비멤버 viewer RLS negative(mock no-op 라 미검증)·창2 화면 expo start smoke.",
+        "minorDeferred": [
+          "testMatch §C7 src/ 앵커 검증명령 기재(plan 전체 컨벤션)",
+          "비멤버 viewer RLS negative dev 실측",
+          "Phase F 창2 화면 expo start smoke"
+        ]
+      },
+      "notes": "EVAL-0066 · plan 2026-06-29-rn-settlement-c2-penalty Task 7(Phase C). TDD: penalty-reads.spec.ts(RED, ./penalty-reads 부재) → penalty-reads.ts(GREEN, 4 tests). EVAL-0065 fixture(PENALTY_STATUS_EXPECTED·PENALTY_WAITING_TABLES·EXPECTED) 공유로 web↔RN 패리티 강제. Harness Impact: Q1 신규 폴더 features/penalty/api/ · Q2 penalty-reads 명명 recap-reads 선례 동일 · Q4 신규 검증명령 test -- penalty-reads — 모두 기존 read feature(recap/feed) 선례와 동일 구조라 drift 아님 → drift-report 불요(harness:drift Tier1 drift 없음). keys.ts 는 task Target Files 외이나 ADR-0037 가드레일 정합(reviewer Minor 1)으로 추가. 커밋·푸시·PR 은 사용자 게이트(D6)."
     }
   ]
 }
