@@ -708,6 +708,56 @@
         "verdict": "fixed"
       },
       "notes": "orchestrate D6: route feature(0.7·ambiguous=false) → 기존 EVAL-0051 task 존재라 create-agent-tasks 생략, drift 정정(blocked→todo) 후 claim→구현. WP 브랜치 feat/eval-0051-device-push-tokens 는 origin/develop(54eddfc·PR #285 머지 후)에서 컷. ADR 부분은 ADR-0041(accepted) 로 선완료라 본 PR 은 migration+dispatch+test+BE_SCHEMA. 리뷰어 fan-out(migration·backend) Blocker 0/Major 0=pass; review-driven 반영 2건: BE_SCHEMA SoT parity 6곳 추가(migration-reviewer Major 승격 여지 차단), sendExpoPush fetch AbortSignal.timeout 10s(backend-reviewer cron 행 방지). 미반영 Minor(의도/후속): disabled_at .is() DB필터 대신 JS filter(strict-sequence 테스트 mock churn 회피 의도적 POC 트레이드오프), disableExpoToken DB error silent(cleanupInvalidSubscription house style 일치). 실기기 4종 Expo 수신 확인은 EVAL-0052(토큰 등록)·0053(수신 핸들러) 후. 푸시·PR 은 사용자 게이트(D6) 후."
+    },
+    {
+      "taskId": "EVAL-0058",
+      "date": "2026-06-29",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "apps/mobile/src/shared/theme/ 신규 — web globals.css SoT 를 미러한 RN 디자인 토큰 4종(colors·typography·radius·motion)+barrel+parity 테스트(theme.spec). colors.ts 는 기존 teal POC 팔레트를 web hex SoT(background #F7F8FB·primary #8AA4FF 등 12종)+invite 영수증 팔레트 10종+OKLCH AA 보정 3종(muted·mutedForeground·brandPrimaryDeep, culori 변환)로 재작성하되 레거시 alias 9종(textStrong·success 등) 보존 → 기존 화면(home·me·feed·challenge) typecheck 비파괴. typography 는 .t-* 6종을 RN TextStyle 로 환산(letterSpacing=em×fontSize, lineHeight=ratio×fontSize). EVAL-0059 UI primitive 의 전제. 변경: colors.ts 재작성 + typography/radius/motion/index/theme.spec 신규 + test-env.d.ts shim 확장 + package.json culori devDep.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/mobile test -- theme.spec": "pass (26/26 — hex SoT 12 + OKLCH culori 3 + invite + alias + typography 6 + radius + motion 2)",
+          "pnpm --filter @withkey/mobile exec tsc --noEmit": "pass (기존 화면 비파괴 — 레거시 alias 보존)",
+          "pnpm --filter @withkey/mobile lint": "pass (exit 0)",
+          "pnpm --filter @withkey/mobile test": "pass (전체 20 suites · 180/180 — colors 재작성이 feed/recap/invite 스냅샷·로직 테스트 비파괴 확인)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken refs)"
+        }
+      },
+      "review": {
+        "reviewers": ["inline-self-review"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "orchestrate D6: route ambiguous(0.2·no-keyword-match) — '계획 구현하자' 가 키워드 테이블 밖이라 라우터 misroute(analysis). 사용자가 type=feature 확정 + 선행 의존 SL0(C2 prereq, develop 미머지) 먼저 + 하네스 create-agent-tasks 플로우 선택. harness-engineer 가 SL0 plan→EVAL-0058(theme)/0059(ui) 분해. WP 브랜치 feat/rn-settlement-sl0-design 은 develop 끝점(현 HEAD)에서 컷. 단일 mobile 도메인 소규모 diff 라 inline self-review(POC 과금 절약, 무인 tick 아님). plan 갭 2건 TDD 로 교정: (1) radius.ts 곱셈(14*1.4=19.599…) vs 테스트 리터럴 불일치 → 리터럴 고정, (2) theme.spec 의 readFileSync+culori 가 RN tsconfig(@types/node 미포함)에서 tsc 실패 → test-env.d.ts ambient shim 확장(기존 컨벤션 준수). culori 4.x 는 require/main 이 CJS 번들이라 jest-expo ESM 이슈 없음. 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. drift-report: evals/drift-reports/EVAL-0058-rn-settlement-sl0-theme-tokens.md."
+    },
+    {
+      "taskId": "EVAL-0059",
+      "date": "2026-06-29",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "apps/mobile/src/shared/ui/ 신규 — web components/ui/* 를 RN StyleSheet 로 미러한 presentational primitive 6종 + barrel + 렌더 스냅샷 테스트(ui.spec). Button(variant 5 default·outline·secondary·ghost·destructive × size 3, minHeight≥44 터치타깃·accessibilityRole=button·disabled, link/icon YAGNI 제외), Chip(tone 5, /alpha→rgba), Card(padding 4 × tone 3, borderRadius 14, web shadow→RN shadow+elevation), Stamp(label/wordmark × tone 4 + color 주입, accessibilityRole=image, 회전 애니메이션 생략 정적 — Animated 미import), EmptyState(icon?:ReactNode·title h3·description sub·action?), ErrorState(기본 문구 + onRetry?시 Button ghost). EVAL-0058 theme 토큰 소비. 신규 dep 0.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/mobile test -- ui.spec": "pass (14/14 — Button 3·Chip 2·Card 2·Stamp 3·EmptyState 2·ErrorState 2)",
+          "pnpm --filter @withkey/mobile test": "pass (전체 21 suites · 194/194 — 기존 비파괴)",
+          "pnpm --filter @withkey/mobile exec tsc --noEmit": "pass",
+          "pnpm --filter @withkey/mobile lint": "pass (exit 0)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken refs)"
+        }
+      },
+      "review": {
+        "reviewers": ["inline-self-review"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "EVAL-0058(theme) Depends-on 충족 후 같은 WP 브랜치 feat/rn-settlement-sl0-design 에서 순차 구현. 단일 mobile 도메인 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). Stamp 정적 AC 는 코드 검토로 확인(Animated/Easing 미import). 경미 deviation 1건: plan 의 ui.spec 가 require('react-native').StyleSheet.flatten 인라인 require 인데 expo lint(no-require-imports) 리스크 회피 위해 top-level import 로 동치 치환(단언 동일). SL0 슬라이스(EVAL-0058+0059) 완료 — C2(2026-06-29-rn-settlement-c2-penalty.md) 의 선행 의존 해소. 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. drift-report: evals/drift-reports/EVAL-0059-rn-settlement-sl0-ui-primitives.md."
     }
   ]
 }
