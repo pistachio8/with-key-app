@@ -113,9 +113,10 @@ describe("actionVideoMetaSchema", () => {
     expect(actionVideoMetaSchema.safeParse({ ...base, mime: "video/webm" }).success).toBe(true);
   });
 
-  it("rejects a non-allowlisted MIME (e.g. image or quicktime)", () => {
+  it("accepts quicktime (iOS .mov, RN 카메라) and rejects non-video MIME", () => {
+    // RN expo-image-picker 카메라는 iOS 에서 video/quicktime(.mov)을 생성한다 (0059).
     expect(actionVideoMetaSchema.safeParse({ ...base, mime: "video/quicktime" }).success).toBe(
-      false,
+      true,
     );
     expect(actionVideoMetaSchema.safeParse({ ...base, mime: "image/jpeg" }).success).toBe(false);
   });

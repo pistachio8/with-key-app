@@ -807,6 +807,34 @@
         "verdict": "pass"
       },
       "notes": "C2 Phase A–C write-contract task(EVAL-0061), 선행 EVAL-0060 read-contract 와 페어. action-log.ts 패턴 정확 미러 — errorCodeSchema/issuesSchema shape 동일. 단일 domain 신규 2파일(penalty.ts·penalty.spec.ts) + barrel 1줄 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). TDD: spec RED(모듈 부재 실패) 확인 후 구현 GREEN. 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. Harness Impact: Q4 새 테스트 파일(명령 패턴 action-log 동일) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
+    },
+    {
+      "taskId": "EVAL-0062",
+      "date": "2026-06-29",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "action-videos 영상 허용목록에 video/quicktime(.mov) 동기 확장 — RN(apps/mobile) expo-image-picker iOS 카메라가 .mov 를 생성하므로 4곳을 함께 갱신. (1) supabase/migrations/0059_action_videos_allow_mov.sql 신규: 버킷 allowed_mime_types 에 video/quicktime 추가(전체 배열 재할당, mp4/webm 보존) + update_action_log_video_path RPC 파일명 정규식 (mp4|webm)→(mp4|webm|mov)(0054 본문 byte 보존, SECURITY DEFINER set search_path=public 유지). (2) packages/domain/src/validators/action-log.ts ALLOWED_VIDEO_MIME 에 video/quicktime(SoT). (3) apps/web/src/lib/storage/action-videos.ts ALLOWED_EXT/MIME_TO_EXT/EXT_TO_MIME/VIDEO_PATH_RE 4곳 mov 동기. (4) docs/BE_SCHEMA.md migration history 표에 0058·0059 행 추가 + 0054 행 MIME 표기 보강(리뷰 M2 드리프트). RLS(av_insert_self 경로 prefix만)·submit_penalty_proof(0055, 확장자 미검사) 무영향. 신규 dep 0.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/domain test -- action-log": "pass (27 files · 224 — quicktime 수용 flip)",
+          "pnpm --filter web test -- action-videos": "pass (126 files · 824 — mov 경로 3종 + 기존 거부 jpg/gif/image 유지)",
+          "pnpm --filter web exec tsc --noEmit": "pass (exit 0 — MIME_TO_EXT/EXT_TO_MIME Record 3키 완전성 컴파일 강제)",
+          "pnpm --filter @withkey/domain lint": "pass",
+          "pnpm --filter web exec eslint (storage)": "pass",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (BE_SCHEMA 표 갱신 후 재확인 예정)"
+        },
+        "manual_pending": "pnpm supabase db reset 후 (1) action-videos allowed_mime_types 에 video/quicktime 포함, (2) .mov 경로 update_action_log_video_path 통과 + 비허용 확장자 거부 유지 — CI/머지 전 1회"
+      },
+      "review": {
+        "reviewers": ["migration-reviewer", "backend-reviewer", "orchestrator-merge-verify"],
+        "criticalHigh": 0,
+        "verdict": "pass",
+        "notes": "fan-out 2 도메인(migration+backend) 병렬 후 오케스트레이터가 소스로 병합·검증. Blocker/Major 0. Minor 4: M2(BE_SCHEMA 드리프트)=소스확인 유효→이 PR에서 0058·0059 둘 다 메움. M1(ADR 부재)=task 설계상 사람게이트→PR 본문 근거로 갈음(기존 spec §C2 인용). B1/B2(웹 폼 에러메시지·주석)=오케스트레이터 검증 결과 현시점 런타임 무효(웹 MediaRecorder 가 quicktime 미생성, mov 는 RN 전용 Phase F)→Target 밖, surgical 유지, Phase F 후속."
+      },
+      "notes": "C2 Phase A–C 영상 포맷 task. TDD: domain spec(quicktime 거부→수용) + web spec(mov/quicktime 거부 2곳 flip + 신규 수용 3종) RED 확인 후 구현 GREEN. plan deviation 1건: plan Task 3 Step 6 은 web action-videos.spec.ts 에 mov 수용 케이스 추가만 명시했으나, 기존 mov/quicktime 거부 테스트 2곳(ALLOWED_EXT mov throw, extFromVideoFile quicktime throw)이 mov 허용 시 깨지므로 함께 flip(plan 갭 보완). 푸시·PR 은 사용자 게이트(D6). Harness Impact: Q4 supabase db reset 수동검증 추가(CI 외) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
     }
   ]
 }

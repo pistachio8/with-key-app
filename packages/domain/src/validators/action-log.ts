@@ -7,7 +7,8 @@ export type AllowedPhotoMime = (typeof ALLOWED_PHOTO_MIME)[number];
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 // 영상 인증(spec §C2 / EVAL-0043). 실시간 캡처 3초 클립 — action-videos 버킷 정책과 정합.
-export const ALLOWED_VIDEO_MIME = ["video/mp4", "video/webm"] as const;
+// RN(apps/mobile) 카메라 호환: iOS=video/quicktime(.mov), Android=video/mp4 (0059 버킷 동기).
+export const ALLOWED_VIDEO_MIME = ["video/mp4", "video/webm", "video/quicktime"] as const;
 export type AllowedVideoMime = (typeof ALLOWED_VIDEO_MIME)[number];
 // 버킷 file_size_limit(0054) 과 동일 상한. 3초 클립 + 헤드룸.
 export const MAX_VIDEO_BYTES = 20 * 1024 * 1024;

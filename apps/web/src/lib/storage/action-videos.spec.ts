@@ -25,8 +25,8 @@ describe("buildVideoPath", () => {
     ).toThrow(/invalid/i);
   });
 
-  it("rejects unsupported extensions (photo·mov)", () => {
-    for (const ext of ["jpg", "mov", "gif"]) {
+  it("rejects unsupported extensions (photo)", () => {
+    for (const ext of ["jpg", "gif"]) {
       expect(() =>
         buildVideoPath({
           userId: "user-1",
@@ -65,6 +65,25 @@ describe("extFromVideoFile", () => {
   });
 
   it("rejects a non-allowlisted MIME", () => {
-    expect(() => extFromVideoFile({ type: "video/quicktime", name: "clip.mov" })).toThrow(/mime/);
+    expect(() => extFromVideoFile({ type: "image/jpeg", name: "clip.jpg" })).toThrow(/mime/);
+  });
+});
+
+describe("action-videos — mov(quicktime) 허용 (0059)", () => {
+  it("extFromVideoFile: video/quicktime → mov", () => {
+    expect(extFromVideoFile({ type: "video/quicktime", name: "x.mov" })).toBe("mov");
+  });
+  it("buildVideoPath: mov 확장자 throw 없음", () => {
+    const path = buildVideoPath({
+      userId: "u1",
+      challengeId: "c1",
+      actionLogId: "penalty",
+      ext: "mov",
+      nonce: "abc123",
+    });
+    expect(path).toBe("u1/c1/penalty-abc123.mov");
+  });
+  it("looksLikeVideoPath: .mov 경로 수용 (feed getVideoSignedUrls gate)", () => {
+    expect(looksLikeVideoPath("u1/c1/penalty-abc.mov")).toBe(true);
   });
 });

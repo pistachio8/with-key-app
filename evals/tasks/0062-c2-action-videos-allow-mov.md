@@ -2,7 +2,7 @@
 Task: EVAL-0062
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---
 
