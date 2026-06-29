@@ -2,7 +2,7 @@
 Task: EVAL-0065
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0060] — PenaltyStatusView·PenaltyWaitingView 타입이 domain에 있어야 fixture가 type-safe하다.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---

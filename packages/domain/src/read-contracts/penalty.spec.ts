@@ -5,6 +5,7 @@ import {
   penaltyWindowPhaseSchema,
   type PenaltyStatusView,
 } from "./penalty";
+import { PENALTY_STATUS_EXPECTED } from "../../../../evals/fixtures/read-contracts/penalty-status";
 
 const PROOF = {
   proofId: "11111111-1111-1111-1111-111111111111",
@@ -57,5 +58,12 @@ describe("penalty read-contract zod", () => {
     const parsed = penaltyProofViewSchema.parse(leaked);
     expect("voterId" in parsed).toBe(false);
     expect("rejecterIds" in parsed).toBe(false);
+  });
+});
+
+describe("penalty-status fixture parity", () => {
+  it("penaltyStatusViewSchema가 PENALTY_STATUS_EXPECTED를 round-trip", () => {
+    // 순수 객체 fixture(feed·recap 컨벤션) — schema parse 가 enum·형태를 런타임 검증한다.
+    expect(penaltyStatusViewSchema.parse(PENALTY_STATUS_EXPECTED)).toEqual(PENALTY_STATUS_EXPECTED);
   });
 });
