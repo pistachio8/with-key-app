@@ -6,8 +6,16 @@ declare const __dirname: string;
 
 declare module "node:fs" {
   export function existsSync(path: string): boolean;
+  export function readFileSync(path: string, encoding: string): string;
 }
 
 declare module "node:path" {
   export function join(...parts: string[]): string;
+}
+
+// theme.spec 의 OKLCH→hex parity 변환(culori 4.x, 타입 미동봉). 쓰는 표면만 최소 선언.
+declare module "culori" {
+  export function converter(
+    mode: string,
+  ): (color: string) => { r: number; g: number; b: number } | undefined;
 }
