@@ -10,6 +10,9 @@ import {
   type CutoffContext,
   type CutoffPhase,
   type PenaltyProofStatus,
+  type PenaltyWindowPhase,
+  type PenaltyProofView,
+  type PenaltyStatusView,
 } from "@withkey/domain";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -28,41 +31,9 @@ const SIGNED_TTL_SECONDS = 600; // 10분 — Storage createSignedUrl ttl 과 정
 const WINDOW_OPEN_MS = 48 * 60 * 60 * 1000; // 창2 시작 = 종료+48h (submit_penalty_proof RPC 와 정합).
 const WINDOW_CLOSE_MS = 96 * 60 * 60 * 1000; // 창2 만료 = 종료+96h.
 
-// 창2 페이즈 — RPC 의 시간창 검증(0055 §E·§F)을 read 측에서 미러해 page 가 미리 분기한다.
-export type PenaltyWindowPhase = "before" | "open" | "expired";
-
-export type PenaltyProofView = {
-  proofId: string;
-  performerId: string;
-  performerName: string;
-  status: PenaltyProofStatus;
-  videoSignedUrl: string | null;
-  rejectCount: number;
-  viewerRejected: boolean;
-  // 과반 반려 판정(표시용) — isPenaltyProofRejectedByPeers(rejectCount, signedParticipantCount).
-  rejectedByPeers: boolean;
-  isViewer: boolean;
-};
-
-export type PenaltyStatusView = {
-  challengeId: string;
-  title: string;
-  penaltyMission: string | null;
-  penaltyAmount: number;
-  // 창2 타임라인 (page 분기 게이트). end 는 closed_at ?? end_at.
-  windowPhase: PenaltyWindowPhase;
-  endAt: string | null;
-  // viewer 자격·상태.
-  isParticipant: boolean;
-  isSigned: boolean;
-  // 확정 미달분 X>0 (창1 닫힌 뒤 제출 자격). amount(원) — 0 이면 제출 대상 아님.
-  viewerConfirmedPenalty: number;
-  viewerProof: PenaltyProofView | null;
-  // 그룹 멤버 증명 목록(viewer 본인 포함). 판단 UI 는 본인 외 proof 에 토글을 건다.
-  proofs: PenaltyProofView[];
-  // 서약 참가자 수(과반 분모). isPenaltyProofRejectedByPeers 분모와 정합.
-  signedParticipantCount: number;
-};
+// view-model 타입은 @withkey/domain read-contract 가 SoT (web·RN·BFF 공유, spec §C2 승격).
+// 기존 web consumer(penalty-proof-card.tsx)의 import path 를 깨지 않게 re-export 보존.
+export type { PenaltyWindowPhase, PenaltyProofView, PenaltyStatusView };
 
 type ChallengeRow = {
   id: string;

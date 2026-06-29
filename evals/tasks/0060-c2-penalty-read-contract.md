@@ -2,7 +2,7 @@
 Task: EVAL-0060
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0059] — SL0 UI primitive 완료 후 C2 브랜치 베이스가 확정된다.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---

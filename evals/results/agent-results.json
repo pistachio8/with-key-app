@@ -758,6 +758,31 @@
         "verdict": "pass"
       },
       "notes": "EVAL-0058(theme) Depends-on 충족 후 같은 WP 브랜치 feat/rn-settlement-sl0-design 에서 순차 구현. 단일 mobile 도메인 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). Stamp 정적 AC 는 코드 검토로 확인(Animated/Easing 미import). 경미 deviation 1건: plan 의 ui.spec 가 require('react-native').StyleSheet.flatten 인라인 require 인데 expo lint(no-require-imports) 리스크 회피 위해 top-level import 로 동치 치환(단언 동일). SL0 슬라이스(EVAL-0058+0059) 완료 — C2(2026-06-29-rn-settlement-c2-penalty.md) 의 선행 의존 해소. 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. drift-report: evals/drift-reports/EVAL-0059-rn-settlement-sl0-ui-primitives.md."
+    },
+    {
+      "taskId": "EVAL-0060",
+      "date": "2026-06-29",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "packages/domain/src/read-contracts/penalty.ts 신규 — web 전용이던 PenaltyWindowPhase·PenaltyProofView·PenaltyStatusView·PenaltyWaitingView 를 @withkey/domain 공유 read-contract 로 승격. transport zod 3종(penaltyWindowPhaseSchema z.enum([before,open,expired]) · penaltyProofViewSchema · penaltyStatusViewSchema)이 web view-model 을 round-trip, voterId/rejecterIds 익명성 위반 필드는 z.object strip. PenaltyWaitingView 는 RLS-direct 라 타입만(transport zod 불요). barrel export 추가. apps/web/src/lib/db/reads/penalty-status.ts 지역 타입 블록을 domain import + re-export 로 치환(기존 consumer penalty-proof-card.tsx import path 비파괴). 신규 dep 0.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/domain test -- penalty": "pass (26 files · 220 — penalty.spec 5: window enum·proof round-trip·status round-trip·enum 거부·익명성 strip)",
+          "pnpm --filter web exec tsc --noEmit": "pass (consumer 비파괴 — penalty-proof-card.tsx re-export path 유지)",
+          "pnpm --filter @withkey/domain lint": "pass",
+          "pnpm --filter web exec eslint src/lib/db/reads/penalty-status.ts": "pass",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken refs)"
+        }
+      },
+      "review": {
+        "reviewers": ["inline-self-review"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "C2 Phase A–C 첫 task(read-contract). 단일 domain+web 1파일 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). plan deviation 1건: plan Step 6 은 web 에 별도 import type 줄을 제시했으나 import/no-duplicates 회피 위해 기존 @withkey/domain import 블록에 type 3개 통합(동치, re-export 보존). 오케스트레이션: harness-engineer 분해 커밋(87cf380)이 develop 에 직접 올라가 feat/rn-settlement-c2-penalty 로 이동·develop=origin/develop 동기화(로컬 only, 미푸시). 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. Harness Impact: Q4 새 테스트 파일 추가(명령 패턴 동일) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
     }
   ]
 }

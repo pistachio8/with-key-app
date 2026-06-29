@@ -6,3 +6,4 @@ export * from "./group";
 export * from "./recap";
 export * from "./feed";
 export * from "./invite";
+export * from "./penalty";
