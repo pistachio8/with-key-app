@@ -24,7 +24,7 @@ status: draft
 ## Viability
 
 - **RA-Vi1 [G2]** — ⓑ적립/번들 포인트가 환불·사행성·선불전자지급수단 규제에서 ≈0 리스크다. confidence Medium(미통과·BLOCKING) · test G2 법무 검토 · **impact** P1 전체 차단 · **mitigation** G2 선행, 현금충전 Fast-follow 분리, 현금화 차단(AC-settle-3).
-- **RA-Vi2 [Q2]** — 탈퇴자·환불 정책이 분쟁 없이 운영 가능하다. confidence Low(미해결) · test Q2 확정+약관 · **impact** 운영·법적 리스크 · **mitigation** Q2 확정 전 경로 비활성, 정책 고지.
+- **RA-Vi2 [Q2]** — 탈퇴자·환불 정책이 분쟁 없이 운영 가능하다. confidence Medium(PO 정책 확정 [ADR-0043], 법무 사인오프·약관 잔여) · test Q2 확정+약관 · **impact** 운영·법적 리스크 · **mitigation** Q2 확정 전 경로 비활성, 정책 고지(ADR-0043 DP4).
 - **RA-Vi3** — 0% rake가 지속 가능하다(수익=구독). confidence Medium · test 구독 WTP(범위 밖) · **impact** 장기 사업성 · **mitigation** 구독 모델 별도 검증.
 
 ## Feasibility
