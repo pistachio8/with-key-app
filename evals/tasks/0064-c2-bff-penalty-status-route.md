@@ -2,7 +2,7 @@
 Task: EVAL-0064
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0063] — fetchPenaltyStatusForViewerClient 주입 변형이 완성돼야 route가 호출할 수 있다.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---

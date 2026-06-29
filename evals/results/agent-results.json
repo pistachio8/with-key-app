@@ -862,6 +862,31 @@
         "notesMinorReflected": "amend b41066a 로 로그 레이블 통일"
       },
       "notes": "EVAL-0063 · plan 2026-06-29-rn-settlement-c2-penalty Task 4(Phase B). 동작 보존 리팩터라 신규 테스트 없음 — wrapper 위임으로 기존 동작 보존, typecheck + 전체 suite 비파괴로 검증. Harness Impact: 신규 폴더/네이밍(fetchXxxForViewerClient 는 기존 feed 패턴)/의존성/검증명령 변경 없음 → drift-report 불요. 푸시·PR 은 사용자 게이트(D6)."
+    },
+    {
+      "taskId": "EVAL-0064",
+      "date": "2026-06-29",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "RN BFF read endpoint GET /api/penalty-status (Bearer) 신설 — feed BFF route 미러. apps/web/src/app/api/penalty-status/route.ts: bearerTokenFrom → createBearerClient(token) → supabase.auth.getUser(token) 인증(ADR-0036 §1·§2) → challengeSchema.shape.id(zod SoT) uuid 검증 → EVAL-0063 fetchPenaltyStatusForViewerClient 에 Bearer RLS user client 주입 호출 → NextResponse.json(view). view null 또는 penaltyMission null(redemption 비활성)이면 404(web notFound 정합), read throw 500. 본문/토큰 미로그(식별자 challengeId 만). PWA(web)는 호출 금지(RSC + fetchPenaltyStatus cookie 경로 유지). route.spec.ts 계약 7종(토큰없음 401·getUser error 401·uuid아님 400·정상 200·null 404·penaltyMission null 404·throw 500). 신규 폴더 api/penalty-status/.",
+      "verification": {
+        "local": {
+          "pnpm --filter web test -- penalty-status/route": "pass (127 files · 831 tests — route 계약 7종 green)",
+          "pnpm --filter web exec tsc --noEmit": "pass (exit 0)",
+          "pnpm --filter web lint": "pass (0 error 0 warning — plan spec 의 불필요 eslint-disable import/first directive 제거)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken references)"
+        }
+      },
+      "review": {
+        "reviewers": ["backend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass",
+        "notes": "backend-reviewer 1도메인(BFF 인증/RLS 경계) 단독. Blocker 0 / Major 0 / Minor 3. Minor 1(getUser error → 401 테스트 누락, feed 선례도 동일 누락)=반영, 인증 계약 보강 테스트 추가(계약 6→7종). Minor 2(penalty-status.ts c as unknown as ChallengeRow 이중 단언)=pre-existing(EVAL-0044 도입, 이번 커밋은 코드 이동만, reviewer 도 인정)→내 변경 범위 밖 미반영, 후속. Minor 3(ADR-0024 production callsite 가 challenge-feed.ts 만 명시 — penalty-status.ts 추가 권고)=ADR 본문 변경은 D6 사람 게이트(adr)라 자동 미반영, 코드에 ADR-0024 admin hydrate 인용 주석 존재로 정당성 기록됨 → 후속 사람 결정. 확인: Bearer 인증 순서 feed 정합, Layer 1 주입 RLS client(admin 대체 없음), Layer 2 admin hydrate ADR-0024 준수(viewer-agnostic cache + viewerId 3-way filter), 시크릿 노출 없음(publishable key only)."
+      },
+      "notes": "EVAL-0064 · plan 2026-06-29-rn-settlement-c2-penalty Task 5(Phase B). TDD: route.spec.ts(RED, ./route 부재) → route.ts(GREEN). Harness Impact: Q1 신규 폴더 api/penalty-status/ · Q4 신규 검증명령 pnpm --filter web test -- penalty-status/route — 둘 다 기존 BFF(feed/action-log) 선례와 동일 구조라 drift 아님 → drift-report 불요. 후속: Minor 2(ChallengeRow 캐스팅 제거)·Minor 3(ADR-0024 callsite 명시) 별도. 푸시·PR 은 사용자 게이트(D6)."
     }
   ]
 }
