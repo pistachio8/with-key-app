@@ -14,6 +14,7 @@ import {
   type PenaltyProofView,
   type PenaltyStatusView,
 } from "@withkey/domain";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -106,14 +107,26 @@ function windowPhaseFor(endAt: string | null, now: number): PenaltyWindowPhase {
   return "open";
 }
 
-// 한 챌린지의 벌칙 창2 상태를 viewer 관점으로 읽는다.
-// RLS(penalty_proofs_select_group_member)가 비멤버 접근을 차단하므로 cookie 세션 client 로 proof 목록을 읽고,
-// reject count·signed URL·viewer flag 는 ADR-0024 admin hydrate read(위 3개)로 채운다.
+// cookie 세션 경로(web RSC) — Layer 1 을 cookie client 로 주입해 변형에 위임. 동작 무변경.
 export async function fetchPenaltyStatus(
   challengeId: string,
   viewerId: string,
 ): Promise<PenaltyStatusView | null> {
   const supabase = await createClient();
+  return fetchPenaltyStatusForViewerClient(supabase, challengeId, viewerId);
+}
+
+// 한 챌린지의 벌칙 창2 상태를 viewer 관점으로 읽는다. Bearer(BFF /api/penalty-status) 경로 — RN 전용
+// (ADR-0036 §1·§2, feed fetchChallengeFeedForViewerClient 모델).
+// Layer 1(challenges·participants·action_logs·penalty_proofs·users)은 호출자가 주입한 RLS user client 로
+// 실행한다(admin 대체 금지) — RLS(penalty_proofs_select_group_member)가 비멤버 접근을 차단한다.
+// Layer 2(reject count·signed URL·viewer flag)는 ADR-0024 admin hydrate read(위 3개)로 그대로 공유한다.
+export async function fetchPenaltyStatusForViewerClient(
+  viewerClient: SupabaseClient,
+  challengeId: string,
+  viewerId: string,
+): Promise<PenaltyStatusView | null> {
+  const supabase = viewerClient;
 
   const { data: c, error } = await supabase
     .from("challenges")
@@ -123,7 +136,7 @@ export async function fetchPenaltyStatus(
     .eq("id", challengeId)
     .maybeSingle();
   if (error) {
-    console.error("[fetchPenaltyStatus] challenge read failed", { challengeId, error });
+    console.error("[penalty-status] challenge read failed", { challengeId, error });
     throw new Error(`fetchPenaltyStatus(${challengeId}) failed: ${error.message}`);
   }
   if (!c) return null;

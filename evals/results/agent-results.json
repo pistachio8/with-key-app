@@ -835,6 +835,33 @@
         "notes": "fan-out 2 도메인(migration+backend) 병렬 후 오케스트레이터가 소스로 병합·검증. Blocker/Major 0. Minor 4: M2(BE_SCHEMA 드리프트)=소스확인 유효→이 PR에서 0058·0059 둘 다 메움. M1(ADR 부재)=task 설계상 사람게이트→PR 본문 근거로 갈음(기존 spec §C2 인용). B1/B2(웹 폼 에러메시지·주석)=오케스트레이터 검증 결과 현시점 런타임 무효(웹 MediaRecorder 가 quicktime 미생성, mov 는 RN 전용 Phase F)→Target 밖, surgical 유지, Phase F 후속."
       },
       "notes": "C2 Phase A–C 영상 포맷 task. TDD: domain spec(quicktime 거부→수용) + web spec(mov/quicktime 거부 2곳 flip + 신규 수용 3종) RED 확인 후 구현 GREEN. plan deviation 1건: plan Task 3 Step 6 은 web action-videos.spec.ts 에 mov 수용 케이스 추가만 명시했으나, 기존 mov/quicktime 거부 테스트 2곳(ALLOWED_EXT mov throw, extFromVideoFile quicktime throw)이 mov 허용 시 깨지므로 함께 flip(plan 갭 보완). 푸시·PR 은 사용자 게이트(D6). Harness Impact: Q4 supabase db reset 수동검증 추가(CI 외) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
+    },
+    {
+      "taskId": "EVAL-0063",
+      "date": "2026-06-29",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "fetchPenaltyStatus(cookie client 의존)를 feed fetchChallengeFeedForViewerClient 모델대로 둘로 분리 — Layer 1(challenges·challenge_participants·action_logs·penalty_proofs·users)을 호출자 주입 RLS user client 로 실행하는 fetchPenaltyStatusForViewerClient 를 신규 export 하고, 기존 fetchPenaltyStatus 는 createClient() cookie client 를 주입·위임하는 thin wrapper 로 축소(동작 byte-equivalent 보존). Layer 2 admin hydrate helper 3종(getPenaltyProofRejectCount·getViewerPenaltyProofRejection·getPenaltyVideoSignedUrl, adminClient + 'use cache')은 무수정 공유. import type { SupabaseClient } from '@supabase/supabase-js' 추가. EVAL-0064 BFF GET /api/penalty-status 가 Bearer RLS client 를 주입해 호출하는 진입점. 단일 파일 apps/web/src/lib/db/reads/penalty-status.ts 17+/4-.",
+      "verification": {
+        "local": {
+          "pnpm --filter web exec tsc --noEmit": "pass (exit 0 — fetchPenaltyStatusForViewerClient 시그니처·주입 정합 컴파일 강제)",
+          "pnpm --filter web lint": "pass (0 error 0 warning)",
+          "pnpm --filter web test -- penalty-status": "pass (126 files · 824 tests — penalty-status 전용 spec 부재, 전체 suite 비파괴 확인)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken references)"
+        },
+        "note": "penalty-status 전용 단위 테스트 파일 없음 → 동작 보존 리팩터를 typecheck + 전체 web suite 비파괴 + frontend-reviewer 동작보존 확인으로 검증(plan Task 4 '없으면 typecheck 갈음' 정합)."
+      },
+      "review": {
+        "reviewers": ["frontend-reviewer"],
+        "criticalHigh": 0,
+        "verdict": "pass",
+        "notes": "frontend-reviewer 1도메인(reads 범위) 단독 — diff 16줄 단일 reads 파일이라 fan-out 불요. Blocker 0 / Major 0 / Minor 2. Minor 1(console.error 레이블 [fetchPenaltyStatus] 가 코드 이동으로 변형 함수 본문과 불일치)=반영, [penalty-status] 파일단위 레이블로 통일(amend b41066a). Minor 2(const supabase = viewerClient alias 가 challenge-feed 직접사용과 미세 상이)=의도적 미반영 — 본문 비변경(surgical) 위한 plan 지시, 본문 치환 시 동작보존 범위 초과. RLS leak 없음 확인(Layer 1 전부 주입 RLS client, Layer 2 admin hydrate 는 ADR-0024 허용). 선례 정합 확인(시그니처 순서·SupabaseClient import).",
+        "notesMinorReflected": "amend b41066a 로 로그 레이블 통일"
+      },
+      "notes": "EVAL-0063 · plan 2026-06-29-rn-settlement-c2-penalty Task 4(Phase B). 동작 보존 리팩터라 신규 테스트 없음 — wrapper 위임으로 기존 동작 보존, typecheck + 전체 suite 비파괴로 검증. Harness Impact: 신규 폴더/네이밍(fetchXxxForViewerClient 는 기존 feed 패턴)/의존성/검증명령 변경 없음 → drift-report 불요. 푸시·PR 은 사용자 게이트(D6)."
     }
   ]
 }

@@ -2,7 +2,7 @@
 Task: EVAL-0063
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0060] — domain read-contract가 완성돼야 penalty-status.ts의 타입 import 치환이 완료된다.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---
