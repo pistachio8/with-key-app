@@ -783,6 +783,30 @@
         "verdict": "pass"
       },
       "notes": "C2 Phase A–C 첫 task(read-contract). 단일 domain+web 1파일 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). plan deviation 1건: plan Step 6 은 web 에 별도 import type 줄을 제시했으나 import/no-duplicates 회피 위해 기존 @withkey/domain import 블록에 type 3개 통합(동치, re-export 보존). 오케스트레이션: harness-engineer 분해 커밋(87cf380)이 develop 에 직접 올라가 feat/rn-settlement-c2-penalty 로 이동·develop=origin/develop 동기화(로컬 only, 미푸시). 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. Harness Impact: Q4 새 테스트 파일 추가(명령 패턴 동일) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
+    },
+    {
+      "taskId": "EVAL-0061",
+      "date": "2026-06-29",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "packages/domain/src/write-contracts/penalty.ts 신규 — 벌칙 증명 제출 BFF 응답 봉투. penaltyProofSubmitResultSchema({proofId, status:penaltyProofStatusSchema}) + penaltyProofSubmitResponseSchema z.discriminatedUnion(\"ok\")로 성공/실패 분기(action-log.ts submitActionLogResponseSchema 패턴 미러). errorCodeSchema 는 ./action-log 재사용(재정의 금지), penaltyProofStatusSchema 는 ../validators/penalty import. mediaPath 등 서버 내부 필드는 z.object strip. write-contracts/index.ts barrel 에 export 추가. RN feature service 가 이 schema 로 BFF 응답 parse(Phase D–E 의존). 신규 dep 0.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/domain test -- write-contracts/penalty": "pass (27 files · 224 — penalty.spec 4: 성공 봉투 parse·실패 봉투 parse·mediaPath strip·미지 error 코드 throw)",
+          "pnpm --filter @withkey/domain exec tsc --noEmit": "pass",
+          "pnpm --filter @withkey/domain lint": "pass",
+          "pnpm harness:check": "pass (status done + run entry)",
+          "pnpm validate:docs": "pass (no broken refs)"
+        }
+      },
+      "review": {
+        "reviewers": ["inline-self-review"],
+        "criticalHigh": 0,
+        "verdict": "pass"
+      },
+      "notes": "C2 Phase A–C write-contract task(EVAL-0061), 선행 EVAL-0060 read-contract 와 페어. action-log.ts 패턴 정확 미러 — errorCodeSchema/issuesSchema shape 동일. 단일 domain 신규 2파일(penalty.ts·penalty.spec.ts) + barrel 1줄 소규모 diff → inline self-review(POC 과금 절약, 무인 tick 아님). TDD: spec RED(모듈 부재 실패) 확인 후 구현 GREEN. 푸시·PR 은 사용자 게이트(D6) 대기 — CI 미실측. Harness Impact: Q4 새 테스트 파일(명령 패턴 action-log 동일) 외 신규 폴더/네이밍/의존성 없음 → drift-report 불요."
     }
   ]
 }

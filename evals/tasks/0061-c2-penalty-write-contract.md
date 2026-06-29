@@ -2,7 +2,7 @@
 Task: EVAL-0061
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Depends-on: [task:EVAL-0060] — penaltyProofStatusSchema 가 read-contract penalty.ts 에서 import 하므로 EVAL-0060 완료 후 착수 권장.
 Parent: docs/superpowers/plans/2026-06-29-rn-settlement-c2-penalty.md
 ---
