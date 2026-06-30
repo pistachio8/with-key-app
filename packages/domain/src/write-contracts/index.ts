@@ -3,3 +3,4 @@
 // web client·BFF route·RN service 가 공유하는 응답 SoT 다.
 // 순수 타입 + transport 검증 zod 스키마만 — 네트워크/클라이언트 코드 금지 (04 A2 domain 순수성).
 export * from "./action-log";
+export * from "./penalty";

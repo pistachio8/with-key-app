@@ -7,22 +7,24 @@ import { ALLOWED_VIDEO_MIME, MAX_VIDEO_BYTES, type AllowedVideoMime } from "@wit
 // 영상 인증 클립(spec §C2 / EVAL-0043). action-photos.ts 패턴 미러 —
 // 같은 경로 규약({userId}/{challengeId}/{actionLogId}-{nonce}.{ext}) · private 버킷 · signed URL.
 const BUCKET = "action-videos";
-const ALLOWED_EXT = ["mp4", "webm"] as const;
+const ALLOWED_EXT = ["mp4", "webm", "mov"] as const;
 type AllowedExt = (typeof ALLOWED_EXT)[number];
 
 const MIME_TO_EXT: Record<AllowedVideoMime, AllowedExt> = {
   "video/mp4": "mp4",
   "video/webm": "webm",
+  "video/quicktime": "mov",
 };
 
 const EXT_TO_MIME: Record<AllowedExt, AllowedVideoMime> = {
   mp4: "video/mp4",
   webm: "video/webm",
+  mov: "video/quicktime",
 };
 
 const SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 const VIDEO_PATH_RE =
-  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+-[A-Za-z0-9._-]+\.(mp4|webm)$/i;
+  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+-[A-Za-z0-9._-]+\.(mp4|webm|mov)$/i;
 
 export function looksLikeVideoPath(value: string | null | undefined): value is string {
   if (!value || value.includes("://")) return false;
