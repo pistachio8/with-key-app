@@ -972,6 +972,34 @@
         "notes": "withkey-review 스킬 인라인 self-review(apps/mobile 단일 도메인 — frontend/backend/migration 도메인 리뷰어 범위 밖이라 인라인이 POC baseline). Blocker 0 / Major 1 / Minor 2. Major 1(로그아웃→무효화 wiring 미검증: signOut 의 unregisterPushToken 호출이 기존 supabase mock 의 getSession 부재로 catch 흡수돼 테스트 미도달)=반영, auth-service.spec.ts 에 getSession+capability mock 추가 후 '세션 폐기 전 무효화'(invocationCallOrder 순서 보장)·'무효화 실패가 로그아웃 비차단' 2테스트 신설(211 green). Minor 1(device_push_tokens upsert 페이로드 @withkey/domain zod 스키마 부재)=미반영, 입력이 외부 untrusted 아닌 신뢰 소스(session·Expo·Platform narrow·자체 UUID)라 boundary 검증 의무 아님 — devicePushTokenSchema 공유는 dispatch read 후속(drift 기록). Minor 2(unsupported_platform 경로 무테스트)=미반영, jest-expo Platform.OS ios 고정 + trivial guard. RLS self-row·토큰 본문 비로그·onConflict 'user_id,device_id'·platform check 정합·Web Push 경로 보존 직접 확인."
       },
       "notes": "EVAL-0052 · WP feat/rn-phase6-notifications WP2 · ADR-0041(accepted). Branch feat/rn-phase6-notifications(develop 기반 + unblock-drift cherry-pick a2c1995). Harness Impact: Q1 capabilities/push-notification 신규 폴더 · Q2 register-token/unregister-token 명명 · Q3 deps expo-notifications/device/crypto · Q4 jest setupFiles 추가(명령 불변) → drift-report 작성(evals/drift-reports/EVAL-0052-*.md) + harness:drift Tier1 0 violations. device_id=SecureStore UUID(osBuildId 비고유), BFF 미생성(ADR §73 direct), 로그아웃 무효화=auth-service.signOut. 라우팅 off-mapping 관찰: 'EVAL-NNNN 작업 진행하자' no-keyword-match(후속 gated). 실기기 push e2e 는 EVAL-0053(EAS credentials) 선행. 커밋·푸시·PR 은 사용자 게이트(D6)."
+    },
+    {
+      "taskId": "EVAL-0049",
+      "date": "2026-06-30",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0049 — 연속 인증 업로드 시 매번 뜨던 완료 모달을 안 A로 개선. submit-core 응답에 alreadyVerifiedToday(=!todayWasNewDay) 노출(새 쿼리 0, 기존 신호 재사용), SubmitResult(write-contracts, web·BFF·RN 공유 SoT)+공유 fixture 동반 갱신으로 parity by-construction 유지. photo(action-form)·video(video-action-form) 두 인증 경로 모두 같은 날 추가 피드는 toast('피드에 올렸어요')+챌린지 피드로 router.replace, 첫 인증·목표 달성·그날 첫 카운트는 모달 유지. alreadyVerifiedToday는 goalReached·isFirstAction과 상호배타라 early-return이 축하 모먼트 미선점.",
+      "verification": {
+        "local": {
+          "pnpm -r typecheck": "pass (domain·web·mobile clean)",
+          "pnpm -r lint": "pass (3 packages exit 0)",
+          "pnpm --filter @withkey/domain test": "pass (27 files · 225 tests — action-log 계약 fixture parity 포함)",
+          "pnpm --filter @withkey/web test": "pass (128 files · 835 tests — action-form +2 · video-action-form.spec 신설 +2)",
+          "pnpm --filter @withkey/mobile test": "pass (RN boundary submit-action-log 4 tests — 공유 fixture 새 필드 parse)",
+          "pnpm harness:check": "pass",
+          "pnpm validate:docs": "pass (no broken references)",
+          "PR #296 CI": "pass (Lint+Type+Unit 2m4s · Integration 5m36s · Playwright E2E 2m50s)"
+        }
+      },
+      "review": {
+        "reviewers": ["withkey-review (inline self-review)"],
+        "criticalHigh": 0,
+        "verdict": "fixed",
+        "notes": "Blocker 0 / Major 1 / Minor 1. Major 1(video-action-form 미적용: page.tsx feed_type==='video' 분기로 라이브인데 photo만 안 A 적용 — 영상 챌린지 반복 업로드 시 모달 잔존)=반영, video-action-form에 동일 4줄 분기 + video-action-form.spec 신설(2테스트, 저장소 첫 카메라 폼 테스트 — getUserMedia/MediaRecorder 최소 모킹). Minor 1(action-form.tsx early-return이 goalReached·isFirstAction보다 위 — 상호배타라 안전하나 불변식 미명시)=미반영(저위험, 주석 후속 후보). 신호 상호배타성·write-contracts parity·기존 단일 업로드 피드백 보존 직접 확인."
+      },
+      "notes": "video-action-form.spec.tsx가 저장소 첫 카메라 폼(getUserMedia+MediaRecorder) 테스트 — MockMediaRecorder(onstop 동기 발화)·navigator.mediaDevices·HTMLMediaElement.play/srcObject 보강 패턴은 penalty-proof-form 등 미테스트 카메라 폼에 재사용 가능. 모바일 viewport 시각 확인은 dogfood 후속(실데이터 필요)."
     }
   ]
 }
