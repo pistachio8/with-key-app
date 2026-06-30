@@ -177,3 +177,27 @@ test("buildRoute 출력에 reason 포함", () => {
   const route = buildRoute(FIXTURE, manifest, { fileExists: () => false, repoRoot: "/repo" });
   assert.equal(route.reason, "keyword-match");
 });
+
+// bare task-ID(EVAL-NNNN) 힌트 — 회고 2026-06-30(안 B, neutral). gate 미변경 informational 필드.
+test("buildRoute 가 bare task-ID 를 detectedPattern 으로 표시한다", () => {
+  const route = buildRoute("EVAL-0052 작업 진행하자", manifest, {
+    fileExists: () => false,
+    repoRoot: "/repo",
+  });
+  // 분류는 여전히 no-keyword-match→analysis ambiguous (clarify 게이트 보존).
+  assert.equal(route.ambiguous, true);
+  assert.equal(route.detectedPattern, "bare-task-id");
+  assert.equal(route.detectedTaskId, "EVAL-0052");
+  assert.equal(route.humanGateTokens.includes("clarify"), true);
+  assert.equal(typeof route.suggestedNextStep, "string");
+});
+
+test("buildRoute 는 task-ID 없는 요청에 detectedPattern=null", () => {
+  const route = buildRoute("결제 승인 workflow 자동화 기능 추가해줘", manifest, {
+    fileExists: () => false,
+    repoRoot: "/repo",
+  });
+  assert.equal(route.detectedPattern, null);
+  assert.equal(route.detectedTaskId, null);
+  assert.equal(route.suggestedNextStep, null);
+});
