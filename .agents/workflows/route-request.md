@@ -27,6 +27,7 @@
 1. 사용자 자연어 요청을 받는다.
 2. `pnpm harness:route "<요청>"` 로 1차 분류를 본다 (deterministic — LLM 비호출).
 3. **분류 확인**: `ambiguous: true` 이거나 confidence 가 낮으면(임계값 0.6 미만) **자동 진행 금지** → 사용자에게 "이 작업은 X 타입으로 보이는데 맞나요?" 확인. 키워드 분류는 brittle 하므로 이 확인이 안전밸브다.
+   - **bare task-ID self-resolve (회고 2026-06-30)**: route 출력에 `detectedPattern: "bare-task-id"` 가 있으면(예 "EVAL-0052 작업 진행하자" — 작업-타입 키워드 없이 기존 task 만 지칭해 no-keyword-match→analysis 0.2 로 떨어진 경우), **blank clarify 대신** `evals/tasks/<ID>-*.md` 를 먼저 읽어 `Kind`/`Status`/`Blocked-by` 로 타입·착수 가능성을 파악한 뒤 **informed 확인**("EVAL-0052 는 구현(implement-agent-task) task 인데 진행할까요?")을 제시한다. **사람 게이트는 유지**(여전히 확인을 받는다) — 단 묻는 질문이 informed 해진다. 확정되면 기존 task 라 `create-agent-tasks` 생략하고 `harness:next → claim → goal → 1-tick` 직행.
 4. 확정된 타입의 `targetWorkflow`(manifest)로 인계한다. 필요하면 `pnpm harness:intake "<요청>"` 로 run 기록을 남긴다.
 5. **첫 사람 게이트에서 정지·보고**한다 (D6: push·PR·merge·spec·adr·po). 무인이라도 outward 행위는 사람 몫.
 

@@ -313,6 +313,14 @@ export function buildRoute(request, manifest, options = {}) {
     ? Array.from(new Set([...route.humanGateTokens, "clarify"]))
     : route.humanGateTokens;
 
+  // bare task-ID(EVAL-NNNN) 참조 감지 — informational 힌트(neutral, gate 미변경).
+  // "EVAL-0052 작업 진행하자" 처럼 작업-타입 키워드 없이 기존 task 만 지칭하면 분류가
+  // no-keyword-match→analysis 0.2 ambiguous 로 떨어진다. clarify 게이트는 그대로 두되,
+  // 오케스트레이터가 evals/tasks/ 의 해당 task 파일을 먼저 읽어 Kind/Status 로 타입을
+  // self-resolve 하고 informed 확인을 제시하도록 신호만 준다(사람 게이트 미제거).
+  // 회고 근거: evals/retro-reports/2026-06-30-retro-bare-task-id.md (안 B · meta-eval neutral).
+  const bareTaskId = /\bEVAL-\d+\b/i.exec(request)?.[0]?.toUpperCase() ?? null;
+
   return {
     request,
     classification: classification.classification,
@@ -327,6 +335,11 @@ export function buildRoute(request, manifest, options = {}) {
     risk,
     requiredContext,
     humanGateTokens,
+    detectedPattern: bareTaskId ? "bare-task-id" : null,
+    detectedTaskId: bareTaskId,
+    suggestedNextStep: bareTaskId
+      ? `bare task-ID ${bareTaskId} 감지 — clarify 전에 evals/tasks/ 의 해당 task 파일을 읽어 Kind/Status 로 타입을 self-resolve 하고 informed 확인을 제시하라(사람 게이트 유지)`
+      : null,
     blockedActions: route.blockedActions,
     maxRepairAttempts: route.maxRepairAttempts,
     allowedWriteScopes: route.allowedWriteScopes,
