@@ -174,6 +174,14 @@ export function VideoActionForm({ challengeId, verifiedToday = false }: Props) {
           toast.error(FALLBACK_ERROR_MESSAGE);
           return;
         }
+        // EVAL-0049 안 A — 사진 경로(action-form.tsx)와 동일: 오늘 이미 인증한 뒤의 추가
+        // 클립(alreadyVerifiedToday)은 인증 횟수가 늘지 않으므로 축하 모달 대신 toast 로
+        // 피드백하고 같은 목적지(챌린지 피드)로 이동한다.
+        if (res.data.alreadyVerifiedToday) {
+          toast("피드에 올렸어요");
+          router.replace(`/challenge/${challengeId}`);
+          return;
+        }
         setResult({
           open: true,
           // 우선순위: goal-reached > first-success > completed (사진 경로와 동일).

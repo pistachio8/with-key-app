@@ -16,6 +16,7 @@ export const SUBMIT_SUCCESS_ENVELOPE = {
     verifiedDays: [1],
     goalReached: false,
     goalCount: 12,
+    alreadyVerifiedToday: false,
   },
 };
 

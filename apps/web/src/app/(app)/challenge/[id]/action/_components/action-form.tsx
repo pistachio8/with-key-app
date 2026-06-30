@@ -308,6 +308,14 @@ export function ActionForm({ challengeId, verifiedToday = false }: Props) {
           return;
         }
         clearDraft(challengeId);
+        // EVAL-0049 안 A — 오늘 이미 인증한 뒤의 추가 피드(alreadyVerifiedToday)는 인증
+        // 횟수가 늘지 않으므로 축하 모달 대신 toast 로 피드백하고 기존 모달과 같은 목적지
+        // (챌린지 피드)로 이동한다. 첫 인증·목표 달성·그날 첫 카운트는 모달 유지.
+        if (res.data.alreadyVerifiedToday) {
+          toast("피드에 올렸어요");
+          router.replace(`/challenge/${challengeId}`);
+          return;
+        }
         setResult({
           open: true,
           // 우선순위: goal-reached > first-success > completed
