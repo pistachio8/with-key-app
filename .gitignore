@@ -70,6 +70,7 @@ supabase/.branches/
 /test-results/
 /playwright-report/
 /tests/e2e/.auth/
+/.playwright-mcp/
 
 # Personal AI assistant workspace
 # Keep the directory open so we can whitelist team-shared subtrees below.
