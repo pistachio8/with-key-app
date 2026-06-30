@@ -3,10 +3,14 @@
 import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
+import { useRegisterPushToken } from "@/capabilities/push-notification";
 import { useSession } from "@/features/auth";
 
 export default function AppLayout() {
   const { session, isLoading } = useSession();
+
+  // 인증 직후 Expo push token 등록 (EVAL-0052 · A6). 거부/시뮬레이터/projectId 미설정은 내부에서 skip.
+  useRegisterPushToken(session?.user.id);
 
   if (isLoading) {
     return (

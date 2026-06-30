@@ -2,9 +2,9 @@
 Task: EVAL-0052
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0051] — device_push_tokens migration + ADR 가 confirmed 되어야 RN 클라이언트가 upsert 할 테이블이 확정된다.
-Depends-on: [task:EVAL-0051] — ADR·migration 선행 필요(착수 불가 게이트).
+Status: done
+Blocked-by: [task:EVAL-0051] — device_push_tokens migration + ADR 가 confirmed 되어야 RN 클라이언트가 upsert 할 테이블이 확정된다. (RESOLVED 2026-06-26: EVAL-0051 done — PR#286 머지, `0058_device_push_tokens.sql`·ADR-0041 accepted)
+Depends-on: [task:EVAL-0051] — ADR·migration 선행 필요(착수 불가 게이트). (RESOLVED 2026-06-26: EVAL-0051 done)
 Parent: docs/migration/00-rn-conversion-plan.md
 ---
 
@@ -61,16 +61,16 @@ RN 앱(apps/mobile)이 로그인 직후 `Notifications.requestPermissionsAsync()
 
 ## Acceptance Criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| expo-notifications 설치 | `apps/mobile/package.json` devDependencies/dependencies 확인 |
-| iOS/Android 권한 선언 | `app.config.ts` `permissions` 배열 확인 |
-| 토큰 획득·upsert 로직 | `pnpm test -- "src/capabilities/push-notification"` (단위 테스트) |
-| 로그아웃 시 토큰 무효화 | logout 시나리오 단위 테스트 |
-| 기존 Web Push 경로 회귀 없음 | `pnpm -r test -- "src/lib/push/"` green |
-| TypeScript 이상 없음 | `pnpm -r typecheck` |
-| ESLint 이상 없음 | `pnpm -r lint` |
-| harness 추적성 | `pnpm harness:check` |
+| 기준                         | 검증 방법                                                         |
+| ---------------------------- | ----------------------------------------------------------------- |
+| expo-notifications 설치      | `apps/mobile/package.json` devDependencies/dependencies 확인      |
+| iOS/Android 권한 선언        | `app.config.ts` `permissions` 배열 확인                           |
+| 토큰 획득·upsert 로직        | `pnpm test -- "src/capabilities/push-notification"` (단위 테스트) |
+| 로그아웃 시 토큰 무효화      | logout 시나리오 단위 테스트                                       |
+| 기존 Web Push 경로 회귀 없음 | `pnpm -r test -- "src/lib/push/"` green                           |
+| TypeScript 이상 없음         | `pnpm -r typecheck`                                               |
+| ESLint 이상 없음             | `pnpm -r lint`                                                    |
+| harness 추적성               | `pnpm harness:check`                                              |
 
 ## Verification Commands
 
