@@ -2,9 +2,9 @@
 Task: EVAL-0055
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0052] — 토큰 등록 capability 가 완성돼야 알림 설정 화면에서 prefs 변경→재등록·해제 흐름을 구현할 수 있다.
-Depends-on: [task:EVAL-0052] — 토큰 등록 capability 선행(착수 불가 게이트).
+Status: todo
+Blocked-by: [task:EVAL-0052] — 토큰 등록 capability 가 완성돼야 알림 설정 화면에서 prefs 변경→재등록·해제 흐름을 구현할 수 있다. (RESOLVED 2026-06-30: EVAL-0052 done — PR#291 머지)
+Depends-on: [task:EVAL-0052] — 토큰 등록 capability 선행(착수 불가 게이트). (RESOLVED 2026-06-30: EVAL-0052 done)
 Parent: docs/migration/00-rn-conversion-plan.md
 ---
 
@@ -59,17 +59,17 @@ PWA 의 `/me` 화면 내 `push-settings.tsx`(notification_prefs·등록·해제)
 
 ## Acceptance Criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| notification_prefs 3종 토글 UI | `pnpm test -- "src/features/profile/NotificationSettingsSection"` |
-| Supabase update(RLS self-row) | `pnpm test -- "src/features/profile/notification-prefs"` (단위 테스트) |
-| 권한 미허용 시 재요청 흐름 | 단위 테스트: requestPermissionsAsync mock 반환 값별 분기 확인 |
-| 거부 시 설정 앱 안내 | Linking.openSettings 호출 확인(mock) |
-| 알림 OFF 시 토큰 무효화 | unregister-token.ts 호출 확인(mock) |
-| domain validator 재사용 | import from @withkey/domain 확인 |
-| TypeScript 이상 없음 | `pnpm -r typecheck` |
-| ESLint 이상 없음 | `pnpm -r lint` |
-| harness 추적성 | `pnpm harness:check` |
+| 기준                           | 검증 방법                                                              |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| notification_prefs 3종 토글 UI | `pnpm test -- "src/features/profile/NotificationSettingsSection"`      |
+| Supabase update(RLS self-row)  | `pnpm test -- "src/features/profile/notification-prefs"` (단위 테스트) |
+| 권한 미허용 시 재요청 흐름     | 단위 테스트: requestPermissionsAsync mock 반환 값별 분기 확인          |
+| 거부 시 설정 앱 안내           | Linking.openSettings 호출 확인(mock)                                   |
+| 알림 OFF 시 토큰 무효화        | unregister-token.ts 호출 확인(mock)                                    |
+| domain validator 재사용        | import from @withkey/domain 확인                                       |
+| TypeScript 이상 없음           | `pnpm -r typecheck`                                                    |
+| ESLint 이상 없음               | `pnpm -r lint`                                                         |
+| harness 추적성                 | `pnpm harness:check`                                                   |
 
 ## Verification Commands
 

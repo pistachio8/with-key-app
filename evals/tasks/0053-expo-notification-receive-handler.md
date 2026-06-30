@@ -2,9 +2,9 @@
 Task: EVAL-0053
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0052] — 토큰 등록이 완료되고 APNs/FCM credentials 가 준비돼야 실기기 수신 테스트가 유효하다.
-Depends-on: [task:EVAL-0052] — 토큰 등록 capability 선행(착수 불가 게이트).
+Status: todo
+Blocked-by: [task:EVAL-0052] — 토큰 등록이 완료되고 APNs/FCM credentials 가 준비돼야 실기기 수신 테스트가 유효하다. (RESOLVED 2026-06-30: EVAL-0052 done — PR#291 머지. APNs/FCM credentials 발급은 본 태스크 실기기 검증 셋업 범위)
+Depends-on: [task:EVAL-0052] — 토큰 등록 capability 선행(착수 불가 게이트). (RESOLVED 2026-06-30: EVAL-0052 done)
 Parent: docs/migration/00-rn-conversion-plan.md
 ---
 
@@ -59,14 +59,14 @@ RN 앱(apps/mobile)에서 Expo 알림이 foreground(앱 활성), background(홈 
 
 ## Acceptance Criteria
 
-| 기준 | 검증 방법 |
-|---|---|
-| foreground 핸들러 | _layout.tsx addNotificationReceivedListener 존재 |
-| response 핸들러(탭→딥링크) | 단위 테스트: targetUrl → router path 변환(jest-expo) |
-| Android 채널 | setNotificationChannelAsync 호출 확인 |
-| start·deadline·friend_action·kudos 실기기 수신 | 4종 실기기 수동 확인(EVAL-0052 환경 전제) |
-| TypeScript/ESLint | `pnpm -r typecheck && pnpm -r lint` |
-| harness 추적성 | `pnpm harness:check` |
+| 기준                                           | 검증 방법                                            |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| foreground 핸들러                              | \_layout.tsx addNotificationReceivedListener 존재    |
+| response 핸들러(탭→딥링크)                     | 단위 테스트: targetUrl → router path 변환(jest-expo) |
+| Android 채널                                   | setNotificationChannelAsync 호출 확인                |
+| start·deadline·friend_action·kudos 실기기 수신 | 4종 실기기 수동 확인(EVAL-0052 환경 전제)            |
+| TypeScript/ESLint                              | `pnpm -r typecheck && pnpm -r lint`                  |
+| harness 추적성                                 | `pnpm harness:check`                                 |
 
 ## Verification Commands
 
