@@ -6,6 +6,8 @@ const mockSignInWithIdToken = jest.fn();
 const mockSignInWithOtp = jest.fn();
 const mockVerifyOtp = jest.fn();
 const mockSignOut = jest.fn();
+const mockGetSession = jest.fn();
+const mockUnregisterPushToken = jest.fn();
 
 jest.mock("@/capabilities/kakao-auth", () => ({
   kakaoAuth: {
@@ -15,6 +17,10 @@ jest.mock("@/capabilities/kakao-auth", () => ({
   },
 }));
 
+jest.mock("@/capabilities/push-notification", () => ({
+  unregisterPushToken: (...args: unknown[]) => mockUnregisterPushToken(...args),
+}));
+
 jest.mock("@/services/supabase/client", () => ({
   getSupabaseClient: () => ({
     auth: {
@@ -22,6 +28,7 @@ jest.mock("@/services/supabase/client", () => ({
       signInWithOtp: mockSignInWithOtp,
       verifyOtp: mockVerifyOtp,
       signOut: mockSignOut,
+      getSession: mockGetSession,
     },
   }),
 }));
@@ -139,6 +146,8 @@ describe("verifyMagicLinkToken", () => {
 describe("signOut", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockUnregisterPushToken.mockResolvedValue({ ok: true, skipped: false });
   });
 
   it("kakao logout(best-effort) 후 supabase 세션을 폐기한다", async () => {
@@ -152,6 +161,29 @@ describe("signOut", () => {
 
   it("kakao logout 실패가 supabase 세션 폐기를 막지 않는다", async () => {
     mockKakaoLogout.mockRejectedValue(new Error("no kakao session"));
+    mockSignOut.mockResolvedValue({ error: null });
+
+    expect(await signOut()).toEqual({ ok: true });
+    expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it("세션 폐기 전 현재 user 의 push token 을 무효화한다 (EVAL-0052)", async () => {
+    mockKakaoLogout.mockResolvedValue(undefined);
+    mockGetSession.mockResolvedValue({ data: { session: { user: { id: "user-1" } } } });
+    mockSignOut.mockResolvedValue({ error: null });
+
+    expect(await signOut()).toEqual({ ok: true });
+    expect(mockUnregisterPushToken).toHaveBeenCalledWith("user-1");
+    // 무효화는 RLS self-write 라 세션 폐기(signOut) 전에 일어나야 한다.
+    expect(mockUnregisterPushToken.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSignOut.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("push token 무효화 실패가 세션 폐기를 막지 않는다", async () => {
+    mockKakaoLogout.mockResolvedValue(undefined);
+    mockGetSession.mockResolvedValue({ data: { session: { user: { id: "user-1" } } } });
+    mockUnregisterPushToken.mockRejectedValue(new Error("network"));
     mockSignOut.mockResolvedValue({ error: null });
 
     expect(await signOut()).toEqual({ ok: true });

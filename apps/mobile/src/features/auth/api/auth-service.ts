@@ -4,6 +4,7 @@
 import Constants from "expo-constants";
 
 import { kakaoAuth } from "@/capabilities/kakao-auth";
+import { unregisterPushToken } from "@/capabilities/push-notification";
 import { getSupabaseClient } from "@/services/supabase/client";
 
 export type AuthResult = { ok: true } | { ok: false; error: AuthErrorCode };
@@ -102,6 +103,17 @@ export async function signOut(): Promise<AuthResult> {
   }
 
   const supabase = getSupabaseClient();
+
+  // push token 무효화는 best-effort + 세션 폐기 전에 수행 — RLS self-write 라 인증이 살아 있어야 한다
+  // (EVAL-0052 · ADR-0041 soft-delete). 실패해도 로그아웃은 진행한다.
+  try {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user.id;
+    if (userId) await unregisterPushToken(userId);
+  } catch {
+    // noop
+  }
+
   // 기본 scope('global') 의도 유지 — PoC 는 단일 기기 전제라 전 기기 세션 폐기가 안전한 기본값
   const { error } = await supabase.auth.signOut();
   if (error) {

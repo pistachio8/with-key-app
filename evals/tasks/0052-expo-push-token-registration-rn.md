@@ -2,7 +2,7 @@
 Task: EVAL-0052
 Track: port
 Kind: migration
-Status: todo
+Status: done
 Blocked-by: [task:EVAL-0051] — device_push_tokens migration + ADR 가 confirmed 되어야 RN 클라이언트가 upsert 할 테이블이 확정된다. (RESOLVED 2026-06-26: EVAL-0051 done — PR#286 머지, `0058_device_push_tokens.sql`·ADR-0041 accepted)
 Depends-on: [task:EVAL-0051] — ADR·migration 선행 필요(착수 불가 게이트). (RESOLVED 2026-06-26: EVAL-0051 done)
 Parent: docs/migration/00-rn-conversion-plan.md

@@ -944,6 +944,34 @@
         ]
       },
       "notes": "EVAL-0066 · plan 2026-06-29-rn-settlement-c2-penalty Task 7(Phase C). TDD: penalty-reads.spec.ts(RED, ./penalty-reads 부재) → penalty-reads.ts(GREEN, 4 tests). EVAL-0065 fixture(PENALTY_STATUS_EXPECTED·PENALTY_WAITING_TABLES·EXPECTED) 공유로 web↔RN 패리티 강제. Harness Impact: Q1 신규 폴더 features/penalty/api/ · Q2 penalty-reads 명명 recap-reads 선례 동일 · Q4 신규 검증명령 test -- penalty-reads — 모두 기존 read feature(recap/feed) 선례와 동일 구조라 drift 아님 → drift-report 불요(harness:drift Tier1 drift 없음). keys.ts 는 task Target Files 외이나 ADR-0037 가드레일 정합(reviewer Minor 1)으로 추가. 커밋·푸시·PR 은 사용자 게이트(D6)."
+    },
+    {
+      "taskId": "EVAL-0052",
+      "date": "2026-06-30",
+      "track": "port",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0052 — apps/mobile 에 push-notification capability 신설로 Expo push token 등록·해제 구현(ADR-0041). register-token.ts = Notifications.getPermissionsAsync→requestPermissionsAsync(거부 silent skip)→Device.isDevice 가드→Android channel→getExpoPushTokenAsync({projectId})→device_push_tokens upsert(onConflict (user_id,device_id), disabled_at:null·last_seen_at·platform·app_version), RLS self-row direct(BFF 불필요, ADR-0041 §73). unregister-token.ts = 로그아웃 시 disabled_at=NOW() soft-delete(hard-delete 아님). device-id.ts = SecureStore UUID(osBuildId 비고유성 회피, expo-crypto randomUUID). use-register-push-token.ts 훅을 (app)/_layout.tsx 에서 호출(인증 직후 1회, ref 가드). auth-service.signOut() 이 세션 폐기 전 unregisterPushToken 호출(best-effort, kakao logout 패턴 미러). app.config.ts: expo-notifications plugin + android POST_NOTIFICATIONS. deps 3종(expo-notifications/device/crypto, SDK55 핀). jest.setup.ts 전역 native mock(expo-notifications import 부작용·Expo Go 경고 차단). PWA push_subscriptions(Web Push) 경로 무변경. 신규 7파일(capability 6 + jest.setup) + 편집 4(_layout·auth-service·app.config·package.json) + spec 2.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/mobile exec jest src/capabilities/push-notification": "pass (2 suites · 11 tests — register 8 + unregister 3)",
+          "pnpm --filter @withkey/mobile test": "pass (24 suites · 211 tests — auth-service +2 로그아웃 무효화 wiring 포함, 기존 비파괴)",
+          "pnpm -r typecheck": "pass (domain·web·mobile clean)",
+          "pnpm -r lint": "pass (3 packages exit 0)",
+          "pnpm --filter @withkey/web test": "pass (127 files · 831 tests — Web Push src/lib/push 경로 회귀 없음)",
+          "pnpm harness:check": "pass",
+          "pnpm harness:drift": "pass (Tier1 0 violations)",
+          "pnpm validate:docs": "pass (no broken references)"
+        }
+      },
+      "review": {
+        "reviewers": ["withkey-review (inline self-review)"],
+        "criticalHigh": 0,
+        "verdict": "fixed",
+        "notes": "withkey-review 스킬 인라인 self-review(apps/mobile 단일 도메인 — frontend/backend/migration 도메인 리뷰어 범위 밖이라 인라인이 POC baseline). Blocker 0 / Major 1 / Minor 2. Major 1(로그아웃→무효화 wiring 미검증: signOut 의 unregisterPushToken 호출이 기존 supabase mock 의 getSession 부재로 catch 흡수돼 테스트 미도달)=반영, auth-service.spec.ts 에 getSession+capability mock 추가 후 '세션 폐기 전 무효화'(invocationCallOrder 순서 보장)·'무효화 실패가 로그아웃 비차단' 2테스트 신설(211 green). Minor 1(device_push_tokens upsert 페이로드 @withkey/domain zod 스키마 부재)=미반영, 입력이 외부 untrusted 아닌 신뢰 소스(session·Expo·Platform narrow·자체 UUID)라 boundary 검증 의무 아님 — devicePushTokenSchema 공유는 dispatch read 후속(drift 기록). Minor 2(unsupported_platform 경로 무테스트)=미반영, jest-expo Platform.OS ios 고정 + trivial guard. RLS self-row·토큰 본문 비로그·onConflict 'user_id,device_id'·platform check 정합·Web Push 경로 보존 직접 확인."
+      },
+      "notes": "EVAL-0052 · WP feat/rn-phase6-notifications WP2 · ADR-0041(accepted). Branch feat/rn-phase6-notifications(develop 기반 + unblock-drift cherry-pick a2c1995). Harness Impact: Q1 capabilities/push-notification 신규 폴더 · Q2 register-token/unregister-token 명명 · Q3 deps expo-notifications/device/crypto · Q4 jest setupFiles 추가(명령 불변) → drift-report 작성(evals/drift-reports/EVAL-0052-*.md) + harness:drift Tier1 0 violations. device_id=SecureStore UUID(osBuildId 비고유), BFF 미생성(ADR §73 direct), 로그아웃 무효화=auth-service.signOut. 라우팅 off-mapping 관찰: 'EVAL-NNNN 작업 진행하자' no-keyword-match(후속 gated). 실기기 push e2e 는 EVAL-0053(EAS credentials) 선행. 커밋·푸시·PR 은 사용자 게이트(D6)."
     }
   ]
 }

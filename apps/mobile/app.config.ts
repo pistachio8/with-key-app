@@ -56,6 +56,8 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
     },
     android: {
       package: variantConfig.bundleIdentifier,
+      // Android 13+ 알림 권한 (EVAL-0052 · A6). expo-notifications 도 manifest 에 병합하지만 명시 선언한다.
+      permissions: ["android.permission.POST_NOTIFICATIONS"],
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -101,6 +103,8 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
         },
       ],
       "expo-secure-store",
+      // Expo 푸시 알림 (EVAL-0052 · ADR-0041) — iOS aps-environment entitlement·Android 알림 권한/채널을 구성.
+      "expo-notifications",
       // 사진 인증(EVAL-0019) — 촬영/보관함 권한 안내 문구. 권한 거부 시 화면이 재시도 UI 를 띄운다.
       [
         "expo-image-picker",
