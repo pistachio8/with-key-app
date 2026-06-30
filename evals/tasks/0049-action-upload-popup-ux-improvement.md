@@ -2,7 +2,7 @@
 Task: EVAL-0049
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/PRD.md
 ---
 
