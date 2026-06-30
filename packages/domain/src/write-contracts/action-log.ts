@@ -21,6 +21,9 @@ export const submitResultSchema = z.object({
   goalReached: z.boolean(),
   // 목표 횟수(주 N회 빈도값, POC 정산은 전체 distinct 일수와 비교).
   goalCount: z.number(),
+  // EVAL-0049 안 A — 이번 제출 이전에 오늘 이미 인증이 있었는지(추가 피드 여부).
+  // true 면 인증 횟수가 늘지 않는 반복 업로드라 클라이언트가 축하 모달 대신 toast 로 피드백한다.
+  alreadyVerifiedToday: z.boolean(),
 });
 export type SubmitResult = z.infer<typeof submitResultSchema>;
 

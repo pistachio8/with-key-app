@@ -192,6 +192,65 @@ describe("ActionForm", () => {
     await waitFor(() => expect(screen.getByText("챌린지 성공!")).toBeTruthy());
   });
 
+  it("alreadyVerifiedToday 응답이면 모달 대신 toast 로 피드백하고 피드로 이동한다 (EVAL-0049 안 A)", async () => {
+    submitActionLog.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "log-1",
+        summary: "ok",
+        photoAttached: true,
+        isFirstAction: false,
+        currentDay: 3,
+        totalDays: 30,
+        verifiedDays: [1, 2, 3],
+        goalReached: false,
+        goalCount: 12,
+        alreadyVerifiedToday: true,
+      },
+    });
+
+    render(<ActionForm challengeId={challengeId} />);
+    selectPhoto(new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    selectFirstKeyword();
+    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+
+    // toast 피드백 + 기존 모달과 같은 목적지(챌린지 피드)로 replace.
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith("피드에 올렸어요"));
+    expect(replace).toHaveBeenCalledWith(`/challenge/${challengeId}`);
+    // 완료 모달(completed body)은 뜨지 않는다.
+    expect(screen.queryByText("매일 한 걸음씩 쌓이고 있어요 💪")).toBeNull();
+  });
+
+  it("그날 첫 카운트(alreadyVerifiedToday=false)면 완료 모달을 유지한다 (EVAL-0049 안 A 회귀가드)", async () => {
+    submitActionLog.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "log-1",
+        summary: "ok",
+        photoAttached: true,
+        isFirstAction: false,
+        currentDay: 3,
+        totalDays: 30,
+        verifiedDays: [1, 2, 3],
+        goalReached: false,
+        goalCount: 12,
+        alreadyVerifiedToday: false,
+      },
+    });
+
+    render(<ActionForm challengeId={challengeId} />);
+    selectPhoto(new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" }));
+    await screen.findByAltText("사진 미리보기");
+    selectFirstKeyword();
+    fireEvent.click(screen.getByRole("button", { name: "등록하기" }));
+
+    // 완료 모달이 뜨고 toast·이동은 없다.
+    await waitFor(() => expect(screen.getByText("매일 한 걸음씩 쌓이고 있어요 💪")).toBeTruthy());
+    expect(toastInfo).not.toHaveBeenCalledWith("피드에 올렸어요");
+    expect(replace).not.toHaveBeenCalled();
+  });
+
   it("saves draft on submit failure (F10)", async () => {
     submitActionLog.mockResolvedValueOnce({ ok: false, error: "forbidden" });
     render(<ActionForm challengeId={challengeId} />);

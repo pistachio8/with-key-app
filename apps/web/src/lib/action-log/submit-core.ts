@@ -384,5 +384,7 @@ export async function submitActionLogCore(
     verifiedDays,
     goalReached,
     goalCount,
+    // EVAL-0049 안 A — 오늘 이미 인증한 뒤의 추가 피드면 true(인증 횟수 미증가).
+    alreadyVerifiedToday: !todayWasNewDay,
   });
 }
