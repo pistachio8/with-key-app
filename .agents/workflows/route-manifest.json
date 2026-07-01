@@ -58,6 +58,16 @@
       "allowedWriteScopes": ["evals/tasks/**", "apps/**", "packages/**"],
       "blockedActions": []
     },
+    "ui-ux": {
+      "label": "ui-ux-flow",
+      "targetWorkflow": ".agents/workflows/implement-agent-task.md",
+      "taskCreation": ".agents/workflows/create-agent-tasks.md",
+      "entryState": "CURRENT_UI_ANALYSIS",
+      "humanGateTokens": ["spec", "po", "gate"],
+      "maxRepairAttempts": 3,
+      "allowedWriteScopes": ["evals/tasks/**", "apps/**", "packages/**"],
+      "blockedActions": []
+    },
     "prd": {
       "label": "prd-flow",
       "targetWorkflow": ".agents/workflows/create-prd.md",
