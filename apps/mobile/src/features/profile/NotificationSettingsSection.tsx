@@ -32,9 +32,14 @@ export function NotificationSettingsSection({ userId }: { userId: string }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [permissionBlocked, setPermissionBlocked] = useState(false);
   const activeRef = useRef(true);
+  // 이 기기의 토큰 등록이 성공했는지 추적 — 이미 등록됐고 ≥1 개 ON 이면 재등록(upsert)을 건너뛴다.
+  // 등록 미완/직전 실패(false)면 다음 turn-on 에서 다시 등록을 시도한다(회귀 방지).
+  const tokenRegisteredRef = useRef(false);
 
   useEffect(() => {
     activeRef.current = true;
+    // userId 가 바뀌면(계정 전환) 등록 상태를 초기화 — 다른 사용자 기준으로 재등록해야 한다.
+    tokenRegisteredRef.current = false;
     // 초기 prefs read (RLS self-row) — 실패는 전부 OFF 폴백(profile-reads 정책).
     void fetchNotificationPrefs(userId).then((loaded) => {
       if (activeRef.current) setPrefs(loaded);
@@ -56,16 +61,24 @@ export function NotificationSettingsSection({ userId }: { userId: string }) {
         setSaving(true);
         try {
           if (value) {
-            // 켤 때: 권한 확보 + 토큰 등록을 capability 로 위임(권한 미허용이면 내부에서 재요청).
-            const res = await registerPushToken(userId);
-            if (!res.ok && res.reason === "permission_denied") {
-              // 거부 → 켠 상태 유지하지 않고 설정 안내만(AC-7).
-              setPrefs(prev);
-              setPermissionBlocked(true);
-              return;
+            const wasAllOff = !(prev.start || prev.deadline || prev.kudos);
+            // 등록은 "전부 OFF → 처음 하나 ON" 전환에서만 필요하다.
+            // 단 아직 이 기기 토큰이 등록되지 않았다면(미등록·직전 실패) 그때도 등록을 시도한다.
+            const needsRegister = wasAllOff || !tokenRegisteredRef.current;
+            if (needsRegister) {
+              // 권한 확보 + 토큰 등록을 capability 로 위임(권한 미허용이면 내부에서 재요청).
+              const res = await registerPushToken(userId);
+              if (!res.ok && res.reason === "permission_denied") {
+                // 거부 → 켠 상태 유지하지 않고 설정 안내만(AC-7).
+                setPrefs(prev);
+                setPermissionBlocked(true);
+                return;
+              }
+              // ok 일 때만 등록 성공으로 표시 — not_device·no_project_id·error 는 다음에 재시도.
+              tokenRegisteredRef.current = res.ok;
+              // not_device·no_project_id·error 는 delivery 인프라/기기 한계 — pref 저장은 진행(best-effort).
+              setPermissionBlocked(false);
             }
-            // not_device·no_project_id·error 는 delivery 인프라/기기 한계 — pref 저장은 진행(best-effort).
-            setPermissionBlocked(false);
           }
 
           const saved = await updateNotificationPrefs(userId, next);
@@ -78,7 +91,14 @@ export function NotificationSettingsSection({ userId }: { userId: string }) {
           const anyOn = next.start || next.deadline || next.kudos;
           if (!anyOn) {
             // 전체 OFF → 이 기기 토큰을 soft-delete(dispatch 대상에서 제외).
-            await unregisterPushToken(userId);
+            const result = await unregisterPushToken(userId);
+            if (!result.ok) {
+              // soft-delete 실패는 위생 수준(다음 로그인 upsert 로 재활성) — 흐름은 막지 않고 컨텍스트만 남긴다.
+              console.error("[NotificationSettings] unregisterPushToken failed", userId);
+            } else {
+              // 무효화됐으니 다음 turn-on 에서 재등록이 필요하다.
+              tokenRegisteredRef.current = false;
+            }
           }
         } finally {
           if (activeRef.current) setSaving(false);

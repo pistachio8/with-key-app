@@ -85,4 +85,46 @@ describe("NotificationSettingsSection", () => {
     // 끄는 경로는 권한 재요청(registerPushToken)을 호출하지 않는다.
     expect(mockRegisterPushToken).not.toHaveBeenCalled();
   });
+
+  it("이미 하나 ON 인 상태에서 추가 ON 은 registerPushToken 을 재호출하지 않는다", async () => {
+    render(<NotificationSettingsSection userId="u1" />);
+    const start = await screen.findByLabelText("그룹 활동 알림");
+
+    // 전부 OFF → 첫 ON: 등록 1회.
+    fireEvent(start, "valueChange", true);
+    await waitFor(() => expect(mockUpdateNotificationPrefs).toHaveBeenCalledTimes(1));
+    expect(mockRegisterPushToken).toHaveBeenCalledTimes(1);
+
+    // 이미 하나 ON 상태에서 두 번째 ON: 재등록(upsert) 없이 prefs 만 저장.
+    const deadline = screen.getByLabelText("마감 임박 알림");
+    fireEvent(deadline, "valueChange", true);
+    await waitFor(() => expect(mockUpdateNotificationPrefs).toHaveBeenCalledTimes(2));
+    expect(mockRegisterPushToken).toHaveBeenCalledTimes(1);
+    expect(mockUpdateNotificationPrefs).toHaveBeenLastCalledWith("u1", {
+      start: true,
+      deadline: true,
+      kudos: false,
+    });
+  });
+
+  it("전체 OFF 시 unregisterPushToken 실패는 console.error 로 남기고 흐름을 막지 않는다", async () => {
+    mockFetchNotificationPrefs.mockResolvedValue({ start: true, deadline: false, kudos: false });
+    mockUnregisterPushToken.mockResolvedValue({ ok: false });
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    render(<NotificationSettingsSection userId="u1" />);
+    const start = await screen.findByLabelText("그룹 활동 알림");
+
+    fireEvent(start, "valueChange", false);
+
+    await waitFor(() => expect(mockUnregisterPushToken).toHaveBeenCalledWith("u1"));
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "[NotificationSettings] unregisterPushToken failed",
+        "u1",
+      ),
+    );
+    // prefs 저장은 정상 완료 — soft-delete 실패가 흐름을 막지 않는다.
+    expect(mockUpdateNotificationPrefs).toHaveBeenCalledWith("u1", ALL_OFF);
+    consoleError.mockRestore();
+  });
 });
