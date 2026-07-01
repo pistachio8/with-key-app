@@ -202,6 +202,8 @@ src/
 
 웹 CSS를 RN StyleSheet로 기계적으로 번역하지 않는다. **디자인 토큰을 먼저 정의**한 뒤 컴포넌트를 옮긴다.
 
+> **재작성의 시각 목표(=parity)**: native 재작성이되 결과는 대응 PWA 화면과 **시각 parity**를 목표로 하고 화면별 **screenshot acceptance**로 검증한다([ADR-0044](../adr/0044-rn-screen-visual-parity.md) accepted · [parity spec](../superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md)). parity는 결과 목표일 뿐 위 "기계적 번역 금지"의 예외가 아니다.
+
 | Next.js/PWA  | RN/Expo                                 | 규칙                                          |
 | ------------ | --------------------------------------- | --------------------------------------------- |
 | CSS Module   | `StyleSheet`                            | 정적 스타일 중심이면 기본 선택지              |
