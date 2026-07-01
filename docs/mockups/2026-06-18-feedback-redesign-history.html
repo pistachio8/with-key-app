@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>내 건의 내역</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  /* with-key 디자인 토큰 (모킹업 v4 hex SoT — apps/web/src/app/globals.css) */
+  :root {
+    --bg: #f7f8fb;
+    --surface: #ffffff;
+    --fg: #22262e;
+    --muted: #f0f1f5;
+    --muted-fg: #6b6f79;
+    --border: #e8ebf0;
+
+    --primary: #8aa4ff;
+    --primary-deep: #4f6ae0;
+    --primary-soft: #e8edff;
+    --secondary: #ffd46b;
+    --accent: #bca6ff;
+
+    --success: #52c28c;
+    --success-soft: #e4f6ee;
+    --warn: #ff8a4e;
+    --warn-soft: #fff0e4;
+    --danger: #ff6b6b;
+
+    --radius: 14px;
+    --radius-sm: 9px;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --font-sans: "Pretendard", "Pretendard Variable", -apple-system,
+      BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --maxw: 460px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background:
+      radial-gradient(120% 60% at 50% -10%, var(--primary-soft) 0%, transparent 55%),
+      var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+    max-width: var(--maxw);
+    min-height: 100dvh;
+    margin: 0 auto;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  @media (min-width: 520px) {
+    body { padding: 28px 0; }
+    .app {
+      min-height: auto;
+      height: calc(100dvh - 56px);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 24px 70px -28px rgba(34, 38, 46, 0.4), 0 0 0 1px var(--border);
+    }
+  }
+
+  /* ---- 앱바 ---- */
+  .appbar {
+    position: sticky; top: 0; z-index: 5;
+    display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 4px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .iconbtn {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 0; background: transparent; color: var(--fg);
+    border-radius: 999px; cursor: pointer; text-decoration: none;
+    transition: background 140ms var(--ease);
+  }
+  .iconbtn:hover { background: var(--muted); }
+  .iconbtn svg { width: 22px; height: 22px; stroke-width: 1.8; }
+  .appbar h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; text-align: center; }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 16px 16px 40px; -webkit-overflow-scrolling: touch; }
+
+  /* ---- 요약 ---- */
+  .summary {
+    display: flex; align-items: stretch;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .summary .cell {
+    flex: 1; padding: 14px 8px; text-align: center;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .summary .cell + .cell { border-left: 1px solid var(--border); }
+  .summary .num { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .summary .num.accent { color: var(--primary-deep); }
+  .summary .num.ok { color: var(--success); }
+  .summary .cap { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--muted-fg); }
+
+  /* ---- 필터 탭 ---- */
+  .filters {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; gap: 6px;
+    padding: 6px 0 12px;
+    background: linear-gradient(to bottom, var(--bg) 70%, transparent);
+  }
+  .ftab {
+    appearance: none; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted-fg);
+    font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 130ms var(--ease), color 130ms var(--ease), border-color 130ms var(--ease);
+  }
+  .ftab .badge {
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+    background: var(--muted); color: var(--muted-fg);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .ftab[aria-selected="true"] {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+    box-shadow: 0 8px 18px -10px var(--primary);
+  }
+  .ftab[aria-selected="true"] .badge { background: rgba(255, 255, 255, .25); color: #fff; }
+
+  /* ---- 건의 카드 ---- */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 26px -22px rgba(34, 38, 46, .55);
+    overflow: hidden;
+  }
+  .card-head {
+    width: 100%; text-align: left;
+    background: transparent; border: 0; cursor: pointer;
+    font-family: inherit; color: inherit;
+    padding: 14px 14px 13px;
+    display: block;
+  }
+  .row1 { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+  .cat {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted-fg);
+  }
+  .cat svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .row1 .date { margin-left: auto; font-size: 11.5px; font-weight: 500; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.01em;
+    padding: 3px 9px 3px 7px; border-radius: 999px;
+  }
+  .status svg { width: 12px; height: 12px; stroke-width: 2.2; }
+  .st-received  { background: var(--muted); color: var(--muted-fg); }
+  .st-reviewing { background: var(--primary-soft); color: var(--primary-deep); }
+  .st-shipped   { background: var(--success-soft); color: var(--success); }
+  .st-parked    { background: var(--warn-soft); color: var(--warn); }
+  .st-reviewing svg { animation: pulse 1.6s var(--ease) infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  .body-text {
+    font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--fg);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    text-wrap: pretty;
+  }
+  .card.open .body-text { -webkit-line-clamp: unset; }
+
+  .row3 { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
+  .photos { display: flex; gap: 5px; }
+  .ph-thumb {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: var(--muted); color: #aab0bd;
+    display: grid; place-items: center; flex: none;
+    border: 1px solid var(--border);
+  }
+  .ph-thumb svg { width: 15px; height: 15px; stroke-width: 1.7; }
+  .ph-more {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: var(--muted); color: var(--muted-fg);
+    display: grid; place-items: center; flex: none;
+    font-size: 11px; font-weight: 700;
+  }
+  .expand {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600; color: var(--muted-fg);
+  }
+  .expand svg { width: 15px; height: 15px; stroke-width: 2; transition: transform 200ms var(--ease); }
+  .card.open .expand svg { transform: rotate(180deg); }
+  .card.open .expand .lbl-closed { display: none; }
+  .expand .lbl-open { display: none; }
+  .card.open .expand .lbl-open { display: inline; }
+
+  /* ---- 펼침: 타임라인 + 답변 ---- */
+  .detail {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 260ms var(--ease);
+  }
+  .card.open .detail { grid-template-rows: 1fr; }
+  .detail-inner { overflow: hidden; }
+  .detail-pad { padding: 2px 14px 16px; border-top: 1px dashed var(--border); margin-top: 2px; }
+
+  .tl { position: relative; margin: 14px 0 0; padding-left: 26px; }
+  .tl-step { position: relative; padding-bottom: 16px; }
+  .tl-step:last-child { padding-bottom: 0; }
+  .tl-step::before {
+    content: ""; position: absolute; left: -18px; top: 16px; bottom: -2px;
+    width: 2px; background: var(--border);
+  }
+  .tl-step:last-child::before { display: none; }
+  .tl-dot {
+    position: absolute; left: -25px; top: 1px;
+    width: 16px; height: 16px; border-radius: 999px;
+    background: var(--surface); border: 2px solid var(--border);
+    display: grid; place-items: center;
+  }
+  .tl-dot svg { width: 9px; height: 9px; stroke-width: 3; color: #fff; }
+  .tl-step.done .tl-dot { background: var(--success); border-color: var(--success); }
+  .tl-step.current .tl-dot { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+  .tl-step.current.is-parked .tl-dot { background: var(--warn); border-color: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+  .tl-step.upcoming .tl-dot { background: var(--surface); border-color: var(--border); }
+  .tl-name { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+  .tl-step.upcoming .tl-name { color: var(--muted-fg); }
+  .tl-date { font-size: 11.5px; font-weight: 500; color: var(--muted-fg); margin-top: 1px; font-variant-numeric: tabular-nums; }
+
+  .reply {
+    margin-top: 14px; padding: 12px 13px;
+    background: var(--primary-soft); border-radius: var(--radius-sm);
+    display: flex; gap: 9px;
+  }
+  .reply .av {
+    width: 26px; height: 26px; flex: none; border-radius: 999px;
+    background: var(--primary); color: #fff;
+    display: grid; place-items: center; font-size: 11px; font-weight: 800;
+  }
+  .reply .who { font-size: 11.5px; font-weight: 700; color: var(--primary-deep); margin-bottom: 2px; }
+  .reply .msg { font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--fg); text-wrap: pretty; }
+
+  /* ---- 빈 상태 ---- */
+  .empty {
+    display: none; flex-direction: column; align-items: center; text-align: center;
+    padding: 56px 24px; color: var(--muted-fg);
+  }
+  .empty.show { display: flex; }
+  .empty .ic {
+    width: 60px; height: 60px; border-radius: 999px; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: grid; place-items: center; color: var(--primary-deep);
+  }
+  .empty .ic svg { width: 28px; height: 28px; stroke-width: 1.6; }
+  .empty h3 { font-size: 16px; font-weight: 700; color: var(--fg); letter-spacing: -0.01em; }
+  .empty p { margin-top: 6px; font-size: 13px; font-weight: 500; line-height: 1.5; max-width: 28ch; }
+
+  /* ---- 새 건의 FAB ---- */
+  .fab {
+    position: absolute; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom));
+    height: 50px; padding: 0 20px 0 16px;
+    border-radius: 999px; border: 0; cursor: pointer; text-decoration: none;
+    background: var(--primary); color: #fff;
+    font-family: inherit; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 7px;
+    box-shadow: 0 16px 30px -12px var(--primary);
+    transition: transform 130ms var(--ease);
+    z-index: 6;
+  }
+  .fab:active { transform: scale(0.96); }
+  .fab svg { width: 19px; height: 19px; stroke-width: 2.2; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="app" aria-label="내 건의 내역">
+
+    <header class="appbar" data-od-id="appbar">
+      <a class="iconbtn" aria-label="뒤로" href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <h1>내 건의 내역</h1>
+      <a class="iconbtn" aria-label="새 건의 작성" href="feedback-page-redesign.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+      </a>
+    </header>
+
+    <div class="scroll">
+      <!-- 요약 -->
+      <section class="summary" data-od-id="summary">
+        <div class="cell"><span class="num" id="sum-total">0</span><span class="cap">보낸 건의</span></div>
+        <div class="cell"><span class="num accent" id="sum-progress">0</span><span class="cap">진행 중</span></div>
+        <div class="cell"><span class="num ok" id="sum-shipped">0</span><span class="cap">반영됨</span></div>
+      </section>
+
+      <!-- 필터 -->
+      <nav class="filters" role="tablist" aria-label="상태 필터" data-od-id="filters">
+        <button class="ftab" role="tab" aria-selected="true" data-filter="all">전체 <span class="badge" data-count="all">0</span></button>
+        <button class="ftab" role="tab" aria-selected="false" data-filter="progress">진행 중 <span class="badge" data-count="progress">0</span></button>
+        <button class="ftab" role="tab" aria-selected="false" data-filter="shipped">반영됨 <span class="badge" data-count="shipped">0</span></button>
+      </nav>
+
+      <!-- 리스트 -->
+      <div class="list" id="list" data-od-id="list"></div>
+
+      <!-- 빈 상태 -->
+      <div class="empty" id="empty">
+        <span class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 id="empty-title">아직 건의가 없어요</h3>
+        <p id="empty-desc">불편한 점이나 아이디어가 있다면 언제든 보내주세요.</p>
+      </div>
+    </div>
+
+    <a class="fab" href="feedback-page-redesign.html" data-od-id="fab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+      새 건의
+    </a>
+
+  </main>
+
+<script>
+(function () {
+  function byId(id) { return document.getElementById(id); }
+
+  // ── 샘플 데이터 (실제 연동 시 feedback 테이블 + status 컬럼 + 본인 SELECT 정책 필요) ──
+  var CAT_ICON = {
+    bug: '<path d="M8 6a4 4 0 0 1 8 0M5 11h14M12 9v10M6.5 11v3a5.5 5.5 0 0 0 11 0v-3M4 13l2.5 1M20 13l-2.5 1M4.5 18l2.4-1M19.5 18l-2.4-1" stroke-linecap="round" stroke-linejoin="round"/>',
+    feature: '<path d="M12 3l1.6 4.9a2 2 0 0 0 1.3 1.3L20 11l-4.1 1.6a2 2 0 0 0-1.3 1.3L12 19l-1.6-5.1a2 2 0 0 0-1.3-1.3L5 11l4.1-1.8a2 2 0 0 0 1.3-1.3L12 3z" stroke-linecap="round" stroke-linejoin="round"/>',
+    other: '<path d="M21 11.5a8 8 0 0 1-11.5 7.2L4 20l1.3-5A8 8 0 1 1 21 11.5z" stroke-linecap="round" stroke-linejoin="round"/>'
+  };
+  var CAT_LABEL = { bug: "버그 제보", feature: "기능 제안", other: "기타" };
+
+  var STATUS = {
+    received:  { label: "접수됨",  cls: "st-received",  icon: '<path d="M5 12.5l4.2 4.2L19 7" stroke-linecap="round" stroke-linejoin="round"/>' },
+    reviewing: { label: "검토 중", cls: "st-reviewing", icon: '<circle cx="12" cy="12" r="3.4"/><path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/>' },
+    shipped:   { label: "반영됨",  cls: "st-shipped",   icon: '<path d="M5 12.5l4.2 4.2L19 7" stroke-linecap="round" stroke-linejoin="round"/>' },
+    parked:    { label: "보류",    cls: "st-parked",    icon: '<path d="M9 7v10M15 7v10" stroke-linecap="round"/>' }
+  };
+
+  // group: progress = 진행 중(접수/검토), shipped = 반영됨, (parked 는 전체에만)
+  var ITEMS = [
+    {
+      cat: "bug", status: "reviewing", date: "6월 15일", group: "progress",
+      body: "챌린지 인증 화면에서 사진을 올리면 가끔 화면이 멈춰요. 어제 저녁에 인증할 때 그랬고, 앱을 껐다 켜면 다시 돼요.",
+      photos: 2,
+      steps: [
+        { name: "접수됨", date: "6월 15일", state: "done" },
+        { name: "검토 중", date: "6월 16일", state: "current" },
+        { name: "반영", date: "처리 예정", state: "upcoming" }
+      ],
+      reply: null
+    },
+    {
+      cat: "feature", status: "shipped", date: "6월 2일", group: "shipped",
+      body: "친구를 챌린지에 초대할 때 카카오톡으로 바로 공유할 수 있으면 좋겠어요. 지금은 링크 복사만 돼서 번거로워요.",
+      photos: 1,
+      steps: [
+        { name: "접수됨", date: "6월 2일", state: "done" },
+        { name: "검토 중", date: "6월 4일", state: "done" },
+        { name: "반영됨", date: "6월 12일", state: "current" }
+      ],
+      reply: "6/12 업데이트에 카카오톡 공유를 추가했어요. 덕분에 더 편해졌습니다. 제안 감사합니다!"
+    },
+    {
+      cat: "bug", status: "received", date: "오늘", group: "progress",
+      body: "정산 영수증 금액이 가끔 0원으로 보여요. 새로고침하면 정상으로 돌아옵니다.",
+      photos: 0,
+      steps: [
+        { name: "접수됨", date: "오늘", state: "current" },
+        { name: "검토 중", date: "확인 예정", state: "upcoming" },
+        { name: "반영", date: "처리 예정", state: "upcoming" }
+      ],
+      reply: null
+    },
+    {
+      cat: "other", status: "parked", date: "5월 28일", group: "other",
+      body: "다크 모드도 지원해 주세요. 밤에 챌린지 인증할 때 화면이 너무 밝아서 눈이 부셔요.",
+      photos: 0,
+      steps: [
+        { name: "접수됨", date: "5월 28일", state: "done" },
+        { name: "검토 중", date: "5월 30일", state: "done" },
+        { name: "보류", date: "6월 3일", state: "current parked" }
+      ],
+      reply: "다크 모드는 로드맵에 있지만 지금 당장은 적용이 어려워요. 우선 보류로 둘게요. 관심 가져주셔서 감사합니다!"
+    }
+  ];
+
+  var list = byId("list");
+  var empty = byId("empty");
+  var current = "all";
+
+  function inFilter(item, f) {
+    if (f === "all") return true;
+    if (f === "progress") return item.group === "progress";
+    if (f === "shipped") return item.group === "shipped";
+    return true;
+  }
+
+  function thumbSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 16l-4.5-4.2a2 2 0 0 0-2.7 0L4 20" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function photosHtml(n) {
+    if (!n) return "";
+    var shown = Math.min(n, 3), html = "";
+    for (var i = 0; i < shown; i++) html += '<span class="ph-thumb">' + thumbSvg() + '</span>';
+    if (n > 3) html += '<span class="ph-more">+' + (n - 3) + '</span>';
+    return '<div class="photos" aria-label="첨부 사진 ' + n + '장">' + html + '</div>';
+  }
+  function stepsHtml(steps) {
+    return steps.map(function (s) {
+      var parked = s.state.indexOf("parked") !== -1;
+      var base = s.state.split(" ")[0]; // done | current | upcoming
+      var dotIcon = (base === "done" || (base === "current" && !parked))
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12.5l4.2 4.2L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : "";
+      return '<div class="tl-step ' + base + (parked ? " current is-parked" : "") + '">' +
+        '<span class="tl-dot">' + dotIcon + '</span>' +
+        '<div class="tl-name">' + s.name + '</div>' +
+        '<div class="tl-date">' + s.date + '</div>' +
+      '</div>';
+    }).join("");
+  }
+  function replyHtml(reply) {
+    if (!reply) return "";
+    return '<div class="reply">' +
+      '<span class="av">개발</span>' +
+      '<div><div class="who">개발팀</div><div class="msg">' + reply + '</div></div>' +
+    '</div>';
+  }
+
+  function cardHtml(item, idx) {
+    var st = STATUS[item.status];
+    return '<article class="card" data-idx="' + idx + '" data-od-id="feedback-card-' + idx + '">' +
+      '<button class="card-head" type="button" aria-expanded="false">' +
+        '<div class="row1">' +
+          '<span class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">' + CAT_ICON[item.cat] + '</svg>' + CAT_LABEL[item.cat] + '</span>' +
+          '<span class="status ' + st.cls + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">' + st.icon + '</svg>' + st.label + '</span>' +
+          '<span class="date">' + item.date + '</span>' +
+        '</div>' +
+        '<div class="body-text">' + item.body + '</div>' +
+        '<div class="row3">' +
+          photosHtml(item.photos) +
+          '<span class="expand"><span class="lbl-closed">진행 상태</span><span class="lbl-open">접기</span>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '</span>' +
+        '</div>' +
+      '</button>' +
+      '<div class="detail"><div class="detail-inner"><div class="detail-pad">' +
+        '<div class="tl">' + stepsHtml(item.steps) + '</div>' +
+        replyHtml(item.reply) +
+      '</div></div></div>' +
+    '</article>';
+  }
+
+  function render() {
+    var rows = ITEMS.filter(function (it) { return inFilter(it, current); });
+    list.innerHTML = rows.map(function (it) {
+      return cardHtml(it, ITEMS.indexOf(it));
+    }).join("");
+
+    // 펼치기 토글
+    Array.prototype.slice.call(list.querySelectorAll(".card-head")).forEach(function (head) {
+      head.addEventListener("click", function () {
+        var card = head.closest(".card");
+        var open = card.classList.toggle("open");
+        head.setAttribute("aria-expanded", String(open));
+      });
+    });
+
+    // 빈 상태
+    var none = rows.length === 0;
+    empty.classList.toggle("show", none);
+    if (none) {
+      byId("empty-title").textContent = current === "shipped" ? "아직 반영된 건의가 없어요" : "진행 중인 건의가 없어요";
+      byId("empty-desc").textContent = "새 건의를 보내면 여기에서 처리 상태를 확인할 수 있어요.";
+    }
+  }
+
+  function setFilter(f) {
+    current = f;
+    Array.prototype.slice.call(document.querySelectorAll(".ftab")).forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.filter === f));
+    });
+    render();
+  }
+  Array.prototype.slice.call(document.querySelectorAll(".ftab")).forEach(function (t) {
+    t.addEventListener("click", function () { setFilter(t.dataset.filter); });
+  });
+
+  // 요약 + 배지 카운트
+  function counts() {
+    var total = ITEMS.length;
+    var progress = ITEMS.filter(function (i) { return i.group === "progress"; }).length;
+    var shipped = ITEMS.filter(function (i) { return i.group === "shipped"; }).length;
+    byId("sum-total").textContent = total;
+    byId("sum-progress").textContent = progress;
+    byId("sum-shipped").textContent = shipped;
+    document.querySelector('[data-count="all"]').textContent = total;
+    document.querySelector('[data-count="progress"]').textContent = progress;
+    document.querySelector('[data-count="shipped"]').textContent = shipped;
+  }
+
+  counts();
+  render();
+  // 첫 카드는 펼친 상태로 시작 (상태 타임라인을 바로 보여주기)
+  var first = list.querySelector(".card");
+  if (first) { first.classList.add("open"); first.querySelector(".card-head").setAttribute("aria-expanded", "true"); }
+})();
+</script>
+</body>
+</html>

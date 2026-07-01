@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>개발자에게 건의하기 — 작성</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  /* ============================================================
+     with-key 디자인 토큰 (모킹업 v4 hex SoT — apps/web/src/app/globals.css)
+     ============================================================ */
+  :root {
+    --bg: #f7f8fb;
+    --surface: #ffffff;
+    --fg: #22262e;
+    --muted: #f0f1f5;
+    --muted-fg: #6b6f79;
+    --border: #e8ebf0;
+
+    --primary: #8aa4ff;
+    --primary-fg: #ffffff;
+    --primary-deep: #4f6ae0;
+    --primary-soft: #e8edff;
+
+    --secondary: #ffd46b;
+    --secondary-soft: #fff5da;
+    --accent: #bca6ff;
+
+    --success: #52c28c;
+    --success-soft: #e4f6ee;
+    --warn: #ff8a4e;
+    --danger: #ff6b6b;
+
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-lg: 20px;
+
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --font-sans: "Pretendard", "Pretendard Variable", -apple-system,
+      BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+    --maxw: 460px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background:
+      radial-gradient(120% 60% at 50% -10%, var(--primary-soft) 0%, transparent 55%),
+      var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ---- 앱 셸 ---- */
+  .app {
+    position: relative;
+    width: 100%;
+    max-width: var(--maxw);
+    min-height: 100dvh;
+    margin: 0 auto;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  @media (min-width: 520px) {
+    body { padding: 28px 0; }
+    .app {
+      min-height: auto;
+      height: calc(100dvh - 56px);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 24px 70px -28px rgba(34, 38, 46, 0.4), 0 0 0 1px var(--border);
+    }
+  }
+
+  /* ---- 상단 앱바 ---- */
+  .appbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 40px 1fr 40px;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .iconbtn {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 0; background: transparent; color: var(--fg);
+    border-radius: 999px; cursor: pointer; text-decoration: none;
+    transition: background 140ms var(--ease);
+  }
+  .iconbtn:hover { background: var(--muted); }
+  .appbar h1 {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+    text-align: center;
+  }
+
+  /* ---- 스크롤 본문 ---- */
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 18px 132px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lede h2 {
+    font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.22;
+  }
+  .lede p {
+    margin-top: 7px;
+    font-size: 14px; font-weight: 500; line-height: 1.55;
+    color: var(--muted-fg);
+    text-wrap: pretty;
+  }
+
+  /* ---- 섹션 라벨 ---- */
+  .field { margin-top: 22px; }
+  .label {
+    display: block;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--muted-fg); text-transform: uppercase;
+    margin-bottom: 9px;
+  }
+  .label .opt { color: var(--muted-fg); margin-left: 4px; font-weight: 600; opacity: .8; }
+
+  /* ---- 카테고리 세그먼트 칩 ---- */
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .chip {
+    appearance: none;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 13px 8px 11px;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    cursor: pointer;
+    color: var(--muted-fg);
+    font-family: inherit;
+    transition: transform 130ms var(--ease), border-color 130ms var(--ease),
+      background 130ms var(--ease), color 130ms var(--ease), box-shadow 130ms var(--ease);
+  }
+  .chip svg { width: 22px; height: 22px; stroke-width: 1.7; }
+  .chip span {
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip[aria-pressed="true"] {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary-deep);
+    box-shadow: 0 6px 16px -10px var(--primary);
+  }
+
+  .helper {
+    margin-top: 10px;
+    display: flex; align-items: flex-start; gap: 7px;
+    font-size: 12.5px; font-weight: 500; line-height: 1.45;
+    color: var(--muted-fg);
+    padding: 10px 12px;
+    background: var(--muted);
+    border-radius: var(--radius-sm);
+  }
+  .helper svg { width: 15px; height: 15px; flex: none; margin-top: 1px; color: var(--primary-deep); stroke-width: 1.8; }
+  .helper b { color: var(--fg); font-weight: 600; }
+
+  /* ---- 본문 textarea ---- */
+  .ta-wrap {
+    position: relative;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    transition: border-color 130ms var(--ease), box-shadow 130ms var(--ease);
+  }
+  .ta-wrap:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-soft);
+  }
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 168px;
+    resize: vertical;
+    border: 0; background: transparent;
+    padding: 14px 14px 12px;
+    font-family: inherit;
+    font-size: 15px; font-weight: 500; line-height: 1.55;
+    color: var(--fg);
+    outline: none;
+  }
+  textarea::placeholder { color: #aab0bd; }
+  .counter {
+    display: flex; justify-content: flex-end;
+    padding: 0 14px 11px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--muted-fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .counter.warn { color: var(--warn); }
+  .counter.danger { color: var(--danger); }
+
+  /* ---- 사진 멀티 업로드 ---- */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 8px;
+  }
+  .thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--muted);
+    box-shadow: 0 6px 16px -12px rgba(34, 38, 46, .5);
+    animation: pop 200ms var(--ease) both;
+  }
+  @keyframes pop { 0% { opacity: 0; transform: scale(.9); } 100% { opacity: 1; transform: scale(1); } }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .rm {
+    position: absolute; top: 5px; right: 5px;
+    width: 24px; height: 24px;
+    border: 0; border-radius: 999px;
+    background: rgba(34, 38, 46, .72); color: #fff;
+    display: grid; place-items: center; cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+  .thumb .rm svg { width: 13px; height: 13px; stroke-width: 2.2; }
+  .thumb .tag {
+    position: absolute; left: 5px; bottom: 5px;
+    font-size: 10px; font-weight: 600;
+    background: rgba(34, 38, 46, .66); color: #fff;
+    padding: 2px 6px; border-radius: 999px;
+  }
+  .add-tile {
+    aspect-ratio: 1;
+    border: 1.5px dashed color-mix(in srgb, var(--primary) 45%, var(--border));
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--primary-soft) 40%, var(--surface));
+    color: var(--primary-deep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    cursor: pointer; font-family: inherit;
+    transition: border-color 130ms var(--ease), background 130ms var(--ease), transform 130ms var(--ease);
+  }
+  .add-tile:hover { border-color: var(--primary); background: var(--primary-soft); }
+  .add-tile:active { transform: scale(0.96); }
+  .add-tile svg { width: 22px; height: 22px; stroke-width: 1.7; }
+  .add-tile .add-count { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .add-tile[hidden] { display: none; }
+  .photo-hint { margin-top: 9px; font-size: 11.5px; font-weight: 500; line-height: 1.45; color: var(--muted-fg); }
+
+  /* ---- 신뢰 안내 ---- */
+  .trust {
+    margin-top: 18px;
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--muted-fg);
+  }
+  .trust .dot {
+    width: 22px; height: 22px; flex: none;
+    border-radius: 999px;
+    background: var(--success-soft); color: var(--success);
+    display: grid; place-items: center;
+  }
+  .trust .dot svg { width: 14px; height: 14px; stroke-width: 2; }
+  .trust b { color: var(--fg); font-weight: 600; }
+
+  /* ---- 하단 고정 제출 바 ---- */
+  .submitbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 18px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 62%, transparent);
+    z-index: 4;
+  }
+  .btn {
+    width: 100%;
+    border: 0; border-radius: var(--radius);
+    padding: 15px 18px;
+    font-family: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em;
+    cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 120ms var(--ease), background 140ms var(--ease), opacity 140ms;
+  }
+  .btn-primary {
+    background: var(--primary); color: var(--primary-fg);
+    box-shadow: 0 12px 26px -12px var(--primary);
+  }
+  .btn-primary:not(:disabled):active { transform: translateY(1px) scale(0.99); }
+  .btn-primary:disabled { background: #c7cfe6; color: #fff; cursor: not-allowed; box-shadow: none; }
+  .btn-outline {
+    background: var(--surface); color: var(--fg);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline:active { transform: scale(0.99); }
+  .btn-ghost { background: transparent; color: var(--muted-fg); font-weight: 600; }
+
+  .spinner {
+    width: 17px; height: 17px;
+    border: 2.5px solid rgba(255, 255, 255, .45);
+    border-top-color: #fff; border-radius: 999px;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- 완료 상태 ---- */
+  .done {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 32px 28px calc(28px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 55% at 50% 18%, var(--success-soft) 0%, transparent 60%),
+      var(--bg);
+  }
+  .done.show { display: flex; }
+  .seal {
+    width: 96px; height: 96px; border-radius: 999px;
+    background: var(--surface);
+    display: grid; place-items: center;
+    box-shadow: 0 18px 40px -16px rgba(82, 194, 140, .6), 0 0 0 1px var(--border);
+    margin-bottom: 22px;
+    animation: seal-in 560ms var(--ease) both;
+  }
+  @keyframes seal-in {
+    0% { opacity: 0; transform: scale(1.7) rotate(-14deg); }
+    60% { opacity: 1; transform: scale(0.92) rotate(-6deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-7deg); }
+  }
+  .seal svg { width: 46px; height: 46px; color: var(--success); }
+  .seal .check {
+    stroke: var(--success); stroke-width: 3.2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 40; stroke-dashoffset: 40;
+    animation: draw 460ms var(--ease) 260ms forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .done h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+  .done p {
+    margin-top: 9px; max-width: 30ch;
+    font-size: 14px; font-weight: 500; line-height: 1.55; color: var(--muted-fg);
+    text-wrap: pretty;
+  }
+  .done .recap {
+    margin-top: 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 12.5px; font-weight: 600; color: var(--fg);
+  }
+  .done .recap .pill {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: var(--primary-soft); color: var(--primary-deep);
+  }
+  .done .actions {
+    margin-top: 26px; width: 100%; max-width: 320px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+    .seal .check { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+  <main class="app" aria-label="개발자에게 건의하기">
+
+    <!-- 상단 앱바 -->
+    <header class="appbar" data-od-id="appbar">
+      <a class="iconbtn" aria-label="뒤로" href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <h1>건의하기</h1>
+      <span aria-hidden="true"></span>
+    </header>
+
+    <!-- 작성 화면 -->
+    <div class="scroll" id="composer">
+      <section class="lede" data-od-id="lede">
+        <h2>개발자에게 건의하기</h2>
+        <p>버그 제보나 아이디어를 보내주세요. 보내주신 내용은 개발팀이 바로 확인해요.</p>
+      </section>
+
+      <!-- 분류 -->
+      <section class="field" data-od-id="category">
+        <span class="label">분류</span>
+        <div class="chips" role="group" aria-label="건의 분류 선택">
+          <button class="chip" type="button" data-cat="bug" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M8 6a4 4 0 0 1 8 0M5 11h14M12 9v10M6.5 11v3a5.5 5.5 0 0 0 11 0v-3M4 13l2.5 1M20 13l-2.5 1M4.5 18l2.4-1M19.5 18l-2.4-1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>버그 제보</span>
+          </button>
+          <button class="chip" type="button" data-cat="feature" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 3l1.6 4.9a2 2 0 0 0 1.3 1.3L20 11l-4.1 1.6a2 2 0 0 0-1.3 1.3L12 19l-1.6-5.1a2 2 0 0 0-1.3-1.3L5 11l4.1-1.8a2 2 0 0 0 1.3-1.3L12 3z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>기능 제안</span>
+          </button>
+          <button class="chip" type="button" data-cat="other" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 11.5a8 8 0 0 1-11.5 7.2L4 20l1.3-5A8 8 0 1 1 21 11.5z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>기타</span>
+          </button>
+        </div>
+        <div class="helper" id="helper" role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <span id="helper-text"></span>
+        </div>
+      </section>
+
+      <!-- 내용 -->
+      <section class="field" data-od-id="body">
+        <label class="label" for="body">내용</label>
+        <div class="ta-wrap">
+          <textarea id="body" maxlength="1000" placeholder=""></textarea>
+          <div class="counter" id="counter">0 / 1000</div>
+        </div>
+      </section>
+
+      <!-- 사진 (여러 장) -->
+      <section class="field" data-od-id="photo">
+        <span class="label">사진 <span class="opt">· 선택 · 최대 3장</span></span>
+        <div class="photo-grid" id="photo-grid">
+          <button class="add-tile" id="add-tile" type="button" aria-label="사진 추가">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 15.5l-4-3.7a2 2 0 0 0-2.7 0L7 18.5M14.5 5.5h5M17 3v5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="add-count">0/3</span>
+          </button>
+        </div>
+        <p class="photo-hint">문제 화면을 캡처해 첨부하면 더 빨리 확인할 수 있어요. JPG · PNG · WEBP · HEIC · 장당 5MB.</p>
+        <input id="file" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple hidden />
+      </section>
+
+      <!-- 신뢰 안내 -->
+      <div class="trust" data-od-id="trust">
+        <span class="dot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12.5l4.2 4.2L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>보내면 <b>개발팀에게 바로 전달</b>돼요. 답변이 필요하면 가입하신 이메일로 연락드려요.</span>
+      </div>
+    </div>
+
+    <!-- 하단 고정 제출 -->
+    <div class="submitbar" id="submitbar">
+      <button class="btn btn-primary" id="submit" type="button" disabled>보내기</button>
+    </div>
+
+    <!-- 완료 화면 -->
+    <div class="done" id="done" role="status" aria-live="polite">
+      <div class="seal">
+        <svg viewBox="0 0 24 24" fill="none"><path class="check" d="M5 12.5l4.2 4.2L19 7"/></svg>
+      </div>
+      <h2>전달됐어요</h2>
+      <p>소중한 의견 감사합니다. 개발팀이 꼼꼼히 읽어볼게요.</p>
+      <div class="recap"><span class="pill" id="done-cat">버그 제보</span><span id="done-meta">접수 완료</span></div>
+      <div class="actions">
+        <a class="btn btn-outline" href="index.html">마이페이지로 돌아가기</a>
+        <button class="btn btn-ghost" type="button" id="again">하나 더 보내기</button>
+      </div>
+    </div>
+
+  </main>
+
+<script>
+(function () {
+  function byId(id) { return document.getElementById(id); }
+
+  var CATS = {
+    bug: {
+      label: "버그 제보",
+      helper: "<b>무엇이</b>, <b>언제·어디서</b> 일어났는지 적어주시면 빨리 고칠 수 있어요.",
+      placeholder: "예) 챌린지 인증 화면에서 사진을 올리면 화면이 멈춰요. 어제 저녁 인증할 때 그랬어요."
+    },
+    feature: {
+      label: "기능 제안",
+      helper: "어떤 상황에서 <b>무엇이 있었으면</b> 좋을지 알려주세요.",
+      placeholder: "예) 친구를 챌린지에 초대할 때 카카오톡으로 바로 공유할 수 있으면 좋겠어요."
+    },
+    other: {
+      label: "기타",
+      helper: "칭찬, 불편함, 문의 등 무엇이든 편하게 남겨주세요.",
+      placeholder: "예) 앱을 잘 쓰고 있어요! 정산 영수증 디자인이 특히 마음에 들어요."
+    }
+  };
+
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var helperText = byId("helper-text");
+  var body = byId("body");
+  var counter = byId("counter");
+  var submit = byId("submit");
+  var addTile = byId("add-tile");
+  var addCount = addTile.querySelector(".add-count");
+  var photoGrid = byId("photo-grid");
+  var fileInput = byId("file");
+  var doneEl = byId("done");
+  var composer = byId("composer");
+  var submitbar = byId("submitbar");
+  var doneCat = byId("done-cat");
+  var doneMeta = byId("done-meta");
+
+  var current = "bug";
+  var MAX = 1000;
+  var MAX_PHOTOS = 3;
+  var MAX_BYTES = 5 * 1024 * 1024;
+  var photos = []; // { file, url, tag }
+
+  function applyCategory(cat) {
+    current = cat;
+    chips.forEach(function (c) {
+      c.setAttribute("aria-pressed", String(c.dataset.cat === cat));
+    });
+    helperText.innerHTML = CATS[cat].helper;
+    body.setAttribute("placeholder", CATS[cat].placeholder);
+  }
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () { applyCategory(c.dataset.cat); });
+  });
+
+  function refreshCounter() {
+    var n = body.value.length;
+    counter.textContent = n + " / " + MAX;
+    counter.classList.toggle("warn", n >= 900 && n < 980);
+    counter.classList.toggle("danger", n >= 980);
+    submit.disabled = body.value.trim().length === 0;
+  }
+  body.addEventListener("input", refreshCounter);
+
+  // ---- 사진 (멀티) ----
+  function sizeLabel(bytes) {
+    return bytes >= 1024 * 1024
+      ? (bytes / 1024 / 1024).toFixed(1) + "MB"
+      : Math.round(bytes / 1024) + "KB";
+  }
+  function renderPhotos() {
+    Array.prototype.slice.call(photoGrid.querySelectorAll(".thumb")).forEach(function (t) { t.remove(); });
+    photos.forEach(function (p, i) {
+      var t = document.createElement("div");
+      t.className = "thumb";
+      t.innerHTML =
+        '<img alt="첨부 사진 ' + (i + 1) + '" src="' + p.url + '">' +
+        '<span class="tag">' + p.tag + '</span>' +
+        '<button class="rm" type="button" aria-label="사진 제거">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>' +
+        '</button>';
+      t.querySelector(".rm").addEventListener("click", function () { removePhoto(i); });
+      photoGrid.insertBefore(t, addTile);
+    });
+    addCount.textContent = photos.length + "/" + MAX_PHOTOS;
+    addTile.hidden = photos.length >= MAX_PHOTOS;
+  }
+  function addFiles(list) {
+    for (var i = 0; i < list.length; i++) {
+      if (photos.length >= MAX_PHOTOS) { flash(addTile); break; }
+      var f = list[i];
+      if (!f.type || f.type.indexOf("image/") !== 0) continue;
+      if (f.size > MAX_BYTES) { flash(addTile); continue; }
+      photos.push({ file: f, url: URL.createObjectURL(f), tag: sizeLabel(f.size) });
+    }
+    renderPhotos();
+    fileInput.value = "";
+  }
+  function removePhoto(i) {
+    if (photos[i]) URL.revokeObjectURL(photos[i].url);
+    photos.splice(i, 1);
+    renderPhotos();
+  }
+  function clearPhotos() {
+    photos.forEach(function (p) { URL.revokeObjectURL(p.url); });
+    photos = [];
+    renderPhotos();
+  }
+  addTile.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files.length) addFiles(fileInput.files);
+  });
+  function flash(el) {
+    el.animate(
+      [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" },
+       { transform: "translateX(6px)" }, { transform: "translateX(0)" }],
+      { duration: 260, easing: "ease-in-out" }
+    );
+  }
+
+  // ---- 제출 (프로토타입: 전송 연출만) ----
+  submit.addEventListener("click", function () {
+    if (submit.disabled) return;
+    submit.disabled = true;
+    submit.innerHTML = '<span class="spinner"></span>보내는 중...';
+    setTimeout(function () {
+      doneCat.textContent = CATS[current].label;
+      doneMeta.textContent = photos.length ? ("사진 " + photos.length + "장 · 접수 완료") : "접수 완료";
+      composer.style.display = "none";
+      submitbar.style.display = "none";
+      doneEl.classList.add("show");
+    }, 900);
+  });
+
+  // ---- 하나 더 보내기 ----
+  byId("again").addEventListener("click", function () {
+    body.value = "";
+    clearPhotos();
+    applyCategory("bug");
+    refreshCounter();
+    submit.innerHTML = "보내기";
+    submit.disabled = true;
+    doneEl.classList.remove("show");
+    composer.style.display = "";
+    submitbar.style.display = "";
+    composer.scrollTop = 0;
+  });
+
+  // init
+  applyCategory("bug");
+  refreshCounter();
+  renderPhotos();
+})();
+</script>
+</body>
+</html>

@@ -36,6 +36,9 @@ IA(Information Architecture, 화면 구조·흐름)를 정리한 자료입니다
   - 화면 8종 단독 실행: 영상 캡처 인증 · 스토리 재생 · 만회 제출/판정/결과 · 인증 피드 · 생성 폼 · 홈. 상태 변형(빈/미제출 대기/2배 이월)은 쿼리스트링(`?state=empty`·`?r=rejected`)으로 진입
   - 인터랙션 동작: 3초 캡처 타이머·스토리 자동재생·판정 토글·폼 검증 등 (더미 데이터, 실 구현은 `apps/web/src/app/**`)
   - 단일 합본 대신 분리 파일: 화면별 단독 `open`이 file://에서 확실히 렌더되고 개발 중 참조에 편리. 화면 카피는 컨벤션 용어 '만회 찬스'로 통일(2026-06-24 · 금액 '벌금'은 유지 · 코드 식별자 `penalty_*`·`/penalty` 유지). 위 screens 허브에서 ▶ 로 임베드됨
+- [`2026-06-18-feedback-redesign-compose.html`](./2026-06-18-feedback-redesign-compose.html) · [`2026-06-18-feedback-redesign-history.html`](./2026-06-18-feedback-redesign-history.html) · [`2026-06-18-feedback-redesign-hub.html`](./2026-06-18-feedback-redesign-hub.html) — 건의하기(고객지원) 화면 리디자인 v2 ([기존 spec](../superpowers/specs/2026-06-10-feedback-suggestion-design.md) · 실 구현 `apps/web/src/app/(app)/me/feedback`)
+  - 화면 3종: **작성**(건의 작성 폼) · **내 건의 내역**(제출 이력 조회) · **마이페이지·고객지원**(건의 진입 허브)
+  - 시안 단계 — 별도 v2 spec·EVAL WP 미분해(구현 전 시각 합의용). 실 구현이 달라지면 latest 파일 frame-note에 `deprecated — 실 구현: …` 표기(아래 운영 규칙)
 
 ## 보는 법
 
