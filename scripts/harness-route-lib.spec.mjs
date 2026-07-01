@@ -201,3 +201,29 @@ test("buildRoute 는 task-ID 없는 요청에 detectedPattern=null", () => {
   assert.equal(route.detectedTaskId, null);
   assert.equal(route.suggestedNextStep, null);
 });
+
+// ── ui-ux 분류 타입 (ADR-0045) ──
+// UI 컴포넌트를 명사로 서술하는 요청이 no-keyword-match→analysis 로 새던 갭을 ui-ux 로 흡수.
+
+test("ui-ux 분류: UI 명사 서술형 요청(네비게이션·뒤로가기)", () => {
+  const result = classifyRequest("상단 네비게이션을 상시 보여주고 뒤로가기 버튼이 있으면 좋겠어");
+  assert.equal(result.classification, "ui-ux");
+  assert.equal(result.ambiguous, false);
+  assert.ok(result.confidence >= 0.6, `confidence ${result.confidence} 가 임계값 이상`);
+});
+
+test("ui-ux buildRoute: ui-ux-flow · CURRENT_UI_ANALYSIS 로 라우팅", () => {
+  const route = buildRoute("탭바 레이아웃 정렬을 바꿔줘", manifest, {
+    fileExists: () => false,
+    repoRoot: "/repo",
+  });
+  assert.equal(route.classification, "ui-ux");
+  assert.equal(route.workflow, "ui-ux-flow");
+  assert.equal(route.nextState, "CURRENT_UI_ANALYSIS");
+  assert.equal(route.targetWorkflowFile, ".agents/workflows/implement-agent-task.md");
+});
+
+test("ui-ux 경계: '다크모드 기능 추가해줘' 는 feature 유지(2단 어휘 보류)", () => {
+  // 다크모드/라이트모드는 기존 feature 예시와 tie 충돌이라 ui-ux 키워드에서 제외(ADR-0045 적용 결과).
+  assert.equal(classifyRequest("다크모드 기능 추가해줘").classification, "feature");
+});
