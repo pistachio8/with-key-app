@@ -191,13 +191,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
     justifyContent: "center",
-    minHeight: 52,
+    minHeight: 48, // PWA h-12=48
     paddingHorizontal: spacing.lg,
   },
   kakaoLabel: {
+    ...typography.body, // PWA button base = text-sm font-medium (14/500)
     color: colors.primaryForeground,
-    fontSize: 16,
-    fontWeight: "700",
   },
   divider: {
     ...typography.sub,
@@ -210,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     color: colors.foreground,
-    fontSize: 16,
+    fontSize: 16, // iOS no-zoom(≥16) — 의도적 유지
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
@@ -223,16 +222,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     marginTop: spacing.md,
-    minHeight: 52,
+    minHeight: 48, // PWA h-12=48
     paddingHorizontal: spacing.lg,
   },
   buttonPressed: {
     opacity: 0.85,
   },
   magicLinkLabel: {
+    ...typography.body, // PWA button base = text-sm font-medium (14/500)
     color: colors.foreground,
-    fontSize: 16,
-    fontWeight: "700",
   },
   feedbackCard: {
     backgroundColor: colors.card,
