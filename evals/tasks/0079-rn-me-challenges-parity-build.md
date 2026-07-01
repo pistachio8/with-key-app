@@ -2,8 +2,8 @@
 Task: EVAL-0079
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0067] — 신규 화면이라 토큰 없이 만들면 하드코딩 스타일이 남아 parity 를 사후 강제할 수 없다(ADR-0044·spec §C).
+Status: todo
+Depends-on: [task:EVAL-0067] — 신규 화면이라 토큰 없이 만들면 하드코딩 스타일이 남아 parity 를 사후 강제할 수 없다(ADR-0044·spec §C). (EVAL-0067 #304 머지로 해제)
 Parent: docs/superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md
 ---
 

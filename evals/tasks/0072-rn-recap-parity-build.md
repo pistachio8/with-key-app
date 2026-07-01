@@ -2,8 +2,8 @@
 Task: EVAL-0072
 Track: port
 Kind: migration
-Status: blocked
-Blocked-by: [task:EVAL-0067] — 토큰 확장 완료 전에는 parity 를 사후 강제할 수 없다(ADR-0044·spec §C).
+Status: todo
+Depends-on: [task:EVAL-0067] — 토큰 확장 완료 전에는 parity 를 사후 강제할 수 없다(ADR-0044·spec §C). (EVAL-0067 #304 머지로 해제)
 Parent: docs/superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md
 ---
 
