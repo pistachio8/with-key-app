@@ -2,7 +2,7 @@
 Task: EVAL-0067
 Track: greenfield
 Kind: migration
-Status: todo
+Status: done
 Parent: docs/superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md
 ---
 

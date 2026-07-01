@@ -1000,6 +1000,33 @@
         "notes": "Blocker 0 / Major 1 / Minor 1. Major 1(video-action-form 미적용: page.tsx feed_type==='video' 분기로 라이브인데 photo만 안 A 적용 — 영상 챌린지 반복 업로드 시 모달 잔존)=반영, video-action-form에 동일 4줄 분기 + video-action-form.spec 신설(2테스트, 저장소 첫 카메라 폼 테스트 — getUserMedia/MediaRecorder 최소 모킹). Minor 1(action-form.tsx early-return이 goalReached·isFirstAction보다 위 — 상호배타라 안전하나 불변식 미명시)=미반영(저위험, 주석 후속 후보). 신호 상호배타성·write-contracts parity·기존 단일 업로드 피드백 보존 직접 확인."
       },
       "notes": "video-action-form.spec.tsx가 저장소 첫 카메라 폼(getUserMedia+MediaRecorder) 테스트 — MockMediaRecorder(onstop 동기 발화)·navigator.mediaDevices·HTMLMediaElement.play/srcObject 보강 패턴은 penalty-proof-form 등 미테스트 카메라 폼에 재사용 가능. 모바일 viewport 시각 확인은 dogfood 후속(실데이터 필요)."
+    },
+    {
+      "taskId": "EVAL-0067",
+      "date": "2026-07-01",
+      "track": "greenfield",
+      "kind": "migration",
+      "status": "done",
+      "attempts": 1,
+      "summary": "EVAL-0067 — RN shared/theme 를 정산 SL0 범위에서 P0 화면 공통 토큰으로 비파괴 확장. globals.css 대비 색 토큰 갭 감사: 동일-OKLCH 별칭 4종(input=border·ring=primary·popover=card·popoverForeground=foreground — globals 가 형제와 같은 OKLCH 재사용, culori round-trip drift 0) + streak-1~7(hex SoT 부재 → OKLCH 가 SoT 라 culori 변환값 저장, theme.spec 이 globals OKLCH 존재+culori 일치 이중 강제). spacing.ts 신규 — apps/mobile/src padding/margin/gap 빈도 감사(12→31·16→25·8→24·4→16·24→16·32→6)로 8px 그리드 scale(xs4~2xl32) 추출·근거 주석. theme.spec 기존 4종 구조 재사용해 신규 색/spacing 케이스 추가(26→40). globals.css 미변경(참조만)·레거시 alias·SL0 소비처 전부 비파괴. EVAL-0068~ 화면 re-skin 의 선행 토큰.",
+      "verification": {
+        "local": {
+          "pnpm --filter @withkey/mobile test -- theme.spec": "pass (40/40 — 기존 26 비파괴 + 별칭 4·별칭관계 1·streak 7·spacing 2 신규)",
+          "pnpm --filter @withkey/mobile test": "pass (25 suites · 234/234 — colors 확장이 feed/recap/invite/read-only 비파괴)",
+          "pnpm --filter @withkey/mobile exec tsc --noEmit": "pass (레거시 alias·SL0 소비처 비파괴)",
+          "pnpm --filter @withkey/mobile lint": "pass (exit 0)",
+          "pnpm harness:check": "pass",
+          "pnpm harness:drift": "clean (No Tier 1 traceability drift)",
+          "pnpm validate:docs": "pass (no broken references)"
+        }
+      },
+      "review": {
+        "reviewers": ["withkey-review (inline self-review)"],
+        "criticalHigh": 0,
+        "verdict": "pass",
+        "notes": "단일 도메인(mobile theme)·소규모 diff — 무인 tick 아니므로 단일 컨텍스트 인라인 리뷰(POC 과금 절약). Non-goal 봉인 확인(globals.css 참조만·화면 re-skin 없음·legacy alias 보존). 색 토큰값은 theme.spec 이 culori 로 런타임 재계산 검증(하드코딩 hex 오탈자 방어). 별칭 4종은 globals 동일-OKLCH 라 round-trip drift 0. CRITICAL/HIGH 0건."
+      },
+      "notes": "streak-1~7·spacing scale 은 EVAL-0068~0072 화면 re-skin 이 @/shared/theme barrel 로 소비하는 선행 토큰. off-grid 화면 리터럴(10·6·14)은 re-skin 슬라이스에서 spacing scale 로 흡수 예정(이 task 범위 밖). 커밋은 worktree 자율, 푸시·PR 은 사용자 확인 게이트."
     }
   ]
 }

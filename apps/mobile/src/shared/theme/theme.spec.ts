@@ -8,6 +8,7 @@ import { colors } from "./colors";
 import { typography } from "./typography";
 import { radius } from "./radius";
 import { motion } from "./motion";
+import { spacing } from "./spacing";
 
 // monorepo 상대경로: apps/mobile/src/shared/theme → repo root → apps/web/src/app/globals.css
 const GLOBALS = readFileSync(join(__dirname, "../../../../web/src/app/globals.css"), "utf8");
@@ -53,6 +54,42 @@ describe("colors — web globals.css hex SoT 미러", () => {
 
   it.each(Object.entries(OKLCH_SOT))("%s = culori(OKLCH SoT)", (key, oklch) => {
     expect(colors[key as keyof typeof colors]).toBe(oklchToHex(oklch));
+  });
+
+  // (b-2) 신규 시맨틱 토큰 — globals.css OKLCH 정의를 culori 로 미러 (input·ring·popover·popoverForeground)
+  const SEMANTIC_OKLCH_SOT: Record<string, string> = {
+    input: "oklch(0.939 0.007 260.7)", // = --border
+    ring: "oklch(0.737 0.135 270.7)", // = --primary
+    popover: "oklch(1 0 0)", // = --card
+    popoverForeground: "oklch(0.268 0.016 264.3)", // = --foreground
+  };
+
+  it.each(Object.entries(SEMANTIC_OKLCH_SOT))("%s = culori(globals.css OKLCH)", (key, oklch) => {
+    expect(colors[key as keyof typeof colors]).toBe(oklchToHex(oklch));
+    expect(GLOBALS).toContain(oklch); // globals.css 에 정의 존재 (SoT 추적성)
+  });
+
+  it("popover/input/ring 이 동일-OKLCH 형제 토큰과 일치", () => {
+    expect(colors.input).toBe(colors.border);
+    expect(colors.ring).toBe(colors.primary);
+    expect(colors.popover).toBe(colors.card);
+    expect(colors.popoverForeground).toBe(colors.cardForeground);
+  });
+
+  // (b-3) streak 채도 단계 (globals.css:103-109) — OKLCH SoT culori 변환
+  const STREAK_OKLCH_SOT: Record<string, string> = {
+    streak1: "oklch(0.93 0.045 270.7)",
+    streak2: "oklch(0.885 0.067 270.7)",
+    streak3: "oklch(0.84 0.088 270.7)",
+    streak4: "oklch(0.79 0.108 270.7)",
+    streak5: "oklch(0.74 0.125 270.7)",
+    streak6: "oklch(0.685 0.138 270.7)",
+    streak7: "oklch(0.62 0.15 270.7)",
+  };
+
+  it.each(Object.entries(STREAK_OKLCH_SOT))("%s = culori(OKLCH SoT)", (key, oklch) => {
+    expect(colors[key as keyof typeof colors]).toBe(oklchToHex(oklch));
+    expect(GLOBALS).toContain(oklch); // streak 은 hex SoT 부재 — OKLCH 정의로만 추적
   });
 
   // (c) invite 팔레트 (globals.css 직접 hex)
@@ -158,5 +195,17 @@ describe("motion — globals.css duration/easing", () => {
   it("easing factory 가 함수를 반환", () => {
     expect(typeof motion.easeOutSoft).toBe("function");
     expect(typeof motion.easeInSoft).toBe("function");
+  });
+});
+
+describe("spacing — 8px 그리드 scale", () => {
+  it("xs~2xl 정규 scale", () => {
+    expect(spacing).toEqual({ xs: 4, sm: 8, md: 12, lg: 16, xl: 24, "2xl": 32 });
+  });
+
+  it("모든 값이 4px 하프스텝 그리드에 정렬되고 단조 증가", () => {
+    const vals = Object.values(spacing);
+    for (const v of vals) expect(v % 4).toBe(0);
+    expect(vals).toEqual([...vals].sort((a, b) => a - b));
   });
 });
