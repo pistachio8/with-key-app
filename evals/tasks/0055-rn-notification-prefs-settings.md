@@ -2,7 +2,7 @@
 Task: EVAL-0055
 Track: port
 Kind: migration
-Status: todo
+Status: in_progress
 Blocked-by: [task:EVAL-0052] — 토큰 등록 capability 가 완성돼야 알림 설정 화면에서 prefs 변경→재등록·해제 흐름을 구현할 수 있다. (RESOLVED 2026-06-30: EVAL-0052 done — PR#291 머지)
 Depends-on: [task:EVAL-0052] — 토큰 등록 capability 선행(착수 불가 게이트). (RESOLVED 2026-06-30: EVAL-0052 done)
 Parent: docs/migration/00-rn-conversion-plan.md
