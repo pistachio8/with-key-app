@@ -1,8 +1,8 @@
 # ADR-0044: RN 화면 시각 parity 정책 (screenshot acceptance)
 
 **Date**: 2026-07-01
-**Status**: proposed <!-- accepted / superseded / deprecated -->
-**Deciders**: pistachio8 (PO 승인 대기)
+**Status**: accepted <!-- proposed / superseded / deprecated -->
+**Deciders**: pistachio8 (PO) · 2026-07-01 승인
 
 이 ADR은 PWA(Progressive Web App)의 각 화면을 RN(React Native)으로 옮길 때 "결과가 시각적으로 어느 수준까지 원본과 같아야 하는가"를 정의한다. 결론부터: **UI는 계속 native 로 재작성하되, 각 화면의 시각적 목표를 "대응 PWA 화면과의 parity"로 못 박고 이를 화면별 screenshot acceptance 로 검증한다.** 이는 기존 "기계적 번역 금지" 규칙을 뒤집는 것이 아니라 강화하는 것이다.
 

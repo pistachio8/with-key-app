@@ -313,7 +313,7 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
 - ✅ ⓐ **harness §3.2 정정**: "전면 restructure 선행 + `packages/domain`은 그 안에서 점진 채움(구조는 한 번에, 내용은 기능 단위)"으로 갱신([02 §3.2](./02-rn-migration-harness.md)). 남은 결정 없음(A1 ADR 작성으로 확정).
 - ✅ ⓑ **00 plan goal 4 정정**: invite 복구를 "**설치=자동**(token stash→로그인→수락), **미설치=재탭**"으로 명시([00 §8 goal 4](./00-rn-conversion-plan.md)). ✅ **PO 결정(2026-06-11)**: 재탭 UX MVP 수용 확정 — 마찰은 UX(웹 랜딩 재탭 안내)로 완화, Branch 도입은 post-MVP 재검토([§4 A7](#4-auth-a6a7)).
-- ✅ ⓒ **PRD §6.3 정정**: Bottom Tabs 새 IA + 외부=universal link·내부=scheme을 명시([01 §6.3](./01-rn-mvp-prd.md)). ⚠️ **남은 PO 결정**: 새 IA 승인 + 핵심 플로우 screenshot acceptance.
+- ✅ ⓒ **PRD §6.3 정정**: Bottom Tabs 새 IA + 외부=universal link·내부=scheme을 명시([01 §6.3](./01-rn-mvp-prd.md)). ✅ **PO 결정(2026-07-01) — [ADR-0044](../adr/0044-rn-screen-visual-parity.md) accepted**: Bottom Tabs 새 IA 승인 + 화면 시각 parity 를 화면별 screenshot acceptance 게이트로 채택([parity spec](../superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md)).
 
 ### 권장 부트스트랩 순서
 

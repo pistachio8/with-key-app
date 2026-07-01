@@ -3,7 +3,7 @@ spec: 2026-07-01-rn-screen-parity-acceptance
 title: RN 화면 시각 parity — screenshot acceptance 표준
 author: pistachio8
 date: 2026-07-01
-status: draft
+status: approved
 ---
 
 ## Summary
