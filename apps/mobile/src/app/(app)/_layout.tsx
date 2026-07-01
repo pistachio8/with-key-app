@@ -3,7 +3,7 @@
 import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
-import { useRegisterPushToken } from "@/capabilities/push-notification";
+import { useNotificationRouting, useRegisterPushToken } from "@/capabilities/push-notification";
 import { useSession } from "@/features/auth";
 
 export default function AppLayout() {
@@ -11,6 +11,9 @@ export default function AppLayout() {
 
   // 인증 직후 Expo push token 등록 (EVAL-0052 · A6). 거부/시뮬레이터/projectId 미설정은 내부에서 skip.
   useRegisterPushToken(session?.user.id);
+
+  // 알림 수신·탭 라우팅 (EVAL-0053 · A6). foreground 배너 + 탭 시 targetUrl 딥링크 이동.
+  useNotificationRouting();
 
   if (isLoading) {
     return (

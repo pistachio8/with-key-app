@@ -104,7 +104,13 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
       ],
       "expo-secure-store",
       // Expo 푸시 알림 (EVAL-0052 · ADR-0041) — iOS aps-environment entitlement·Android 알림 권한/채널을 구성.
-      "expo-notifications",
+      // EVAL-0053: color 는 Android 알림 accent(헤드업 배너·status bar 아이콘 tint). icon 미지정 시 앱 아이콘 fallback.
+      [
+        "expo-notifications",
+        {
+          color: "#208AEF",
+        },
+      ],
       // 사진 인증(EVAL-0019) — 촬영/보관함 권한 안내 문구. 권한 거부 시 화면이 재시도 UI 를 띄운다.
       [
         "expo-image-picker",

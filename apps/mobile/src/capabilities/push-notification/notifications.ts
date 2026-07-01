@@ -56,3 +56,32 @@ export async function acquireExpoPushToken(projectId: string): Promise<string> {
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   return data;
 }
+
+// ── EVAL-0053: 수신 핸들러 native 표면 (foreground 표시 + 탭 응답) ──
+// 라우팅 로직은 notification-handler.ts(순수 변환 + hook)에 두고, native SDK 호출은 여기로 모은다 (04 §5.1).
+
+/**
+ * foreground(앱 활성) 수신 시 인앱 배너·소리·목록 표시 정책. 앱 1회 설정한다.
+ * SDK 53+ 는 deprecated shouldShowAlert 대신 shouldShowBanner·shouldShowList 로 분리됐다.
+ */
+export function configureForegroundNotificationDisplay(): void {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
+
+/**
+ * 가장 최근 알림 탭 응답을 반환하는 native 훅 래핑.
+ * foreground·background·killed(cold start) 세 상태의 탭을 통합하고 notification identifier 로
+ * 중복을 제거한다(같은 응답 재이동 방지). 반환: undefined(판정 전) · null(응답 없음) · 응답 객체.
+ */
+export function useLastNotificationResponse(): ReturnType<
+  typeof Notifications.useLastNotificationResponse
+> {
+  return Notifications.useLastNotificationResponse();
+}

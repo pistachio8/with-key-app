@@ -8,6 +8,9 @@ jest.mock("expo-notifications", () => ({
   getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: "" }),
   setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
   AndroidImportance: { DEFAULT: 5 },
+  // EVAL-0053: (app) 셸이 useNotificationRouting → 수신 핸들러를 transitive 호출. 응답 없음(null) 기본값.
+  setNotificationHandler: jest.fn(),
+  useLastNotificationResponse: jest.fn(() => null),
 }));
 jest.mock("expo-device", () => ({ isDevice: false }));
 jest.mock("expo-crypto", () => ({ randomUUID: () => "00000000-0000-0000-0000-000000000000" }));

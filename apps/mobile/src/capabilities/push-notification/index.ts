@@ -3,3 +3,4 @@
 export { registerPushToken, type RegisterPushResult } from "./register-token";
 export { unregisterPushToken, type UnregisterPushResult } from "./unregister-token";
 export { useRegisterPushToken } from "./use-register-push-token";
+export { useNotificationRouting, toNotificationHref } from "./notification-handler";
