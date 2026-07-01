@@ -53,23 +53,25 @@ status: approved
 - **IA 재배치 + 컴포넌트 parity** — 화면이 RN 탭/스택 구조에 맞춰 재배치되나, 내부 컴포넌트(카드·리스트·버튼)는 parity 목표. "전체 레이아웃 동일"은 기대하지 않음.
 - **비대상** — 시각 parity 검증에서 제외(사유 명시).
 
-| PWA 화면 (`§1.1`)                    | RN 현재 상태               | parity 분류                                         | 우선순위 |
-| ------------------------------------ | -------------------------- | --------------------------------------------------- | -------- |
-| `/home`                              | native 구현(re-skin)       | IA 재배치(탭 셸) + 컴포넌트 parity                  | **P0**   |
-| `/challenge/[id]` (feed)             | native 구현(re-skin)       | IA 재배치(challenge 탭 navigator) + 컴포넌트 parity | **P0**   |
-| `/challenge/[id]/dashboard`          | native 구현                | IA 재배치 + 컴포넌트 parity                         | **P0**   |
-| `/challenge/[id]/info`               | native 구현                | IA 재배치 + 컴포넌트 parity                         | **P0**   |
-| `/challenge/[id]/action` (사진 인증) | native 구현                | 1:1 parity                                          | **P0**   |
-| `/challenge/[id]/pledge` (서약)      | native 구현                | 1:1 parity                                          | **P0**   |
-| `/challenge/[id]/recap` (정산)       | native 구현                | 1:1 parity                                          | **P0**   |
-| `/challenge/new` (+`/done/[id]`)     | native 구현                | 1:1 parity                                          | P1       |
-| `/login`                             | native 구현                | 1:1 parity                                          | P1       |
-| `/invite/[token]`                    | native 구현                | 1:1 parity                                          | P1       |
-| `/me` (프로필/설정)                  | native 구현                | IA 재배치(탭) + 컴포넌트 parity                     | P1       |
-| `/group/[id]`                        | 부분(features/group reads) | 1:1 parity                                          | P1       |
-| `/notifications` (알림 센터)         | 미구현(EVAL-0054 blocked)  | 1:1 parity                                          | P2       |
-| `/me/challenges`                     | 미구현                     | 1:1 parity                                          | P2       |
-| `/legal/privacy` · `/legal/terms`    | 미구현                     | **비대상** — WebView/웹 링크 유지(`§1.1` 분류)      | —        |
+| PWA 화면 (`§1.1`)                    | RN 현재 상태                  | parity 분류                                         | 우선순위 |
+| ------------------------------------ | ----------------------------- | --------------------------------------------------- | -------- |
+| `/home`                              | native 구현(re-skin)          | IA 재배치(탭 셸) + 컴포넌트 parity                  | **P0**   |
+| `/challenge/[id]` (feed)             | native 구현(re-skin)          | IA 재배치(challenge 탭 navigator) + 컴포넌트 parity | **P0**   |
+| `/challenge/[id]/dashboard`          | native 구현                   | IA 재배치 + 컴포넌트 parity                         | **P0**   |
+| `/challenge/[id]/info`               | native 구현                   | IA 재배치 + 컴포넌트 parity                         | **P0**   |
+| `/challenge/[id]/action` (사진 인증) | native 구현                   | 1:1 parity                                          | **P0**   |
+| `/challenge/[id]/pledge` (서약)      | native 구현                   | 1:1 parity                                          | **P0**   |
+| `/challenge/[id]/recap` (정산)       | placeholder 스텁(read 계약만) | 1:1 parity                                          | **P0**   |
+| `/challenge/new` (+`/done/[id]`)     | native 구현                   | 1:1 parity                                          | P1       |
+| `/login`                             | native 구현                   | 1:1 parity                                          | P1       |
+| `/invite/[token]`                    | native 구현                   | 1:1 parity                                          | P1       |
+| `/me` (프로필/설정)                  | 최소 스텁(email+logout)       | IA 재배치(탭) + 컴포넌트 parity                     | P1       |
+| `/group/[id]`                        | 부분(features/group reads)    | 1:1 parity                                          | P1       |
+| `/notifications` (알림 센터)         | 미구현(EVAL-0054 blocked)     | 1:1 parity                                          | P2       |
+| `/me/challenges`                     | 미구현                        | 1:1 parity                                          | P2       |
+| `/legal/privacy` · `/legal/terms`    | 미구현                        | **비대상** — WebView/웹 링크 유지(`§1.1` 분류)      | —        |
+
+> **정정(2026-07-01, 코드 실사)**: 표 작성 시 `recap`·`me` 를 "native 구현"으로 분류했으나 실제로는 각각 **PlaceholderScreen 스텁**·**최소 스텁(email+logout)** 이다. 두 화면은 re-skin 이 아니라 **구현 + parity 동시 수행**(EVAL-0072 recap · EVAL-0076 me).
 
 Legacy redirect(`/action`·`/feed`·`/pledge`·`/recap`·`/settings` 등 `§1.2`)는 RN 에서 deep link alias 로만 존재 → **화면 parity 비대상**. Route handler·OG·share endpoint(`§1.3`)는 서버 유지 → 비대상.
 
@@ -105,7 +107,7 @@ Legacy redirect(`/action`·`/feed`·`/pledge`·`/recap`·`/settings` 등 `§1.2`
 ### C. 우선순위 · 선행 의존
 
 - **선행(블로커)**: RN 디자인 토큰을 정산 SL0(`0058·0059`) → **전 화면 공통 토큰으로 확장**(`04-rn-architecture` A10, 현재 status: spec 미작성). 이 토큰 확장 task 가 P0 화면 parity 의 선행. **왜**: 토큰 없이 화면부터 칠하면 하드코딩 스타일이 흩어져 B-3 #2 를 사후 강제할 수 없다.
-- **순서**: 토큰 확장 → P0(핵심 루프 7화면 re-skin) → P1(생성/인증진입/프로필/그룹) → P2(알림 센터[EVAL-0054 후]·내 챌린지·기타).
+- **순서**: 토큰 확장 → P0(핵심 루프 7화면 — recap 은 미구현이라 구현+parity, 나머지 6 은 re-skin) → P1(생성/인증진입/프로필/그룹) → P2(알림 센터[EVAL-0054 후]·내 챌린지·기타).
 
 ## Alternatives Considered
 
