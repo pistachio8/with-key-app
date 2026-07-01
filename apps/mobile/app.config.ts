@@ -155,6 +155,9 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
     },
     extra: {
       appVariant: variant,
+      // EAS 프로젝트 링크 (eas init 2026-07-01) — push token(easProjectId)·build·update 의 프로젝트 식별자.
+      // 동적 config 라 eas init 이 자동 기록 못 해 수동 배선. projectId 는 공개 식별자(비밀 아님).
+      eas: { projectId: "c22217f8-0e83-4b57-b50e-6d7d704fc21a" },
       universalLinkDomain: variantConfig.universalLinkDomain,
       // BFF(Bearer) base URL 명시 override (ADR-0036 — transport-중립 계약).
       // 미지정 시 런타임은 `https://${universalLinkDomain}` 폴백(web = PWA + BFF 겸임).
