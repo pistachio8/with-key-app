@@ -18,6 +18,9 @@ import { createInvite } from "@/features/invite";
 import { LoadingScreen, ReadErrorScreen } from "@/shared/components/screen-states";
 import { useAsyncRead } from "@/shared/hooks/use-async-read";
 import { colors } from "@/shared/theme/colors";
+import { radius } from "@/shared/theme/radius";
+import { spacing } from "@/shared/theme/spacing";
+import { typography } from "@/shared/theme/typography";
 
 // web new-challenge-form userMessage 패리티.
 const ERROR_MESSAGES: Record<LifecycleErrorCode, string> = {
@@ -144,7 +147,7 @@ function NewChallengeForm({
               maxLength={30}
               onChangeText={setTitle}
               placeholder="이번 주 운동 서약서"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={colors.mutedForeground}
               style={styles.input}
               value={title}
             />
@@ -353,6 +356,10 @@ function Stepper({
   );
 }
 
+// StyleSheet 는 EVAL-0067 확장 토큰(colors·typography·radius·spacing)으로 재도장한다.
+// 텍스트는 typography.* 를 spread (h2/h3/body/sub/caption — sub·caption 은 color 포함),
+// 간격은 spacing.*, 모서리는 radius.*. control dimension(버튼/체크박스/최소폭 등 정수 px)과
+// full-pill(999)은 토큰 범주 밖이라 리터럴 유지.
 const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
@@ -362,15 +369,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 12,
-    padding: 16,
-    paddingBottom: 32,
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: spacing["2xl"],
   },
   headerRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 10,
-    paddingBottom: 4,
+    gap: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   closeButton: {
     alignItems: "center",
@@ -380,53 +387,50 @@ const styles = StyleSheet.create({
     width: 32,
   },
   closeLabel: {
-    color: colors.textSubtle,
-    fontSize: 18,
+    ...typography.h3,
+    color: colors.mutedForeground,
   },
   heading: {
-    color: colors.textStrong,
-    fontSize: 20,
-    fontWeight: "800",
+    ...typography.h2,
+    color: colors.foreground,
   },
   card: {
     backgroundColor: colors.card,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    gap: 12,
-    padding: 16,
+    gap: spacing.md,
+    padding: spacing.lg,
   },
   fieldLabel: {
-    color: colors.textSubtle,
-    fontSize: 13,
-    fontWeight: "600",
+    ...typography.caption,
   },
   input: {
+    ...typography.body,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
-    color: colors.textStrong,
-    fontSize: 15,
+    color: colors.foreground,
     minHeight: 44,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
   },
   groupRow: {
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   groupRowSelected: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.brandPrimarySoft,
     borderColor: colors.primary,
   },
   groupRowDisabled: {
     opacity: 0.5,
   },
   groupName: {
-    color: colors.text,
-    fontSize: 14,
+    ...typography.body,
+    color: colors.foreground,
     fontWeight: "600",
   },
   groupNameSelected: {
@@ -440,7 +444,7 @@ const styles = StyleSheet.create({
   stepperControls: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: spacing.md,
   },
   stepperButton: {
     alignItems: "center",
@@ -451,13 +455,12 @@ const styles = StyleSheet.create({
     width: 32,
   },
   stepperButtonLabel: {
-    color: colors.textStrong,
-    fontSize: 16,
-    fontWeight: "700",
+    ...typography.h3,
+    color: colors.foreground,
   },
   stepperValue: {
-    color: colors.textStrong,
-    fontSize: 15,
+    ...typography.body,
+    color: colors.foreground,
     fontVariant: ["tabular-nums"],
     fontWeight: "700",
     minWidth: 64,
@@ -465,13 +468,13 @@ const styles = StyleSheet.create({
   },
   consentRow: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 4,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   checkbox: {
     alignItems: "center",
     borderColor: colors.border,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     height: 22,
     justifyContent: "center",
@@ -483,28 +486,27 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   checkboxMark: {
-    color: colors.inverse,
-    fontSize: 13,
+    ...typography.sub,
+    color: colors.primaryForeground,
     fontWeight: "700",
   },
   consentLabel: {
-    color: colors.text,
+    ...typography.body,
+    color: colors.foreground,
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
   },
   error: {
-    color: colors.danger,
-    fontSize: 13,
-    paddingHorizontal: 4,
+    ...typography.sub,
+    color: colors.destructive,
+    paddingHorizontal: spacing.xs,
   },
   primaryButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: radius.md,
     justifyContent: "center",
     minHeight: 48,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -513,51 +515,47 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   primaryButtonLabel: {
-    color: colors.inverse,
-    fontSize: 15,
+    ...typography.body,
+    color: colors.primaryForeground,
     fontWeight: "700",
   },
   secondaryButton: {
     alignItems: "center",
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     justifyContent: "center",
     minHeight: 48,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   secondaryButtonLabel: {
-    color: colors.textStrong,
-    fontSize: 15,
+    ...typography.body,
+    color: colors.foreground,
     fontWeight: "700",
   },
   doneScreen: {
     alignItems: "stretch",
     backgroundColor: colors.background,
     flex: 1,
-    gap: 12,
+    gap: spacing.md,
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   doneTitle: {
-    color: colors.textStrong,
-    fontSize: 20,
-    fontWeight: "800",
+    ...typography.h2,
+    color: colors.foreground,
     textAlign: "center",
   },
   doneDescription: {
-    color: colors.textSubtle,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.sub,
     textAlign: "center",
   },
   inviteUrl: {
+    ...typography.sub,
     backgroundColor: colors.muted,
-    borderRadius: 10,
-    color: colors.textSubtle,
-    fontSize: 12,
+    borderRadius: radius.sm,
     overflow: "hidden",
-    padding: 10,
+    padding: spacing.sm,
     textAlign: "center",
   },
 });

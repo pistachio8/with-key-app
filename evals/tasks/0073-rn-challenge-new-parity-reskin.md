@@ -2,7 +2,7 @@
 Task: EVAL-0073
 Track: port
 Kind: migration
-Status: todo
+Status: in_progress
 Depends-on: [task:EVAL-0067] — 토큰 확장 완료 후 착수해야 재작업이 없다(하드 게이트 아님, 순서 권장).
 Parent: docs/superpowers/specs/2026-07-01-rn-screen-parity-acceptance.md
 ---
