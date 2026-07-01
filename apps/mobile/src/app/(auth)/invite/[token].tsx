@@ -10,6 +10,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useSession } from "@/features/auth";
 import { acceptInvite, stashPendingInviteToken, type InviteErrorCode } from "@/features/invite";
 import { PlaceholderScreen } from "@/shared/components/placeholder-screen";
+import { colors } from "@/shared/theme/colors";
+import { spacing } from "@/shared/theme/spacing";
+import { typography } from "@/shared/theme/typography";
 
 // 카피는 web invite/[token]/page.tsx 의 에러 상태와 정렬 — 두 플랫폼이 같은 말을 한다.
 const ERROR_SCREENS: Record<InviteErrorCode, { title: string; lines: string[] }> = {
@@ -108,7 +111,7 @@ function PendingScreen({ label }: { label: string }) {
   return (
     <View style={styles.center}>
       <ActivityIndicator />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[typography.body, styles.label]}>{label}</Text>
     </View>
   );
 }
@@ -116,13 +119,12 @@ function PendingScreen({ label }: { label: string }) {
 const styles = StyleSheet.create({
   center: {
     alignItems: "center",
-    backgroundColor: "#F7FAFC",
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
   },
   label: {
-    color: "#4B5563",
-    fontSize: 15,
-    marginTop: 12,
+    color: colors.mutedForeground,
+    marginTop: spacing.md,
   },
 });
