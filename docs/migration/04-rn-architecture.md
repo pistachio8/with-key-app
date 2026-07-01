@@ -268,6 +268,14 @@ export const deepLinking: DeepLinking = /* expo-linking 구현 */
 
   기존 `push_subscriptions`(Web Push: endpoint·p256dh·auth)는 **cutover까지 web 잔존**, dispatch sender가 두 테이블을 조회해 전송. **왜**: 한 테이블에 Web Push·Expo를 섞으면 nullable·분기·RLS가 지저분해진다([03 §8](./03-rn-migration-rules.md)). **migration 은 [ADR-0041](../adr/0041-rn-push-token-model.md) 로 확정**(구현 `0058_device_push_tokens`). `src/lib/push/dispatch.ts`의 수신자 선정·quiet hours·dedup은 유지하고 sender만 Expo push로 교체.
 
+- **Android FCM 셋업 (EVAL-0053 · A9)**: iOS APNs 는 EAS 가 자동 관리하지만 **Android 푸시는 FCM 자격이 필수**다 — 없으면 Expo Push Service 가 Android 로 배달하지 못한다(FCM = Firebase Cloud Messaging, 구글 푸시 게이트웨이). 절차:
+  1. Firebase 프로젝트 생성 → variant별 Android 앱 등록(package `app.fromwith.dev`·`app.fromwith.staging`·`app.fromwith`) → `google-services.json` 다운로드.
+  2. `apps/mobile/google-services.json` 로 두거나(자동 감지) EAS file env `GOOGLE_SERVICES_JSON` 로 주입 — `app.config.ts` 가 파일이 있을 때만 `googleServicesFile` 을 배선한다(없으면 omit → prebuild 미실패).
+  3. `eas credentials`(또는 대시보드)로 **FCM V1 service account key(JSON)** 업로드 → Expo Push Service 발송 자격(레거시 server key 는 2024 폐기).
+  4. Android dev client **재빌드**(네이티브 변경). **왜**: `google-services.json` 은 빌드타임에 FCM sender/app id 를 네이티브에 주입하므로 OTA(EAS Update)로는 안 되고 재빌드가 필요하다.
+
+  파일은 프로젝트별 값이라 `.gitignore`(빌드는 EAS file env 로 배포). iOS 는 `ios/**.entitlements`(`aps-environment`)로 이미 배선됨. 시뮬레이터 핸들러 검증은 `xcrun simctl push`(iOS 전용, 자격 불요), 4종 실제 수신은 실기기.
+
 - **이미지 (기본값)**: 렌더=`expo-image`, 선택=`expo-image-picker`, 촬영=`expo-camera`, 압축/리사이즈=`expo-image-manipulator`. **5MB/1920px/JPEG 0.85** 정책 상수는 `packages/domain`(`image/prepare-upload` 상수)에서 공유, browser canvas/heic2any 구현만 RN으로 교체. Storage는 private bucket + signed URL([03 §4·§7](./03-rn-migration-rules.md)).
 
 ---
