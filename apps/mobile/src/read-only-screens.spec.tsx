@@ -65,12 +65,22 @@ jest.mock("@/features/profile/api/profile-reads", () => ({
   fetchNotificationPrefs: jest.fn(),
 }));
 
+const mockFetchGroupDetail = jest.fn();
+
+// group/[id] 화면이 barrel(@/features/group)로 소비하는 read — api 모듈을 mock 하면 barrel 로 전파.
+jest.mock("@/features/group/api/group-reads", () => ({
+  fetchGroupDetail: (...args: unknown[]) => mockFetchGroupDetail(...args),
+  fetchMyGroups: jest.fn(),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock 은 babel 이 hoist 하므로 모킹 선언을 위에 둔다
 import { HOME_EXPECTED } from "../../../evals/fixtures/read-contracts/home";
 // eslint-disable-next-line import/first
 import { DETAIL_EXPECTED } from "../../../evals/fixtures/read-contracts/challenge-detail";
 // eslint-disable-next-line import/first
 import { FEED_RESPONSE } from "../../../evals/fixtures/read-contracts/feed";
+// eslint-disable-next-line import/first
+import { GROUP_EXPECTED } from "../../../evals/fixtures/read-contracts/group";
 // eslint-disable-next-line import/first
 import { BffRequestError } from "@/services/api/bff-client";
 
@@ -93,6 +103,7 @@ beforeEach(() => {
   mockFetchMyUnsignedChallengeIds.mockResolvedValue(new Set<string>());
   mockFetchChallengeFeed.mockResolvedValue(FEED_RESPONSE);
   mockFetchMyDisplayName.mockResolvedValue("민지");
+  mockFetchGroupDetail.mockResolvedValue(GROUP_EXPECTED);
 });
 
 describe("home — current/pending/closed 요약 실데이터 렌더", () => {
@@ -228,5 +239,42 @@ describe("challenge info — 서약 조건/멤버/계좌 read-only", () => {
     mockFetchChallengeDetail.mockResolvedValue(null);
     renderAppRouter(`/challenge/${CHALLENGE_ID}/info`);
     expect(await screen.findByText("챌린지를 찾을 수 없어요")).toBeTruthy();
+  });
+});
+
+describe("group detail — 헤더·계좌·멤버·챌린지 목록 read-only (EVAL-0077)", () => {
+  it("그룹명·정산 계좌(마스킹)·멤버·챌린지 목록을 실데이터로 렌더한다", async () => {
+    renderAppRouter("/group/g1");
+    // 헤더 — 그룹명
+    expect(await screen.findByText("운동 그룹")).toBeTruthy();
+    // 정산 계좌 — 카드 + maskAccountNumber 표기
+    expect(screen.getByText("정산 계좌")).toBeTruthy();
+    expect(screen.getByText("****-**-****1234")).toBeTruthy();
+    // 멤버 리스트 — 헤딩 + 멤버명
+    expect(screen.getByText("멤버 (2명)")).toBeTruthy();
+    expect(screen.getByText("제이")).toBeTruthy();
+    // 챌린지 목록 — 헤딩 + 제목
+    expect(screen.getByText("챌린지 (1개)")).toBeTruthy();
+    expect(screen.getByText("아침 운동")).toBeTruthy();
+  });
+
+  it("계좌 미등록(bankCode/last4 null)이면 계좌 카드를 숨긴다", async () => {
+    mockFetchGroupDetail.mockResolvedValue({
+      ...GROUP_EXPECTED,
+      bankCode: null,
+      accountNumberLast4: null,
+    });
+    renderAppRouter("/group/g1");
+    // 나머지 콘텐츠(그룹명)는 렌더되고 계좌 카드만 숨겨진다.
+    expect(await screen.findByText("운동 그룹")).toBeTruthy();
+    expect(screen.queryByText("정산 계좌")).toBeNull();
+    expect(screen.queryByText("****-**-****1234")).toBeNull();
+  });
+
+  it("RLS 경계 — 비멤버/그룹 없음(null)은 빈 상태 안내만 본다", async () => {
+    mockFetchGroupDetail.mockResolvedValue(null);
+    renderAppRouter("/group/g1");
+    expect(await screen.findByText("그룹을 찾을 수 없어요")).toBeTruthy();
+    expect(screen.queryByText("운동 그룹")).toBeNull();
   });
 });
