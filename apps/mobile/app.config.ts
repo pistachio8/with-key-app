@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const appVariants = {
@@ -38,6 +40,12 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
   const variant = resolveAppVariant(process.env.APP_VARIANT);
   const variantConfig = appVariants[variant];
 
+  // Android FCM (EVAL-0053 · A9) — google-services.json 이 있을 때만 배선(없으면 omit → prebuild 미실패).
+  // EAS 빌드는 GOOGLE_SERVICES_JSON file env(경로) 주입, 로컬은 apps/mobile/google-services.json 자동 감지.
+  const googleServicesFile =
+    process.env.GOOGLE_SERVICES_JSON ??
+    (existsSync("./google-services.json") ? "./google-services.json" : undefined);
+
   return {
     ...config,
     name: variantConfig.displayName,
@@ -56,6 +64,8 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArchitecture => {
     },
     android: {
       package: variantConfig.bundleIdentifier,
+      // FCM (EVAL-0053 · A9) — google-services.json 있을 때만. 없으면 Android 푸시 배달 불가(iOS 무관).
+      ...(googleServicesFile ? { googleServicesFile } : {}),
       // Android 13+ 알림 권한 (EVAL-0052 · A6). expo-notifications 도 manifest 에 병합하지만 명시 선언한다.
       permissions: ["android.permission.POST_NOTIFICATIONS"],
       adaptiveIcon: {

@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Android FCM — 프로젝트별 값이라 커밋 안 함. EAS file env(GOOGLE_SERVICES_JSON)로 빌드에 주입.
+google-services.json
+
 # typescript
 *.tsbuildinfo
 
